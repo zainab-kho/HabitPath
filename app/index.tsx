@@ -17,5 +17,5 @@ export default function Index() {
   }
 
   // logged in, send to main habits page
-  return <Redirect href="/tabs/HabitsPage" />;
+  return <Redirect href="/(tabs)/habits" />;
 }

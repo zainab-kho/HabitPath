@@ -1,4 +1,7 @@
+// @/app/_layout.tsx
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { DrawerProvider } from '@/navigation/DrawerContext';
+import { RootDrawer } from '@/navigation/RootDrawer';
 import { useFonts } from "expo-font";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { useEffect } from 'react';
@@ -20,7 +23,7 @@ function RootLayoutNav() {
       router.replace('/auth/LoginScreen');
     } else if (user && inAuthGroup) {
       // logged in but on auth screen, redirect to app
-      router.replace('/tabs/HabitsPage');
+      router.replace('/(tabs)/habits');
     }
   }, [user, loading, segments]);
 
@@ -30,18 +33,25 @@ function RootLayoutNav() {
   }
 
   return (
-    <Stack
-      screenOptions={{
-        headerShown: false,
-        animation: 'none',
-        gestureEnabled: false,
-        contentStyle: { backgroundColor: 'transparent' },
-      }}
-    >
-      <Stack.Screen name="index" />
-      <Stack.Screen name="auth/LoginScreen" />
-      <Stack.Screen name="tabs/HabitsPage" />
-    </Stack>
+    <DrawerProvider>
+      <View style={{ flex: 1 }} pointerEvents="box-none">
+        <Stack
+          screenOptions={{
+            headerShown: false,
+            animation: 'none',
+            gestureEnabled: false,
+            contentStyle: { backgroundColor: 'transparent' },
+          }}
+        >
+          <Stack.Screen name="index" />
+          <Stack.Screen name="auth/LoginScreen" />
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        </Stack>
+
+        {/* global drawer */}
+        <RootDrawer />
+      </View>
+    </DrawerProvider>
   );
 }
 

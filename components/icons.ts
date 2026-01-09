@@ -9,5 +9,10 @@ export const SYSTEM_ICONS = {
     reward: require('@/assets/icons/system/sparkle-fill.png'),
     journal: require('@/assets/icons/system/journal-icon.png'),
     settings: require('@/assets/icons/system/settings-icon.png'),
+    sortLeft: require('@/assets/icons/system/sort-left.png'),
     sortRight: require('@/assets/icons/system/sort-right.png'),
+    clock: require('@/assets/icons/system/clock.png'),
+    repeat: require('@/assets/icons/system/repeat.png'),
+    calendar: require('@/assets/icons/system/calendar.png'),
+    dots: require('@/assets/icons/system/dots.png'),
 };

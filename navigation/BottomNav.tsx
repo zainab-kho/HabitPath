@@ -48,6 +48,7 @@ export function BottomNav() {
     return (
         <View
             style={{
+                height: 100,
                 bottom: 0,
                 left: 0,
                 right: 0,

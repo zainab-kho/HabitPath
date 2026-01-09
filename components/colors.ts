@@ -8,6 +8,7 @@ export const COLORS = {
   PrimaryLight: '#AB98F8',
   Secondary: '#FF5F57',
   ProgressColor: '#FFD581',
+  Rewards: '#FF7F50',
   RewardsAccent: '#7FD1AE',
   StreakAccent: '#F55858',
   XPAccent: '#FFB5A0',
@@ -23,6 +24,9 @@ export const PAGE = {
     background: ['#C9FFBF', '#FFAFBD'],
     border: ['#55d7b0ff'],
     primary: ['#FED0FF'],
+  },
+  newHabit: {
+    background: ['#FDDAC5', '#FEF9E7']
   },
   journal: {
     background: ['#8f94fb', '#bec1ffff'],

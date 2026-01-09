@@ -8,6 +8,7 @@ import { StyleProp, ViewStyle } from 'react-native';
 type GradientPath =
   | 'auth.background'
   | 'habitsPage.background'
+  | 'newHabit.background'
   | 'journal.background'
   | 'settings.background';
 

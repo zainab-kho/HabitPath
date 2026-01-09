@@ -6,16 +6,16 @@ import { buttonStyles, globalStyles, uiStyles } from '@/styles'
 import { useRouter } from 'expo-router'
 import { useState } from 'react'
 import {
-    Alert,
-    Keyboard,
-    KeyboardAvoidingView,
-    Platform,
-    Pressable,
-    ScrollView,
-    Text,
-    TextInput,
-    TouchableWithoutFeedback,
-    View
+  Alert,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableWithoutFeedback,
+  View
 } from 'react-native'
 
 export default function LoginScreen() {
@@ -24,7 +24,7 @@ export default function LoginScreen() {
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('') // New for sign up
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [isSignUp, setIsSignUp] = useState(false)
   const [loading, setLoading] = useState(false)
 
@@ -34,7 +34,7 @@ export default function LoginScreen() {
       return
     }
 
-    // Validate password confirmation for sign up
+    // validate password confirmation for sign up
     if (isSignUp) {
       if (password !== confirmPassword) {
         Alert.alert('Error', 'Passwords do not match')
@@ -76,7 +76,7 @@ export default function LoginScreen() {
 
   const toggleMode = () => {
     setIsSignUp(!isSignUp)
-    setConfirmPassword('') // Clear confirmation when switching
+    setConfirmPassword('') // clear confirmation when switching
   }
 
   return (
@@ -156,6 +156,7 @@ export default function LoginScreen() {
                       borderColor: PAGE.auth.border[0],
                     }]}
                     placeholder="Re-enter your password"
+                    placeholderTextColor={'#000'}
                     value={confirmPassword}
                     onChangeText={setConfirmPassword}
                     secureTextEntry

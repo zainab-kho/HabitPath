@@ -1,3 +1,4 @@
+import { SYSTEM_ICONS } from '@/components/icons'
 import { useRouter } from 'expo-router'
 import { Image, Pressable, Text, View } from 'react-native'
 
@@ -31,28 +32,32 @@ export default function PageHeader({
         height: 50,
         flexDirection: 'row',
         alignItems: 'center',
+        justifyContent: 'space-between',
         paddingHorizontal: 12,
         marginBottom: 15,
       }}
     >
-      {/* LEFT SLOT */}
-      <View style={{ width: 40, alignItems: 'flex-start' }}>
+      {/* left side - back button or spacer */}
+      <View style={{ width: 40 }}>
         {showBackButton && (
-          <Pressable onPress={() => router.back()}>
+          <Pressable
+            onPress={() => router.back()}
+            style={{ flexDirection: 'row', alignItems: 'center' }}
+          >
             <Image
-              source={require('@/assets/icons/system/back.png')}
+              source={SYSTEM_ICONS.sortLeft}
               style={{ width: 20, height: 20 }}
             />
           </Pressable>
         )}
       </View>
 
-      {/* CENTER SLOT */}
+      {/* center - title */}
       <View style={{ flex: 1, alignItems: 'center' }}>
         <Text
           style={{
-            fontSize: 20,
-            fontFamily: 'p1',
+            fontSize: 22,
+            fontFamily: 'p2',
             color: textColor,
           }}
           numberOfLines={1}
@@ -61,16 +66,16 @@ export default function PageHeader({
         </Text>
       </View>
 
-      {/* RIGHT SLOT */}
+      {/* right side - plus button or spacer */}
       <View style={{ width: 40, alignItems: 'flex-end' }}>
         {showPlusButton && (
           <Pressable onPress={handlePlusPress}>
             <Text
               style={{
                 textAlign: 'center',
-                width: 40,
-                fontSize: 24,
-                 backgroundColor: '#fff',
+                width: 30,
+                fontSize: 20,
+                backgroundColor: '#fff',
                 borderWidth: 1,
                 borderRadius: 10,
                 shadowColor: 'black',

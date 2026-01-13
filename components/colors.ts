@@ -13,7 +13,8 @@ export const COLORS = {
   StreakAccent: '#F55858',
   XPAccent: '#FFB5A0',
   Star: '#ea3434ff',
-  Time: '#FFE6FF'
+  Time: '#FFE6FF',
+  ReadMore: '#0000EE'
 } as const;
 
 /**

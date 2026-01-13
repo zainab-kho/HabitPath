@@ -70,7 +70,7 @@ export default function HabitsPage() {
             end={{ x: 0.5, y: 1 }}
             style={{ flex: 1 }}
         >
-            <PageContainer>
+            <PageContainer style={{marginBottom: 80}}>
                 <PageHeader
                     title='Habits'
                     showPlusButton

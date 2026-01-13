@@ -1,5 +1,5 @@
 // @/components/journal/MoodPreview.tsx
-import { MOOD_COLORS } from '@/components/colors';
+import { COLORS, MOOD_COLORS } from '@/components/colors';
 import { JournalEntry } from '@/components/types/JournalEntry';
 import { globalStyles } from '@/styles';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -145,9 +145,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 15,
     borderWidth: 1,
-    borderColor: '#000',
-    shadowColor: '#000',
-    shadowOffset: { width: 2, height: 2 },
+    borderColor: COLORS.Primary,
+    shadowColor: COLORS.Primary,
+    shadowOffset: { width: 3, height: 3 },
     shadowOpacity: 1,
     shadowRadius: 0,
   },

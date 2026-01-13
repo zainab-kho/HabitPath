@@ -15,15 +15,13 @@ export default function PageContainer({ children, style }: PageContainerProps) {
           {
             flex: 1,
             marginTop: '15%',
-            marginHorizontal: '5%', // default
+            marginHorizontal: '5%',
           },
-          style, // merge/override with custom styles
+          style,
         ]}
       >
         {children}
-        <View style={{ marginBottom: 80 }} />
       </View>
-
     </View>
   );
 }

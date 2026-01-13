@@ -31,7 +31,8 @@ export const PAGE = {
   journal: {
     background: ['#8f94fb', '#bec1ffff'],
     foreground: ['#F9F8FF'],
-    border: ['#55d7b0ff']
+    border: ['#55d7b0ff'],
+    buttonColor: ['#ED8BE7'],
   },
   settings: {
     background: ['#fdfbfb', '#ebedee'],
@@ -46,6 +47,7 @@ export const BUTTON_COLORS = {
   Close: '#ffc8c8ff',
   Delete: '#FA839F',
   Edit: '#d8c8ffff',
+  Cancel: '#fcfcfcff'
 } as const;
 
 /**

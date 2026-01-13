@@ -33,7 +33,6 @@ export default function PageHeader({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 12,
         marginBottom: 15,
       }}
     >

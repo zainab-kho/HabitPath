@@ -1,6 +1,8 @@
 export const SYSTEM_ICONS = {
+    loading: require('@/assets/icons/system/loading.png'),
     habit: require('@/assets/icons/system/habit-icon.png'),
     path: require('@/assets/icons/system/path-icon.png'),
+    path2: require('@/assets/icons/system/path-icon2.png'),
     quest: require('@/assets/icons/system/quest-icon.png'),
     profile: require('@/assets/icons/system/profile-icon.png'),
     more: require('@/assets/icons/system/more-icon.png'),
@@ -15,4 +17,5 @@ export const SYSTEM_ICONS = {
     repeat: require('@/assets/icons/system/repeat.png'),
     calendar: require('@/assets/icons/system/calendar.png'),
     dots: require('@/assets/icons/system/dots.png'),
+    location: require('@/assets/icons/system/location-icon.png'),
 };

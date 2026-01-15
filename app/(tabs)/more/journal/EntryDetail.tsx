@@ -6,6 +6,7 @@ import { JournalEntry } from '@/components/types/JournalEntry';
 import { AppLinearGradient } from '@/components/ui/AppLinearGradient';
 import PageContainer from '@/components/ui/PageContainer';
 import PageHeader from '@/components/ui/PageHeader';
+import { formatLocalDate, parseLocalDate } from '@/components/utils/dateUtils';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { buttonStyles } from '@/styles';
@@ -38,16 +39,21 @@ export default function EntryDetail() {
         try {
             // try AsyncStorage first
             const stored = await AsyncStorage.getItem('@journal_entries');
-            const allEntries: JournalEntry[] = stored ? JSON.parse(stored) : [];
+            const allEntries: any[] = stored ? JSON.parse(stored) : [];
             let foundEntry = allEntries.find(e => e.id === id);
 
             if (foundEntry) {
-                setEntry(foundEntry);
-                setEditedDate(foundEntry.date.toString());
-                setEditedTime(foundEntry.time || '');
-                setEditedLocation(foundEntry.location || '');
-                setEditedEntry(foundEntry.entry || '');
-                setEditedMood(foundEntry.mood as keyof typeof MOOD_COLORS || null);
+                // parse date if stored as string
+                const parsedEntry: JournalEntry = {
+                    ...foundEntry,
+                    date: typeof foundEntry.date === 'string' ? parseLocalDate(foundEntry.date) : new Date(foundEntry.date)
+                };
+                setEntry(parsedEntry);
+                setEditedDate(parsedEntry.date.toString());
+                setEditedTime(parsedEntry.time || '');
+                setEditedLocation(parsedEntry.location || '');
+                setEditedEntry(parsedEntry.entry || '');
+                setEditedMood(parsedEntry.mood as keyof typeof MOOD_COLORS || null);
             }
 
             // sync with Supabase in background
@@ -67,7 +73,7 @@ export default function EntryDetail() {
                 if (data) {
                     const freshEntry: JournalEntry = {
                         id: data.id,
-                        date: new Date(data.date),
+                        date: parseLocalDate(data.date),
                         time: data.time,
                         mood: data.mood as keyof typeof MOOD_COLORS | undefined,
                         location: data.location || undefined,
@@ -92,8 +98,8 @@ export default function EntryDetail() {
 
         setIsSaving(true);
 
-        try {
-            // keep date as original Date object - don't let users change entry dates
+        try {   
+            // keep date as original Date object - users cannot change entry dates
             const updatedEntry: JournalEntry = {
                 ...entry,
                 date: entry.date, // keep original date
@@ -105,19 +111,21 @@ export default function EntryDetail() {
 
             // update Supabase first so it's ready when home page loads
             if (user) {
-                console.log('☁️ Updating Supabase first...');
+                const updateData = {
+                    time: editedTime || null,
+                    mood: editedMood || null,
+                    location: editedLocation || null,
+                    entry: editedEntry || null,
+                };
+                
                 const { error } = await supabase
                     .from('journal_entries')
-                    .update({
-                        time: editedTime || null,
-                        mood: editedMood || null,
-                        location: editedLocation || null,
-                        entry: editedEntry || null,
-                    })
+                    .update(updateData)
                     .eq('id', entry.id)
                     .eq('user_id', user.id);
 
                 if (error) {
+                    console.error('Error: Supabase error:', error);
                     Alert.alert('Error', 'Failed to save to cloud. Please try again.');
                     return; // don't update cache if cloud fails
                 }
@@ -125,10 +133,20 @@ export default function EntryDetail() {
 
             // update AsyncStorage cache after Supabase succeeds
             const stored = await AsyncStorage.getItem('@journal_entries');
-            const allEntries: JournalEntry[] = stored ? JSON.parse(stored) : [];
-            const updatedEntries = allEntries.map(e =>
-                e.id === entry.id ? updatedEntry : e
-            );
+            const allEntries: any[] = stored ? JSON.parse(stored) : [];
+            
+            // store date as YYYY-MM-DD string to avoid UTC conversion
+            const cacheEntry = {
+                ...updatedEntry,
+                date: formatLocalDate(updatedEntry.date)
+            };
+            
+            const updatedEntries = allEntries.map(e => {
+                if (e.id === entry.id) {
+                    return cacheEntry;
+                }
+                return e;
+            });
             await AsyncStorage.setItem('@journal_entries', JSON.stringify(updatedEntries));
 
             // update local state
@@ -136,7 +154,7 @@ export default function EntryDetail() {
             setIsEditing(false);
 
         } catch (error) {
-            console.error('Error saving entry:', error);
+            console.error('Error: Error saving entry:', error);
             Alert.alert('Error', 'Failed to save changes');
         } finally {
             setIsSaving(false);
@@ -196,21 +214,14 @@ export default function EntryDetail() {
         );
     }
 
-    const bgColor = editedMood ? MOOD_COLORS[editedMood] : (entry.mood ? MOOD_COLORS[entry.mood as keyof typeof MOOD_COLORS] : '#fff');
-    const date = new Date(entry.date);
-    const formattedDate = date.toLocaleDateString('en-US', {
-        weekday: 'long',
-        month: 'long',
-        day: 'numeric',
-        year: 'numeric'
-    });
+    const bgColor = entry.mood ? MOOD_COLORS[entry.mood as keyof typeof MOOD_COLORS] : '#fff';
 
     return (
         <AppLinearGradient variant="journal.background">
             <PageContainer>
-                <PageHeader
+                <PageHeader 
                     title={isEditing ? "Edit Entry" : "Journal Entry"}
-                    showBackButton
+                    showBackButton 
                 />
 
                 <KeyboardAvoidingView
@@ -218,20 +229,30 @@ export default function EntryDetail() {
                     behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 >
                     {!isEditing ? (
-                        // view mode: scrollable page
-                        <ScrollView 
+                        // read mode: content is scrollable
+                        <ScrollView
                             style={{ flex: 1 }}
-                            contentContainerStyle={{ paddingHorizontal: 3, paddingBottom: 30, }}
-                            showsVerticalScrollIndicator={false}
+                            contentContainerStyle={{ paddingBottom: 30 }}
                         >
-                            <View style={[entryDetailStyle.card, { backgroundColor: bgColor }]}>
-                                <Text style={entryDetailStyle.date}>{formattedDate}</Text>
-                                {entry.time && <Text style={entryDetailStyle.time}>{entry.time}</Text>}
+                            <View style={[entryDetailStyle.card, { marginHorizontal: 3, backgroundColor: bgColor }]}>
+                                <Text style={entryDetailStyle.date}>
+                                    {new Date(entry.date).toLocaleDateString('en-US', {
+                                        weekday: 'long',
+                                        month: 'long',
+                                        day: 'numeric',
+                                        year: 'numeric',
+                                    })}
+                                </Text>
+
+                                {entry.time && (
+                                    <Text style={entryDetailStyle.time}>{entry.time}</Text>
+                                )}
+
                                 {entry.location && (
-                                    <View style={{ flexDirection: 'row' }}>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 10 }}>
                                         <Image
                                             source={SYSTEM_ICONS.location}
-                                            style={{ width: 15, height: 15, tintColor: COLORS.Secondary, marginRight: 5, }}
+                                            style={{ width: 15, height: 15, tintColor: COLORS.Secondary, marginRight: 5 }}
                                         />
                                         <Text style={entryDetailStyle.location}>{entry.location}</Text>
                                     </View>
@@ -239,22 +260,19 @@ export default function EntryDetail() {
 
                                 {entry.mood && (
                                     <View style={entryDetailStyle.moodBadge}>
-                                        <View
-                                            style={[
-                                                entryDetailStyle.moodDot,
-                                                { backgroundColor: MOOD_COLORS[entry.mood as keyof typeof MOOD_COLORS] }
-                                            ]}
-                                        />
+                                        <View style={[entryDetailStyle.moodDot, { backgroundColor: MOOD_COLORS[entry.mood as keyof typeof MOOD_COLORS] }]} />
                                         <Text style={entryDetailStyle.moodText}>{entry.mood}</Text>
                                     </View>
                                 )}
-                                {entry.entry && <Text style={entryDetailStyle.entryText}>{entry.entry}</Text>}
+
+                                {entry.entry && (
+                                    <Text style={entryDetailStyle.entryText}>{entry.entry}</Text>
+                                )}
                             </View>
 
-                            {/* action button */}
-                            <View style={{ width: 100, alignSelf: 'center', justifyContent: 'center', marginTop: 30, }}>
+                            <View style={{ alignItems: 'center', marginTop: 30, marginBottom: 30 }}>
                                 <Pressable
-                                    style={buttonStyles.button}
+                                    style={[buttonStyles.button, { backgroundColor: BUTTON_COLORS.Done }]}
                                     onPress={() => setIsEditing(true)}
                                 >
                                     <Text style={buttonStyles.buttonText}>Edit</Text>

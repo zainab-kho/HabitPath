@@ -1,6 +1,7 @@
 // @/components/journal/MoodPreview.tsx
 import { COLORS, MOOD_COLORS } from '@/components/colors';
 import { JournalEntry } from '@/components/types/JournalEntry';
+import { formatLocalDate } from '@/components/utils/dateUtils';
 import { globalStyles } from '@/styles';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -26,10 +27,12 @@ export default function MoodPreview({ entries }: MoodPreviewProps) {
   }
 
   // create a map of date -> moods (array to handle multiple entries per day)
+  // Use local timezone for date keys
   const moodsByDate = React.useMemo(() => {
     const map: Record<string, string[]> = {};
     entries.forEach(entry => {
-      const dateStr = new Date(entry.date).toISOString().split('T')[0];
+      const date = new Date(entry.date);
+      const dateStr = formatLocalDate(date);
       if (entry.mood) {
         if (!map[dateStr]) {
           map[dateStr] = [];
@@ -113,7 +116,7 @@ export default function MoodPreview({ entries }: MoodPreviewProps) {
                 {/* Actual days of the month */}
                 {Array.from({ length: daysInMonth }, (_, dayIndex) => {
                   const date = new Date(year, monthIndex, dayIndex + 1);
-                  const dateStr = date.toISOString().split('T')[0];
+                  const dateStr = formatLocalDate(date);
                   const moods = moodsByDate[dateStr];
 
                   return (

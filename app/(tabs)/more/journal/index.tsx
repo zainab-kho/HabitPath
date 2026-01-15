@@ -7,6 +7,7 @@ import { AppLinearGradient } from '@/components/ui/AppLinearGradient';
 import EmptyStateView from '@/components/ui/EmptyStateView';
 import PageContainer from '@/components/ui/PageContainer';
 import PageHeader from '@/components/ui/PageHeader';
+import { parseLocalDate } from '@/components/utils/dateUtils';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -24,53 +25,67 @@ export default function JournalPage() {
         try {
             setIsLoading(true);
 
+            // don't load cached data if no user is logged in
+            if (!user) {
+                setEntriesByMonth({});
+                setIsLoading(false);
+                return;
+            }
+
             // load from AsyncStorage first (instant display from cache)
             const cached = await AsyncStorage.getItem('@journal_entries');
             const cachedEntries: JournalEntry[] = cached ? JSON.parse(cached) : [];
             
             if (cachedEntries.length > 0) {
-                groupAndSetEntries(cachedEntries);
+                // parse dates that might be stored as strings
+                const parsedEntries = cachedEntries.map(entry => ({
+                    ...entry,
+                    date: typeof entry.date === 'string' ? parseLocalDate(entry.date) : new Date(entry.date)
+                }));
+                groupAndSetEntries(parsedEntries);
             }
 
             // add delay to allow Supabase updates to propagate (1s)
             await new Promise(resolve => setTimeout(resolve, 1000));
 
             // load from Supabase (get fresh data from cloud)
-            if (user) {
-                const { data, error } = await supabase
-                    .from('journal_entries')
-                    .select('*')
-                    .eq('user_id', user.id)
-                    .order('date', { ascending: false });
+            const { data, error } = await supabase
+                .from('journal_entries')
+                .select('*')
+                .eq('user_id', user.id)
+                .order('date', { ascending: false });
 
-                if (error) {
-                    console.error('Error loading from Supabase:', error);
-                    // keep showing cached data on error
-                    return;
-                }
+            if (error) {
+                console.error(' Error loading from Supabase:', error);
+                // keep showing cached data on error
+                return;
+            }
 
-                if (data && data.length > 0) {                    
-                    // convert Supabase data to JournalEntry format
-                    const freshEntries: JournalEntry[] = data.map(row => ({
-                        id: row.id,
-                        date: new Date(row.date),
-                        time: row.time,
-                        mood: row.mood as keyof typeof MOOD_COLORS | undefined,
-                        location: row.location || undefined,
-                        entry: row.entry || undefined,
-                    }));
+            if (data && data.length > 0) {
+                // convert Supabase data to JournalEntry format
+                // use local timezone interpretation for dates
+                const freshEntries: JournalEntry[] = data.map(row => ({
+                    id: row.id,
+                    date: parseLocalDate(row.date),
+                    time: row.time,
+                    mood: row.mood as keyof typeof MOOD_COLORS | undefined,
+                    location: row.location || undefined,
+                    entry: row.entry || undefined,
+                }));
 
-                    // update cache with fresh data
-                    await AsyncStorage.setItem('@journal_entries', JSON.stringify(freshEntries));
+                // update cache with fresh data
+                await AsyncStorage.setItem('@journal_entries', JSON.stringify(freshEntries));
 
-                    // display fresh data
-                    groupAndSetEntries(freshEntries);
-                }
-            } else {
-                console.log('Error: not logged in - showing only cached entries');
+                // display fresh data
+                groupAndSetEntries(freshEntries);
+            } else if (data && data.length === 0) {
+                // clear the display
+                setEntriesByMonth({});
+                await AsyncStorage.setItem('@journal_entries', JSON.stringify([]));
             }
 
         } catch (error) {
+            console.error('Error in loadEntries:', error);
         } finally {
             setIsLoading(false);
         }
@@ -78,8 +93,70 @@ export default function JournalPage() {
 
     // helper function to group entries by month
     const groupAndSetEntries = (entries: JournalEntry[]) => {
-        // sort most recent first
-        entries.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        // convert time string to minutes for sorting (e.g., "2:15 PM" -> 14*60 + 15 = 855)
+        const timeToMinutes = (timeStr: string | undefined): number => {
+            if (!timeStr) {
+                console.log('Error: No time string provided');
+                return 0;
+            }
+            
+            try {
+                // trim and normalize the string
+                const normalized = timeStr.trim();
+                
+                // split by any whitespace character (handles regular space, NBSP, NNBSP, etc.)
+                // toLocaleTimeString() uses Unicode char 8239
+                const parts = normalized.split(/\s/);
+                
+                if (parts.length !== 2) {
+                    console.log('Error: Invalid format (expected "HH:MM AM/PM"):', normalized, 'parts:', parts);
+                    return 0;
+                }
+                
+                const [time, period] = parts;
+                const timeParts = time.split(':');
+                
+                if (timeParts.length !== 2) {
+                    console.log('Error: Invalid time format:', time);
+                    return 0;
+                }
+                
+                const hours = parseInt(timeParts[0], 10);
+                const minutes = parseInt(timeParts[1], 10);
+                
+                if (isNaN(hours) || isNaN(minutes)) {
+                    console.log('Error: Could not parse hours/minutes:', hours, minutes);
+                    return 0;
+                }
+                
+                let hour24 = hours;
+                if (period === 'PM' && hours !== 12) hour24 += 12;
+                if (period === 'AM' && hours === 12) hour24 = 0;
+                
+                const result = hour24 * 60 + minutes;
+                return result;
+            } catch (error) {
+                console.log('Error: Error parsing time:', timeStr, error);
+                return 0;
+            }
+        };
+
+        // sort by date (newest first), then by time (newest first)
+        entries.sort((a, b) => {
+            const dateA = new Date(a.date).getTime();
+            const dateB = new Date(b.date).getTime();
+            
+            // First sort by date
+            if (dateB !== dateA) {
+                return dateB - dateA;
+            }
+            
+            // If same date, sort by time (newest first)
+            const timeA = timeToMinutes(a.time);
+            const timeB = timeToMinutes(b.time);
+            
+            return timeB - timeA;
+        });
 
         // group by month
         const grouped: Record<string, JournalEntry[]> = {};
@@ -185,7 +262,7 @@ export default function JournalPage() {
                             <View style={styles.emptyState}>
                                 <Image
                                     source={SYSTEM_ICONS.loading}
-                                    style={{ width: 40, height: 40, marginBottom: 10, tintColor: COLORS.Primary }}
+                                    style={{ width: 30, height: 30, marginBottom: 10, tintColor: COLORS.Primary }}
                                 />
                             </View>
                         )}

@@ -4,6 +4,7 @@ import { JournalEntry } from '@/components/types/JournalEntry';
 import { AppLinearGradient } from '@/components/ui/AppLinearGradient';
 import PageContainer from '@/components/ui/PageContainer';
 import PageHeader from '@/components/ui/PageHeader';
+import { formatDisplayDate, formatDisplayTime, formatLocalDate } from '@/components/utils/dateUtils';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { buttonStyles, globalStyles, journalStyle } from '@/styles';
@@ -99,22 +100,8 @@ export default function JournalPage() {
 
     useEffect(() => {
         const now = new Date();
-
-        setLocalDate(
-            now.toLocaleDateString('en-US', {
-                weekday: 'short',
-                month: 'short',
-                day: 'numeric',
-            })
-        );
-
-        setLocalTime(
-            now.toLocaleTimeString([], {
-                hour: '2-digit',
-                minute: '2-digit',
-            })
-        );
-
+        setLocalDate(formatDisplayDate(now));
+        setLocalTime(formatDisplayTime(now));
         inputRef.current?.focus();
     }, []);
 
@@ -134,6 +121,9 @@ export default function JournalPage() {
         try {
             const now = new Date();
             const id = now.toISOString();
+            
+            // format date in local timezone for storage
+            const localDateString = formatLocalDate(now);
 
             const newEntry: JournalEntry = {
                 id,
@@ -145,21 +135,25 @@ export default function JournalPage() {
             };
 
             // save to AsyncStorage
+            const cacheEntry = {
+                ...newEntry,
+                date: localDateString, // store as YYYY-MM-DD string, not Date object
+            };
             const existing = await AsyncStorage.getItem('@journal_entries');
-            const allEntries: JournalEntry[] = existing ? JSON.parse(existing) : [];
-            allEntries.push(newEntry);
+            const allEntries: any[] = existing ? JSON.parse(existing) : [];
+            allEntries.push(cacheEntry);
             await AsyncStorage.setItem('@journal_entries', JSON.stringify(allEntries));
 
             console.log('**LOG: Entry saved to AsyncStorage (cache)');
 
-            // save to Supabase
+            // save to Supabase - use local date string (YYYY-MM-DD) to avoid timezone issues
             const { data, error } = await supabase
                 .from('journal_entries')
                 .insert([
                     {
                         id: id,
                         user_id: user.id,
-                        date: now.toISOString(),
+                        date: localDateString, // YYYY-MM-DD format in local timezone
                         time: localTime,
                         mood: selectedMood,
                         location: location || null,

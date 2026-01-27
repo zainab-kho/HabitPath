@@ -35,18 +35,18 @@ export const ASSIGNMENT_TYPES = [
 
 export const ASSIGNMENT_PROGRESS = [
     'Not started',
-    'Will do later',
     'In progress',
+    'Will do later',
     'Finished (not submitted)',
     'Done'
 ] as const;
 
 export const PROGRESS_COLORS: Record<string, string> = {
-    'Not started': '#82a2f9',
-    'Will do later': '#f98282',
-    'In progress': '#F9E282',
-    'Finished (not submitted)': '#f9bb82',
-    'Done': '#54BF82'
+    'Not started': '#fff',
+    'In progress': '#ffa5c8',
+    'Will do later': '#fcbd6a',
+    'Finished (not submitted)': '#99ccf6',
+    'Done': '#ccd5ae'
 };
 
 export const ASSIGNMENT_TYPE_COLORS: Record<string, string> = {

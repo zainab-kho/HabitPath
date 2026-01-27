@@ -8,6 +8,7 @@ import { globalStyles } from '@/styles';
 import ShadowBox from '@/ui/ShadowBox';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const TAB_WIDTH = SCREEN_WIDTH - 40;
 
 interface AssignmentTabsProps {
     activeTab: 'due' | 'thisWeek' | 'upcoming';
@@ -18,22 +19,9 @@ interface AssignmentTabsProps {
     renderAssignmentCard: (assignment: any, editMode: boolean, onDelete: () => void) => JSX.Element;
     editMode: boolean;
     onDeleteAssignment: (assignmentId: string) => void;
-    scrollViewRef: RefObject<ScrollView | null>; // 👈 FIXED: Allow null
+    scrollViewRef: RefObject<ScrollView | null>;
 }
 
-/**
- * AssignmentTabs Component
- * 
- * Horizontal tabbed view for assignments with three categories:
- * - Due: Assignments that are due
- * - This Week: Assignments due this week  
- * - Upcoming: Future assignments
- * 
- * Features:
- * - Swipeable horizontal pages
- * - Each page scrolls vertically (nested ScrollView)
- * - Tab buttons sync with scroll position
- */
 export default function AssignmentTabs({
     activeTab,
     onTabChange,
@@ -47,51 +35,41 @@ export default function AssignmentTabs({
 }: AssignmentTabsProps) {
     const router = useRouter();
 
+    // handle tab press
     const handleTabPress = (tab: 'due' | 'thisWeek' | 'upcoming') => {
-        const pageIndex = tab === 'due' ? 0 : tab === 'thisWeek' ? 1 : 2;
-        scrollViewRef.current?.scrollTo({
-            x: pageIndex * (SCREEN_WIDTH - 40),
-            animated: true
-        });
         onTabChange(tab);
+        const tabIndex = tab === 'due' ? 0 : tab === 'thisWeek' ? 1 : 2;
+        
+        // use setTimeout to ensure state update happens first
+        setTimeout(() => {
+            scrollViewRef.current?.scrollTo({ x: tabIndex * TAB_WIDTH, animated: true });
+        }, 0);
     };
+
+    const tabs = [
+        { key: 'due', label: 'Due', assignments: dueAssignments },
+        { key: 'thisWeek', label: 'This Week', assignments: thisWeekAssignments },
+        { key: 'upcoming', label: 'Upcoming', assignments: upcomingAssignments },
+    ];
 
     return (
         <View style={styles.container}>
             {/* tab buttons */}
             <View style={styles.tabButtons}>
-                <Pressable onPress={() => handleTabPress('due')} style={styles.tabButton}>
-                    <Text style={[
-                        globalStyles.body,
-                        styles.tabText,
-                        { opacity: activeTab === 'due' ? 1 : 0.4 }
-                    ]}>
-                        Due ({dueAssignments.length})
-                    </Text>
-                </Pressable>
-
-                <Pressable onPress={() => handleTabPress('thisWeek')} style={styles.tabButton}>
-                    <Text style={[
-                        globalStyles.body,
-                        styles.tabText,
-                        { opacity: activeTab === 'thisWeek' ? 1 : 0.4 }
-                    ]}>
-                        This Week ({thisWeekAssignments.length})
-                    </Text>
-                </Pressable>
-
-                <Pressable onPress={() => handleTabPress('upcoming')} style={styles.tabButton}>
-                    <Text style={[
-                        globalStyles.body,
-                        styles.tabText,
-                        { opacity: activeTab === 'upcoming' ? 1 : 0.4 }
-                    ]}>
-                        Upcoming ({upcomingAssignments.length})
-                    </Text>
-                </Pressable>
+                {tabs.map(tab => (
+                    <Pressable key={tab.key} onPress={() => handleTabPress(tab.key as any)} style={styles.tabButton}>
+                        <Text style={[
+                            globalStyles.body,
+                            styles.tabText,
+                            { opacity: activeTab === tab.key ? 1 : 0.4 }
+                        ]}>
+                            {tab.label} ({tab.assignments.length})
+                        </Text>
+                    </Pressable>
+                ))}
             </View>
 
-            {/* horizontal scroll view pages */}
+            {/* horizontal scrollview */}
             <ScrollView
                 ref={scrollViewRef}
                 horizontal
@@ -99,63 +77,55 @@ export default function AssignmentTabs({
                 showsHorizontalScrollIndicator={false}
                 scrollEventThrottle={16}
                 onMomentumScrollEnd={(e) => {
-                    const page = Math.round(e.nativeEvent.contentOffset.x / (SCREEN_WIDTH - 40));
-                    const newTab = page === 0 ? 'due' : page === 1 ? 'thisWeek' : 'upcoming';
-                    onTabChange(newTab);
+                    const offsetX = e.nativeEvent.contentOffset.x;
+                    const index = Math.round(offsetX / TAB_WIDTH);
+                    const newTab = tabs[index]?.key as 'due' | 'thisWeek' | 'upcoming';
+                    if (newTab) {
+                        onTabChange(newTab);
+                    }
                 }}
                 style={styles.horizontalScroll}
             >
-                {/* map through each tab's assignments */}
-                {[dueAssignments, thisWeekAssignments, upcomingAssignments].map(
-                    (assignmentsArray, index) => (
-                        <View
-                            key={index}
-                            style={styles.pageContainer}
+                {tabs.map((tab, index) => (
+                    <View key={index} style={{ width: TAB_WIDTH }}>
+                        <ScrollView
+                            showsVerticalScrollIndicator={false}
+                            contentContainerStyle={styles.verticalScrollContent}
+                            nestedScrollEnabled
                         >
-                            {/* nested scrollview for vertical scrolling */}
-                            <ScrollView
-                                showsVerticalScrollIndicator={false}
-                                contentContainerStyle={styles.verticalScrollContent}
-                                nestedScrollEnabled={true}
-                            >
-                                {/* render assignments */}
-                                {assignmentsArray.map(assignment =>
+                            {tab.assignments.length === 0 ? (
+                                <View style={{ paddingTop: 20, alignItems: 'center', opacity: 0.4 }}>
+                                    <Text style={globalStyles.body}>
+                                        {tab.key === 'due'
+                                            ? 'No assignments due'
+                                            : tab.key === 'thisWeek'
+                                                ? 'No assignments this week'
+                                                : 'No upcoming assignments'}
+                                    </Text>
+                                </View>
+                            ) : (
+                                tab.assignments.map(assignment =>
                                     renderAssignmentCard(
                                         assignment,
                                         editMode,
                                         () => onDeleteAssignment(assignment.id!)
                                     )
-                                )}
+                                )
+                            )}
 
-                                {index === 2 && assignmentsArray.length > 0 && (
-                                    <ShadowBox>
-                                        <Pressable
-                                            style={{
-                                                paddingVertical: 7,
-                                                alignItems: 'center',
-                                            }}
+                            {index === 2 && tab.assignments.length > 0 && (
+                                <ShadowBox>
+                                    <Pressable
+                                        style={{ paddingVertical: 7, alignItems: 'center' }}
                                         onPress={() => router.push('/assignments/AllAssignments')}
-                                        >
-                                            <Text style={globalStyles.body}>View All Assignments</Text>
-                                        </Pressable>
-                                    </ShadowBox>
-                                )}
-
-
-                                {/* empty state */}
-                                {assignmentsArray.length === 0 && (
-                                    <Text style={[globalStyles.body, styles.emptyText]}>
-                                        {index === 0
-                                            ? 'No assignments due'
-                                            : index === 1
-                                                ? 'No assignments this week'
-                                                : 'No upcoming assignments'}
-                                    </Text>
-                                )}
-                            </ScrollView>
-                        </View>
-                    )
-                )}
+                                    >
+                                        <Text style={globalStyles.body}>View All Assignments</Text>
+                                    </Pressable>
+                                </ShadowBox>
+                            )}
+                        </ScrollView>
+                    </View>
+                ))}
             </ScrollView>
         </View>
     );
@@ -189,21 +159,9 @@ const styles = StyleSheet.create({
         flex: 1,
     },
 
-    pageContainer: {
-        width: SCREEN_WIDTH - 40,
-        paddingHorizontal: 0,
-    },
-
     verticalScrollContent: {
         paddingBottom: 20,
-        paddingHorizontal: 3,
+        paddingHorizontal: 5,
         gap: 15,
-    },
-
-    emptyText: {
-        textAlign: 'center',
-        opacity: 0.5,
-        marginTop: 20,
-        fontSize: 14,
     },
 });

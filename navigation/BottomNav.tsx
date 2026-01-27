@@ -24,14 +24,14 @@ export function BottomNav() {
             icon: SYSTEM_ICONS.habit,
         },
         {
-            name: 'paths',
-            route: '/paths',
-            icon: SYSTEM_ICONS.path,
+            name: 'assignments',
+            route: '/assignments',
+            icon: SYSTEM_ICONS.assignment,
         },
         {
-            name: 'quests',
-            route: '/quests',
-            icon: SYSTEM_ICONS.quest,
+            name: 'journal',
+            route: '/journal',
+            icon: SYSTEM_ICONS.journal,
         },
         {
             name: 'profile',

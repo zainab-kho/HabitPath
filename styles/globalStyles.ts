@@ -1,4 +1,5 @@
 // styles.ts
+import { COLORS } from '@/constants/colors';
 import { StyleSheet } from 'react-native';
 
 export const globalStyles = StyleSheet.create({
@@ -17,6 +18,11 @@ export const globalStyles = StyleSheet.create({
         fontSize: 19,
         fontFamily: 'p2'
     },
+    h4: {
+        color: 'black',
+        fontSize: 17,
+        fontFamily: 'p2',
+    },
     body: {
         color: 'black',
         fontSize: 15,
@@ -32,7 +38,17 @@ export const globalStyles = StyleSheet.create({
         fontFamily: 'label',
         color: 'black',
         opacity: 0.7,
-        marginBottom: 10,
+    },
+    bubbleLabel: {
+        flexDirection: 'row',
+        alignItems: 'center',
         justifyContent: 'center',
+        paddingHorizontal: 8,
+        paddingVertical: 2,
+        borderWidth: 1,
+        borderColor: '#000',
+        borderRadius: 8,
+        gap: 4,
+        backgroundColor: COLORS.RewardsAccent,
     },
 });

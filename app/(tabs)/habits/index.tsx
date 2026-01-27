@@ -1,13 +1,13 @@
 // @/app/(tabs)/habits/index
-import { COLORS } from '@/components/colors';
-import { SYSTEM_ICONS } from '@/components/icons';
-import NewHabitModal from '@/components/modals/NewHabit';
-import PageContainer from '@/components/ui/PageContainer';
-import PageHeader from '@/components/ui/PageHeader';
 import { formatDateHeader } from '@/components/utils/date';
 import { getGradientForTime } from '@/components/utils/gradients';
+import { COLORS } from '@/constants/colors';
+import { SYSTEM_ICONS } from '@/constants/icons';
 import { useAuth } from '@/contexts/AuthContext';
+import NewHabitModal from '@/modals/NewHabit';
 import { globalStyles } from '@/styles';
+import PageContainer from '@/ui/PageContainer';
+import PageHeader from '@/ui/PageHeader';
 import { useIsFocused } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRef, useState } from 'react';

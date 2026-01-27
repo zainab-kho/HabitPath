@@ -1,4 +1,5 @@
-import { SYSTEM_ICONS } from '@/components/icons'
+import { SYSTEM_ICONS } from '@/constants/icons'
+import ShadowBox from '@/ui/ShadowBox'
 import { useRouter } from 'expo-router'
 import { Image, Pressable, Text, View } from 'react-native'
 
@@ -33,7 +34,6 @@ export default function PageHeader({
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingHorizontal: 12,
         marginBottom: 15,
       }}
     >
@@ -70,24 +70,18 @@ export default function PageHeader({
       <View style={{ width: 40, alignItems: 'flex-end' }}>
         {showPlusButton && (
           <Pressable onPress={handlePlusPress}>
-            <Text
-              style={{
-                textAlign: 'center',
-                width: 30,
-                fontSize: 20,
-                backgroundColor: '#fff',
-                borderWidth: 1,
-                borderRadius: 10,
-                shadowColor: 'black',
-                shadowOffset: { width: 2, height: 2 },
-                shadowOpacity: 1,
-                shadowRadius: 0,
-                elevation: 5,
-                fontFamily: 'p2',
-              }}
+            <ShadowBox
+              borderRadius={10}
             >
-              +
-            </Text>
+              <Text style={{
+                textAlign: 'center',
+                fontFamily: 'p1',
+                fontSize: 18,
+                paddingVertical: 2,
+                paddingHorizontal: 10,
+              }}>+</Text>
+
+            </ShadowBox>
           </Pressable>
         )}
       </View>

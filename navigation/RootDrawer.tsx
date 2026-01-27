@@ -1,9 +1,9 @@
 // @/navigation/RootDrawer.tsx
-import { SYSTEM_ICONS } from '@/components/icons';
+import { SYSTEM_ICONS } from '@/constants/icons';
 import { useDrawer } from '@/navigation/DrawerContext';
 import { globalStyles } from '@/styles';
 import { useRouter } from 'expo-router';
-import { useRef } from 'react';
+import React, { useRef } from 'react';
 import {
     Animated,
     Dimensions,
@@ -119,9 +119,19 @@ export function RootDrawer() {
             icon: SYSTEM_ICONS.reward,
         },
         {
-            label: 'Journal',
-            path: '/(tabs)/more/journal',
-            icon: SYSTEM_ICONS.journal,
+            label: 'Paths',
+            path: '/(tabs)/more/paths',
+            icon: SYSTEM_ICONS.path,
+        },
+        {
+            label: 'Quests',
+            path: '/(tabs)/more/quests',
+            icon: SYSTEM_ICONS.quest,
+        },
+        {
+            label: 'Focus',
+            path: '/(tabs)/more/stopwatch',
+            icon: SYSTEM_ICONS.stopwatch,
         },
         {
             label: 'Settings',

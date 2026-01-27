@@ -1,8 +1,7 @@
 // app/components/gradients/AppLinearGradient.tsx
-import { PAGE } from '@/components/colors';
+import { PAGE } from '@/constants/colors';
 import { layoutStyles } from '@/styles';
 import { LinearGradient } from 'expo-linear-gradient';
-import React from 'react';
 import { StyleProp, ViewStyle } from 'react-native';
 
 type GradientPath =
@@ -10,6 +9,10 @@ type GradientPath =
   | 'habitsPage.background'
   | 'newHabit.background'
   | 'journal.background'
+  | 'focus.backgroundMain'
+  | 'focus.backgroundBreak'
+  | 'assignments.background'
+  | 'assignments.backgroundAssignment'
   | 'settings.background';
 
 interface Props {

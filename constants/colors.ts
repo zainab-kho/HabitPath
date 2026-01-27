@@ -13,7 +13,8 @@ export const COLORS = {
   StreakAccent: '#F55858',
   XPAccent: '#FFB5A0',
   Star: '#ea3434ff',
-  Time: '#FFE6FF'
+  Time: '#FFE6FF',
+  ReadMore: '#0000EE'
 } as const;
 
 /**
@@ -31,7 +32,22 @@ export const PAGE = {
   journal: {
     background: ['#8f94fb', '#bec1ffff'],
     foreground: ['#F9F8FF'],
-    border: ['#55d7b0ff']
+    border: ['#55d7b0ff'],
+    buttonColor: ['#ED8BE7'],
+  },
+  focus: {
+    backgroundMain: ['#EDE574', '#E1F5C4'],
+    backgroundBreak: ['#f8997d', '#ad336d'],
+    primary: ['#2ca994', '#C3FCF1'],
+    break: ['#FFACE1', '#FFBCD4'],
+    background: ['#f7ffe7', '#FFF6F2']
+  },
+  assignments: {
+    background: ['#FFEFBA', '#FFFFFF'],
+    backgroundAssignment: ['#D3CCE3', '#E9E4F0'],
+    border: ['#4CE0F6'],
+    primary: ['#F5924F', '#EEA2DA', '#4A98E6', '#AF9BE9'],
+    tags: ['#8DF8B7', '#40BAFF', '#FF8B77', '#F9E282', '#FFB456', '#FF90AB', '#AEBEFF', '#9DB0A3' ]
   },
   settings: {
     background: ['#fdfbfb', '#ebedee'],
@@ -44,8 +60,9 @@ export const PAGE = {
 export const BUTTON_COLORS = {
   Done: '#70A9FF',
   Close: '#ffc8c8ff',
-  Delete: '#FA839F',
+  Delete: '#ff5656',
   Edit: '#d8c8ffff',
+  Cancel: '#fcfcfcff'
 } as const;
 
 /**

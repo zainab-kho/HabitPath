@@ -1,21 +1,21 @@
 // @/app/auth/LoginScreen.tsx
-import { PAGE } from '@/components/colors'
-import { AppLinearGradient } from '@/components/ui/AppLinearGradient'
+import { PAGE } from '@/constants/colors'
 import { useAuth } from '@/contexts/AuthContext'
 import { buttonStyles, globalStyles, uiStyles } from '@/styles'
+import { AppLinearGradient } from '@/ui/AppLinearGradient'
 import { useRouter } from 'expo-router'
 import { useState } from 'react'
 import {
-  Alert,
-  Keyboard,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableWithoutFeedback,
-  View
+    Alert,
+    Keyboard,
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableWithoutFeedback,
+    View
 } from 'react-native'
 
 export default function LoginScreen() {

@@ -1,6 +1,6 @@
 // @/navigation/BottomNav.tsx
-import { COLORS } from '@/components/colors';
-import { SYSTEM_ICONS } from '@/components/icons';
+import { COLORS } from '@/constants/colors';
+import { SYSTEM_ICONS } from '@/constants/icons';
 import { useDrawer } from '@/navigation/DrawerContext';
 import { usePathname, useRouter } from 'expo-router';
 import { Image, Pressable, View } from 'react-native';

@@ -2,7 +2,6 @@
 
 /**
  * formats a Date object to YYYY-MM-DD string in local timezone
- * (avoids UTC timezone conversion issues)
  */
 export const formatLocalDate = (date: Date): string => {
   const year = date.getFullYear();
@@ -13,7 +12,6 @@ export const formatLocalDate = (date: Date): string => {
 
 /**
  * parses a YYYY-MM-DD string into a Date object in local timezone
- * (avoids UTC timezone conversion issues)
  */
 export const parseLocalDate = (dateString: string): Date => {
   const parts = dateString.split('-');
@@ -25,37 +23,42 @@ export const parseLocalDate = (dateString: string): Date => {
 };
 
 /**
- * gets the current date in YYYY-MM-DD format in local timezone
+ * gets today's date in YYYY-MM-DD format
  */
-export const getTodayLocal = (): string => {
-  return formatLocalDate(new Date());
+export const getTodayLocal = (): string => formatLocalDate(new Date());
+
+/**
+ * adds N days to today and returns YYYY-MM-DD
+ */
+export const addDaysLocal = (days: number): string => {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return formatLocalDate(d);
 };
 
 /**
- * formats a Date object for display (e.g., "Thu, Jan 14")
+ * formats a date for display, e.g., "Thu, Jan 14"
  */
-export const formatDisplayDate = (date: Date): string => {
-  return date.toLocaleDateString('en-US', {
+export const formatDisplayDate = (date: Date): string =>
+  date.toLocaleDateString('en-US', {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
   });
-};
 
 /**
- * formats current time (e.g., "3:45 PM")
+ * formats current time, e.g., "3:45 PM"
  */
-export const formatDisplayTime = (date: Date = new Date()): string => {
-  return date.toLocaleTimeString([], {
+export const formatDisplayTime = (date: Date = new Date()): string =>
+  date.toLocaleTimeString([], {
     hour: '2-digit',
     minute: '2-digit',
   });
-};
 
 /**
- * formats today's date to a weekday name (e.g., "Monday")
+ * get today weekday name, e.g., "Monday"
  */
-export const getTodayWeekday = () => {
-  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+export const getTodayWeekday = (): string => {
+  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
   return days[new Date().getDay()];
 };

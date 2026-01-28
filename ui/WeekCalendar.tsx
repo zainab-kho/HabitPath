@@ -15,6 +15,7 @@ const getWeekStart = (date: Date) => {
     const diff = day === 0 ? -6 : 1 - day;
     const monday = new Date(date);
     monday.setDate(date.getDate() + diff);
+    monday.setHours(0, 0, 0, 0); // reset time for accurate comparison
     return monday;
 };
 
@@ -31,6 +32,10 @@ export default function WeekCalendar({
 
     const year = currentMonth.getFullYear();
     const month = currentMonth.getMonth();
+
+    // get today's date for comparison
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
 
     /**
      * build a full 6-week grid (42 days), starting on the Monday
@@ -71,6 +76,15 @@ export default function WeekCalendar({
 
     const isWeekEnd = (date: Date) =>
         isSameDay(date, selectedWeekDays[6]);
+
+    // check if a week is in the past (entire week has ended)
+    const isWeekInPast = (date: Date) => {
+        const weekStart = getWeekStart(date);
+        const weekEnd = new Date(weekStart);
+        weekEnd.setDate(weekStart.getDate() + 6);
+        weekEnd.setHours(23, 59, 59, 999);
+        return weekEnd < today;
+    };
 
     const monthName = currentMonth.toLocaleDateString('en-US', {
         month: 'long',
@@ -115,6 +129,7 @@ export default function WeekCalendar({
                 {calendarDays.map((date, i) => {
                     const selected = isInSelectedWeek(date);
                     const muted = date.getMonth() !== month;
+                    const isPast = isWeekInPast(date);
 
                     return (
                         <Pressable
@@ -126,6 +141,7 @@ export default function WeekCalendar({
                                 alignItems: 'center',
                             }}
                             onPress={() => onSelectWeek(getWeekStart(date))}
+                            disabled={isPast} // disable selecting past weeks
                         >
                             {/* week-wide background strip */}
                             {selected && (
@@ -150,6 +166,7 @@ export default function WeekCalendar({
                                     globalStyles.body2,
                                     { fontSize: 13 },
                                     muted && { opacity: 0.4 },
+                                    isPast && { opacity: 0.3 }, // dim past weeks
                                     selected && { fontWeight: 'bold' },
                                 ]}
                             >

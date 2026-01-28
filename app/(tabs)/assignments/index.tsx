@@ -1,4 +1,3 @@
-// @/app/(tabs)/more/assignments/index.tsx
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
@@ -11,10 +10,11 @@ import { useAssignmentData } from '@/hooks/useAssignmentData';
 // utils
 import {
     shouldArchiveWeek as checkArchiveWeek,
+    getAssignedAssignments,
     getDueAssignments,
     getThisWeekAssignments,
     getTodayAssignments,
-    getUnplannedAssignments,
+    getUnassignedAssignments,
     getUpcomingAssignments
 } from '@/utils/assignmentFilters';
 
@@ -40,6 +40,9 @@ import PageHeader from '@/ui/PageHeader';
 import { PAGE } from '@/constants/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import { AssignmentWithCourse } from '@/hooks/useAssignmentData';
+
+// **TODO:
+// - correct dates: date on edit assignment modal needs to be centralized with dateUtils
 
 export default function Assignments() {
     const { user } = useAuth();
@@ -86,7 +89,6 @@ export default function Assignments() {
     const [showAssignmentSheet, setShowAssignmentSheet] = useState(false);
     const [selectedDayForSheet, setSelectedDayForSheet] = useState<{ date: string; label: string } | null>(null);
     const [showSaveButton, setShowSaveButton] = useState(false);
-    const [showMoreButton, setShowMoreButton] = useState(true);
     const [showMoreMenu, setShowMoreMenu] = useState(false);
     const [editMode, setEditMode] = useState(false);
     const [showStatusModal, setShowStatusModal] = useState(false);
@@ -97,21 +99,33 @@ export default function Assignments() {
     const dueAssignments = getDueAssignments(assignments);
     const thisWeekAssignments = getThisWeekAssignments(assignments);
     const upcomingAssignments = getUpcomingAssignments(assignments);
-    const unplannedAssignments = getUnplannedAssignments(assignments, dayPlanAssignments);
+
+    const { items: assignedAssignments, totalCount: totalAssignedCount } =
+        getAssignedAssignments(assignments, dayPlanAssignments);
+
+    const unassignedAssignments = getUnassignedAssignments(assignments, dayPlanAssignments);
+
+    // remaining tasks = not done, not assigned, not unassigned
+    const assignedAndUnassignedIds = new Set([
+        ...assignedAssignments.map(a => a.id!),
+        ...unassignedAssignments.map(a => a.id!)
+    ]);
+
+    const remainingAssignments = assignments.filter(
+        a => a.progress !== 'Done' && !assignedAndUnassignedIds.has(a.id!)
+    );
 
     // handlers
     const handleEnterEditMode = () => {
-        setShowMoreButton(false);
         setShowSaveButton(true);
-        setShowMoreMenu(false);
         setEditMode(true);
+        setShowMoreMenu(false);
     };
 
     const handleExitEditMode = async () => {
         await handleCancelEdit();
         setEditMode(false);
         setShowSaveButton(false);
-        setShowMoreButton(true);
     };
 
     const handleSaveChanges = async () => {
@@ -119,10 +133,7 @@ export default function Assignments() {
             await handleSave();
             setEditMode(false);
             setShowSaveButton(false);
-            setShowMoreButton(true);
-        } catch (error) {
-            // error already handled in handleSave
-        }
+        } catch (error) {}
     };
 
     const handleStatusUpdate = async (assignmentId: string, newStatus: string) => {
@@ -130,25 +141,21 @@ export default function Assignments() {
             await updateAssignmentStatus(assignmentId, newStatus);
             setShowStatusModal(false);
             setSelectedAssignmentForStatus(null);
-        } catch (error) {
-            // error already handled in updateAssignmentStatus
-        }
+        } catch (error) {}
     };
 
-    const renderAssignmentCard = (assignment: AssignmentWithCourse, showDelete: boolean = false, onDelete?: () => void) => {
-        return (
-            <AssignmentCard
-                key={assignment.id}
-                assignment={assignment}
-                showDelete={showDelete}
-                onDelete={onDelete}
-                onStatusPress={() => {
-                    setSelectedAssignmentForStatus(assignment);
-                    setShowStatusModal(true);
-                }}
-            />
-        );
-    };
+    const renderAssignmentCard = (assignment: AssignmentWithCourse, showDelete: boolean = false, onDelete?: () => void) => (
+        <AssignmentCard
+            key={assignment.id}
+            assignment={assignment}
+            showDelete={showDelete}
+            onDelete={onDelete}
+            onStatusPress={() => {
+                setSelectedAssignmentForStatus(assignment);
+                setShowStatusModal(true);
+            }}
+        />
+    );
 
     // loading state
     if (loading) {
@@ -194,35 +201,35 @@ export default function Assignments() {
                     showsVerticalScrollIndicator={false}
                     contentContainerStyle={{ paddingBottom: 40 }}
                 >
-                    {/* today's plan */}
+                    {/* Today's Plan */}
                     <TodaysPlan
                         assignments={todayAssignments}
                         editMode={editMode}
                         onDelete={deleteFromTodayFocus}
-                        onStatusPress={(assignment) => {
+                        onStatusPress={assignment => {
                             setSelectedAssignmentForStatus(assignment);
                             setShowStatusModal(true);
                         }}
                     />
 
-                    {/* week plans */}
+                    {/* Week Plans */}
                     <WeekPlanView
                         weekPlans={weekPlans}
                         assignments={assignments}
                         dayPlanAssignments={dayPlanAssignments}
                         editMode={editMode}
-                        onToggleCollapse={(id) => toggleWeekCollapse(id, weekPlans)}
-                        onRemoveWeekPlan={(id) => removeWeekPlan(id, weekPlans)}
+                        onToggleCollapse={id => toggleWeekCollapse(id, weekPlans)}
+                        onRemoveWeekPlan={id => removeWeekPlan(id, weekPlans)}
                         onDeleteFromWeekPlan={deleteFromWeekPlan}
                         onOpenAssignmentSheet={(date, label) => {
                             setSelectedDayForSheet({ date, label });
                             setShowAssignmentSheet(true);
                         }}
-                        onOpenStatusModal={(assignment) => {
+                        onOpenStatusModal={assignment => {
                             setSelectedAssignmentForStatus(assignment);
                             setShowStatusModal(true);
                         }}
-                        shouldArchiveWeek={(weekPlan) => checkArchiveWeek(weekPlan, assignments)}
+                        shouldArchiveWeek={weekPlan => checkArchiveWeek(weekPlan, assignments)}
                     />
 
                     {/* Assignment Tabs */}
@@ -240,7 +247,7 @@ export default function Assignments() {
                     />
                 </ScrollView>
 
-                {/* floating actions - renders both floating buttons and save buttons */}
+                {/* Floating Actions */}
                 <FloatingActions
                     showSaveButton={showSaveButton}
                     showMoreMenu={showMoreMenu}
@@ -261,7 +268,7 @@ export default function Assignments() {
                     onCloseMenu={() => setShowMoreMenu(false)}
                 />
 
-                {/* modals */}
+                {/* Modals */}
                 <StatusModal
                     visible={showStatusModal}
                     selectedAssignment={selectedAssignmentForStatus}
@@ -287,7 +294,9 @@ export default function Assignments() {
                     }}
                     dayLabel={selectedDayForSheet?.label || ''}
                     targetDate={selectedDayForSheet?.date || ''}
-                    availableAssignments={unplannedAssignments}
+                    unassignedAssignments={unassignedAssignments}
+                    assignedAssignments={assignedAssignments}
+                    remainingAssignments={remainingAssignments}
                     onAddAssignment={handleAddAssignmentToDay}
                 />
             </PageContainer>

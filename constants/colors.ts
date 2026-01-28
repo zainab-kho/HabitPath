@@ -33,7 +33,7 @@ export const PAGE = {
     background: ['#8f94fb', '#bec1ffff'],
     foreground: ['#F9F8FF'],
     border: ['#55d7b0ff'],
-    buttonColor: ['#ED8BE7'],
+    primary: ['#ED8BE7'],
   },
   focus: {
     backgroundMain: ['#EDE574', '#E1F5C4'],

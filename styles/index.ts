@@ -3,6 +3,7 @@
 
 export { buttonStyles } from './buttonStyles';
 export { globalStyles } from './globalStyles';
+export { journalStyle } from './journalStyles';
 export { layoutStyles } from './layoutStyles';
 export { uiStyles } from './uiStyles';
 
@@ -11,6 +12,5 @@ export { uiStyles } from './uiStyles';
 // **TODO: clean
 // export { habitCardStyles } from './habitCardStyles';
 // export { habitStyles } from './habitStyles';
-// export { journalStyle } from './journalStyles';
 // export { optionContainerStyles } from './optionContainerStyles';
 // export { ui } from './uiStyles';

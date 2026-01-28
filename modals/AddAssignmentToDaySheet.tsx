@@ -1,12 +1,12 @@
 // @/modals/AddAssignmentToDaySheet.tsx
+import { ASSIGNMENT_TYPE_COLORS, PROGRESS_COLORS } from '@/constants';
+import { BUTTON_COLORS, PAGE } from '@/constants/colors';
+import { globalStyles } from '@/styles';
+import ShadowBox from '@/ui/ShadowBox';
 import React, { useState } from 'react';
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 
-import { ASSIGNMENT_TYPE_COLORS, PROGRESS_COLORS } from '@/constants';
-import { BUTTON_COLORS, PAGE } from '@/constants/colors';
 import { AssignmentWithCourse } from '@/hooks/useAssignmentData';
-import { globalStyles } from '@/styles';
-import ShadowBox from '@/ui/ShadowBox';
 
 interface AddAssignmentToDaySheetProps {
     visible: boolean;

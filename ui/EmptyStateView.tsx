@@ -1,7 +1,8 @@
-import { COLORS } from '@/constants/colors';
-import { buttonStyles, globalStyles } from '@/styles';
+import { COLORS, PAGE } from '@/constants/colors';
+import { globalStyles } from '@/styles';
 import React from 'react';
 import { Image, ImageSourcePropType, Pressable, StyleProp, Text, View, ViewStyle } from 'react-native';
+import ShadowBox from './ShadowBox';
 
 interface EmptyStateViewProps {
     icon: ImageSourcePropType;
@@ -27,65 +28,58 @@ export default function EmptyStateView({
             flex: 1,
             justifyContent: 'center',
             alignItems: 'center',
-            marginBottom: 200,
         }, containerStyle]}>
-            <View style={{
+            <ShadowBox style={{
                 alignItems: 'center',
-                padding: 30,
-                backgroundColor: '#fff',
-                borderWidth: 1,
-                borderColor: '#000',
-                borderRadius: 20,
-                shadowColor: '#000',
-                shadowOffset: { width: 3, height: 3 },
-                shadowOpacity: 1,
-                shadowRadius: 0,
-                elevation: 5,
+                flex: 1,
             }}>
-                <Image
-                    source={icon}
-                    style={{
-                        width: 30,
-                        height: 30,
-                        tintColor: COLORS.Primary,
-                        marginBottom: 10,
-                    }}
-                />
+                <View style={{ paddingHorizontal: 75, paddingVertical: 30, justifyContent: 'center', alignItems: 'center' }}>
+                    <Image
+                        source={icon}
+                        style={{
+                            width: 30,
+                            height: 30,
+                            tintColor: COLORS.Primary,
+                            marginBottom: 10,
+                        }}
+                    />
 
-                <Text style={{
-                    textAlign: 'center',
-                    marginBottom: 10,
-                    color: '#000',
-                    fontFamily: 'p2',
-                    fontSize: 20,
-                }}>
-                    {title}
-                </Text>
-
-                {description && (
                     <Text style={{
                         textAlign: 'center',
-                        marginBottom: 10,
-                        color: 'rgba(0,0,0,0.6)',
-                        fontFamily: 'label',
-                        fontSize: 14,
+                        marginBottom: 5,
+                        color: '#000',
+                        fontFamily: 'p2',
+                        fontSize: 18,
                     }}>
-                        {description}
+                        {title}
                     </Text>
-                )}
 
-                {buttonText && buttonAction && (
-                    <Pressable
-                        onPress={buttonAction}
-                        style={[
-                            buttonStyles.button,
-                            {marginVertical: 10, backgroundColor: buttonColor ?? '#ffcb50' },
-                        ]}
-                    >
-                        <Text style={globalStyles.body}>{buttonText}</Text>
-                    </Pressable>
-                )}
-            </View>
-        </View>
+                    {description && (
+                        <Text style={{
+                            textAlign: 'center',
+                            marginBottom: 20,
+                            color: 'rgba(0,0,0,0.6)',
+                            fontFamily: 'label',
+                            fontSize: 14,
+                        }}>
+                            {description}
+                        </Text>
+                    )}
+
+                    {buttonText && buttonAction && (
+                        <ShadowBox contentBackgroundColor={buttonColor || PAGE.journal.primary[0]}>
+                            <Pressable
+                                onPress={buttonAction}
+                                style={[
+                                    { paddingVertical: 6, paddingHorizontal: 12, },
+                                ]}
+                            >
+                                <Text style={globalStyles.body}>{buttonText}</Text>
+                            </Pressable>
+                        </ShadowBox>
+                    )}
+                </View>
+            </ShadowBox >
+        </View >
     );
 }

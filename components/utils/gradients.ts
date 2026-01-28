@@ -3,27 +3,35 @@ export const getGradientForTime = (): [string, string, ...string[]] => {
   const hour = new Date().getHours();
   
   if (hour >= 5 && hour < 7)
-    return ['#eeb2b2', '#cc9999', '#e17e7e', '#ba6363', '#ff773e', '#db5858'];
+    return ['#e0c3fc', '#8ec5fc'];
 
   if (hour >= 7 && hour < 10)
-    return ['#fdeceb', '#f7bfbe', '#ef7c7a', '#bedaf7', '#6ca0dc'];
+    return ['#fdfbfb', '#fdfbfb', '#ffafbd'];
 
   if (hour >= 10 && hour < 12)
-    return ['#d7feff', '#d1eeff', '#b8dcfd', '#aac4fb', '#87aed8'];
+    return ['#fffafa', '#add8e6'];
 
+  // 12pm - 3pm
   if (hour >= 12 && hour < 15)
-    return ['#b0cdef', '#f6fafd', '#d3e4f8', '#25496b', '#5e789d'];
+    return ['#a1c4fd', '#c2e9fb'];
 
+  // 3pm - 4pm
   if (hour >= 15 && hour < 16)
-    return ['#5e789d', '#759eb8', '#A58FD2'];
+    return ['#6495ed', '#7c9ec3'];
 
+  // 4pm - 5pm
   if (hour >= 16 && hour < 17)
-    return ['#4a7c99', '#bdbdca', '#f5bdaa', '#ED6A5A', '#ff773e', '#235a5a'];
+    return ['#E55D87', '#5FC3E4'];
 
-  if (hour >= 17 && hour < 21)
-    return ['#f06261', '#a958a5', '#613e97'];
+  // 6pm - 9pm
+  if (hour >= 18 && hour < 21)
+    return ['#fffbd5', '#b20a2c'];
 
-  // night (9pm to 5am)
+  // 9pm - 12am
+  if (hour >= 21 && hour < 24)
+        return ['#a8c0ff', '#3f2b96'];
+
+  // 12am - 5am
   return [
     '#7F5A83', 
     '#0D324D', 

@@ -36,20 +36,20 @@ export function useAssignmentData(userId?: string) {
         }
 
         try {
-            // Parallel loading for better performance
+            // parallel loading for better performance
             const [coursesRes, assignmentsRes, weekPlansRes, dayPlansRes] = await Promise.all([
                 supabase.from('courses').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
-                // Order assignments by creation time (oldest first, newest at bottom)
+                // order assignments by creation time (oldest first, newest at bottom)
                 supabase.from('assignments').select('*').eq('user_id', userId).order('created_at', { ascending: true }),
                 supabase.from('week_plans').select('*').eq('user_id', userId).order('week_start', { ascending: true }),
-                // Order day plan assignments by creation time (order they were added)
+                // order day plan assignments by creation time (order they were added)
                 supabase.from('day_plan_assignments').select('*').eq('user_id', userId).order('created_at', { ascending: true })
             ]);
 
             if (coursesRes.error) {
                 console.error('Error loading courses:', coursesRes.error);
             } else {
-                // Assign colors to courses that don't have one
+                // assign colors to courses that don't have one
                 const coursesWithColors: CourseWithColor[] = (coursesRes.data || []).map((course) => {
                     if (!course.color) {
                         const uncoloredIndex = (coursesRes.data || [])

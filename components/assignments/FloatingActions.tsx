@@ -5,6 +5,7 @@ import { BUTTON_COLORS, PAGE } from '@/constants/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import { globalStyles } from '@/styles';
 import ShadowBox from '@/ui/ShadowBox';
+import { router } from 'expo-router';
 
 interface FloatingActionsProps {
     showSaveButton: boolean;
@@ -77,7 +78,13 @@ export function FloatingActions({
 
                         <Pressable onPress={onAddWeek}>
                             <View style={{ padding: 5, borderBottomWidth: 1 }}>
-                                <Text style={globalStyles.body}>New Week</Text>
+                                <Text style={globalStyles.body}>Add New Week</Text>
+                            </View>
+                        </Pressable>
+
+                        <Pressable onPress={() => router.push('/assignments/AllAssignments')}>
+                            <View style={{ padding: 5, borderBottomWidth: 1 }}>
+                                <Text style={globalStyles.body}>All Assignments</Text>
                             </View>
                         </Pressable>
 
@@ -86,6 +93,7 @@ export function FloatingActions({
                                 <Text style={globalStyles.body}>Edit</Text>
                             </View>
                         </Pressable>
+
                     </Pressable>
                 </Pressable>
             )}

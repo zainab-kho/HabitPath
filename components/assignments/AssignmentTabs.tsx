@@ -5,7 +5,6 @@ import { Dimensions, Pressable, ScrollView, StyleSheet, Text, View } from 'react
 
 import { PAGE } from '@/constants/colors';
 import { globalStyles } from '@/styles';
-import ShadowBox from '@/ui/ShadowBox';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const TAB_WIDTH = SCREEN_WIDTH - 40;
@@ -41,13 +40,13 @@ export default function AssignmentTabs({
     const tabs = [
         { key: 'due', label: 'Due', assignments: dueAssignments },
         { key: 'thisWeek', label: 'This Week', assignments: thisWeekAssignments },
-        { key: 'upcoming', label: 'Upcoming', assignments: upcomingAssignments },
+        // { key: 'upcoming', label: 'Upcoming', assignments: upcomingAssignments },
     ];
 
     // handle tab press - use local ref as fallback
-    const handleTabPress = (tab: 'due' | 'thisWeek' | 'upcoming') => {
+    const handleTabPress = (tab: 'due' | 'thisWeek') => {
         onTabChange(tab);
-        const tabIndex = tab === 'due' ? 0 : tab === 'thisWeek' ? 1 : 2;
+        const tabIndex = tab === 'due' ? 0 : 1;
 
         setTimeout(() => {
             const ref = scrollViewRef?.current || localScrollRef?.current;
@@ -58,7 +57,7 @@ export default function AssignmentTabs({
     };
 
     return (
-        <View style={[styles.container, { marginBottom: 15}]}>
+        <View style={[styles.container, { marginBottom: 15 }]}>
             {/* tab buttons */}
             <View style={styles.tabButtons}>
                 {tabs.map(tab => (
@@ -89,7 +88,7 @@ export default function AssignmentTabs({
                 onMomentumScrollEnd={(e) => {
                     const offsetX = e.nativeEvent.contentOffset.x;
                     const index = Math.round(offsetX / TAB_WIDTH);
-                    const newTab = tabs[index]?.key as 'due' | 'thisWeek' | 'upcoming';
+                    const newTab = tabs[index]?.key as 'due' | 'thisWeek';
                     if (newTab) {
                         onTabChange(newTab);
                     }
@@ -99,6 +98,7 @@ export default function AssignmentTabs({
                 {tabs.map((tab, index) => (
                     <View key={index} style={{ width: TAB_WIDTH }}>
                         <View style={{
+                            paddingBottom: 15,
                             paddingHorizontal: 5,
                             gap: 15,
                         }}
@@ -121,17 +121,6 @@ export default function AssignmentTabs({
                                         () => onDeleteAssignment(assignment.id!)
                                     )
                                 )
-                            )}
-
-                            {index === 2 && tab.assignments.length > 0 && (
-                                <ShadowBox>
-                                    <Pressable
-                                        style={{ paddingVertical: 7, alignItems: 'center' }}
-                                        onPress={() => router.push('/assignments/AllAssignments')}
-                                    >
-                                        <Text style={globalStyles.body}>View All Assignments</Text>
-                                    </Pressable>
-                                </ShadowBox>
                             )}
                         </View>
                     </View>

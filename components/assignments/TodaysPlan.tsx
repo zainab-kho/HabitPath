@@ -1,74 +1,109 @@
-// @/components/assignments/TodaysPlan.tsx
-import { getTodayWeekday } from '@/components/utils/dateUtils';
-import { PROGRESS_COLORS } from '@/constants/';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { useEffect, useState } from 'react';
+import { Pressable, Text, View } from 'react-native';
+
+import { formatLocalDate, getTodayWeekday } from '@/components/utils/dateUtils';
+import { PROGRESS_COLORS } from '@/constants';
 import { BUTTON_COLORS, PAGE } from '@/constants/colors';
-import { SYSTEM_ICONS } from '@/constants/icons';
 import { AssignmentWithCourse } from '@/hooks/useAssignmentData';
 import { globalStyles } from '@/styles';
-import React from 'react';
-import { Image, Pressable, Text, View } from 'react-native';
 
 interface TodaysPlanProps {
-    assignments: AssignmentWithCourse[];
-    editMode: boolean;
-    onDelete: (assignmentId: string) => void;
-    onStatusPress: (assignment: AssignmentWithCourse) => void;
+  assignments: AssignmentWithCourse[];
+  editMode: boolean;
+  onDelete: (assignmentId: string) => void;
+  onStatusPress: (assignment: AssignmentWithCourse) => void;
 }
 
 export function TodaysPlan({ assignments, editMode, onDelete, onStatusPress }: TodaysPlanProps) {
-    if (assignments.length === 0) return null;
+  const today = formatLocalDate(new Date());
 
-    return (
-        <View style={{
-            borderWidth: 1,
-            borderRadius: 20,
-            backgroundColor: PAGE.assignments.backgroundAssignment[1],
-            marginBottom: 20,
-            overflow: 'hidden',
-        }}>
-            <View style={{ margin: 7, alignItems: 'center' }}>
-                <Text style={globalStyles.h4}>{getTodayWeekday()}</Text>
-            </View>
+  const [completedAssignments, setCompletedAssignments] = useState<Record<string, boolean>>({});
 
-            {assignments.map(assignment => (
-                <View key={assignment.id} style={{ backgroundColor: '#fff', position: 'relative' }}>
-                    <View style={{ padding: 10, gap: 10, flexDirection: 'column', borderTopWidth: 1 }}>
-                        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                            <Text style={[globalStyles.body, { paddingVertical: 2 }]}>
-                                {assignment.name}
-                            </Text>
+  // load from AsyncStorage on mount
+  useEffect(() => {
+    const loadCompleted = async () => {
+      try {
+        const json = await AsyncStorage.getItem(`completedAssignments-${today}`);
+        if (json) {
+          setCompletedAssignments(JSON.parse(json));
+        }
+      } catch (err) {
+        console.warn('Failed to load completed assignments', err);
+      }
+    };
+    loadCompleted();
+  }, [today]);
 
-                            <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'flex-end' }}>
-                                <Pressable onPress={() => onStatusPress(assignment)}>
-                                    <View style={[globalStyles.bubbleLabel, { backgroundColor: PROGRESS_COLORS[assignment.progress] }]}>
-                                        <Text style={globalStyles.label}>{assignment.progress}</Text>
-                                    </View>
-                                </Pressable>
+  // toggle and save
+  const toggleCompleted = async (assignmentId: string) => {
+    const updated = { ...completedAssignments, [assignmentId]: !completedAssignments[assignmentId] };
+    setCompletedAssignments(updated);
+    try {
+      await AsyncStorage.setItem(`completedAssignments-${today}`, JSON.stringify(updated));
+    } catch (err) {
+      console.warn('Failed to save completed assignment', err);
+    }
+  };
 
-                                {editMode && (
-                                    <Pressable
-                                        onPress={() => onDelete(assignment.id!)}
-                                        style={{
-                                            backgroundColor: BUTTON_COLORS.Done,
-                                            borderWidth: 1,
-                                            borderRadius: 12,
-                                            width: 25,
-                                            height: 25,
-                                            justifyContent: 'center',
-                                            alignItems: 'center',
-                                        }}
-                                    >
-                                        <Image
-                                            source={SYSTEM_ICONS.delete}
-                                            style={{ width: 12, height: 12 }}
-                                        />
-                                    </Pressable>
-                                )}
-                            </View>
-                        </View>
+  if (assignments.length === 0) return null;
+
+  return (
+    <View style={{
+      borderWidth: 1,
+      borderRadius: 20,
+      backgroundColor: PAGE.assignments.backgroundAssignment[1],
+      marginBottom: 20,
+      overflow: 'hidden',
+    }}>
+      <View style={{ margin: 7, alignItems: 'center' }}>
+        <Text style={globalStyles.h4}>{getTodayWeekday()}</Text>
+      </View>
+
+      {assignments.map(a => {
+        const isCompleted = completedAssignments[a.id!];
+        return (
+          <View key={a.id} style={{ backgroundColor: '#fff', position: 'relative' }}>
+            <View style={{ padding: 10, gap: 10, flexDirection: 'column', borderTopWidth: 1 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Pressable onPress={() => toggleCompleted(a.id!)}>
+                  <Text style={[
+                    globalStyles.body,
+                    { paddingVertical: 2, textDecorationLine: isCompleted ? 'line-through' : 'none', opacity: isCompleted ? 0.4 : 1 }
+                  ]}>
+                    {a.name}
+                  </Text>
+                </Pressable>
+
+                <View style={{ flexDirection: 'row', gap: 10, justifyContent: 'flex-end' }}>
+                  <Pressable onPress={() => onStatusPress(a)}>
+                    <View style={[globalStyles.bubbleLabel, { backgroundColor: PROGRESS_COLORS[a.progress] }]}>
+                      <Text style={globalStyles.label}>{a.progress}</Text>
                     </View>
+                  </Pressable>
+
+                  {editMode && (
+                    <Pressable
+                      onPress={() => onDelete(a.id!)}
+                      style={{
+                        backgroundColor: BUTTON_COLORS.Done,
+                        borderWidth: 1,
+                        borderRadius: 12,
+                        width: 25,
+                        height: 25,
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <Text style={{ fontSize: 12 }}>🗑️</Text>
+                    </Pressable>
+                  )}
                 </View>
-            ))}
-        </View>
-    );
+              </View>
+            </View>
+          </View>
+        );
+      })}
+    </View>
+  );
 }

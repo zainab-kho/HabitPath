@@ -1,6 +1,6 @@
 // @/components/assignments/AssignmentTabs.tsx
 import { useRouter } from 'expo-router';
-import React, { JSX, RefObject } from 'react';
+import React, { JSX, RefObject, useRef } from 'react';
 import { Dimensions, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { PAGE } from '@/constants/colors';
@@ -16,6 +16,7 @@ interface AssignmentTabsProps {
     dueAssignments: any[];
     thisWeekAssignments: any[];
     upcomingAssignments: any[];
+    todayAssignments: boolean;
     renderAssignmentCard: (assignment: any, editMode: boolean, onDelete: () => void) => JSX.Element;
     editMode: boolean;
     onDeleteAssignment: (assignmentId: string) => void;
@@ -28,22 +29,27 @@ export default function AssignmentTabs({
     dueAssignments,
     thisWeekAssignments,
     upcomingAssignments,
+    todayAssignments,
     renderAssignmentCard,
     editMode,
     onDeleteAssignment,
     scrollViewRef
 }: AssignmentTabsProps) {
     const router = useRouter();
+    const localScrollRef = useRef<ScrollView>(null);
 
-    // handle tab press
+    // Handle tab press - use local ref as fallback
     const handleTabPress = (tab: 'due' | 'thisWeek' | 'upcoming') => {
         onTabChange(tab);
         const tabIndex = tab === 'due' ? 0 : tab === 'thisWeek' ? 1 : 2;
-        
-        // use setTimeout to ensure state update happens first
+
         setTimeout(() => {
-            scrollViewRef.current?.scrollTo({ x: tabIndex * TAB_WIDTH, animated: true });
-        }, 0);
+            // Try both refs - use whichever one exists
+            const ref = scrollViewRef?.current || localScrollRef?.current;
+            if (ref) {
+                ref.scrollTo({ x: tabIndex * TAB_WIDTH, animated: true });
+            }
+        }, 10); // Slightly longer delay for reliability
     };
 
     const tabs = [
@@ -53,7 +59,7 @@ export default function AssignmentTabs({
     ];
 
     return (
-        <View style={styles.container}>
+        <View style={[styles.container, { height: todayAssignments ? 400 : 600 }]}>
             {/* tab buttons */}
             <View style={styles.tabButtons}>
                 {tabs.map(tab => (
@@ -71,7 +77,12 @@ export default function AssignmentTabs({
 
             {/* horizontal scrollview */}
             <ScrollView
-                ref={scrollViewRef}
+                ref={(ref) => {
+                    localScrollRef.current = ref;
+                    if (scrollViewRef) {
+                        scrollViewRef.current = ref;
+                    }
+                }}
                 horizontal
                 pagingEnabled
                 showsHorizontalScrollIndicator={false}
@@ -134,7 +145,6 @@ export default function AssignmentTabs({
 const styles = StyleSheet.create({
     container: {
         marginBottom: 20,
-        height: 400,
         backgroundColor: PAGE.assignments.background[0],
         borderRadius: 20,
         overflow: 'hidden',

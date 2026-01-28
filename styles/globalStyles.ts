@@ -28,6 +28,11 @@ export const globalStyles = StyleSheet.create({
         fontSize: 15,
         fontFamily: 'p2',
     },
+    body1: {
+        color: 'black',
+        fontSize: 14,
+        fontFamily: 'p2',
+    },
     body2: {
         color: '#000',
         fontSize: 15,

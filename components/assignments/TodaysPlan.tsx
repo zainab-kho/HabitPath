@@ -49,7 +49,7 @@ export function TodaysPlan({ assignments, editMode, onDelete, onStatusPress }: T
                                     <Pressable
                                         onPress={() => onDelete(assignment.id!)}
                                         style={{
-                                            backgroundColor: BUTTON_COLORS.Delete,
+                                            backgroundColor: BUTTON_COLORS.Done,
                                             borderWidth: 1,
                                             borderRadius: 12,
                                             width: 25,

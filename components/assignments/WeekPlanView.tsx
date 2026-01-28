@@ -174,7 +174,7 @@ const WeekPlanView: React.FC<WeekPlanViewProps> = ({
                         onPress={() => onOpenStatusModal(assignment)}
                       >
                         <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                          <Text style={[globalStyles.body, { paddingVertical: 2 }]}>
+                          <Text style={[globalStyles.body, { paddingVertical: 2, maxWidth: 170, overflow: 'hidden' }]}>
                             {assignment.name}
                           </Text>
 

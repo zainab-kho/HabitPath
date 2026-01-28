@@ -38,28 +38,27 @@ export default function AssignmentTabs({
     const router = useRouter();
     const localScrollRef = useRef<ScrollView>(null);
 
-    // Handle tab press - use local ref as fallback
-    const handleTabPress = (tab: 'due' | 'thisWeek' | 'upcoming') => {
-        onTabChange(tab);
-        const tabIndex = tab === 'due' ? 0 : tab === 'thisWeek' ? 1 : 2;
-
-        setTimeout(() => {
-            // Try both refs - use whichever one exists
-            const ref = scrollViewRef?.current || localScrollRef?.current;
-            if (ref) {
-                ref.scrollTo({ x: tabIndex * TAB_WIDTH, animated: true });
-            }
-        }, 10); // Slightly longer delay for reliability
-    };
-
     const tabs = [
         { key: 'due', label: 'Due', assignments: dueAssignments },
         { key: 'thisWeek', label: 'This Week', assignments: thisWeekAssignments },
         { key: 'upcoming', label: 'Upcoming', assignments: upcomingAssignments },
     ];
 
+    // handle tab press - use local ref as fallback
+    const handleTabPress = (tab: 'due' | 'thisWeek' | 'upcoming') => {
+        onTabChange(tab);
+        const tabIndex = tab === 'due' ? 0 : tab === 'thisWeek' ? 1 : 2;
+
+        setTimeout(() => {
+            const ref = scrollViewRef?.current || localScrollRef?.current;
+            if (ref) {
+                ref.scrollTo({ x: tabIndex * TAB_WIDTH, animated: true });
+            }
+        }, 10);
+    };
+
     return (
-        <View style={[styles.container, { height: todayAssignments ? 400 : 600 }]}>
+        <View style={[styles.container, { marginBottom: 15}]}>
             {/* tab buttons */}
             <View style={styles.tabButtons}>
                 {tabs.map(tab => (
@@ -99,10 +98,10 @@ export default function AssignmentTabs({
             >
                 {tabs.map((tab, index) => (
                     <View key={index} style={{ width: TAB_WIDTH }}>
-                        <ScrollView
-                            showsVerticalScrollIndicator={false}
-                            contentContainerStyle={styles.verticalScrollContent}
-                            nestedScrollEnabled
+                        <View style={{
+                            paddingHorizontal: 5,
+                            gap: 15,
+                        }}
                         >
                             {tab.assignments.length === 0 ? (
                                 <View style={{ paddingTop: 20, alignItems: 'center', opacity: 0.4 }}>
@@ -134,7 +133,7 @@ export default function AssignmentTabs({
                                     </Pressable>
                                 </ShadowBox>
                             )}
-                        </ScrollView>
+                        </View>
                     </View>
                 ))}
             </ScrollView>
@@ -167,11 +166,5 @@ const styles = StyleSheet.create({
 
     horizontalScroll: {
         flex: 1,
-    },
-
-    verticalScrollContent: {
-        paddingBottom: 20,
-        paddingHorizontal: 5,
-        gap: 15,
     },
 });

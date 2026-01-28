@@ -1,5 +1,5 @@
 // @/components/assignments/AssignmentCard.tsx
-import { parseLocalDate } from '@/components/utils/dateUtils';
+import { formatDueDateTimeDisplay } from '@/components/utils/dateUtils';
 import { ASSIGNMENT_TYPE_COLORS, PROGRESS_COLORS } from '@/constants/';
 import { BUTTON_COLORS } from '@/constants/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
@@ -15,31 +15,6 @@ interface AssignmentCardProps {
     onDelete?: () => void;
     onStatusPress?: () => void;
 }
-
-const formatDueDateTime = (date?: string, time?: string) => {
-    if (!date) return '';
-
-    const d = parseLocalDate(date);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    const dateOnly = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-    const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const tomorrowOnly = new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate());
-
-    let dateStr = '';
-    if (dateOnly.getTime() === todayOnly.getTime()) {
-        dateStr = 'Today';
-    } else if (dateOnly.getTime() === tomorrowOnly.getTime()) {
-        dateStr = 'Tomorrow';
-    } else {
-        dateStr = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-    }
-
-    return time ? `${dateStr} ${time}` : dateStr;
-};
 
 export function AssignmentCard({ assignment, showDelete = false, onDelete, onStatusPress }: AssignmentCardProps) {
     return (
@@ -112,7 +87,7 @@ export function AssignmentCard({ assignment, showDelete = false, onDelete, onSta
                         {assignment.due_date && (
                             <View style={[globalStyles.bubbleLabel, { paddingVertical: 5, backgroundColor: '#fff' }]}>
                                 <Text style={globalStyles.label}>
-                                    {formatDueDateTime(assignment.due_date, assignment.due_time || undefined)}
+                                    {formatDueDateTimeDisplay(assignment.due_date, assignment.due_time || undefined)}
                                 </Text>
                             </View>
                         )}

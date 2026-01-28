@@ -52,14 +52,29 @@ const WeekPlanView: React.FC<WeekPlanViewProps> = ({
   onOpenStatusModal,
   shouldArchiveWeek,
 }) => {
-  // get assignments for a specific day
+  // get assignments for a specific day, sorted by when they were added to the plan
   const getAssignmentsForDay = (date: Date) => {
     const dateString = formatLocalDate(date);
-    const assignmentIdsForDay = dayPlanAssignments
-      .filter(dpa => dpa.planned_date === dateString)
-      .map(dpa => dpa.assignment_id);
+    
+    // get all day plan assignments for this date
+    const dayPlanForDate = dayPlanAssignments
+      .filter(dpa => dpa.planned_date === dateString);
 
-    return assignments.filter(a => assignmentIdsForDay.includes(a.id!));
+    // sort by created_at if available (cast to any to handle optional field)
+    const sortedPlans = [...dayPlanForDate].sort((a, b) => {
+      const aCreatedAt = (a as any).created_at;
+      const bCreatedAt = (b as any).created_at;
+      
+      if (!aCreatedAt && !bCreatedAt) return 0;
+      if (!aCreatedAt) return 1;
+      if (!bCreatedAt) return -1;
+      return aCreatedAt < bCreatedAt ? -1 : 1;
+    });
+
+    // map to assignments while maintaining order
+    return sortedPlans
+      .map(dpa => assignments.find(a => a.id === dpa.assignment_id))
+      .filter((a): a is AssignmentWithCourse => a !== undefined);
   };
 
   // map day names to their indices

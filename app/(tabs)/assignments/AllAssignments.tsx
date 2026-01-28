@@ -23,11 +23,10 @@ import { PAGE } from '@/constants/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import { AssignmentWithCourse } from '@/hooks/useAssignmentData';
 import { globalStyles } from '@/styles';
+import { sortByDueDate } from '@/utils/assignmentFilters';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const TAB_WIDTH = SCREEN_WIDTH - 40;
-
-// **TODO: order assignments by due date
 
 export default function AllAssignments() {
     const { user } = useAuth();
@@ -46,9 +45,13 @@ export default function AllAssignments() {
     const [selectedAssignment, setSelectedAssignment] = useState<AssignmentWithCourse | null>(null);
     const [showEditModal, setShowEditModal] = useState(false);
 
-    // filter assignments
-    const upcomingAssignments = assignments.filter(a => a.progress !== 'Done');
-    const pastAssignments = assignments.filter(a => a.progress === 'Done');
+    // filter and sort assignments
+    const upcomingAssignments = sortByDueDate(
+        assignments.filter(a => a.progress !== 'Done')
+    );
+    const pastAssignments = sortByDueDate(
+        assignments.filter(a => a.progress === 'Done')
+    );
 
     const handleTabPress = (tab: 'upcoming' | 'past') => {
         setActiveTab(tab);
@@ -170,7 +173,7 @@ export default function AllAssignments() {
                             </ScrollView>
                         </View>
 
-                        {/* past Section */}
+                        {/* past section */}
                         <View style={{ width: TAB_WIDTH }}>
                             <ScrollView
                                 showsVerticalScrollIndicator={false}

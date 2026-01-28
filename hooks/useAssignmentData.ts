@@ -17,9 +17,11 @@ export type WeekPlan = {
 };
 
 export type DayPlanAssignment = {
-    id: string;
-    assignment_id: string;
-    planned_date: string;
+  id: string;
+  assignment_id: string;
+  planned_date: string;
+  created_at: string; 
+  user_id?: string;
 };
 
 export function useAssignmentData(userId?: string) {
@@ -42,8 +44,11 @@ export function useAssignmentData(userId?: string) {
                 // order assignments by creation time (oldest first, newest at bottom)
                 supabase.from('assignments').select('*').eq('user_id', userId).order('created_at', { ascending: true }),
                 supabase.from('week_plans').select('*').eq('user_id', userId).order('week_start', { ascending: true }),
-                // order day plan assignments by creation time (order they were added)
-                supabase.from('day_plan_assignments').select('*').eq('user_id', userId).order('created_at', { ascending: true })
+                // order day plan assignments by creation time (order they were added) and include created_at
+                supabase.from('day_plan_assignments')
+                    .select('id, assignment_id, planned_date, created_at, user_id')
+                    .eq('user_id', userId)
+                    .order('created_at', { ascending: true })
             ]);
 
             if (coursesRes.error) {

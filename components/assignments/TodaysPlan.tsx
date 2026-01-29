@@ -68,14 +68,13 @@ export function TodaysPlan({ assignments, editMode, onDelete, onStatusPress }: T
         const courseColor = a.course?.color || PAGE.assignments.backgroundAssignment[1];
 
         return (
-          <View key={a.id} style={{ backgroundColor: courseColor }}>
+          <View key={a.id} style={{ backgroundColor: isCompleted ? '#fff' : courseColor }}>
             <View
               style={{
                 padding: 10,
                 gap: 10,
                 flexDirection: 'column',
                 borderTopWidth: 1,
-                borderTopColor: 'rgba(0,0,0,0.1)'
               }}
             >
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>

@@ -1,7 +1,7 @@
 // @/hooks/useAssignmentActions.ts
-import { formatLocalDate } from '@/components/utils/dateUtils';
 import { AssignmentWithCourse, DayPlanAssignment, WeekPlan } from '@/hooks/useAssignmentData';
 import { supabase } from '@/lib/supabase';
+import { formatLocalDate } from '@/utils/dateUtils';
 import { useState } from 'react';
 import { Alert } from 'react-native';
 

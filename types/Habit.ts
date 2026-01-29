@@ -9,7 +9,6 @@ export interface Habit {
   id: string;
   name: string;
   icon: string;
-  iconFile: string;
 
   frequency: string;
   selectedDays?: string[];

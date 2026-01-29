@@ -1,6 +1,6 @@
 // app/(tabs)/_layout.tsx
-import { getGradientForTime } from '@/components/utils/gradients';
 import { BottomNav } from '@/navigation/BottomNav';
+import { getGradientForTime } from '@/utils/gradients';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack } from 'expo-router';
 import { View } from 'react-native';

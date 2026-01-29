@@ -1,32 +1,9 @@
 // @/utils/assignmentFilters.ts
-import {
-  addDaysLocal,
-  compareDateStrings,
-  formatLocalDate,
-  getTodayLocal
-} from '@/components/utils/dateUtils';
 import { AssignmentWithCourse, DayPlanAssignment, WeekPlan } from '@/hooks/useAssignmentData';
-
-/**
- * sorts assignments by due date (oldest first), with no due date at the end
- */
-export const sortByDueDate = <T extends { due_date?: string | null }>(
-  assignments: T[]
-): T[] => {
-  return [...assignments].sort((a, b) => {
-    // Assignments without due dates go to the end
-    if (!a.due_date && !b.due_date) return 0;
-    if (!a.due_date) return 1;
-    if (!b.due_date) return -1;
-    
-    // Sort by due date (oldest first)
-    return compareDateStrings(a.due_date, b.due_date);
-  });
-};
+import { addDaysLocal, formatLocalDate, getTodayLocal } from '@/utils/dateUtils';
 
 /**
  * get assignments planned for today
- * sorted by the order they were added to the day plan (created_at if available)
  */
 export function getTodayAssignments(
   assignments: AssignmentWithCourse[],
@@ -34,25 +11,13 @@ export function getTodayAssignments(
 ) {
   const today = getTodayLocal();
 
-  const todayPlans = dayPlanAssignments.filter(dpa => dpa.planned_date === today);
-  
-  // Sort by created_at if available, otherwise maintain original order
-  const sortedPlans = [...todayPlans].sort((a, b) => {
-    const aCreatedAt = (a as any).created_at;
-    const bCreatedAt = (b as any).created_at;
-    
-    if (!aCreatedAt && !bCreatedAt) return 0;
-    if (!aCreatedAt) return 1;
-    if (!bCreatedAt) return -1;
-    return aCreatedAt < bCreatedAt ? -1 : 1;
-  });
+  const assignmentIdsForToday = dayPlanAssignments
+    .filter(dpa => dpa.planned_date === today)
+    .map(dpa => dpa.assignment_id);
 
-  const assignmentIdsForToday = sortedPlans.map(dpa => dpa.assignment_id);
-
-  // maintain the order from dayPlanAssignments
-  return assignmentIdsForToday
-    .map(id => assignments.find(a => a.id === id))
-    .filter((a): a is AssignmentWithCourse => a !== undefined && a.progress !== 'Done');
+  return assignments.filter(
+    a => assignmentIdsForToday.includes(a.id!) && a.progress !== 'Done'
+  );
 }
 
 /**
@@ -61,11 +26,9 @@ export function getTodayAssignments(
 export function getDueAssignments(assignments: AssignmentWithCourse[]) {
   const dueCutoff = addDaysLocal(2);
 
-  const dueAssignments = assignments.filter(
+  return assignments.filter(
     a => a.due_date && a.progress !== 'Done' && a.due_date <= dueCutoff
   );
-
-  return sortByDueDate(dueAssignments);
 }
 
 /**
@@ -75,11 +38,9 @@ export function getThisWeekAssignments(assignments: AssignmentWithCourse[]) {
   const dueCutoff = addDaysLocal(2);
   const weekCutoff = addDaysLocal(7);
 
-  const thisWeekAssignments = assignments.filter(
+  return assignments.filter(
     a => a.due_date && a.progress !== 'Done' && a.due_date > dueCutoff && a.due_date <= weekCutoff
   );
-
-  return sortByDueDate(thisWeekAssignments);
 }
 
 /**
@@ -88,11 +49,9 @@ export function getThisWeekAssignments(assignments: AssignmentWithCourse[]) {
 export function getUpcomingAssignments(assignments: AssignmentWithCourse[]) {
   const weekCutoff = addDaysLocal(7);
 
-  const upcomingAssignments = assignments.filter(
+  return assignments.filter(
     a => a.due_date && a.progress !== 'Done' && a.due_date > weekCutoff
   );
-
-  return sortByDueDate(upcomingAssignments);
 }
 
 /**
@@ -103,9 +62,7 @@ export function getUnplannedAssignments(
   dayPlanAssignments: DayPlanAssignment[]
 ) {
   const plannedAssignmentIds = new Set(dayPlanAssignments.map(dpa => dpa.assignment_id));
-  const unplannedAssignments = assignments.filter(a => !plannedAssignmentIds.has(a.id!));
-  
-  return sortByDueDate(unplannedAssignments);
+  return assignments.filter(a => !plannedAssignmentIds.has(a.id!));
 }
 
 /**
@@ -118,10 +75,9 @@ export function getUnassignedAssignments(
   const plannedAssignmentIds = new Set(dayPlanAssignments.map(dpa => dpa.assignment_id));
   const weekCutoff = addDaysLocal(7);
 
-  const unassignedAssignments = assignments
-    .filter(a => a.id && a.due_date && a.progress !== 'Done' && !plannedAssignmentIds.has(a.id!) && a.due_date <= weekCutoff);
-    
-  return sortByDueDate(unassignedAssignments);
+  return assignments
+    .filter(a => a.id && a.due_date && a.progress !== 'Done' && !plannedAssignmentIds.has(a.id!) && a.due_date <= weekCutoff)
+    .sort((a, b) => new Date(a.due_date!).getTime() - new Date(b.due_date!).getTime());
 }
 
 /**
@@ -135,14 +91,17 @@ export function getAssignedAssignments(
   const plannedAssignmentIds = new Set(dayPlanAssignments.map(dpa => dpa.assignment_id));
 
   const allAssigned = assignments
-    .filter(a => a.id && a.progress !== 'Done' && plannedAssignmentIds.has(a.id!));
-
-  const sorted = sortByDueDate(allAssigned);
+    .filter(a => a.id && a.progress !== 'Done' && plannedAssignmentIds.has(a.id!))
+    .sort((a, b) => {
+      if (!a.due_date) return 1;
+      if (!b.due_date) return -1;
+      return new Date(a.due_date).getTime() - new Date(b.due_date).getTime();
+    });
 
   return {
-    items: sorted.slice(0, itemsToShow),
-    totalCount: sorted.length,
-    hasMore: sorted.length > itemsToShow
+    items: allAssigned.slice(0, itemsToShow),
+    totalCount: allAssigned.length,
+    hasMore: allAssigned.length > itemsToShow
   };
 }
 
@@ -158,7 +117,7 @@ export function getAvailableAssignmentsForDayPlan(
   const twoDays = addDaysLocal(2);
   const weekCutoff = addDaysLocal(7);
 
-  const availableAssignments = assignments.filter(a => {
+  return assignments.filter(a => {
     if (!a.id) return false;
     if (a.progress === 'Done') return false;
 
@@ -171,8 +130,6 @@ export function getAvailableAssignmentsForDayPlan(
     // Not started / In progress always show
     return true;
   });
-
-  return sortByDueDate(availableAssignments);
 }
 
 /**

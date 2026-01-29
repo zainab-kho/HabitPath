@@ -2,11 +2,11 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 
-import { formatLocalDate, getTodayWeekday } from '@/components/utils/dateUtils';
 import { PROGRESS_COLORS } from '@/constants';
 import { BUTTON_COLORS, PAGE } from '@/constants/colors';
 import { AssignmentWithCourse } from '@/hooks/useAssignmentData';
 import { globalStyles } from '@/styles';
+import { formatLocalDate, getTodayWeekday } from '@/utils/dateUtils';
 
 interface TodaysPlanProps {
   assignments: AssignmentWithCourse[];

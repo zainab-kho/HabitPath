@@ -1,164 +1,182 @@
-// @/app/(tabs)/habits/index
-import { formatDateHeader } from '@/components/utils/date';
-import { getGradientForTime } from '@/components/utils/gradients';
+// @/app/(tabs)/habits/index.tsx
+import HabitsList from '@/components/habits/HabitsList';
+import ProgressBar from '@/components/habits/ProgressBar';
 import { COLORS } from '@/constants/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import { useAuth } from '@/contexts/AuthContext';
-import NewHabitModal from '@/modals/NewHabit';
+import { useHabits } from '@/hooks/useHabits';
 import { globalStyles } from '@/styles';
 import PageContainer from '@/ui/PageContainer';
 import PageHeader from '@/ui/PageHeader';
-import { useIsFocused } from '@react-navigation/native';
+import {
+    formatDateHeader,
+    getCurrentHabitDay,
+    isToday,
+    navigateDate as navigateDateUtil
+} from '@/utils/dateUtils';
+import { getGradientForTime } from '@/utils/gradients';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRef, useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
-
-// **TODO: add linear gradient times (updated)
+import { useState } from 'react';
+import { Image, Pressable, Text, View } from 'react-native';
 
 export default function HabitsPage() {
-    const { signOut } = useAuth()
-    const isFocused = useIsFocused();
-    const viewingDateRef = useRef<Date | null>(null);
+  const { user } = useAuth();
+  const [viewingDate, setViewingDate] = useState<Date>(getCurrentHabitDay());
 
-    // ============================================================================
-    // STATE
-    // ============================================================================
-    const [habits, setHabits] = useState();
-    const [viewingDate, setViewingDate] = useState<Date | null>(null);
-    const [showNewHabitModal, setShowNewHabitModal] = useState(false);
+  // Use the habits hook to get all data
+  const {
+    habits,
+    loading,
+    resetTime,
+    appStreak,
+    totalPoints,
+    earnedPoints,
+    toggleHabit,
+  } = useHabits(viewingDate);
 
+  // Night mode detection (for text color)
+  const currentHour = new Date().getHours();
+  const isNightMode = currentHour >= 21 || currentHour < 5;
+  const textColor = isNightMode ? 'white' : 'black';
 
-    viewingDateRef.current = viewingDate;
+  // Calculate totals for progress bar
+  const totalHabits = habits.length;
+  const completedHabits = habits.filter(h => h.completed).length;
+  
+  // Calculate total possible points for today (all active habits)
+  const totalPossiblePoints = habits.reduce((sum, h) => sum + (h.rewardPoints || 0), 0);
 
+  // Navigate between dates
+  const handleNavigateDate = (direction: 'prev' | 'next') => {
+    const newDate = navigateDateUtil(viewingDate, direction);
+    setViewingDate(newDate);
+  };
 
-    // night mode detection (for text color)
-    const currentHour = new Date().getHours();
-    const isNightMode = currentHour >= 21 || currentHour < 5;
-    const textColor = isNightMode ? 'white' : 'black';
+  // Jump to today
+  const handleGoToToday = () => {
+    setViewingDate(getCurrentHabitDay(resetTime.hour, resetTime.minute));
+  };
 
-    // **TODO: 
-    // // load data once + keep it cached
-    // useEffect(() => {
-    //     // loadHabits();
-    //     console.log('loading habits');
-    // }, []);
+  // Check if viewing today
+  const isViewingToday = isToday(viewingDate, resetTime.hour, resetTime.minute);
 
-    // // refresh only when needed
-    // useEffect(() => {
-    //     if (isFocused)
-    //         console.log('it is focused');
-    // })
-
-    // const isToday = (date: Date | null) => {
-    //     if (!date) return false;
-    //     const todayHabitStr = getHabitDate(new Date(), resetTime.hour, resetTime.minute);
-    //     const viewingHabitStr = getHabitDate(date, resetTime.hour, resetTime.minute);
-    //     return todayHabitStr === viewingHabitStr;
-    // };
-
-    const navigateDate = (direction: 'prev' | 'next') => {
-        if (!viewingDate) return;
-        const newDate = new Date(viewingDate);
-        newDate.setDate(newDate.getDate() + (direction === 'prev' ? -1 : 1));
-        setViewingDate(newDate);
-    };
-
+  if (loading) {
     return (
-        <LinearGradient
-            colors={getGradientForTime()}
-            start={{ x: 0.5, y: 0 }}
-            end={{ x: 0.5, y: 1 }}
-            style={{ flex: 1 }}
-        >
-            <PageContainer>
-                <PageHeader
-                    title='Habits'
-                    showPlusButton
-                    onPlusPress={() => setShowNewHabitModal(true)}
-                    textColor={textColor}
-                ></PageHeader>
-
-                {/* date navigator */}
-                <View
-                    style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        marginBottom: 10,
-                    }}
-                >
-                    <Pressable onPress={() => navigateDate('prev')} style={{ padding: 5 }}>
-                        <Image
-                            source={SYSTEM_ICONS.sortLeft}
-                            style={{
-                                width: 20,
-                                height: 20,
-                                // **UNCOMMENT: tintColor: isToday(viewingDate) ? textColor : `${COLORS.Primary}ff`,
-                            }}
-                        />
-                    </Pressable>
-
-                    <Pressable
-                        style={{
-                            paddingHorizontal: 10,
-                            paddingVertical: 5,
-                            borderRadius: 12,
-                            borderWidth: 1,
-                            borderColor: '#000',
-                            backgroundColor: COLORS.PrimaryLight,
-                        }}
-                    // **UNCOMMENT: onPress={() => setViewingDate(getCurrentHabitDay())}
-                    >
-                        <Text
-                            style={[
-                                globalStyles.body2,
-                                {
-                                    // **UNCOMMENT: color: isToday(viewingDate) ? textColor : `${COLORS.Primary}ff`,
-                                    fontSize: 13,
-                                },
-                            ]}
-                        >
-                            {/* **UNCOMMENT: {formatDateHeader(viewingDate)} */}
-                            {formatDateHeader(new Date())}
-                        </Text>
-                    </Pressable>
-
-                    <Pressable onPress={() => navigateDate('next')} style={{ padding: 5 }}>
-                        <Image
-                            source={SYSTEM_ICONS.sortRight}
-                            style={{
-                                width: 20,
-                                height: 20,
-                                // **UNCOMMENT: tintColor: isToday(viewingDate) ? textColor : `${COLORS.Primary}ff`,
-                            }}
-                        />
-                    </Pressable>
-                </View>
-
-                <NewHabitModal
-                    visible={showNewHabitModal}
-                    onClose={() => setShowNewHabitModal(false)}
-                    onSave={() => setShowNewHabitModal(false)}
-                />
-            </PageContainer>
-
-
-
-            {/* **TESTING: move to settings page when created */}
-            {/* <Pressable
-                    onPress={signOut}
-                    style={[buttonStyles.button, { backgroundColor: COLORS.PrimaryLight, width: 150, alignSelf: 'center', margin: 100 }]}
-                >
-                    <Text style={globalStyles.body}>Sign Out</Text>
-                </Pressable> */}
-        </LinearGradient>
+      <LinearGradient
+        colors={getGradientForTime()}
+        start={{ x: 0.5, y: 0 }}
+        end={{ x: 0.5, y: 1 }}
+        style={{ flex: 1 }}
+      >
+        <PageContainer>
+          <PageHeader title="Habits" textColor={textColor} />
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <Text style={[globalStyles.body, { color: textColor }]}>Loading habits...</Text>
+          </View>
+        </PageContainer>
+      </LinearGradient>
     );
-}
+  }
 
-const modalStyles = StyleSheet.create({
-    overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', alignItems: 'center', paddingBottom: 40 },
-    container: {
-        width: '90%',
-        height: '60%',
-    },
-});
+  return (
+    <LinearGradient
+      colors={getGradientForTime()}
+      start={{ x: 0.5, y: 0 }}
+      end={{ x: 0.5, y: 1 }}
+      style={{ flex: 1 }}
+    >
+      <PageContainer>
+        <PageHeader
+          title="Habits"
+          showPlusButton
+          plusNavigateTo="/(tabs)/more/new-habit"
+          textColor={textColor}
+        />
+
+        {/* Date Navigator */}
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: 10,
+          }}
+        >
+          {/* Previous Day Button */}
+          <Pressable 
+            onPress={() => handleNavigateDate('prev')} 
+            style={{ padding: 5 }}
+          >
+            <Image
+              source={SYSTEM_ICONS.sortLeft}
+              style={{
+                width: 20,
+                height: 20,
+                tintColor: isViewingToday ? textColor : `${COLORS.Primary}ff`,
+              }}
+            />
+          </Pressable>
+
+          {/* Date Display / Jump to Today */}
+          <Pressable
+            style={{
+              paddingHorizontal: 10,
+              paddingVertical: 5,
+              borderRadius: 12,
+              borderWidth: 1,
+              borderColor: '#000',
+              backgroundColor: COLORS.PrimaryLight,
+            }}
+            onPress={handleGoToToday}
+          >
+            <Text
+              style={[
+                globalStyles.body2,
+                {
+                  color: isViewingToday ? textColor : `${COLORS.Primary}ff`,
+                  fontSize: 13,
+                },
+              ]}
+            >
+              {formatDateHeader(viewingDate)}
+            </Text>
+          </Pressable>
+
+          {/* Next Day Button */}
+          <Pressable 
+            onPress={() => handleNavigateDate('next')} 
+            style={{ padding: 5 }}
+          >
+            <Image
+              source={SYSTEM_ICONS.sortRight}
+              style={{
+                width: 20,
+                height: 20,
+                tintColor: isViewingToday ? textColor : `${COLORS.Primary}ff`,
+              }}
+            />
+          </Pressable>
+        </View>
+
+        {/* Progress Bar - Only show for today */}
+        {isViewingToday && (
+          <ProgressBar
+            totalHabits={totalHabits}
+            completedHabits={completedHabits}
+            earnedPoints={earnedPoints}
+            totalPossiblePoints={totalPossiblePoints}
+            appStreak={appStreak}
+          />
+        )}
+
+        {/* Habits List */}
+        <HabitsList
+          habits={habits}
+          viewingDate={viewingDate}
+          resetTime={resetTime}
+          onToggleHabit={toggleHabit}
+        />
+      </PageContainer>
+    </LinearGradient>
+  );
+}

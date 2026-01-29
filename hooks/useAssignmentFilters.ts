@@ -1,11 +1,11 @@
 // @/utils/assignmentFilters.ts
+import { AssignmentWithCourse, DayPlanAssignment, WeekPlan } from '@/hooks/useAssignmentData';
 import {
   addDaysLocal,
   formatLocalDate,
   getTodayLocal,
   sortByDueDate
-} from '@/components/utils/dateUtils';
-import { AssignmentWithCourse, DayPlanAssignment, WeekPlan } from '@/hooks/useAssignmentData';
+} from '@/utils/dateUtils';
 
 /**
  * get assignments planned for today

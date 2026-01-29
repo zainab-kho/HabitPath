@@ -2,7 +2,6 @@
 import React from 'react';
 import { Image, Pressable, Text, View } from 'react-native';
 
-import { formatLocalDate } from '@/components/utils/dateUtils';
 import { PROGRESS_COLORS } from '@/constants/';
 import { BUTTON_COLORS, PAGE } from '@/constants/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
@@ -10,6 +9,7 @@ import { globalStyles } from '@/styles';
 import { Assignment } from '@/types/Assignment';
 import { Course } from '@/types/Course';
 import ShadowBox from '@/ui/ShadowBox';
+import { formatLocalDate } from '@/utils/dateUtils';
 
 type CourseWithColor = Course & { color?: string };
 type AssignmentWithCourse = Assignment & { course?: CourseWithColor };

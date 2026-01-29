@@ -9,6 +9,7 @@ export const COLORS = {
   Secondary: '#FF5F57',
   ProgressColor: '#FFD581',
   Rewards: '#FF7F50',
+  RewardsBackground: '#FFE7D5',
   RewardsAccent: '#7FD1AE',
   StreakAccent: '#F55858',
   XPAccent: '#FFB5A0',

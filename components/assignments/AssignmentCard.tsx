@@ -1,11 +1,11 @@
 // @/components/assignments/AssignmentCard.tsx
-import { formatDueDateTimeDisplay, isPast } from '@/components/utils/dateUtils';
 import { ASSIGNMENT_TYPE_COLORS, PROGRESS_COLORS } from '@/constants/';
 import { BUTTON_COLORS, PAGE } from '@/constants/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import { AssignmentWithCourse } from '@/hooks/useAssignmentData';
 import { globalStyles } from '@/styles';
 import ShadowBox from '@/ui/ShadowBox';
+import { formatDueDateTimeDisplay, isPast } from '@/utils/dateUtils';
 import React from 'react';
 import { Image, Pressable, Text, View } from 'react-native';
 

@@ -1,8 +1,8 @@
 // @/components/ui/SimpleCalendar.tsx
-import { formatLocalDate } from '@/components/utils/dateUtils';
 import { PAGE } from '@/constants/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import { globalStyles } from '@/styles';
+import { formatLocalDate } from '@/utils/dateUtils';
 import React, { useState } from 'react';
 import { Image, Pressable, Text, View } from 'react-native';
 

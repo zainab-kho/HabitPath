@@ -138,5 +138,6 @@ export const SYSTEM_ICONS = {
     calendar: require('@/assets/icons/system/calendar.png'),
     dots: require('@/assets/icons/system/dots.png'),
     location: require('@/assets/icons/system/location-icon.png'),
+    write: require('@/assets/icons/system/write.png'),
 };
 

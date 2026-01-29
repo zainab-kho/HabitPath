@@ -24,14 +24,19 @@ export default function EmptyStateView({
     buttonColor,
 }: EmptyStateViewProps) {
     return (
-        <View style={[{
-            flex: 1,
-            justifyContent: 'center',
-            alignItems: 'center',
-        }, containerStyle]}>
+        <View
+            style={[
+                {
+                    flex: 1,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                },
+                containerStyle,
+            ]}
+        >
             <ShadowBox style={{
                 alignItems: 'center',
-                flex: 1,
+                justifyContent: 'center'
             }}>
                 <View style={{ paddingHorizontal: 75, paddingVertical: 30, justifyContent: 'center', alignItems: 'center' }}>
                     <Image

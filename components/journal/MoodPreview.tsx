@@ -1,5 +1,5 @@
 // @/components/journal/MoodPreview.tsx
-import { COLORS, MOOD_COLORS } from '@/constants/colors';
+import { MOOD_COLORS, PAGE } from '@/constants/colors';
 import { globalStyles } from '@/styles';
 import { JournalEntry } from '@/types/JournalEntry';
 import { formatLocalDate } from '@/utils/dateUtils';
@@ -148,8 +148,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 15,
     borderWidth: 1,
-    borderColor: COLORS.Primary,
-    shadowColor: COLORS.Primary,
+    borderColor: PAGE.journal.border[0],
+    shadowColor: PAGE.journal.border[0],
     shadowOffset: { width: 3, height: 3 },
     shadowOpacity: 1,
     shadowRadius: 0,

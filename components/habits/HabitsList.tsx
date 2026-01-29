@@ -1,18 +1,19 @@
 // components/habits/HabitsList.tsx
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useState } from 'react';
-import { FlatList, Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, FlatList, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import HabitItem from '@/components/habits/HabitItem';
 import HabitSectionHeader from '@/components/habits/HabitSectionHeader';
 import { isHabitActiveToday } from '@/components/habits/habitUtils';
 import { TIME_OPTIONS } from '@/constants';
-import { COLORS } from '@/constants/colors';
+import { COLORS, PAGE } from '@/constants/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
-import EmptyStateView from '@/ui/EmptyStateView';
-// import NewHabitModal from '@/components/modals/NewHabit';
+import { globalStyles } from '@/styles';
 import { Habit } from '@/types/Habit';
+import EmptyStateView from '@/ui/EmptyStateView';
+import ShadowBox from '@/ui/ShadowBox';
 import { getHabitDate } from '@/utils/dateUtils';
 import { useRouter } from 'expo-router';
 
@@ -22,6 +23,7 @@ interface HabitsListProps {
   resetTime: { hour: number; minute: number };
   onToggleHabit: (habitId: string) => void;
   onPressHabit?: (habit: Habit) => void;
+  loading?: boolean;
 }
 
 type TimeOfDay = typeof TIME_OPTIONS[number];
@@ -32,6 +34,7 @@ export default function HabitsList({
   resetTime,
   onToggleHabit,
   onPressHabit,
+  loading = false,
 }: HabitsListProps) {
   const router = useRouter();
   const currentDate = viewingDate || new Date();
@@ -40,8 +43,6 @@ export default function HabitsList({
   const [showCompleted, setShowCompleted] = useState(true);
   const [orderedHabits, setOrderedHabits] = useState<(Habit & { completed: boolean })[]>([]);
   const [showNewHabitModal, setShowNewHabitModal] = useState(false);
-  const [selectedHabit, setSelectedHabit] = useState<Habit | null>(null);
-  const [showDetailModal, setShowDetailModal] = useState(false);
 
   // storage key for today's order
   const ORDER_STORAGE_KEY = `@habit_order_${dateStr}`;
@@ -145,29 +146,50 @@ export default function HabitsList({
     saveDailyOrder(updatedOrder);
   };
 
-  // handlers
-  const handleSaveNewHabit = (newHabit: Habit) => {
-    // **TODO: Create working button
-    // addHabit(newHabit);
-    setShowNewHabitModal(false);
-  };
+  // Loading state
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="small" color={COLORS.Primary} />
+        <Text style={styles.loadingText}>Loading habits...</Text>
+      </View>
+    );
+  }
 
-  const handlePressHabit = (habit: Habit) => {
-    setSelectedHabit(habit);
-    setShowDetailModal(true);
-  };
+  if (!habits || habits.length === 0) {
+    return (
+        <EmptyStateView
+          icon={SYSTEM_ICONS.habit}
+          title='No habits yet'
+          description='Add a goal or a habit. A goal does not repeat.'
+          buttonText='New habit'
+          buttonAction={() => router.push('/(tabs)/habits/NewHabitPage')}
+          buttonColor={COLORS.ProgressColor}
+          containerStyle={{marginBottom: 100}}
+        />
+    );
+  }
 
   // empty state
   if (activeHabits.length === 0) {
     return (
-      <EmptyStateView
-        icon={SYSTEM_ICONS.habit}
-        title='No habits yet'
-        description='Add a goal or a habit. A goal does not repeat.'
-        buttonText='New habit'
-        buttonAction={() => setShowNewHabitModal(true)}
-        buttonColor={COLORS.ProgressColor}
-      />
+      <View style={{ marginTop: 20, alignItems: 'center', gap: 20, }}>
+        <Text style={[globalStyles.body, { opacity: 0.7 }]}>You have no habits today! Add a habit?</Text>
+
+        <ShadowBox
+          borderRadius={20}
+          contentBackgroundColor={PAGE.habits.button[0]}
+        >
+          <Pressable
+            onPress={() => router.push('/(tabs)/habits/NewHabitPage')}
+            style={{
+              paddingVertical: 5,
+              paddingHorizontal: 15,
+            }}>
+            <Text style={[globalStyles.body]}>New Habit</Text>
+          </Pressable>
+        </ShadowBox>
+      </View>
     );
   }
 
@@ -217,14 +239,6 @@ export default function HabitsList({
           );
         })}
       </ScrollView>
-
-      {/* Modals */}
-      {/* <NewHabitModal
-        visible={showNewHabitModal}
-        onClose={() => setShowNewHabitModal(false)}
-        onSave={handleSaveNewHabit}
-      /> */}
-
     </GestureHandlerRootView>
   );
 }
@@ -232,6 +246,19 @@ export default function HabitsList({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    marginTop: 100
+  },
+
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    fontFamily: 'p2',
+    color: 'rgba(0, 0, 0, 0.6)',
   },
 
   toggleContainer: {
@@ -252,27 +279,5 @@ const styles = StyleSheet.create({
 
   section: {
     marginBottom: 20,
-  },
-
-  emptyState: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 40,
-    paddingTop: 100,
-  },
-
-  emptyText: {
-    fontSize: 18,
-    fontFamily: 'h3',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-
-  emptySubtext: {
-    fontSize: 14,
-    fontFamily: 'body',
-    textAlign: 'center',
-    opacity: 0.6,
   },
 });

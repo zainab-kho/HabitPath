@@ -27,6 +27,13 @@ export const PAGE = {
     border: ['#55d7b0ff'],
     primary: ['#FED0FF'],
   },
+  habits: {
+    background: ['#89F7FE', '#66A6FF'],
+    habitCard: ['#FFFFFF', '#F0F0F0'],
+    border: ['#4CE0F6'],
+    primary: ['#FFDDC1', '#FFABAB'],
+    button: ['#f5f2cc']
+  }, 
   newHabit: {
     background: ['#FDDAC5', '#FEF9E7']
   },

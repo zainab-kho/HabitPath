@@ -1,9 +1,10 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Image, Pressable, Text, View } from 'react-native';
 
 import { PROGRESS_COLORS } from '@/constants';
 import { BUTTON_COLORS, PAGE } from '@/constants/colors';
+import { SYSTEM_ICONS } from '@/constants/icons';
 import { AssignmentWithCourse } from '@/hooks/useAssignmentData';
 import { globalStyles } from '@/styles';
 import { formatLocalDate, getTodayWeekday } from '@/utils/dateUtils';
@@ -62,15 +63,33 @@ export function TodaysPlan({ assignments, editMode, onDelete, onStatusPress }: T
 
       {assignments.map(a => {
         const isCompleted = completedAssignments[a.id!];
+
+        // get the course color or fallback
+        const courseColor = a.course?.color || PAGE.assignments.backgroundAssignment[1];
+
         return (
-          <View key={a.id} style={{ backgroundColor: '#fff', position: 'relative' }}>
-            <View style={{ padding: 10, gap: 10, flexDirection: 'column', borderTopWidth: 1 }}>
+          <View key={a.id} style={{ backgroundColor: courseColor }}>
+            <View
+              style={{
+                padding: 10,
+                gap: 10,
+                flexDirection: 'column',
+                borderTopWidth: 1,
+                borderTopColor: 'rgba(0,0,0,0.1)'
+              }}
+            >
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                 <Pressable onPress={() => toggleCompleted(a.id!)}>
-                  <Text style={[
-                    globalStyles.body,
-                    { paddingVertical: 2, textDecorationLine: isCompleted ? 'line-through' : 'none', opacity: isCompleted ? 0.4 : 1 }
-                  ]}>
+                  <Text
+                    style={[
+                      globalStyles.body,
+                      {
+                        paddingVertical: 2,
+                        textDecorationLine: isCompleted ? 'line-through' : 'none',
+                        opacity: isCompleted ? 0.4 : 1
+                      }
+                    ]}
+                  >
                     {a.name}
                   </Text>
                 </Pressable>
@@ -95,7 +114,10 @@ export function TodaysPlan({ assignments, editMode, onDelete, onStatusPress }: T
                         alignItems: 'center',
                       }}
                     >
-                      <Text style={{ fontSize: 12 }}>🗑️</Text>
+                      <Image
+                        source={SYSTEM_ICONS.delete}
+                        style={{ width: 12, height: 12 }}
+                      />
                     </Pressable>
                   )}
                 </View>

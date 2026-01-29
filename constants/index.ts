@@ -1,7 +1,6 @@
 // @/components/constants/index.ts
 
 // habit page constants
-export const TIME_OPTIONS = ['Wake Up', 'Morning', 'Anytime', 'Afternoon', 'Evening', 'Bed Time'] as const;
 export const DATE_OPTIONS = ['Today', 'Tomorrow', 'Custom'] as const;
 export const FREQUENCY_OPTIONS = ['Daily', 'Weekly', 'Monthly', 'Custom', 'None'] as const;
 export const WEEK_DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const;

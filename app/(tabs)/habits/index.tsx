@@ -73,7 +73,6 @@ export default function HabitsPage() {
             <PageContainer>
                 <PageHeader
                     title="Habits"
-                    showPlusButton
                     plusNavigateTo="/(tabs)/more/new-habit"
                     textColor={textColor}
                 />

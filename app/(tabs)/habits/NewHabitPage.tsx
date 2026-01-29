@@ -1,471 +1,569 @@
-// // 
-// import AsyncStorage from '@react-native-async-storage/async-storage';
-// import { LinearGradient } from 'expo-linear-gradient';
-// import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-// import { useCallback, useState } from 'react';
-// import { Image, Pressable, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
+// @/app/(tabs)/habits/NewHabitPage.tsx
+import { BUTTON_COLORS, COLORS, PAGE } from '@/constants/colors';
+import { FREQUENCIES, REWARD_OPTIONS, TIME_OPTIONS, WEEK_DAYS } from '@/constants/habits';
+import { SYSTEM_ICONS } from '@/constants/icons';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
+import { globalStyles } from '@/styles';
+import { Habit } from '@/types/Habit';
+import { AppLinearGradient } from '@/ui/AppLinearGradient';
+import PageContainer from '@/ui/PageContainer';
+import PageHeader from '@/ui/PageHeader';
+import ShadowBox from '@/ui/ShadowBox';
+import SimpleCalendar from '@/ui/SimpleCalendar';
+import { formatLocalDate } from '@/utils/dateUtils';
+import { useRouter } from 'expo-router';
+import React, { useRef, useState } from 'react';
+import {
+    Alert,
+    Image,
+    Keyboard,
+    KeyboardAvoidingView,
+    Platform,
+    Pressable,
+    ScrollView,
+    Text,
+    TextInput,
+    TouchableWithoutFeedback,
+    View
+} from 'react-native';
 
-// import { getCalendarOptions } from '@/app/utils/utils';
-// import { CalendarPicker } from '@/components/calendarPicker';
-// import { Path } from '@/components/types/Path';
-// import { FREQUENCIES, STORAGE_KEY, TIMES_OF_DAY, WEEK_DAYS } from '../../components/constants';
-// import { ButtonGroup, DaySelector, IconSelector, PathButtonGroup } from '../../components/habits/habitComponents';
-// import { Habit } from '../../components/types/Habit';
-// import { buttonStyles, habitCardStyles, habitStyles, layoutStyles } from '../styles';
-// import { optionContainerStyles } from '../styles/optionContainerStyles';
+type Frequency = typeof FREQUENCIES[number];
+type TimeOfDay = typeof TIME_OPTIONS[number];
 
-// export default function NewHabit() {
-//     const router = useRouter();
-//     const params = useLocalSearchParams();
+export default function NewHabitPage() {
+    const router = useRouter();
+    const { user } = useAuth();
+    const inputRef = useRef<TextInput>(null);
 
-//     // Helper to get local CALENDAR date string (not UTC, always uses midnight boundary)
-//     // This is different from getHabitDate which uses 3:30 AM boundary
-//     const getLocalDateString = (date: Date = new Date()) => {
-//         const year = date.getFullYear();
-//         const month = String(date.getMonth() + 1).padStart(2, '0');
-//         const day = String(date.getDate()).padStart(2, '0');
-//         return `${year}-${month}-${day}`;
-//     };
+    // basic info
+    const [habitName, setHabitName] = useState('');
+    const [selectedIcon, setSelectedIcon] = useState('goal');
+    
+    // scheduling
+    const [selectedFrequency, setSelectedFrequency] = useState<Frequency>('No Repeat');
+    const [selectedDays, setSelectedDays] = useState<string[]>([]);
+    const [selectedTimeOfDay, setSelectedTimeOfDay] = useState<TimeOfDay>('Anytime');
+    const [startDate, setStartDate] = useState<Date>(new Date());
+    const [showCalendar, setShowCalendar] = useState(false);
+    
+    // rewards
+    const [rewardPoints, setRewardPoints] = useState<number>(1);
+    const [showRewardsPicker, setShowRewardsPicker] = useState(false);
+    
+    // ui state
+    const [isSaving, setIsSaving] = useState(false);
 
-//     const [habitName, setHabitName] = useState('');
-//     const [selectedIcon, setSelectedIcon] = useState('goal');
-//     const [selectedTimeOfDay, setSelectedTimeOfDay] = useState<string>('Anytime');
-//     const [selectedFrequency, setSelectedFrequency] = useState<string>('No Repeat');
-//     const [selectedDays, setSelectedDays] = useState<string[]>([]);
-//     const [selectedDate, setSelectedDate] = useState<string>(getCalendarOptions()[0].label);
-//     const [startDate, setStartDate] = useState<string>(getLocalDateString());
-//     const [rewardPoints, setRewardPoints] = useState<number>(0);
-//     const [path, setPath] = useState<string>('None');
-//     const [pathColor, setPathColor] = useState<string | undefined>(undefined);
+    // get date label for display
+    const getDateLabel = (date: Date): string => {
+        const today = new Date();
+        const tomorrow = new Date(today);
+        tomorrow.setDate(today.getDate() + 1);
 
-//     const [timeOpen, setTimeOpen] = useState(false);
-//     const [dateOpen, setDateOpen] = useState(false);
-//     const [frequencyOpen, setFrequencyOpen] = useState(false);
-//     const [pathOpen, setPathOpen] = useState(false);
-//     const [rewardsOpen, setRewardsOpen] = useState(false);
-//     const [showCalendar, setShowCalendar] = useState(false);
-//     const [customDate, setCustomDate] = useState<Date | null>(new Date());
-//     const [moreOptionsOpen, setMoreOptionsOpen] = useState(false);
-//     const [paths, setPaths] = useState<Path[]>([]);
+        const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+        const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const tomorrowOnly = new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate());
 
-//     const REWARD_OPTIONS = [0, 1, 2, 3, 5, 10, 15, 20, 25, 50];
+        if (dateOnly.getTime() === todayOnly.getTime()) return 'Today';
+        if (dateOnly.getTime() === tomorrowOnly.getTime()) return 'Tomorrow';
 
-//     // Load paths
-//     useFocusEffect(
-//         useCallback(() => {
-//             const loadPaths = async () => {
-//                 try {
-//                     const stored = await AsyncStorage.getItem('@paths_storage');
-//                     if (stored) {
-//                         setPaths(JSON.parse(stored));
-//                     }
-//                 } catch (e) {
-//                     console.error('Error loading paths:', e);
-//                 }
-//             };
-//             loadPaths();
-//         }, [])
-//     );
+        return date.toLocaleDateString('en-US', {
+            weekday: 'short',
+            month: 'short',
+            day: 'numeric',
+        });
+    };
 
-//     useFocusEffect(
-//         useCallback(() => {
-//             const loadSelectedIcon = async () => {
-//                 try {
-//                     const savedIcon = await AsyncStorage.getItem('@selected_icon_temp');
-//                     if (savedIcon) {
-//                         setSelectedIcon(savedIcon);
-//                         await AsyncStorage.removeItem('@selected_icon_temp');
-//                     }
-//                 } catch (error) {
-//                     console.error('Error loading icon:', error);
-//                 }
-//             };
-//             loadSelectedIcon();
-//         }, [])
-//     );
+    const handleFrequencyChange = (freq: Frequency) => {
+        setSelectedFrequency(freq);
+        
+        // auto-select today's day for Weekly
+        if (freq === 'Weekly') {
+            const dayIndex = startDate.getDay();
+            setSelectedDays([WEEK_DAYS[dayIndex]]);
+        } else {
+            setSelectedDays([]);
+        }
+    };
 
-//     const toggleDay = (day: string) => {
-//         setSelectedDays(prev =>
-//             prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
-//         );
-//     };
+    const toggleDay = (day: string) => {
+        setSelectedDays(prev =>
+            prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
+        );
+    };
 
-//     const dateButtonSelection = selectedDate === 'Today' || selectedDate === 'Tomorrow' ? selectedDate : 'Custom';
+    const handleSave = async () => {
+        if (!habitName.trim()) {
+            Alert.alert('Missing Info', 'Please enter a habit name');
+            return;
+        }
 
-//     const handleCustomDateSelect = (date: Date) => {
-//         setCustomDate(date);
-//         setStartDate(getLocalDateString(date));
-//         setSelectedDate(
-//             date.toLocaleDateString('en-US', {
-//                 weekday: 'short',
-//                 month: 'short',
-//                 day: 'numeric',
-//             })
-//         );
-//         setShowCalendar(false);
-//         setDateOpen(false);
-//     };
+        if (!user) {
+            Alert.alert('Error', 'You must be logged in to save habits');
+            return;
+        }
 
-//     const handleFrequencyChange = (freq: string) => {
-//         setSelectedFrequency(freq);
-//         if (freq === 'Weekly') {
-//             const dayIndex = new Date(startDate).getDay();
-//             setSelectedDays([WEEK_DAYS[dayIndex]]);
-//         } else if (freq === 'Monthly') {
-//             setSelectedDays([]);
-//         } else {
-//             setSelectedDays([]);
-//         }
-//     };
+        setIsSaving(true);
 
-//     const createHabit = async () => {
-//         if (!habitName.trim()) return;
+        try {
+            const newHabit: Habit = {
+                id: Date.now().toString(),
+                name: habitName.trim(),
+                icon: selectedIcon,
+                frequency: selectedFrequency,
+                selectedDays: selectedFrequency === 'Weekly' ? selectedDays : [],
+                selectedTimeOfDay,
+                startDate: formatLocalDate(startDate),
+                selectedDate: getDateLabel(startDate),
+                rewardPoints,
+                streak: 0,
+                bestStreak: 0,
+                completionHistory: [],
+                completionEntries: [],
+            };
 
-//         const newHabit: Habit = {
-//             id: Date.now().toString(),
-//             name: habitName,
-//             icon: selectedIcon,
-//             frequency: selectedFrequency,
-//             // completed: false,
-//             selectedTimeOfDay,
-//             selectedDays,
-//             selectedDate,
-//             startDate,
-//             rewardPoints,
-//             path,
-//             pathColor,
-//             streak: 0,
-//             completionHistory: [],
-//             lastCompletedDate: undefined,
-//         };
+            const { error } = await supabase
+                .from('habits')
+                .insert([{
+                    id: newHabit.id,
+                    user_id: user.id,
+                    name: newHabit.name,
+                    icon: newHabit.icon,
+                    frequency: newHabit.frequency,
+                    selectedDays: newHabit.selectedDays,
+                    selectedTimeOfDay: newHabit.selectedTimeOfDay,
+                    startDate: newHabit.startDate,
+                    selectedDate: newHabit.selectedDate,
+                    rewardPoints: newHabit.rewardPoints,
+                    streak: newHabit.streak,
+                    bestStreak: newHabit.bestStreak,
+                    completionHistory: newHabit.completionHistory,
+                    created_at: new Date().toISOString(),
+                }]);
 
-//         try {
-//             const oldHabits = await AsyncStorage.getItem(STORAGE_KEY);
-//             const habitsArray: Habit[] = oldHabits ? JSON.parse(oldHabits) : [];
-//             habitsArray.push(newHabit);
-//             await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(habitsArray));
-//             router.back();
-//         } catch (e) {
-//             console.error('Failed to save habit', e);
-//         }
-//     };
+            if (error) {
+                console.error('Error saving habit:', error);
+                Alert.alert('Error', 'Failed to save habit. Please try again.');
+            } else {
+                router.back();
+            }
+        } catch (error) {
+            console.error('Error saving habit:', error);
+            Alert.alert('Error', 'Failed to save habit. Please try again.');
+        } finally {
+            setIsSaving(false);
+        }
+    };
 
-//     return (
-//         <>
-//             <LinearGradient
-//                 colors={['#abdc92', '#bfde9d', '#cfe1ab', '#dde4ba', '#e7e8cb', '#eaebd1', '#ededd8', '#f0f0de', '#eef2da', '#ebf4d7', '#e7f6d5', '#e1f8d4']}
-//                 start={{ x: 0, y: 0 }}
-//                 end={{ x: 1, y: 1 }}
-//                 style={layoutStyles.container}
-//             >
-//                 <ScrollView style={layoutStyles.content}>
-//                     <View style={layoutStyles.header}>
-//                         <Text style={layoutStyles.pageTitle}>New Habit</Text>
-//                     </View>
+    return (
+        <AppLinearGradient variant="newHabit.background">
+            <PageContainer>
+                <PageHeader title="New Habit" showBackButton />
 
-//                     {/* Reward Points */}
-//                     <TouchableOpacity
-//                         onPress={() => setRewardsOpen(!rewardsOpen)}
-//                         activeOpacity={0.7}
-//                     >
-//                         <LinearGradient
-//                             colors={['#ffd589', '#fdd68a', '#fcd88b', '#fad98d', '#f9da8e', '#f6db90', '#f8daa2', '#fae0b0', '#fde7bd', '#ffedcb']}
-//                             start={{ x: 0, y: 0 }}
-//                             end={{ x: 1, y: 1 }}
-//                             style={habitCardStyles.mainContent}
-//                         >
-//                             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-//                                 <Image
-//                                     source={require('../../components/assets/icons/system/sparkle.png')}
-//                                     style={{ width: 12, height: 12 }}
-//                                 />
-//                                 <Text style={{ fontFamily: 'label', color: 'black', fontSize: 10 }}>
-//                                     {rewardPoints} pts
-//                                 </Text>
-//                             </View>
-//                         </LinearGradient>
-//                     </TouchableOpacity>
+                <KeyboardAvoidingView
+                    style={{ flex: 1 }}
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                >
+                    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
+                        <ScrollView
+                            keyboardShouldPersistTaps="handled"
+                            showsVerticalScrollIndicator={false}
+                            contentContainerStyle={{ paddingBottom: 40 }}
+                        >
+                            {/* rewards preview at top */}
+                            <Pressable
+                                onPress={() => setShowRewardsPicker(!showRewardsPicker)}
+                                style={{
+                                    alignSelf: 'center',
+                                    marginBottom: 15,
+                                }}
+                            >
+                                <ShadowBox
+                                    contentBackgroundColor={COLORS.RewardsBackground}
+                                    contentBorderColor={COLORS.RewardsAccent}
+                                    shadowColor={COLORS.RewardsAccent}
+                                >
+                                    <View style={{
+                                        flexDirection: 'row',
+                                        alignItems: 'center',
+                                        gap: 6,
+                                        paddingVertical: 6,
+                                        paddingHorizontal: 12,
+                                    }}>
+                                        <Image
+                                            source={SYSTEM_ICONS.reward}
+                                            style={{ width: 14, height: 14, tintColor: COLORS.Rewards }}
+                                        />
+                                        <Text style={[globalStyles.label, { fontSize: 12 }]}>
+                                            {rewardPoints} pts
+                                        </Text>
+                                    </View>
+                                </ShadowBox>
+                            </Pressable>
 
-//                     {/* Reward Points Picker */}
-//                     {rewardsOpen && (
-//                         <View style={{
-//                             alignSelf: 'center',
-//                             flexDirection: 'row',
-//                             flexWrap: 'wrap',
-//                             justifyContent: 'center',
-//                             gap: 8,
-//                             marginBottom: 15,
-//                             marginTop: 10,
-//                             borderWidth: 1,
-//                             borderRadius: 12,
-//                             padding: 8,
-//                             backgroundColor: '#FFF3DC',
-//                             borderColor: '#FFD589',
-//                             width: '90%',
-//                         }}>
-//                             {REWARD_OPTIONS.map((points) => (
-//                                 <Pressable
-//                                     key={points}
-//                                     onPress={() => {
-//                                         setRewardPoints(points);
-//                                         setRewardsOpen(false);
-//                                     }}
-//                                     style={{
-//                                         borderWidth: rewardPoints === points ? 2 : 1,
-//                                         borderColor: rewardPoints === points ? '#bd592eff' : '#FFD589',
-//                                         shadowColor: rewardPoints === points ? '#bd592eff' : '#FFD589',
-//                                         borderRadius: 12,
-//                                         paddingVertical: 8,
-//                                         paddingHorizontal: 12,
-//                                         backgroundColor: '#F8FFF8',
-//                                         shadowOffset: { width: 3, height: 3 },
-//                                         shadowOpacity: 1,
-//                                         shadowRadius: 0,
-//                                         elevation: 5,
-//                                     }}
-//                                 >
-//                                     <Text style={{
-//                                         fontSize: 12,
-//                                         fontFamily: 'label',
-//                                         color: 'black',
-//                                         fontWeight: rewardPoints === points ? 'bold' : 'normal',
-//                                     }}>
-//                                         {points} pts
-//                                     </Text>
-//                                 </Pressable>
-//                             ))}
-//                         </View>
-//                     )}
+                            {/* rewards picker */}
+                            {showRewardsPicker && (
+                                <View style={{
+                                    backgroundColor: COLORS.RewardsBackground,
+                                    borderWidth: 1.5,
+                                    borderColor: COLORS.RewardsAccent,
+                                    borderRadius: 15,
+                                    padding: 12,
+                                    marginBottom: 20,
+                                    marginHorizontal: 3,
+                                }}>
+                                    <View style={{
+                                        flexDirection: 'row',
+                                        flexWrap: 'wrap',
+                                        gap: 8,
+                                        justifyContent: 'center',
+                                    }}>
+                                        {REWARD_OPTIONS.map((points) => (
+                                            <Pressable
+                                                key={points}
+                                                onPress={() => {
+                                                    setRewardPoints(points);
+                                                    setShowRewardsPicker(false);
+                                                }}
+                                            >
+                                                <ShadowBox
+                                                    contentBackgroundColor={
+                                                        rewardPoints === points
+                                                            ? COLORS.Rewards
+                                                            : '#fff'
+                                                    }
+                                                    contentBorderColor={
+                                                        rewardPoints === points
+                                                            ? '#000'
+                                                            : COLORS.RewardsAccent
+                                                    }
+                                                    shadowColor={
+                                                        rewardPoints === points
+                                                            ? '#000'
+                                                            : COLORS.RewardsAccent
+                                                    }
+                                                >
+                                                    <View style={{
+                                                        paddingVertical: 6,
+                                                        paddingHorizontal: 10,
+                                                        minWidth: 50,
+                                                        alignItems: 'center',
+                                                    }}>
+                                                        <Text style={[
+                                                            globalStyles.label,
+                                                            rewardPoints === points && { color: '#fff' }
+                                                        ]}>
+                                                            {points} pts
+                                                        </Text>
+                                                    </View>
+                                                </ShadowBox>
+                                            </Pressable>
+                                        ))}
+                                    </View>
+                                </View>
+                            )}
 
-//                     <View style={habitCardStyles.newHabitCard}>
-//                         {/* Header row */}
-//                         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 20, marginBottom: 10, position: 'relative' }}>
-//                             <View style={layoutStyles.row}>
-//                                 <IconSelector
-//                                     selectedIcon={selectedIcon}
-//                                     onPress={() => router.push({ pathname: '/tabs/choose-icon', params: { currentIcon: selectedIcon } })}
-//                                 />
-//                                 <TextInput
-//                                     style={habitCardStyles.input}
-//                                     placeholder="Enter a new goal..."
-//                                     placeholderTextColor="rgba(0,0,0,0.4)"
-//                                     value={habitName}
-//                                     onChangeText={setHabitName}
-//                                     autoFocus
+                            {/* main card */}
+                            <View style={{
+                                backgroundColor: '#fff',
+                                borderWidth: 1,
+                                borderRadius: 20,
+                                padding: 20,
+                                marginHorizontal: 3,
+                                shadowColor: '#000',
+                                shadowOffset: { width: 3, height: 3 },
+                                shadowOpacity: 1,
+                                shadowRadius: 0,
+                            }}>
+                                {/* icon + name */}
+                                <View style={{
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 12,
+                                    marginBottom: 20,
+                                }}>
+                                    <Pressable
+                                        onPress={() => {
+                                            // navigate to icon picker
+                                            router.push('/habits/ChooseIcon' as any);
+                                        }}
+                                        style={{
+                                            width: 50,
+                                            height: 50,
+                                            borderRadius: 25,
+                                            borderWidth: 2,
+                                            borderColor: COLORS.Primary,
+                                            justifyContent: 'center',
+                                            alignItems: 'center',
+                                            backgroundColor: COLORS.PrimaryLight,
+                                        }}
+                                    >
+                                        <Text style={{ fontSize: 28 }}>{selectedIcon}</Text>
+                                    </Pressable>
 
-//                                 />
-//                             </View>
+                                    <TextInput
+                                        ref={inputRef}
+                                        style={[
+                                            globalStyles.body,
+                                            {
+                                                flex: 1,
+                                                borderBottomWidth: 1,
+                                                borderBottomColor: COLORS.Primary,
+                                                paddingVertical: 8,
+                                                fontSize: 16,
+                                            }
+                                        ]}
+                                        placeholder="Enter habit name..."
+                                        placeholderTextColor="rgba(0,0,0,0.4)"
+                                        value={habitName}
+                                        onChangeText={setHabitName}
+                                        autoFocus
+                                        cursorColor={COLORS.Primary}
+                                        selectionColor={COLORS.Primary}
+                                    />
+                                </View>
 
-//                             <Pressable style={[habitStyles.closeButton, { position: 'absolute', right: 5, top: 5 }]} onPress={() => router.back()}>
-//                                 <Image
-//                                     source={require('../../components/assets/icons/system/close-icon.png')}
-//                                     style={{ width: 15, height: 15 }}
-//                                 />
-//                             </Pressable>
-//                         </View>
+                                {/* start date */}
+                                <Text style={[globalStyles.label, { marginBottom: 8 }]}>
+                                    START DATE
+                                </Text>
+                                <Pressable
+                                    onPress={() => setShowCalendar(!showCalendar)}
+                                    style={{ marginBottom: 15 }}
+                                >
+                                    <ShadowBox contentBackgroundColor={PAGE.habits.button[0]}>
+                                        <View style={{
+                                            padding: 12,
+                                            flexDirection: 'row',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center',
+                                        }}>
+                                            <Text style={globalStyles.body}>
+                                                {getDateLabel(startDate)}
+                                            </Text>
+                                            <Image
+                                                source={SYSTEM_ICONS.calendar}
+                                                style={{ width: 16, height: 16 }}
+                                            />
+                                        </View>
+                                    </ShadowBox>
+                                </Pressable>
 
-//                         {/* Options */}
-//                         <View style={habitCardStyles.habitOptions}>
-//                             {/* Date Picker */}
-//                             {(!timeOpen && !frequencyOpen && !pathOpen) || dateOpen ? (
-//                                 <>
-//                                     <Pressable
-//                                         onPress={() => {
-//                                             setDateOpen(prev => !prev);
-//                                             setTimeOpen(false);
-//                                             setFrequencyOpen(false);
-//                                             setPathOpen(false);
-//                                             setShowCalendar(false);
-//                                         }}
-//                                     >
-//                                         <Text
-//                                             style={[
-//                                                 buttonStyles.labelButton,
-//                                                 { borderColor: '#F0AB8E', shadowColor: '#F0AB8E' },
-//                                             ]}
-//                                         >
-//                                             {selectedDate}
-//                                         </Text>
-//                                     </Pressable>
+                                {showCalendar && (
+                                    <View style={{ marginBottom: 20, marginHorizontal: -10 }}>
+                                        <SimpleCalendar
+                                            selectedDate={startDate}
+                                            onSelectDate={(date) => {
+                                                setStartDate(date);
+                                                setShowCalendar(false);
+                                            }}
+                                        />
+                                    </View>
+                                )}
 
-//                                     {dateOpen && (
-//                                         <View style={optionContainerStyles.dateOptionsContainer}>
-//                                             <ButtonGroup
-//                                                 options={['Today', 'Tomorrow', 'Custom']}
-//                                                 selected={dateButtonSelection}
-//                                                 styleOverrides={{
-//                                                     button: { borderColor: '#F0AB8E', shadowColor: '#F0AB8E' },
-//                                                     selectedButton: { borderColor: '#bd592eff', shadowColor: '#bd592eff' }
-//                                                 }}
-//                                                 setSelected={(val: string) => {
-//                                                     const today = new Date();
-//                                                     const tomorrow = new Date(today);
-//                                                     tomorrow.setDate(today.getDate() + 1);
+                                {/* frequency */}
+                                <Text style={[globalStyles.label, { marginBottom: 8 }]}>
+                                    FREQUENCY
+                                </Text>
+                                <View style={{
+                                    flexDirection: 'row',
+                                    flexWrap: 'wrap',
+                                    gap: 8,
+                                    marginBottom: 15,
+                                }}>
+                                    {FREQUENCIES.map((freq) => (
+                                        <Pressable
+                                            key={freq}
+                                            onPress={() => handleFrequencyChange(freq)}
+                                        >
+                                            <ShadowBox
+                                                contentBackgroundColor={
+                                                    selectedFrequency === freq
+                                                        ? COLORS.Primary
+                                                        : '#fff'
+                                                }
+                                                contentBorderColor={
+                                                    selectedFrequency === freq
+                                                        ? '#000'
+                                                        : COLORS.Primary
+                                                }
+                                                shadowColor={
+                                                    selectedFrequency === freq
+                                                        ? '#000'
+                                                        : COLORS.Primary
+                                                }
+                                            >
+                                                <View style={{
+                                                    paddingVertical: 8,
+                                                    paddingHorizontal: 12,
+                                                }}>
+                                                    <Text style={[
+                                                        globalStyles.body2,
+                                                        selectedFrequency === freq && {
+                                                            color: '#fff',
+                                                            fontFamily: 'p1'
+                                                        }
+                                                    ]}>
+                                                        {freq}
+                                                    </Text>
+                                                </View>
+                                            </ShadowBox>
+                                        </Pressable>
+                                    ))}
+                                </View>
 
-//                                                     if (val === 'Today') {
-//                                                         setSelectedDate('Today');
-//                                                         setStartDate(getLocalDateString(today));
-//                                                         setShowCalendar(false);
-//                                                         setDateOpen(false);
-//                                                     }
-//                                                     else if (val === 'Tomorrow') {
-//                                                         setSelectedDate('Tomorrow');
-//                                                         setStartDate(getLocalDateString(tomorrow));
-//                                                         setShowCalendar(false);
-//                                                         setDateOpen(false);
-//                                                     }
-//                                                     else if (val === 'Custom') {
-//                                                         setSelectedDate('Today');
-//                                                         setStartDate(getLocalDateString(today));
-//                                                         setShowCalendar(true);
-//                                                     }
-//                                                 }}
-//                                             />
-//                                         </View>
-//                                     )}
+                                {/* weekly days selector */}
+                                {selectedFrequency === 'Weekly' && (
+                                    <>
+                                        <Text style={[globalStyles.label, { marginBottom: 8 }]}>
+                                            SELECT DAYS
+                                        </Text>
+                                        <View style={{
+                                            flexDirection: 'row',
+                                            flexWrap: 'wrap',
+                                            gap: 8,
+                                            marginBottom: 15,
+                                        }}>
+                                            {WEEK_DAYS.map((day) => {
+                                                const selected = selectedDays.includes(day);
+                                                const dayAbbrev = day.slice(0, 3);
 
-//                                     {showCalendar && (
-//                                         <CalendarPicker
-//                                             onSelectDate={(date: Date) => {
-//                                                 setStartDate(getLocalDateString(date));
-//                                             }}
-//                                             setSelectedDate={setSelectedDate}
-//                                             setShowCalendar={setShowCalendar}
-//                                             setDateOpen={setDateOpen}
-//                                         />
-//                                     )}
-//                                 </>
-//                             ) : null}
+                                                return (
+                                                    <Pressable
+                                                        key={day}
+                                                        onPress={() => toggleDay(day)}
+                                                        style={{ width: 42 }}
+                                                    >
+                                                        <ShadowBox
+                                                            contentBackgroundColor={
+                                                                selected ? COLORS.Primary : '#fff'
+                                                            }
+                                                            contentBorderColor={
+                                                                selected ? '#000' : COLORS.Primary
+                                                            }
+                                                            shadowColor={
+                                                                selected ? '#000' : COLORS.Primary
+                                                            }
+                                                        >
+                                                            <View style={{
+                                                                paddingVertical: 8,
+                                                                alignItems: 'center',
+                                                            }}>
+                                                                <Text style={[
+                                                                    globalStyles.body2,
+                                                                    { fontSize: 13 },
+                                                                    selected && {
+                                                                        color: '#fff',
+                                                                        fontFamily: 'p1'
+                                                                    }
+                                                                ]}>
+                                                                    {dayAbbrev}
+                                                                </Text>
+                                                            </View>
+                                                        </ShadowBox>
+                                                    </Pressable>
+                                                );
+                                            })}
+                                        </View>
+                                    </>
+                                )}
 
-//                             {/* Time */}
-//                             {(!dateOpen && !frequencyOpen && !pathOpen) || timeOpen ? (
-//                                 <>
-//                                     <Pressable onPress={() => {
-//                                         setTimeOpen(prev => !prev);
-//                                         setDateOpen(false);
-//                                         setFrequencyOpen(false);
-//                                         setPathOpen(false);
-//                                     }}>
-//                                         <Text style={[buttonStyles.labelButton, { borderColor: '#80BEFF', shadowColor: '#80BEFF' }]}>{selectedTimeOfDay}</Text>
-//                                     </Pressable>
-//                                     {timeOpen && (
-//                                         <View style={optionContainerStyles.timeOptionsContainer}>
-//                                             <ButtonGroup
-//                                                 options={[...TIMES_OF_DAY]}
-//                                                 selected={selectedTimeOfDay}
-//                                                 setSelected={setSelectedTimeOfDay}
-//                                                 onSelect={() => setTimeOpen(false)}
-//                                             />
-//                                         </View>
-//                                     )}
-//                                 </>
-//                             ) : null}
+                                {/* time of day */}
+                                <Text style={[globalStyles.label, { marginBottom: 8 }]}>
+                                    TIME OF DAY
+                                </Text>
+                                <View style={{
+                                    flexDirection: 'row',
+                                    flexWrap: 'wrap',
+                                    gap: 8,
+                                    marginBottom: 15,
+                                }}>
+                                    {TIME_OPTIONS.map((time) => (
+                                        <Pressable
+                                            key={time}
+                                            onPress={() => setSelectedTimeOfDay(time)}
+                                        >
+                                            <ShadowBox
+                                                contentBackgroundColor={
+                                                    selectedTimeOfDay === time
+                                                        ? COLORS.Primary
+                                                        : '#fff'
+                                                }
+                                                contentBorderColor={
+                                                    selectedTimeOfDay === time
+                                                        ? '#000'
+                                                        : COLORS.Primary
+                                                }
+                                                shadowColor={
+                                                    selectedTimeOfDay === time
+                                                        ? '#000'
+                                                        : COLORS.Primary
+                                                }
+                                            >
+                                                <View style={{
+                                                    paddingVertical: 8,
+                                                    paddingHorizontal: 12,
+                                                }}>
+                                                    <Text style={[
+                                                        globalStyles.body2,
+                                                        selectedTimeOfDay === time && {
+                                                            color: '#fff',
+                                                            fontFamily: 'p1'
+                                                        }
+                                                    ]}>
+                                                        {time}
+                                                    </Text>
+                                                </View>
+                                            </ShadowBox>
+                                        </Pressable>
+                                    ))}
+                                </View>
+                            </View>
 
-//                             {/* Frequency */}
-//                             {(!dateOpen && !timeOpen && !pathOpen) || frequencyOpen ? (
-//                                 <>
-//                                     <Pressable onPress={() => {
-//                                         setFrequencyOpen(prev => !prev);
-//                                         setDateOpen(false);
-//                                         setTimeOpen(false);
-//                                         setPathOpen(false);
-//                                     }}>
-//                                         <Text style={[buttonStyles.labelButton, { borderColor: '#C4DEB6', shadowColor: '#C4DEB6' }]}>{selectedFrequency}</Text>
-//                                     </Pressable>
-//                                     {frequencyOpen && (
-//                                         <>
-//                                             <View style={optionContainerStyles.frequencyOptionsContainer}>
-//                                                 <ButtonGroup
-//                                                     options={[...FREQUENCIES]}
-//                                                     selected={selectedFrequency}
-//                                                     setSelected={handleFrequencyChange}
-//                                                     styleOverrides={{
-//                                                         button: { borderColor: '#C4DEB6', shadowColor: '#C4DEB6' },
-//                                                         selectedButton: { borderColor: '#3A7D44', shadowColor: '#3A7D44' },
-//                                                     }}
-//                                                     onSelect={() => setFrequencyOpen(false)}
-//                                                 />
+                            {/* save button */}
+                            <View style={{
+                                flexDirection: 'row',
+                                gap: 10,
+                                marginTop: 30,
+                                justifyContent: 'center',
+                            }}>
+                                <Pressable
+                                    onPress={() => router.back()}
+                                    style={{ flex: 1, maxWidth: 150 }}
+                                >
+                                    <ShadowBox
+                                        contentBackgroundColor="#f0f0f0"
+                                        borderRadius={15}
+                                    >
+                                        <View style={{ paddingVertical: 10, alignItems: 'center' }}>
+                                            <Text style={globalStyles.body}>Cancel</Text>
+                                        </View>
+                                    </ShadowBox>
+                                </Pressable>
 
-//                                                 {selectedFrequency === 'Weekly' && (
-//                                                     <DaySelector
-//                                                         days={[...WEEK_DAYS]}
-//                                                         selectedDays={selectedDays}
-//                                                         toggleDay={toggleDay}
-//                                                     />
-//                                                 )}
-//                                             </View>
-//                                         </>
-//                                     )}
-//                                 </>
-//                             ) : null}
-
-//                             {/* Path */}
-//                             {(!dateOpen && !timeOpen && !frequencyOpen) || pathOpen ? (
-//                                 <>
-//                                     <Pressable onPress={() => {
-//                                         setPathOpen(prev => !prev);
-//                                         setDateOpen(false);
-//                                         setTimeOpen(false);
-//                                         setFrequencyOpen(false);
-//                                     }}>
-//                                         <Text style={[buttonStyles.labelButton, { borderColor: '#FFD589', shadowColor: '#FFD589' }]}>
-//                                             {path && path !== 'None' ? path : 'Add to path'}
-//                                         </Text>
-//                                     </Pressable>
-
-//                                     {pathOpen && (
-//                                         <View style={{ width: '100%' }}>
-//                                             <View style={optionContainerStyles.pathOptionsContainer}>
-//                                                 {paths.length === 0 ? (
-//                                                     <View style={{
-//                                                         padding: 15,
-//                                                     }}>
-//                                                         <Text style={{
-//                                                             fontFamily: 'label',
-//                                                             fontSize: 12,
-//                                                             color: 'rgba(0,0,0,0.7)',
-//                                                             textAlign: 'center',
-//                                                             marginBottom: 8,
-//                                                         }}>
-//                                                             No paths created yet
-//                                                         </Text>
-//                                                         <Text style={{
-//                                                             fontFamily: 'label',
-//                                                             fontSize: 10,
-//                                                             color: 'rgba(0,0,0,0.5)',
-//                                                             textAlign: 'center'
-//                                                         }}>
-//                                                             Visit the Paths page to create one
-//                                                         </Text>
-//                                                     </View>
-//                                                 ) : (
-
-
-//                                                     <PathButtonGroup
-//                                                         paths={paths}
-//                                                         selectedPath={path}
-//                                                         onSelectPath={(pathName: string, pathColor?: string) => {
-//                                                             setPath(pathName);
-//                                                             setPathColor(pathColor);
-//                                                         }}
-//                                                         onClose={() => setPathOpen(false)}
-//                                                     />
-
-//                                                 )}
-//                                             </View>
-//                                         </View>
-//                                     )}
-//                                 </>
-//                             ) : null}
-//                         </View>
-
-//                         <Pressable style={habitCardStyles.createButton} onPress={createHabit}>
-//                             <Text style={habitCardStyles.createButtonText}>Create Habit</Text>
-//                         </Pressable>
-//                     </View>
-//                 </ScrollView>
-//             </LinearGradient>
-//         </>
-//     );
-// }
-
+                                <Pressable
+                                    onPress={handleSave}
+                                    disabled={isSaving}
+                                    style={{ flex: 1, maxWidth: 150 }}
+                                >
+                                    <ShadowBox
+                                        contentBackgroundColor={
+                                            isSaving ? '#ccc' : BUTTON_COLORS.Done
+                                        }
+                                        borderRadius={15}
+                                    >
+                                        <View style={{ paddingVertical: 10, alignItems: 'center' }}>
+                                            <Text style={globalStyles.body}>
+                                                {isSaving ? 'Saving...' : 'Save'}
+                                            </Text>
+                                        </View>
+                                    </ShadowBox>
+                                </Pressable>
+                            </View>
+                        </ScrollView>
+                    </TouchableWithoutFeedback>
+                </KeyboardAvoidingView>
+            </PageContainer>
+        </AppLinearGradient>
+    );
+}

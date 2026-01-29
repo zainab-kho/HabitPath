@@ -158,7 +158,6 @@ export default function HabitsPage() {
                     viewingDate={viewingDate}
                     resetTime={resetTime}
                     onToggleHabit={toggleHabit}
-                    loading={loading}
                 />
 
                 {/* floating buttons */}

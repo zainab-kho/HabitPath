@@ -23,7 +23,6 @@ interface HabitsListProps {
   resetTime: { hour: number; minute: number };
   onToggleHabit: (habitId: string) => void;
   onPressHabit?: (habit: Habit) => void;
-  loading?: boolean;
 }
 
 type TimeOfDay = typeof TIME_OPTIONS[number];
@@ -34,15 +33,16 @@ export default function HabitsList({
   resetTime,
   onToggleHabit,
   onPressHabit,
-  loading = false,
 }: HabitsListProps) {
   const router = useRouter();
   const currentDate = viewingDate || new Date();
   const dateStr = getHabitDate(currentDate, resetTime.hour, resetTime.minute);
 
+  const [loading, setLoading] = useState(true);
   const [showCompleted, setShowCompleted] = useState(true);
   const [orderedHabits, setOrderedHabits] = useState<(Habit & { completed: boolean })[]>([]);
   const [showNewHabitModal, setShowNewHabitModal] = useState(false);
+
 
   // storage key for today's order
   const ORDER_STORAGE_KEY = `@habit_order_${dateStr}`;
@@ -75,6 +75,8 @@ export default function HabitsList({
       } else {
         setOrderedHabits(activeHabits);
       }
+
+      setLoading(false)
     } catch (error) {
       console.error('Error loading habit order:', error);
       setOrderedHabits(activeHabits);
@@ -146,8 +148,9 @@ export default function HabitsList({
     saveDailyOrder(updatedOrder);
   };
 
-  // Loading state
+  // loading state
   if (loading) {
+    console.log('loading over here')
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="small" color={COLORS.Primary} />
@@ -156,17 +159,17 @@ export default function HabitsList({
     );
   }
 
-  if (!habits || habits.length === 0) {
+  if ((!habits || habits.length === 0)) {
     return (
-        <EmptyStateView
-          icon={SYSTEM_ICONS.habit}
-          title='No habits yet'
-          description='Add a goal or a habit. A goal does not repeat.'
-          buttonText='New habit'
-          buttonAction={() => router.push('/(tabs)/habits/NewHabitPage')}
-          buttonColor={COLORS.ProgressColor}
-          containerStyle={{marginBottom: 100}}
-        />
+      <EmptyStateView
+        icon={SYSTEM_ICONS.habit}
+        title='No habits yet'
+        description='Add a goal or a habit. A goal does not repeat.'
+        buttonText='New habit'
+        buttonAction={() => router.push('/(tabs)/habits/NewHabitPage')}
+        buttonColor={COLORS.ProgressColor}
+        containerStyle={{ marginBottom: 100 }}
+      />
     );
   }
 

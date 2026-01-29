@@ -1,7 +1,7 @@
 // @/components/assignments/AssignmentCard.tsx
-import { formatDueDateTimeDisplay } from '@/components/utils/dateUtils';
+import { formatDueDateTimeDisplay, isPast } from '@/components/utils/dateUtils';
 import { ASSIGNMENT_TYPE_COLORS, PROGRESS_COLORS } from '@/constants/';
-import { BUTTON_COLORS } from '@/constants/colors';
+import { BUTTON_COLORS, PAGE } from '@/constants/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import { AssignmentWithCourse } from '@/hooks/useAssignmentData';
 import { globalStyles } from '@/styles';
@@ -78,14 +78,30 @@ export function AssignmentCard({ assignment, showDelete = false, onDelete, onSta
                             <Text style={[globalStyles.label, { padding: 5 }]}>{assignment.progress}</Text>
                         </ShadowBox>
 
-                        <View style={[globalStyles.bubbleLabel, { backgroundColor: ASSIGNMENT_TYPE_COLORS[assignment.type] || '#fff' }]}>
+                        <View style={{
+                            paddingVertical: 5,
+                            paddingHorizontal: 10,
+                            borderRadius: 20,
+                            borderWidth: 1,
+                            borderColor: '#000',
+                            backgroundColor: ASSIGNMENT_TYPE_COLORS[assignment.type] || PAGE.assignments.backgroundAssignment[0]
+                        }}>
                             <Text style={globalStyles.label}>{assignment.type}</Text>
                         </View>
                     </Pressable>
 
                     <View style={{ justifyContent: 'flex-end' }}>
                         {assignment.due_date && (
-                            <View style={[globalStyles.bubbleLabel, { paddingVertical: 5, backgroundColor: '#fff' }]}>
+                            <View style={{
+                                paddingVertical: 5,
+                                paddingHorizontal: 10,
+                                borderRadius: 20,
+                                borderWidth: 1.5,
+                                borderColor: '#ffe8e8',
+                                backgroundColor: isPast(assignment.due_date) ?
+                                    BUTTON_COLORS.Delete :
+                                    PAGE.assignments.background[1]
+                            }}>
                                 <Text style={globalStyles.label}>
                                     {formatDueDateTimeDisplay(assignment.due_date, assignment.due_time || undefined)}
                                 </Text>

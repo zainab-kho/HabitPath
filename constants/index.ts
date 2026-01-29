@@ -25,6 +25,7 @@ export const ASSIGNMENT_TYPES = [
     'Excel',
     'Homework',
     'Lecture',
+    'Notes',
     'Program',
     'Project',
     'Review',
@@ -50,17 +51,18 @@ export const PROGRESS_COLORS: Record<string, string> = {
 };
 
 export const ASSIGNMENT_TYPE_COLORS: Record<string, string> = {
-    'Assignment': '#6ab489',
-    'Discussion Post': '#40BAFF',
-    'Essay': '#FF8B77',
-    'Exam': '#F9E282',
-    'Excel': '#FFB456',
-    'Homework': '#FF90AB',
-    'Lecture': '#db66ff',
+    'Assignment': '#efe9ae',
+    'Discussion Post': '#fec3a6',
+    'Essay': '#ffac81',
+    'Exam': '#ffe692',
+    'Excel': '#99c1de',
+    'Homework': '#ff928b',
+    'Lecture': '#d2b7e5',
+    'Notes': '#efaedf',
     'Program': '#AEBEFF',
     'Project': '#9DB0A3',
-    'Quiz': '#c86a6a',
-    'Review': '#4aca75',
-    'Speech': '#adc86a',
-    'Study': '#febd7d'
+    'Quiz': '#db9191',
+    'Review': '#cdeac0',
+    'Speech': '#f0efeb',
+    'Study': '#BFE4D2'
 }

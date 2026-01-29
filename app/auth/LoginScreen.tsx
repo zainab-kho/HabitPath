@@ -6,16 +6,16 @@ import { AppLinearGradient } from '@/ui/AppLinearGradient'
 import { useRouter } from 'expo-router'
 import { useState } from 'react'
 import {
-    Alert,
-    Keyboard,
-    KeyboardAvoidingView,
-    Platform,
-    Pressable,
-    ScrollView,
-    Text,
-    TextInput,
-    TouchableWithoutFeedback,
-    View
+  Alert,
+  Keyboard,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableWithoutFeedback,
+  View
 } from 'react-native'
 
 export default function LoginScreen() {
@@ -109,12 +109,12 @@ export default function LoginScreen() {
                 <Text style={[globalStyles.h1, { marginBottom: 8 }]}>
                   {isSignUp ? 'Create account' : 'Welcome back'}
                 </Text>
-                <Text style={[globalStyles.body, { 
+                <Text style={[globalStyles.body, {
                   color: 'rgba(0,0,0,0.6)',
                   fontSize: 14,
                 }]}>
-                  {isSignUp 
-                    ? 'Start your habit tracking journey' 
+                  {isSignUp
+                    ? 'Start your habit tracking journey'
                     : 'Continue building great habits'}
                 </Text>
               </View>
@@ -124,6 +124,7 @@ export default function LoginScreen() {
               <TextInput
                 style={[uiStyles.inputField, {
                   borderColor: PAGE.auth.border[0],
+                  marginBottom: 15,
                 }]}
                 placeholder="you@example.com"
                 value={email}
@@ -138,6 +139,7 @@ export default function LoginScreen() {
               <TextInput
                 style={[uiStyles.inputField, {
                   borderColor: PAGE.auth.border[0],
+                  marginBottom: 15,
                 }]}
                 placeholder={isSignUp ? "At least 6 characters" : "Password"}
                 value={password}
@@ -154,6 +156,7 @@ export default function LoginScreen() {
                   <TextInput
                     style={[uiStyles.inputField, {
                       borderColor: PAGE.auth.border[0],
+                      marginBottom: 15,
                     }]}
                     placeholder="Re-enter your password"
                     placeholderTextColor={'#000'}

@@ -175,6 +175,7 @@ export default function JournalPage() {
                     title="Journal"
                     showPlusButton
                     plusNavigateTo='/more/journal/NewEntry'
+                    showBackButton
                 />
 
                 <ScrollView

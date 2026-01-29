@@ -18,7 +18,7 @@ import {
 import { getGradientForTime } from '@/utils/gradients';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Image, Pressable, Text, View } from 'react-native';
 
 export default function HabitsPage() {
@@ -70,7 +70,7 @@ export default function HabitsPage() {
             end={{ x: 0.5, y: 1 }}
             style={{ flex: 1 }}
         >
-            <PageContainer>
+            <PageContainer showBottomNav>
                 <PageHeader
                     title="Habits"
                     plusNavigateTo="/(tabs)/more/new-habit"
@@ -180,6 +180,7 @@ export default function HabitsPage() {
                     </View>
 
                 </View>
+
 
             </PageContainer>
         </LinearGradient>

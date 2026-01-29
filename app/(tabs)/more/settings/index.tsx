@@ -118,7 +118,7 @@ export default function SettingsPage() {
 
     return (
         <AppLinearGradient variant="settings.background">
-            <PageContainer>
+            <PageContainer showBottomNav={false}>
                 <PageHeader title="Settings" showBackButton />
 
                 <ScrollView contentContainerStyle={{ marginHorizontal: 30 }}>

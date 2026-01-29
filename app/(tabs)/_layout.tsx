@@ -1,5 +1,4 @@
 // app/(tabs)/_layout.tsx
-import { BottomNav } from '@/navigation/BottomNav';
 import { getGradientForTime } from '@/utils/gradients';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack } from 'expo-router';
@@ -29,8 +28,6 @@ export default function TabsLayout() {
           <Stack.Screen name="profile/index" />
         </Stack>
       </LinearGradient>
-      
-      <BottomNav />
     </View>
   );
 }

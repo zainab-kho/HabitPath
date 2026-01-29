@@ -161,7 +161,7 @@ export default function Assignments() {
     if (loading) {
         return (
             <AppLinearGradient variant="assignments.background">
-                <PageContainer>
+                <PageContainer showBottomNav>
                     <PageHeader title="Assignments" />
                     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
                         <ActivityIndicator size="small" color={PAGE.assignments.primary[0]} />
@@ -175,7 +175,7 @@ export default function Assignments() {
     if (courses.length === 0) {
         return (
             <AppLinearGradient variant="assignments.background">
-                <PageContainer>
+                <PageContainer showBottomNav>
                     <PageHeader title="Assignments" />
                     <EmptyStateView
                         icon={SYSTEM_ICONS.tag}
@@ -192,7 +192,7 @@ export default function Assignments() {
 
     return (
         <AppLinearGradient variant="assignments.background">
-            <PageContainer>
+            <PageContainer showBottomNav>
                 <PageHeader title="Assignments" />
 
                 <ScrollView

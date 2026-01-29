@@ -119,9 +119,9 @@ export function RootDrawer() {
             icon: SYSTEM_ICONS.reward,
         },
         {
-            label: 'Paths',
-            path: '/(tabs)/more/paths',
-            icon: SYSTEM_ICONS.path,
+            label: 'Journal',
+            path: '/(tabs)/more/journal',
+            icon: SYSTEM_ICONS.journal,
         },
         {
             label: 'Quests',

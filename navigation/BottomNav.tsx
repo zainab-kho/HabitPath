@@ -12,11 +12,6 @@ export function BottomNav() {
     const insets = useSafeAreaInsets();
     const { openDrawer } = useDrawer();
 
-    // hide bottom nav on certain screens
-    const shouldHide = pathname.includes('/more/') || pathname.includes('/auth/');
-
-    if (shouldHide) return null;
-
     const tabs = [
         {
             name: 'habits',
@@ -29,9 +24,9 @@ export function BottomNav() {
             icon: SYSTEM_ICONS.assignment,
         },
         {
-            name: 'journal',
-            route: '/journal',
-            icon: SYSTEM_ICONS.journal,
+            name: 'quests',
+            route: '/quests',
+            icon: SYSTEM_ICONS.quest,
         },
         {
             name: 'profile',
@@ -71,7 +66,7 @@ export function BottomNav() {
                             if (tab.name === 'more') {
                                 openDrawer();
                             } else {
-                                router.push(tab.route as any);
+                                router.replace(tab.route as any);
                             }
                         }}
                         style={({ pressed }) => ({

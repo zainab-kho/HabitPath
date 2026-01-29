@@ -1,13 +1,19 @@
 // @/components/ui/PageContainer.tsx
+import { BottomNav } from '@/navigation/BottomNav';
 import { ReactNode } from 'react';
 import { StyleProp, View, ViewStyle } from 'react-native';
 
 interface PageContainerProps {
   children?: ReactNode;
-  style?: StyleProp<ViewStyle>; // optional style prop
+  style?: StyleProp<ViewStyle>;
+  showBottomNav?: boolean;
 }
 
-export default function PageContainer({ children, style }: PageContainerProps) {
+export default function PageContainer({
+  children,
+  style,
+  showBottomNav = false,
+}: PageContainerProps) {
   return (
     <View style={{ flex: 1 }}>
       <View
@@ -22,6 +28,8 @@ export default function PageContainer({ children, style }: PageContainerProps) {
       >
         {children}
       </View>
+      
+      {showBottomNav && <BottomNav />}
     </View>
   );
 }

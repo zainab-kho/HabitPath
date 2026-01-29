@@ -1,5 +1,6 @@
 // @/app/(tabs)/habits/NewHabitPage.tsx
-import { BUTTON_COLORS, COLORS, PAGE } from '@/constants/colors';
+import { getIconFile } from '@/components/habits/iconUtils';
+import { BUTTON_COLORS, COLORS } from '@/constants/colors';
 import { FREQUENCIES, REWARD_OPTIONS, TIME_OPTIONS, WEEK_DAYS } from '@/constants/habits';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import { useAuth } from '@/contexts/AuthContext';
@@ -27,6 +28,7 @@ import {
     TouchableWithoutFeedback,
     View
 } from 'react-native';
+import uuid from 'react-native-uuid';
 
 type Frequency = typeof FREQUENCIES[number];
 type TimeOfDay = typeof TIME_OPTIONS[number];
@@ -39,18 +41,18 @@ export default function NewHabitPage() {
     // basic info
     const [habitName, setHabitName] = useState('');
     const [selectedIcon, setSelectedIcon] = useState('goal');
-    
+
     // scheduling
     const [selectedFrequency, setSelectedFrequency] = useState<Frequency>('No Repeat');
     const [selectedDays, setSelectedDays] = useState<string[]>([]);
     const [selectedTimeOfDay, setSelectedTimeOfDay] = useState<TimeOfDay>('Anytime');
     const [startDate, setStartDate] = useState<Date>(new Date());
     const [showCalendar, setShowCalendar] = useState(false);
-    
+
     // rewards
     const [rewardPoints, setRewardPoints] = useState<number>(1);
     const [showRewardsPicker, setShowRewardsPicker] = useState(false);
-    
+
     // ui state
     const [isSaving, setIsSaving] = useState(false);
 
@@ -76,7 +78,7 @@ export default function NewHabitPage() {
 
     const handleFrequencyChange = (freq: Frequency) => {
         setSelectedFrequency(freq);
-        
+
         // auto-select today's day for Weekly
         if (freq === 'Weekly') {
             const dayIndex = startDate.getDay();
@@ -107,7 +109,7 @@ export default function NewHabitPage() {
 
         try {
             const newHabit: Habit = {
-                id: Date.now().toString(),
+                id: uuid.v4() as string,
                 name: habitName.trim(),
                 icon: selectedIcon,
                 frequency: selectedFrequency,
@@ -116,30 +118,21 @@ export default function NewHabitPage() {
                 startDate: formatLocalDate(startDate),
                 selectedDate: getDateLabel(startDate),
                 rewardPoints,
-                streak: 0,
-                bestStreak: 0,
-                completionHistory: [],
-                completionEntries: [],
             };
 
-            const { error } = await supabase
-                .from('habits')
-                .insert([{
-                    id: newHabit.id,
-                    user_id: user.id,
-                    name: newHabit.name,
-                    icon: newHabit.icon,
-                    frequency: newHabit.frequency,
-                    selectedDays: newHabit.selectedDays,
-                    selectedTimeOfDay: newHabit.selectedTimeOfDay,
-                    startDate: newHabit.startDate,
-                    selectedDate: newHabit.selectedDate,
-                    rewardPoints: newHabit.rewardPoints,
-                    streak: newHabit.streak,
-                    bestStreak: newHabit.bestStreak,
-                    completionHistory: newHabit.completionHistory,
-                    created_at: new Date().toISOString(),
-                }]);
+            const { error } = await supabase.from('habits').insert([{
+                id: newHabit.id,
+                user_id: user.id,
+                name: newHabit.name,
+                icon: newHabit.icon,
+                frequency: newHabit.frequency,
+                selected_days: newHabit.selectedDays,   
+                selected_time_of_day: newHabit.selectedTimeOfDay,
+                start_date: newHabit.startDate,
+                selected_date: newHabit.selectedDate,
+                reward_points: newHabit.rewardPoints,
+                created_at: new Date().toISOString(),
+            }]);
 
             if (error) {
                 console.error('Error saving habit:', error);
@@ -147,9 +140,14 @@ export default function NewHabitPage() {
             } else {
                 router.back();
             }
-        } catch (error) {
-            console.error('Error saving habit:', error);
-            Alert.alert('Error', 'Failed to save habit. Please try again.');
+        } catch (error: unknown) {
+            if (error instanceof Error) {
+                console.error('Error saving habit:', error.message);
+                Alert.alert('Error', 'Failed to save habit. Please try again.');
+            } else {
+                console.error('Error saving habit:', error);
+                Alert.alert('Error', 'Failed to save habit. Please try again.');
+            }
         } finally {
             setIsSaving(false);
         }
@@ -179,9 +177,10 @@ export default function NewHabitPage() {
                                 }}
                             >
                                 <ShadowBox
-                                    contentBackgroundColor={COLORS.RewardsBackground}
-                                    contentBorderColor={COLORS.RewardsAccent}
-                                    shadowColor={COLORS.RewardsAccent}
+                                    contentBackgroundColor={COLORS.RewardsAccent}
+                                    contentBorderColor={COLORS.Rewards}
+                                    shadowColor={COLORS.Rewards}
+                                    shadowBorderColor={COLORS.Rewards}
                                 >
                                     <View style={{
                                         flexDirection: 'row',
@@ -204,9 +203,7 @@ export default function NewHabitPage() {
                             {/* rewards picker */}
                             {showRewardsPicker && (
                                 <View style={{
-                                    backgroundColor: COLORS.RewardsBackground,
-                                    borderWidth: 1.5,
-                                    borderColor: COLORS.RewardsAccent,
+                                    backgroundColor: COLORS.RewardsAccent,
                                     borderRadius: 15,
                                     padding: 12,
                                     marginBottom: 20,
@@ -235,12 +232,17 @@ export default function NewHabitPage() {
                                                     contentBorderColor={
                                                         rewardPoints === points
                                                             ? '#000'
-                                                            : COLORS.RewardsAccent
+                                                            : COLORS.Rewards
+                                                    }
+                                                    shadowBorderColor={
+                                                        rewardPoints === points
+                                                            ? '#000'
+                                                            : COLORS.Rewards
                                                     }
                                                     shadowColor={
                                                         rewardPoints === points
                                                             ? '#000'
-                                                            : COLORS.RewardsAccent
+                                                            : COLORS.Rewards
                                                     }
                                                 >
                                                     <View style={{
@@ -298,7 +300,13 @@ export default function NewHabitPage() {
                                             backgroundColor: COLORS.PrimaryLight,
                                         }}
                                     >
-                                        <Text style={{ fontSize: 28 }}>{selectedIcon}</Text>
+                                        <Image
+                                            source={getIconFile(selectedIcon)}
+                                            style={{
+                                                width: 40,
+                                                height: 40,
+                                            }}
+                                        />
                                     </Pressable>
 
                                     <TextInput
@@ -331,9 +339,10 @@ export default function NewHabitPage() {
                                     onPress={() => setShowCalendar(!showCalendar)}
                                     style={{ marginBottom: 15 }}
                                 >
-                                    <ShadowBox contentBackgroundColor={PAGE.habits.button[0]}>
+                                    <ShadowBox>
                                         <View style={{
-                                            padding: 12,
+                                            paddingVertical: 7,
+                                            paddingHorizontal: 10,
                                             flexDirection: 'row',
                                             justifyContent: 'space-between',
                                             alignItems: 'center',
@@ -350,14 +359,16 @@ export default function NewHabitPage() {
                                 </Pressable>
 
                                 {showCalendar && (
-                                    <View style={{ marginBottom: 20, marginHorizontal: -10 }}>
-                                        <SimpleCalendar
-                                            selectedDate={startDate}
-                                            onSelectDate={(date) => {
-                                                setStartDate(date);
-                                                setShowCalendar(false);
-                                            }}
-                                        />
+                                    <View style={{ marginBottom: 20, marginHorizontal: 0 }}>
+                                        <ShadowBox>
+                                            <SimpleCalendar
+                                                selectedDate={startDate}
+                                                onSelectDate={(date) => {
+                                                    setStartDate(date);
+                                                    setShowCalendar(false);
+                                                }}
+                                            />
+                                        </ShadowBox>
                                     </View>
                                 )}
 
@@ -379,30 +390,31 @@ export default function NewHabitPage() {
                                             <ShadowBox
                                                 contentBackgroundColor={
                                                     selectedFrequency === freq
-                                                        ? COLORS.Primary
+                                                        ? COLORS.Frequency
                                                         : '#fff'
                                                 }
                                                 contentBorderColor={
                                                     selectedFrequency === freq
                                                         ? '#000'
-                                                        : COLORS.Primary
+                                                        : COLORS.Frequency
+                                                }
+                                                shadowBorderColor={
+                                                    selectedFrequency === freq
+                                                        ? '#000'
+                                                        : COLORS.Frequency
                                                 }
                                                 shadowColor={
                                                     selectedFrequency === freq
                                                         ? '#000'
-                                                        : COLORS.Primary
+                                                        : COLORS.Frequency
                                                 }
                                             >
                                                 <View style={{
-                                                    paddingVertical: 8,
-                                                    paddingHorizontal: 12,
+                                                    paddingVertical: 7,
+                                                    paddingHorizontal: 10,
                                                 }}>
                                                     <Text style={[
-                                                        globalStyles.body2,
-                                                        selectedFrequency === freq && {
-                                                            color: '#fff',
-                                                            fontFamily: 'p1'
-                                                        }
+                                                        globalStyles.body
                                                     ]}>
                                                         {freq}
                                                     </Text>
@@ -436,13 +448,16 @@ export default function NewHabitPage() {
                                                     >
                                                         <ShadowBox
                                                             contentBackgroundColor={
-                                                                selected ? COLORS.Primary : '#fff'
+                                                                selected ? COLORS.Frequency : '#fff'
                                                             }
                                                             contentBorderColor={
-                                                                selected ? '#000' : COLORS.Primary
+                                                                selected ? '#000' : COLORS.Frequency
+                                                            }
+                                                            shadowBorderColor={
+                                                                selected ? '#000' : COLORS.Frequency
                                                             }
                                                             shadowColor={
-                                                                selected ? '#000' : COLORS.Primary
+                                                                selected ? '#000' : COLORS.Frequency
                                                             }
                                                         >
                                                             <View style={{
@@ -450,12 +465,8 @@ export default function NewHabitPage() {
                                                                 alignItems: 'center',
                                                             }}>
                                                                 <Text style={[
-                                                                    globalStyles.body2,
+                                                                    globalStyles.body,
                                                                     { fontSize: 13 },
-                                                                    selected && {
-                                                                        color: '#fff',
-                                                                        fontFamily: 'p1'
-                                                                    }
                                                                 ]}>
                                                                     {dayAbbrev}
                                                                 </Text>
@@ -486,18 +497,23 @@ export default function NewHabitPage() {
                                             <ShadowBox
                                                 contentBackgroundColor={
                                                     selectedTimeOfDay === time
-                                                        ? COLORS.Primary
+                                                        ? COLORS.TimeOfDay
                                                         : '#fff'
                                                 }
                                                 contentBorderColor={
                                                     selectedTimeOfDay === time
                                                         ? '#000'
-                                                        : COLORS.Primary
+                                                        : COLORS.TimeOfDay
+                                                }
+                                                shadowBorderColor={
+                                                    selectedTimeOfDay === time
+                                                        ? '#000'
+                                                        : COLORS.TimeOfDay
                                                 }
                                                 shadowColor={
                                                     selectedTimeOfDay === time
                                                         ? '#000'
-                                                        : COLORS.Primary
+                                                        : COLORS.TimeOfDay
                                                 }
                                             >
                                                 <View style={{
@@ -505,11 +521,7 @@ export default function NewHabitPage() {
                                                     paddingHorizontal: 12,
                                                 }}>
                                                     <Text style={[
-                                                        globalStyles.body2,
-                                                        selectedTimeOfDay === time && {
-                                                            color: '#fff',
-                                                            fontFamily: 'p1'
-                                                        }
+                                                        globalStyles.body
                                                     ]}>
                                                         {time}
                                                     </Text>

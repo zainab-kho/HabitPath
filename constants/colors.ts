@@ -15,7 +15,9 @@ export const COLORS = {
   XPAccent: '#FFB5A0',
   Star: '#ea3434ff',
   Time: '#FFE6FF',
-  ReadMore: '#0000EE'
+  ReadMore: '#0000EE',
+  Frequency: '#92C5FF',
+  TimeOfDay: '#AB98F8'
 } as const;
 
 /**

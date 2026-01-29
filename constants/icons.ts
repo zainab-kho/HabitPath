@@ -3,6 +3,14 @@ export type HabitIcon = {
     file: any;
 };
 
+export function getHabitIcon(name: string) {
+  for (const category of Object.values(ICON_CATEGORIES)) {
+    const found = category.find(icon => icon.name === name);
+    if (found) return found.file;
+  }
+  return null; // icon not found
+}
+
 export const ICON_CATEGORIES: Record<string, HabitIcon[]> = {
     'Daily Activities': [
         { name: 'goal', file: require('@/assets/icons/habits/daily-activities/goal.png') },

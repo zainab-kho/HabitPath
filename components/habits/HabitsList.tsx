@@ -27,8 +27,8 @@ interface HabitsListProps {
 
 type TimeOfDay = typeof TIME_OPTIONS[number];
 
-// **TODO: add completion status to cache also!
-// **TODO: add icon 
+const DEBUG = true; // Set to false to disable logging
+
 export default function HabitsList({
   habits,
   viewingDate,
@@ -53,6 +53,56 @@ export default function HabitsList({
   const activeHabits = habits.filter(habit =>
     isHabitActiveToday(habit, currentDate, resetTime.hour, resetTime.minute)
   );
+
+  // DEBUG: Log what's happening with the filter
+  useEffect(() => {
+    if (DEBUG) {
+      console.log('\n📋 ========== HABITS LIST DEBUG ==========');
+      console.log('Viewing date:', currentDate.toISOString());
+      console.log('Habit date string:', dateStr);
+      console.log('Reset time:', `${resetTime.hour}:${resetTime.minute}`);
+      console.log('Total habits from hook:', habits.length);
+      console.log('Active habits after filter:', activeHabits.length);
+      console.log('\n🔍 Checking each habit:');
+      
+      habits.forEach((habit, index) => {
+        const isActive = isHabitActiveToday(habit, currentDate, resetTime.hour, resetTime.minute);
+        
+        console.log(`\n   ${index + 1}. ${habit.name}`);
+        console.log(`      Frequency: ${habit.frequency}`);
+        console.log(`      Start Date: ${habit.startDate}`);
+        console.log(`      Today (habit date): ${dateStr}`);
+        console.log(`      Is Active: ${isActive ? '✅ YES' : '❌ NO'}`);
+        
+        if (!isActive) {
+          console.log(`      ❓ Why not active?`);
+          
+          // Check each condition
+          if (habit.startDate > dateStr) {
+            console.log(`         - Start date (${habit.startDate}) is AFTER today (${dateStr})`);
+          }
+          
+          if (habit.snoozedUntil && dateStr < habit.snoozedUntil) {
+            console.log(`         - Habit is snoozed until ${habit.snoozedUntil}`);
+          }
+          
+          if (habit.frequency === 'No Repeat' && habit.startDate !== dateStr) {
+            console.log(`         - No Repeat habit, start (${habit.startDate}) ≠ today (${dateStr})`);
+          }
+          
+          if (habit.frequency === 'Weekly' && habit.startDate < dateStr) {
+            console.log(`         - Weekly habit, check selected days:`, habit.selectedDays);
+          }
+        }
+        
+        if (habit.completed) {
+          console.log(`      ✓ Completed: YES`);
+        }
+      });
+      
+      console.log('\n========================================\n');
+    }
+  }, [habits, activeHabits, dateStr, currentDate, resetTime]);
 
   // load saved order for today
   useEffect(() => {
@@ -152,6 +202,7 @@ export default function HabitsList({
 
   // loading state
   if (loading) {
+    if (DEBUG) console.log('🔄 HabitsList is loading...');
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="small" color={COLORS.Primary} />
@@ -161,6 +212,7 @@ export default function HabitsList({
   }
 
   if ((!habits || habits.length === 0)) {
+    if (DEBUG) console.log('📭 No habits found in database');
     return (
       <EmptyStateView
         icon={SYSTEM_ICONS.habit}
@@ -176,6 +228,12 @@ export default function HabitsList({
 
   // empty state
   if (activeHabits.length === 0) {
+    if (DEBUG) {
+      console.log('📭 No ACTIVE habits for this date');
+      console.log(`   Total habits: ${habits.length}`);
+      console.log(`   Active for ${dateStr}: 0`);
+    }
+    
     return (
       <View style={{ marginTop: 20, alignItems: 'center', gap: 20, }}>
         <Text style={[globalStyles.body, { opacity: 0.7 }]}>You have no habits today! Add a habit?</Text>

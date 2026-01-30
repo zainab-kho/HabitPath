@@ -1,19 +1,4 @@
 // @/app/(tabs)/habits/NewHabitPage.tsx
-import { getIconFile } from '@/components/habits/iconUtils';
-import { BUTTON_COLORS, COLORS, PAGE } from '@/constants/colors';
-import { FREQUENCIES, REWARD_OPTIONS, TIME_OPTIONS, WEEK_DAYS } from '@/constants/habits';
-import { SYSTEM_ICONS } from '@/constants/icons';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
-import { globalStyles } from '@/styles';
-import { Habit } from '@/types/Habit';
-import { AppLinearGradient } from '@/ui/AppLinearGradient';
-import PageContainer from '@/ui/PageContainer';
-import PageHeader from '@/ui/PageHeader';
-import ShadowBox from '@/ui/ShadowBox';
-import SimpleCalendar from '@/ui/SimpleCalendar';
-import { formatLocalDate, getHabitDate } from '@/utils/dateUtils';
-import { getResetTime } from '@/utils/habitsActions';
 import { useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import {
@@ -31,6 +16,23 @@ import {
 } from 'react-native';
 import uuid from 'react-native-uuid';
 
+import { getIconFile } from '@/components/habits/iconUtils';
+import { BUTTON_COLORS, COLORS, PAGE } from '@/constants/colors';
+import { FREQUENCIES, REWARD_OPTIONS, TIME_OPTIONS, WEEK_DAYS } from '@/constants/habits';
+import { SYSTEM_ICONS } from '@/constants/icons';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
+import IconPickerModal from '@/modals/IconPickerModal';
+import { globalStyles } from '@/styles';
+import { Habit } from '@/types/Habit';
+import { AppLinearGradient } from '@/ui/AppLinearGradient';
+import PageContainer from '@/ui/PageContainer';
+import PageHeader from '@/ui/PageHeader';
+import ShadowBox from '@/ui/ShadowBox';
+import SimpleCalendar from '@/ui/SimpleCalendar';
+import { formatLocalDate, getHabitDate } from '@/utils/dateUtils';
+import { getResetTime } from '@/utils/habitsActions';
+
 type Frequency = typeof FREQUENCIES[number];
 type TimeOfDay = typeof TIME_OPTIONS[number];
 
@@ -40,8 +42,10 @@ export default function NewHabitPage() {
     const inputRef = useRef<TextInput>(null);
 
     // basic info
+    const [showIconPicker, setShowIconPicker] = useState(false);
     const [habitName, setHabitName] = useState('');
     const [selectedIcon, setSelectedIcon] = useState('goal');
+
 
     // scheduling
     const [selectedFrequency, setSelectedFrequency] = useState<Frequency>('None');
@@ -149,7 +153,6 @@ export default function NewHabitPage() {
                 start_date: newHabit.startDate,
                 selected_date: newHabit.selectedDate,
                 reward_points: newHabit.rewardPoints,
-                completion_history: [],
                 created_at: new Date().toISOString(),
             }]);
 
@@ -204,10 +207,7 @@ export default function NewHabitPage() {
                                     marginBottom: 20,
                                 }}>
                                     <Pressable
-                                        onPress={() => {
-                                            // navigate to icon picker
-                                            router.push('/habits/ChooseIcon' as any);
-                                        }}
+                                        onPress={() => setShowIconPicker(true)}
                                         style={{
                                             width: 50,
                                             height: 50,
@@ -588,6 +588,13 @@ export default function NewHabitPage() {
                     </TouchableWithoutFeedback>
                 </KeyboardAvoidingView>
             </PageContainer>
+
+            <IconPickerModal
+                visible={showIconPicker}
+                selectedIcon={selectedIcon}
+                onClose={() => setShowIconPicker(false)}
+                onSelectIcon={(iconName) => setSelectedIcon(iconName)}
+            />
         </AppLinearGradient >
     );
 }

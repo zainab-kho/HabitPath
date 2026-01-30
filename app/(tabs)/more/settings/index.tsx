@@ -6,10 +6,11 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { BUTTON_COLORS, COLORS } from '@/constants/colors';
 import { supabase } from '@/lib/supabase';
-import { buttonStyles, globalStyles } from '@/styles';
+import { globalStyles } from '@/styles';
 import { AppLinearGradient } from '@/ui/AppLinearGradient';
 import PageContainer from '@/ui/PageContainer';
 import PageHeader from '@/ui/PageHeader';
+import ShadowBox from '@/ui/ShadowBox';
 import { TimeWheel, pickerStyles } from '@/ui/TimeWheel';
 import { getResetTime } from '@/utils/habitUtils';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -114,7 +115,7 @@ export default function SettingsPage() {
                     </View>
 
                     {showTimePicker && (
-                        <View>
+                        <View style={{ alignItems: 'center', gap: 10, }}>
                             <View style={pickerStyles.container}>
                                 <View style={{ flexDirection: 'row', justifyContent: 'center' }}>
                                     <TimeWheel data={HOURS} selected={hour} onSelect={setHour} />
@@ -127,25 +128,41 @@ export default function SettingsPage() {
                                 </View>
                             </View>
 
-                            <Pressable
-                                style={[
-                                    buttonStyles.button,
-                                    { backgroundColor: BUTTON_COLORS.Done, alignSelf: 'center', marginTop: 20 },
-                                ]}
-                                onPress={onDone}
+                            <ShadowBox
+                                borderRadius={20}
+                                contentBackgroundColor={BUTTON_COLORS.Done}
+                                style={{}}
                             >
-                                <Text style={globalStyles.body}>Done</Text>
-                            </Pressable>
+                                <Pressable
+                                    onPress={onDone}
+                                    style={{
+                                        alignItems: 'center',
+                                        paddingVertical: 5,
+                                        paddingHorizontal: 15
+                                    }}
+                                >
+                                    <Text style={globalStyles.body1}>Done</Text>
+                                </Pressable>
+                            </ShadowBox>
                         </View>
                     )}
+                </ScrollView>
 
+                <ShadowBox
+                    borderRadius={20}
+                    contentBackgroundColor={BUTTON_COLORS.Cancel}
+                    style={{ marginBottom: 100, marginHorizontal: 50}}
+                >
                     <Pressable
                         onPress={signOut}
-                        style={[buttonStyles.button, { backgroundColor: COLORS.PrimaryLight, width: 150, alignSelf: 'center', margin: 100 }]}
-                    >
+                        style={{
+                            alignItems: 'center',
+                            paddingVertical: 5,
+                            paddingHorizontal: 15
+                        }}>
                         <Text style={globalStyles.body}>Sign Out</Text>
                     </Pressable>
-                </ScrollView>
+                </ShadowBox>
             </PageContainer>
         </AppLinearGradient>
     );

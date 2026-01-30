@@ -36,6 +36,8 @@ import { getResetTime } from '@/utils/habitsActions';
 type Frequency = typeof FREQUENCIES[number];
 type TimeOfDay = typeof TIME_OPTIONS[number];
 
+const ICON_SIZE = 30;
+
 export default function NewHabitPage() {
     const router = useRouter();
     const { user } = useAuth();
@@ -131,7 +133,7 @@ export default function NewHabitPage() {
             }
 
             const newHabit: Habit = {
-                id: uuid.v4() as string,
+                id: String(uuid.v4()),
                 name: habitName.trim(),
                 icon: selectedIcon,
                 frequency: selectedFrequency,
@@ -181,6 +183,7 @@ export default function NewHabitPage() {
             <PageContainer>
                 <PageHeader title="New Habit" showBackButton />
 
+                {/* **TODO: make sure keyboard works smoothly */}
                 <KeyboardAvoidingView
                     style={{ flex: 1 }}
                     behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -189,22 +192,21 @@ export default function NewHabitPage() {
                         <ScrollView
                             keyboardShouldPersistTaps="handled"
                             showsVerticalScrollIndicator={false}
-                            contentContainerStyle={{ paddingBottom: 100 }}
                         >
                             {/* main card */}
                             <View style={{
                                 backgroundColor: '#fff',
-                                borderWidth: 1.5,
+                                borderWidth: 2,
                                 borderColor: PAGE.habits.border[0],
                                 borderRadius: 20,
                                 padding: 30,
+                                gap: 20,
                             }}>
                                 {/* icon + name */}
                                 <View style={{
                                     flexDirection: 'row',
                                     alignItems: 'center',
-                                    gap: 12,
-                                    marginBottom: 20,
+                                    gap: 15,
                                 }}>
                                     <Pressable
                                         onPress={() => setShowIconPicker(true)}
@@ -222,8 +224,8 @@ export default function NewHabitPage() {
                                         <Image
                                             source={getIconFile(selectedIcon)}
                                             style={{
-                                                width: 40,
-                                                height: 40,
+                                                width: ICON_SIZE,
+                                                height: ICON_SIZE,
                                             }}
                                         />
                                     </Pressable>
@@ -234,10 +236,9 @@ export default function NewHabitPage() {
                                             globalStyles.body,
                                             {
                                                 flex: 1,
-                                                borderBottomWidth: 1.5,
+                                                borderBottomWidth: 2,
                                                 borderBottomColor: PAGE.habits.border[0],
-                                                paddingVertical: 8,
-                                                fontSize: 16,
+                                                paddingVertical: 10,
                                             }
                                         ]}
                                         placeholder="Enter habit name..."
@@ -245,14 +246,14 @@ export default function NewHabitPage() {
                                         value={habitName}
                                         onChangeText={setHabitName}
                                         autoFocus
-                                        cursorColor={COLORS.Primary}
-                                        selectionColor={COLORS.Primary}
+                                        cursorColor={PAGE.habits.border[0]}
+                                        selectionColor={PAGE.habits.border[0]}
                                     />
                                 </View>
 
                                 {/* start date */}
-                                <View style={{ marginBottom: 15 }}>
-                                    <Text style={[globalStyles.label, { marginBottom: 8 }]}>
+                                <View style={{ gap: 10 }}>
+                                    <Text style={[globalStyles.label]}>
                                         START DATE
                                     </Text>
                                     <Pressable onPress={() => setShowCalendar(!showCalendar)}>
@@ -262,7 +263,7 @@ export default function NewHabitPage() {
                                                 alignItems: 'center',
                                                 gap: 10,
                                                 paddingVertical: 8,
-                                                paddingHorizontal: 10,
+                                                paddingHorizontal: 15,
                                             }}>
                                                 <Image
                                                     source={SYSTEM_ICONS.calendar}
@@ -276,7 +277,7 @@ export default function NewHabitPage() {
                                     </Pressable>
 
                                     {showCalendar && (
-                                        <View style={{ marginTop: 10 }}>
+                                        <View style={{ marginVertical: 5 }}>
                                             <ShadowBox>
                                                 <SimpleCalendar
                                                     selectedDate={startDate}
@@ -291,12 +292,16 @@ export default function NewHabitPage() {
                                 </View>
 
                                 {/* rewards */}
-                                <View style={{ marginBottom: 15 }}>
-                                    <Text style={[globalStyles.label, { marginBottom: 8 }]}>
+                                <View style={{ gap: 10 }}>
+                                    <Text style={[globalStyles.label]}>
                                         REWARD POINTS
                                     </Text>
                                     <Pressable onPress={() => setShowRewardsPicker(!showRewardsPicker)}>
-                                        <ShadowBox contentBackgroundColor={COLORS.RewardsAccent}>
+                                        <ShadowBox contentBackgroundColor={
+                                            rewardPoints === 0 ?
+                                                '#fff' :
+                                                COLORS.RewardsAccent}
+                                        >
                                             <View style={{
                                                 flexDirection: 'row',
                                                 alignItems: 'center',
@@ -306,7 +311,7 @@ export default function NewHabitPage() {
                                             }}>
                                                 <Image
                                                     source={SYSTEM_ICONS.reward}
-                                                    style={{ width: 20, height: 20, tintColor: COLORS.Rewards }}
+                                                    style={{ width: 17, height: 17, tintColor: COLORS.Rewards }}
                                                 />
                                                 <Text style={globalStyles.body1}>
                                                     {rewardPoints} {rewardPoints === 1 ? 'point' : 'points'}
@@ -319,8 +324,7 @@ export default function NewHabitPage() {
                                         <View style={{
                                             flexDirection: 'row',
                                             flexWrap: 'wrap',
-                                            gap: 8,
-                                            marginTop: 10,
+                                            gap: 10,
                                         }}>
                                             {REWARD_OPTIONS.map((points) => (
                                                 <Pressable
@@ -355,7 +359,7 @@ export default function NewHabitPage() {
                                                         <View style={{
                                                             paddingVertical: 6,
                                                             paddingHorizontal: 10,
-                                                            minWidth: 50,
+                                                            width: 60,
                                                             alignItems: 'center',
                                                         }}>
                                                             <Text style={[
@@ -372,16 +376,15 @@ export default function NewHabitPage() {
                                 </View>
 
                                 {/* scheduling */}
-                                <View style={{ marginBottom: 15 }}>
+                                <View style={{ gap: 10 }}>
                                     {/* frequency */}
-                                    <Text style={[globalStyles.label, { marginBottom: 8 }]}>
+                                    <Text style={[globalStyles.label]}>
                                         FREQUENCY
                                     </Text>
                                     <View style={{
                                         flexDirection: 'row',
                                         flexWrap: 'wrap',
                                         gap: 8,
-                                        marginBottom: 15,
                                     }}>
                                         {FREQUENCIES.map((freq) => (
                                             <Pressable
@@ -428,14 +431,13 @@ export default function NewHabitPage() {
                                     {/* weekly days selector */}
                                     {selectedFrequency === 'Weekly' && (
                                         <>
-                                            <Text style={[globalStyles.label, { marginBottom: 8 }]}>
+                                            <Text style={globalStyles.label}>
                                                 SELECT DAYS
                                             </Text>
                                             <View style={{
                                                 flexDirection: 'row',
                                                 flexWrap: 'wrap',
                                                 gap: 8,
-                                                marginBottom: 15,
                                             }}>
                                                 {WEEK_DAYS.map((day) => {
                                                     const selected = selectedDays.includes(day);
@@ -479,16 +481,17 @@ export default function NewHabitPage() {
                                             </View>
                                         </>
                                     )}
+                                </View>
 
+                                <View style={{ gap: 10 }}>
                                     {/* time of day */}
-                                    <Text style={[globalStyles.label, { marginBottom: 8 }]}>
+                                    <Text style={[globalStyles.label]}>
                                         TIME OF DAY
                                     </Text>
                                     <View style={{
                                         flexDirection: 'row',
                                         flexWrap: 'wrap',
                                         gap: 8,
-                                        marginBottom: 15,
                                     }}>
                                         {TIME_OPTIONS.map((time) => (
                                             <Pressable
@@ -531,19 +534,19 @@ export default function NewHabitPage() {
                                             </Pressable>
                                         ))}
                                     </View>
-
-                                    {/* **TODO: create more options logic */}
-                                    <Pressable
-                                        style={{
-                                            marginTop: 20,
-                                            alignSelf: 'center',
-                                            opacity: 0.6,
-                                        }}>
-                                        <Text style={globalStyles.label}>More options</Text>
-                                    </Pressable>
                                 </View>
 
-                                {/* save button */}
+                                {/* **TODO: create More options logic */}
+                                <Pressable
+                                    style={{
+                                        marginTop: 10,
+                                        alignSelf: 'center',
+                                        opacity: 0.6,
+                                    }}>
+                                    <Text style={globalStyles.label}>More options</Text>
+                                </Pressable>
+
+                                {/* save and cancel button */}
                                 <View style={{
                                     flexDirection: 'row',
                                     gap: 10,
@@ -552,13 +555,13 @@ export default function NewHabitPage() {
                                 }}>
                                     <Pressable
                                         onPress={() => router.back()}
-                                        style={{ flex: 1, maxWidth: 150 }}
+                                        style={{ flex: 1, maxWidth: 100 }}
                                     >
                                         <ShadowBox
-                                            contentBackgroundColor="#f0f0f0"
-                                            borderRadius={15}
+                                            contentBackgroundColor={BUTTON_COLORS.Cancel}
+                                            borderRadius={20}
                                         >
-                                            <View style={{ paddingVertical: 10, alignItems: 'center' }}>
+                                            <View style={{ paddingVertical: 8, alignItems: 'center' }}>
                                                 <Text style={globalStyles.body}>Cancel</Text>
                                             </View>
                                         </ShadowBox>
@@ -567,15 +570,15 @@ export default function NewHabitPage() {
                                     <Pressable
                                         onPress={handleSave}
                                         disabled={isSaving}
-                                        style={{ flex: 1, maxWidth: 150 }}
+                                        style={{ flex: 1, maxWidth: 100 }}
                                     >
                                         <ShadowBox
                                             contentBackgroundColor={
-                                                isSaving ? '#ccc' : BUTTON_COLORS.Done
+                                                isSaving ? BUTTON_COLORS.Disabled : BUTTON_COLORS.Done
                                             }
-                                            borderRadius={15}
+                                            borderRadius={20}
                                         >
-                                            <View style={{ paddingVertical: 10, alignItems: 'center' }}>
+                                            <View style={{ paddingVertical: 8, alignItems: 'center' }}>
                                                 <Text style={globalStyles.body}>
                                                     {isSaving ? 'Saving...' : 'Save'}
                                                 </Text>

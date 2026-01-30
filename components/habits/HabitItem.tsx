@@ -1,6 +1,6 @@
 // @/components/habits/HabitItem.tsx
 import { COLORS } from '@/constants/colors';
-import { SYSTEM_ICONS } from '@/constants/icons';
+import { HABIT_ICONS, SYSTEM_ICONS } from '@/constants/icons';
 import { globalStyles } from '@/styles';
 import { Habit } from '@/types/Habit';
 import ShadowBox from '@/ui/ShadowBox';
@@ -14,6 +14,7 @@ interface HabitItemProps {
 }
 
 export default function HabitItem({ habit, onToggle, onPress }: HabitItemProps) {
+  const habitIconFile = HABIT_ICONS[habit.icon];
   const habitColor = habit.pathColor || COLORS.Primary;
   const isCompleted = habit.completed || false;
   const showStreak = (habit.streak ?? 0) >= 3;
@@ -31,7 +32,13 @@ export default function HabitItem({ habit, onToggle, onPress }: HabitItemProps) 
         <View style={styles.leftSection}>
           {/* icon */}
           <View style={styles.iconContainer}>
-            <Text style={styles.icon}>{habit.icon || '📝'}</Text>
+            <View style={styles.iconContainer}>
+              {habitIconFile ? (
+                <Image source={habitIconFile} style={styles.iconImage} />
+              ) : (
+                <Text style={styles.icon}></Text>
+              )}
+            </View>
           </View>
 
           {/* name and badges */}
@@ -127,6 +134,12 @@ const styles = StyleSheet.create({
 
   icon: {
     fontSize: 24,
+  },
+
+  iconImage: {
+    width: 40,
+    height: 40,
+    resizeMode: 'contain',
   },
 
   textSection: {

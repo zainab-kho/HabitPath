@@ -33,19 +33,6 @@ export default function HabitSectionHeader({
         <Text style={styles.title}>
           {title}
         </Text>
-
-        {/* Count badge */}
-        <View style={[
-          styles.countBadge,
-          isCompleted && styles.completedBadge,
-        ]}>
-          <Text style={[
-            styles.countText,
-            isCompleted && styles.completedText,
-          ]}>
-            {count}
-          </Text>
-        </View>
       </View>
     </View>
   );

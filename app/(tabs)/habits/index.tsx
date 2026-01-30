@@ -1,12 +1,12 @@
 // @/app/(tabs)/habits/index.tsx
 import HabitsList from '@/components/habits/HabitsList';
+import { isHabitActiveToday } from '@/components/habits/habitUtils';
 import ProgressBar from '@/components/habits/ProgressBar';
 import { COLORS, PAGE } from '@/constants/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import { useAuth } from '@/contexts/AuthContext';
 import { useHabits } from '@/hooks/useHabits';
 import { globalStyles } from '@/styles';
-import { Habit } from '@/types/Habit';
 import PageContainer from '@/ui/PageContainer';
 import PageHeader from '@/ui/PageHeader';
 import ShadowBox from '@/ui/ShadowBox';
@@ -42,13 +42,19 @@ export default function HabitsPage() {
     const isNightMode = currentHour >= 21 || currentHour < 5;
     const textColor = isNightMode ? 'white' : 'black';
 
+    // filter only active habits for the current viewing date
+    const activeHabits = habits.filter(habit =>
+        isHabitActiveToday(habit, viewingDate, resetTime.hour, resetTime.minute)
+    );
+
     // calculate totals for progress bar
     // when loading outside cache window, show 0s until data arrives
-    const totalHabits = loading ? 0 : habits.length;
-    const completedHabits = loading ? 0 : habits.filter((h: Habit & { completed: boolean }) => h.completed).length;
-
-    // calculate total possible points for today (all active habits)
-    const totalPossiblePoints = loading ? 0 : habits.reduce((sum: number, h: Habit & { completed: boolean }) => sum + (h.rewardPoints || 0), 0);
+    const totalHabits = activeHabits.length;
+    const completedHabits = activeHabits.filter(h => h.completed).length;
+    const totalActivePoints = activeHabits.reduce(
+        (sum, h) => sum + (h.rewardPoints || 0),
+        0
+    );
 
     // navigate between dates
     const handleNavigateDate = (direction: 'prev' | 'next') => {
@@ -143,13 +149,12 @@ export default function HabitsPage() {
                     </Pressable>
                 </View>
 
-                {/* **TODO: send active habit stuff not total habits */}
                 {/* progress bar */}
                 <ProgressBar
                     totalHabits={totalHabits}
                     completedHabits={completedHabits}
-                    earnedPoints={earnedPoints}
-                    totalPossiblePoints={totalPossiblePoints}
+                    earnedPoints={earnedPoints} // keep this if it tracks overall points earned
+                    totalPossiblePoints={totalActivePoints}
                     appStreak={appStreak}
                 />
 

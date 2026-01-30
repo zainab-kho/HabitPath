@@ -53,6 +53,7 @@ export default function HabitsList({
   const activeHabits = habits.filter(habit =>
     isHabitActiveToday(habit, currentDate, resetTime.hour, resetTime.minute)
   );
+  const incompleteCount = activeHabits.filter(h => !h.completed).length;
 
   // DEBUG: Log what's happening with the filter
   useEffect(() => {
@@ -64,42 +65,42 @@ export default function HabitsList({
       console.log('Total habits from hook:', habits.length);
       console.log('Active habits after filter:', activeHabits.length);
       console.log('\n🔍 Checking each habit:');
-      
+
       habits.forEach((habit, index) => {
         const isActive = isHabitActiveToday(habit, currentDate, resetTime.hour, resetTime.minute);
-        
+
         console.log(`\n   ${index + 1}. ${habit.name}`);
         console.log(`      Frequency: ${habit.frequency}`);
         console.log(`      Start Date: ${habit.startDate}`);
         console.log(`      Today (habit date): ${dateStr}`);
         console.log(`      Is Active: ${isActive ? '✅ YES' : '❌ NO'}`);
-        
+
         if (!isActive) {
           console.log(`      ❓ Why not active?`);
-          
+
           // Check each condition
           if (habit.startDate > dateStr) {
             console.log(`         - Start date (${habit.startDate}) is AFTER today (${dateStr})`);
           }
-          
+
           if (habit.snoozedUntil && dateStr < habit.snoozedUntil) {
             console.log(`         - Habit is snoozed until ${habit.snoozedUntil}`);
           }
-          
+
           if (habit.frequency === 'No Repeat' && habit.startDate !== dateStr) {
             console.log(`         - No Repeat habit, start (${habit.startDate}) ≠ today (${dateStr})`);
           }
-          
+
           if (habit.frequency === 'Weekly' && habit.startDate < dateStr) {
             console.log(`         - Weekly habit, check selected days:`, habit.selectedDays);
           }
         }
-        
+
         if (habit.completed) {
           console.log(`      ✓ Completed: YES`);
         }
       });
-      
+
       console.log('\n========================================\n');
     }
   }, [habits, activeHabits, dateStr, currentDate, resetTime]);
@@ -233,7 +234,7 @@ export default function HabitsList({
       console.log(`   Total habits: ${habits.length}`);
       console.log(`   Active for ${dateStr}: 0`);
     }
-    
+
     return (
       <View style={{ marginTop: 20, alignItems: 'center', gap: 20, }}>
         <Text style={[globalStyles.body, { opacity: 0.7 }]}>You have no habits today! Add a habit?</Text>
@@ -257,16 +258,22 @@ export default function HabitsList({
 
   return (
     <GestureHandlerRootView style={styles.container}>
-      {/* Toggle Button */}
-      <View style={styles.toggleContainer}>
-        <Pressable
-          onPress={() => setShowCompleted(!showCompleted)}
-        >
-          <Image
-            source={showCompleted ? SYSTEM_ICONS.show : SYSTEM_ICONS.hide}
-            style={styles.toggleIcon}
-          />
-        </Pressable>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 }}>
+        <View>
+          <Text style={globalStyles.body}>You have {incompleteCount} {incompleteCount === 1 ? 'goal' : 'goals'} left today!
+          </Text>
+        </View>
+        {/* Toggle Button */}
+        <View style={styles.toggleContainer}>
+          <Pressable
+            onPress={() => setShowCompleted(!showCompleted)}
+          >
+            <Image
+              source={showCompleted ? SYSTEM_ICONS.show : SYSTEM_ICONS.hide}
+              style={styles.toggleIcon}
+            />
+          </Pressable>
+        </View>
       </View>
 
       <ScrollView
@@ -279,7 +286,7 @@ export default function HabitsList({
           if (habitsInTime.length === 0) return null;
 
           return (
-            <View key={timeOfDay} style={styles.section}>
+            <View key={timeOfDay} >
               <HabitSectionHeader
                 title={timeOfDay}
                 count={habitsInTime.length}
@@ -337,9 +344,5 @@ const styles = StyleSheet.create({
 
   contentContainer: {
     paddingBottom: 20,
-  },
-
-  section: {
-    marginBottom: 20,
   },
 });

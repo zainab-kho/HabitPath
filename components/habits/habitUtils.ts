@@ -21,9 +21,14 @@ export const isHabitActiveToday = (
 ): boolean => {
   const checkDate = date || new Date();
   
-  // Use centralized date utilities
+  // use centralized date utilities
   const todayStr = getHabitDate(checkDate, resetHour, resetMinute);
   const startDateStr = habit.startDate;
+
+  // hide if today is BEFORE the start date
+  if (todayStr < startDateStr) {
+    return false;
+  }
 
   // Hide if today is BEFORE the snooze-until date
   if (habit.snoozedUntil && todayStr < habit.snoozedUntil) {
@@ -34,8 +39,8 @@ export const isHabitActiveToday = (
   const dayOfWeekIndex = getHabitDayOfWeek(checkDate, resetHour, resetMinute);
   const dayOfWeek = WEEK_DAYS[dayOfWeekIndex];
 
-  // Non-repeating habits (goals)
-  if (habit.frequency === 'No Repeat' || !habit.frequency) {
+  // Non-repeating habits (goals) - only show on exact start date
+  if (habit.frequency === 'None' || !habit.frequency) {
     return startDateStr === todayStr;
   }
 
@@ -50,15 +55,25 @@ export const isHabitActiveToday = (
     if (startDateStr === todayStr) return true;
     
     // After start date, only show on selected days
-    return startDateStr < todayStr && (habit.selectedDays?.includes(dayOfWeek) ?? false);
+    if (startDateStr < todayStr) {
+      return habit.selectedDays?.includes(dayOfWeek) ?? false;
+    }
+    
+    return false;
   }
 
   // Monthly habits - repeat on the same day of month as startDate
   if (habit.frequency === 'Monthly') {
     if (startDateStr > todayStr) return false; // hasn't started yet
 
-    const startDay = new Date(startDateStr + 'T12:00:00').getDate(); // day of month from startDate
-    const todayDay = checkDate.getDate(); // today's day of month
+    // Parse the start date to get the day of month
+    // Using a consistent parsing method to avoid timezone issues
+    const startDateParts = startDateStr.split('-');
+    const startDay = parseInt(startDateParts[2], 10); // day of month from startDate
+    
+    // Get today's day of month from the habit date (which respects reset time)
+    const todayDateParts = todayStr.split('-');
+    const todayDay = parseInt(todayDateParts[2], 10);
 
     return startDay === todayDay;
   }

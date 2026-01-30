@@ -1,4 +1,4 @@
-// components/habits/HabitsList.tsx
+// components/habits/HabitsList.tsx - DEBUG VERSION
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -27,6 +27,8 @@ interface HabitsListProps {
 
 type TimeOfDay = typeof TIME_OPTIONS[number];
 
+// **TODO: add completion status to cache also!
+// **TODO: add icon 
 export default function HabitsList({
   habits,
   viewingDate,
@@ -150,7 +152,6 @@ export default function HabitsList({
 
   // loading state
   if (loading) {
-    console.log('loading over here')
     return (
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="small" color={COLORS.Primary} />

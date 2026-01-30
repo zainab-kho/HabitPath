@@ -32,7 +32,7 @@ export const PAGE = {
   habits: {
     background: ['#89F7FE', '#66A6FF'],
     habitCard: ['#FFFFFF', '#F0F0F0'],
-    border: ['#4CE0F6'],
+    border: ['#4caff6'],
     primary: ['#FFDDC1', '#FFABAB'],
     button: ['#f5f2cc']
   }, 

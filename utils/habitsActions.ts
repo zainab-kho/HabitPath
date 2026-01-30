@@ -57,7 +57,28 @@ export async function loadHabitsFromSupabase(userId: string): Promise<Habit[]> {
 
     if (error) throw error;
 
-    const habits = (data || []) as Habit[];
+    const habits = (data || []).map(row => ({
+      id: row.id,
+      user_id: row.user_id,
+      name: row.name,
+      habitText: row.name, 
+      icon: row.icon,
+      frequency: row.frequency,
+      selectedDays: row.selected_days || [],
+      selectedTimeOfDay: row.selected_time_of_day,
+      startDate: row.start_date,  
+      selectedDate: row.selected_date,
+      rewardPoints: row.reward_points || 0,
+      completionHistory: row.completion_history || [],
+      snoozedUntil: row.snoozed_until,
+      skipped: row.skipped || false,
+      created_at: row.created_at,
+    })) as Habit[];
+
+    console.log('📥 Loaded from Supabase:', habits.length, 'habits');
+    habits.forEach(h => {
+      console.log(`   - ${h.name}: startDate=${h.startDate}, freq=${h.frequency}`);
+    });
 
     // Merge with cached completionHistory defensively
     const cachedHabits = await getCachedHabits();
@@ -146,7 +167,7 @@ export async function toggleHabitCompletion(
   if (target) {
     await supabase
       .from('habits')
-      .update({ completionHistory: target.completionHistory })
+      .update({ completion_history: target.completionHistory })
       .eq('id', habitId)
       .eq('user_id', userId);
   }
@@ -172,7 +193,7 @@ export async function snoozeHabit(
 
   await supabase
     .from('habits')
-    .update({ snoozedUntil: viewingDate.toISOString() })
+    .update({ snoozed_until: viewingDate.toISOString() })
     .eq('id', habitId)
     .eq('user_id', userId);
 

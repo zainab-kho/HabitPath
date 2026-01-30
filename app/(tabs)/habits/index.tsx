@@ -6,6 +6,7 @@ import { SYSTEM_ICONS } from '@/constants/icons';
 import { useAuth } from '@/contexts/AuthContext';
 import { useHabits } from '@/hooks/useHabits';
 import { globalStyles } from '@/styles';
+import { Habit } from '@/types/Habit';
 import PageContainer from '@/ui/PageContainer';
 import PageHeader from '@/ui/PageHeader';
 import ShadowBox from '@/ui/ShadowBox';
@@ -44,10 +45,10 @@ export default function HabitsPage() {
     // calculate totals for progress bar
     // when loading outside cache window, show 0s until data arrives
     const totalHabits = loading ? 0 : habits.length;
-    const completedHabits = loading ? 0 : habits.filter(h => h.completed).length;
+    const completedHabits = loading ? 0 : habits.filter((h: Habit & { completed: boolean }) => h.completed).length;
 
     // calculate total possible points for today (all active habits)
-    const totalPossiblePoints = loading ? 0 : habits.reduce((sum, h) => sum + (h.rewardPoints || 0), 0);
+    const totalPossiblePoints = loading ? 0 : habits.reduce((sum: number, h: Habit & { completed: boolean }) => sum + (h.rewardPoints || 0), 0);
 
     // navigate between dates
     const handleNavigateDate = (direction: 'prev' | 'next') => {
@@ -142,6 +143,7 @@ export default function HabitsPage() {
                     </Pressable>
                 </View>
 
+                {/* **TODO: send active habit stuff not total habits */}
                 {/* progress bar */}
                 <ProgressBar
                     totalHabits={totalHabits}
@@ -162,7 +164,7 @@ export default function HabitsPage() {
                 {/* floating buttons */}
                 <View style={{ position: 'absolute', bottom: 10, right: 0, zIndex: 5 }}>
                     <View style={{ flexDirection: 'row', gap: 10, opacity: 1 }}>
-                        <Pressable onPress={() => router.push('/journal/NewEntry')}>
+                        <Pressable onPress={() => router.push('/more/journal/NewEntry')}>
                             <ShadowBox contentBackgroundColor={PAGE.journal.border[0]} borderRadius={30}>
                                 <View style={{ width: 40, height: 40, justifyContent: 'center', alignItems: 'center' }}>
                                     <Image source={SYSTEM_ICONS.write} style={{ width: 20, height: 20 }} />
@@ -170,7 +172,7 @@ export default function HabitsPage() {
                             </ShadowBox>
                         </Pressable>
 
-                        <Pressable>
+                        <Pressable onPress={() => router.push('/habits/NewHabitPage')}>
                             <ShadowBox contentBackgroundColor={PAGE.habits.button[0]} borderRadius={30}>
                                 <View style={{ width: 40, height: 40, justifyContent: 'center', alignItems: 'center' }}>
                                     <Text style={{ fontSize: 25, textAlign: 'center' }}>+</Text>

@@ -12,9 +12,10 @@ export const TIMES_OF_DAY = [
 ] as const;
 
 export const FREQUENCIES = [
-  'No Repeat',
+  'None',
   'Daily',
   'Weekly',
+  'Custom'
 ] as const;
 
 export const WEEK_DAYS = [

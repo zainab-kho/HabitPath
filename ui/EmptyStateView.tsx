@@ -1,7 +1,8 @@
-import { COLORS, PAGE } from '@/constants/colors';
-import { globalStyles } from '@/styles';
 import React from 'react';
 import { Image, ImageSourcePropType, Pressable, StyleProp, Text, View, ViewStyle } from 'react-native';
+
+import { COLORS, PAGE } from '@/constants/colors';
+import { globalStyles } from '@/styles';
 import ShadowBox from './ShadowBox';
 
 interface EmptyStateViewProps {
@@ -11,6 +12,9 @@ interface EmptyStateViewProps {
     buttonText?: string;
     buttonAction?: () => void;
     buttonColor?: string;
+    secondButtonText?: () => void;
+    secondButtonColor?: string;
+    secondButtonAction?: string;
     containerStyle?: StyleProp<ViewStyle>;
 }
 
@@ -22,15 +26,17 @@ export default function EmptyStateView({
     buttonAction,
     containerStyle,
     buttonColor,
+    secondButtonText,
+    secondButtonAction,
+    secondButtonColor,
 }: EmptyStateViewProps) {
     return (
         <View
-            style={[
-                {
-                    flex: 1,
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                },
+            style={[{
+                flex: 1,
+                justifyContent: 'center',
+                alignItems: 'center',
+            },
                 containerStyle,
             ]}
         >
@@ -38,7 +44,12 @@ export default function EmptyStateView({
                 alignItems: 'center',
                 justifyContent: 'center'
             }}>
-                <View style={{ paddingHorizontal: 20, paddingVertical: 30, justifyContent: 'center', alignItems: 'center' }}>
+                <View style={{
+                    paddingHorizontal: 20,
+                    paddingVertical: 30,
+                    justifyContent: 'center',
+                    alignItems: 'center'
+                }}>
                     <Image
                         source={icon}
                         style={{

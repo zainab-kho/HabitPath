@@ -5,15 +5,15 @@ import {
     Alert,
     Image,
     Keyboard,
-    KeyboardAvoidingView,
-    Platform,
     Pressable,
     ScrollView,
+    Switch,
     Text,
     TextInput,
     TouchableWithoutFeedback,
     View
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import uuid from 'react-native-uuid';
 
 import { getIconFile } from '@/components/habits/iconUtils';
@@ -30,8 +30,8 @@ import PageContainer from '@/ui/PageContainer';
 import PageHeader from '@/ui/PageHeader';
 import ShadowBox from '@/ui/ShadowBox';
 import SimpleCalendar from '@/ui/SimpleCalendar';
-import { formatLocalDate, getHabitDate } from '@/utils/dateUtils';
-import { getResetTime } from '@/utils/habitsActions';
+import { formatDisplayDate, formatLocalDate } from '@/utils/dateUtils';
+import { getResetTime } from '@/utils/habitUtils';
 
 type Frequency = typeof FREQUENCIES[number];
 type TimeOfDay = typeof TIME_OPTIONS[number];
@@ -42,12 +42,12 @@ export default function NewHabitPage() {
     const router = useRouter();
     const { user } = useAuth();
     const inputRef = useRef<TextInput>(null);
+    const scrollRef = useRef<KeyboardAwareScrollView>(null);
 
     // basic info
     const [showIconPicker, setShowIconPicker] = useState(false);
     const [habitName, setHabitName] = useState('');
     const [selectedIcon, setSelectedIcon] = useState('goal');
-
 
     // scheduling
     const [selectedFrequency, setSelectedFrequency] = useState<Frequency>('None');
@@ -59,6 +59,14 @@ export default function NewHabitPage() {
     // rewards
     const [rewardPoints, setRewardPoints] = useState<number>(1);
     const [showRewardsPicker, setShowRewardsPicker] = useState(false);
+
+    // more options
+    const [moreOptions, setMoreOptions] = useState(false);
+    const [keepUntil, setKeepUntil] = useState(false);
+    const [increment, setIncrement] = useState(false);
+    const [incrementAmount, setIncrementAmount] = useState(0);
+    const [incrementGoal, setIncrementGoal] = useState(0);
+    const [incrementType, setIncrementType] = useState<Habit['incrementType']>('None');
 
     // ui state
     const [isSaving, setIsSaving] = useState(false);
@@ -102,35 +110,33 @@ export default function NewHabitPage() {
     };
 
     const handleSave = async () => {
-        if (!habitName.trim()) {
-            Alert.alert('Missing Info', 'Please enter a habit name');
-            return;
-        }
-
-        if (!user) {
-            Alert.alert('Error', 'You must be logged in to save habits');
-            return;
-        }
-
         setIsSaving(true);
 
         try {
+            if (!user) throw new Error('No user logged in');
+
             const resetTime = await getResetTime();
+            const habitStartDate = formatLocalDate(startDate); // e.g., "2026-01-30"
 
-            // check if the selected date is "today" or a future/past date
-            const now = new Date();
-            const selectedDateOnly = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
-            const todayOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const selectedDateLabel = (() => {
+                const now = new Date();
+                const isLimbo =
+                    now.getHours() < resetTime.hour ||
+                    (now.getHours() === resetTime.hour && now.getMinutes() < resetTime.minute);
 
-            let habitStartDate: string;
+                if (isLimbo) {
+                    return formatDisplayDate(startDate); // always calendar date in limbo
+                }
 
-            if (selectedDateOnly.getTime() === todayOnly.getTime()) {
-                habitStartDate = getHabitDate(now, resetTime.hour, resetTime.minute);
-            } else {
-                // for past/future dates, just use the selected date directly
-                // don't apply reset time logic to future dates!
-                habitStartDate = formatLocalDate(startDate);
-            }
+                const dateOnly = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate());
+                const todayOnly = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                const tomorrowOnly = new Date(todayOnly);
+                tomorrowOnly.setDate(todayOnly.getDate() + 1);
+
+                if (dateOnly.getTime() === todayOnly.getTime()) return 'Today';
+                if (dateOnly.getTime() === tomorrowOnly.getTime()) return 'Tomorrow';
+                return formatDisplayDate(startDate);
+            })();
 
             const newHabit: Habit = {
                 id: String(uuid.v4()),
@@ -139,9 +145,14 @@ export default function NewHabitPage() {
                 frequency: selectedFrequency,
                 selectedDays: selectedFrequency === 'Weekly' ? selectedDays : [],
                 selectedTimeOfDay,
-                startDate: habitStartDate,
-                selectedDate: getDateLabel(startDate),
+                startDate: habitStartDate,     // pure calendar date
+                selectedDate: selectedDateLabel, // display label
                 rewardPoints,
+                keepUntil,
+                increment,
+                incrementAmount,
+                incrementType,
+                // incrementGoal **TODO: add to supabase
             };
 
             const { error } = await supabase.from('habits').insert([{
@@ -162,17 +173,14 @@ export default function NewHabitPage() {
                 console.error('❌ Error saving habit:', error);
                 Alert.alert('Error', 'Failed to save habit. Please try again.');
             } else {
-                console.log('✅ Habit saved successfully to database!');
+                console.log('✅ Habit saved successfully!');
                 router.back();
             }
+
         } catch (error: unknown) {
-            if (error instanceof Error) {
-                console.error('❌ Error saving habit:', error.message);
-                Alert.alert('Error', 'Failed to save habit. Please try again.');
-            } else {
-                console.error('❌ Error saving habit:', error);
-                Alert.alert('Error', 'Failed to save habit. Please try again.');
-            }
+            const msg = error instanceof Error ? error.message : String(error);
+            console.error('❌ Error saving habit:', msg);
+            Alert.alert('Error', 'Failed to save habit. Please try again.');
         } finally {
             setIsSaving(false);
         }
@@ -184,9 +192,14 @@ export default function NewHabitPage() {
                 <PageHeader title="New Habit" showBackButton />
 
                 {/* **TODO: make sure keyboard works smoothly */}
-                <KeyboardAvoidingView
-                    style={{ flex: 1 }}
-                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                <KeyboardAwareScrollView
+                    ref={scrollRef}
+                    contentContainerStyle={{ flexGrow: 1, paddingBottom: 50 }}
+                    enableOnAndroid={true} // scrolls on Android too
+                    extraHeight={120}       // adjust based on your header or bottom spacing
+                    keyboardOpeningTime={0} // faster scrolling when keyboard opens
+                    showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
                 >
                     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
                         <ScrollView
@@ -248,6 +261,8 @@ export default function NewHabitPage() {
                                         autoFocus
                                         cursorColor={PAGE.habits.border[0]}
                                         selectionColor={PAGE.habits.border[0]}
+                                        onFocus={(e) => scrollRef.current?.scrollToFocusedInput(e.nativeEvent.target)}
+
                                     />
                                 </View>
 
@@ -538,13 +553,192 @@ export default function NewHabitPage() {
 
                                 {/* **TODO: create More options logic */}
                                 <Pressable
+                                    onPress={() => setMoreOptions(!moreOptions)}
                                     style={{
                                         marginTop: 10,
                                         alignSelf: 'center',
                                         opacity: 0.6,
                                     }}>
-                                    <Text style={globalStyles.label}>More options</Text>
+                                    <Text style={globalStyles.label}>{moreOptions ? 'Less options' : 'More options'}</Text>
                                 </Pressable>
+
+                                {moreOptions && (
+                                    <>
+                                        <View style={{ gap: 10 }}>
+                                            {/* keep until until */}
+                                            <View style={{
+                                                flexDirection: 'row',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center',
+                                                marginBottom: 10,
+                                            }}>
+                                                <Text style={globalStyles.body}>Keep until finished?</Text>
+                                                <Switch
+                                                    trackColor={{ true: PAGE.habits.primary[1] }}
+                                                    value={keepUntil}
+                                                    onValueChange={setKeepUntil}
+                                                />
+                                            </View>
+
+                                            {/* increment tracking toggle */}
+                                            <View style={{
+                                                flexDirection: 'row',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center',
+                                                marginBottom: 10,
+                                            }}>
+                                                <Text style={globalStyles.body}>Track in increments?</Text>
+                                                <Switch
+                                                    trackColor={{ true: PAGE.habits.primary[1] }}
+                                                    value={increment}
+                                                    onValueChange={setIncrement}
+                                                />
+                                            </View>
+
+                                            {/* increment type & amount (only if increment enabled) */}
+                                            {increment && (
+                                                <View style={{ gap: 30 }}>
+                                                    <View style={{ gap: 10 }}>
+
+                                                        <Text style={globalStyles.label}>INCREMENT TYPE</Text>
+                                                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                                                            {['None', 'Minutes', 'Miles', 'Sips'].map((type) => (
+                                                                <Pressable key={type} onPress={() => setIncrementType(type as Habit['incrementType'])}>
+                                                                    <ShadowBox
+                                                                        contentBackgroundColor={incrementType === type ? PAGE.habits.primary[1] : '#fff'}
+                                                                        contentBorderColor={incrementType === type ? '#000' : PAGE.habits.primary[1]}
+                                                                        shadowBorderColor={incrementType === type ? '#000' : PAGE.habits.primary[1]}
+                                                                        shadowColor={incrementType === type ? '#000' : PAGE.habits.primary[1]}
+                                                                    >
+                                                                        <View style={{ paddingVertical: 6, paddingHorizontal: 10 }}>
+                                                                            <Text style={globalStyles.body1}>{type}</Text>
+                                                                        </View>
+                                                                    </ShadowBox>
+                                                                </Pressable>
+                                                            ))}
+                                                        </View>
+                                                    </View>
+
+                                                    <View style={{ gap: 30 }}>
+                                                        <Text style={globalStyles.label}>INCREMENT AMOUNT</Text>
+
+                                                        <View style={{ flexDirection: 'row', alignSelf: 'center', gap: 10 }}>
+                                                            <ShadowBox
+                                                                shadowColor={PAGE.habits.primary[1]}
+                                                                style={{
+
+                                                                }}>
+                                                                <Pressable
+                                                                    onPress={() => setIncrementAmount(prev => Math.max(0, prev - 1))}
+                                                                    style={{
+                                                                        paddingVertical: 3,
+                                                                        paddingHorizontal: 8,
+                                                                        alignItems: 'center',
+                                                                        justifyContent: 'center'
+                                                                    }}>
+                                                                    <Text style={globalStyles.body}>-</Text>
+                                                                </Pressable>
+                                                            </ShadowBox>
+
+                                                            <ShadowBox
+                                                                shadowColor={PAGE.habits.primary[1]}>
+                                                                <View style={{
+                                                                    borderWidth: 2,
+                                                                    borderColor: PAGE.habits.primary[0],
+                                                                    width: 100,
+                                                                    borderRadius: 20,
+                                                                    justifyContent: 'center'
+                                                                }}>
+                                                                    <TextInput
+                                                                        style={[globalStyles.body, { textAlign: 'center' }]}
+                                                                        keyboardType="numeric"
+                                                                        value={incrementAmount.toString()}
+                                                                        onChangeText={text => setIncrementAmount(Number(text))}
+                                                                        onFocus={(e) => scrollRef.current?.scrollToFocusedInput(e.nativeEvent.target)}
+                                                                    />
+                                                                </View>
+                                                            </ShadowBox>
+
+                                                            <ShadowBox
+                                                                shadowColor={PAGE.habits.primary[1]}
+                                                                style={{
+
+                                                                }}>
+                                                                <Pressable
+                                                                    onPress={() => setIncrementAmount(prev => prev + 1)}
+                                                                    style={{
+                                                                        paddingVertical: 3,
+                                                                        paddingHorizontal: 8,
+                                                                        alignItems: 'center',
+                                                                        justifyContent: 'center'
+                                                                    }}>
+                                                                    <Text style={globalStyles.body}>+</Text>
+                                                                </Pressable>
+                                                            </ShadowBox>
+                                                        </View>
+
+                                                        {/* 
+                                                        **TODO: add goal input (option)
+                                                        1. 
+                                                         */}
+                                                    </View>
+
+                                                    <View style={{ gap: 30 }}>
+                                                        <Text style={globalStyles.label}>INCREMENT GOAL (OPTIONAL)</Text>
+
+                                                        <View style={{ flexDirection: 'row', alignSelf: 'center', gap: 10 }}>
+                                                            <ShadowBox shadowColor={PAGE.habits.primary[0]}>
+                                                                <Pressable
+                                                                    onPress={() => setIncrementGoal(prev => Math.max(0, prev - 1))}
+                                                                    style={{
+                                                                        paddingVertical: 3,
+                                                                        paddingHorizontal: 8,
+                                                                        alignItems: 'center',
+                                                                        justifyContent: 'center'
+                                                                    }}>
+                                                                    <Text style={globalStyles.body}>-</Text>
+                                                                </Pressable>
+                                                            </ShadowBox>
+
+                                                            <ShadowBox shadowColor={PAGE.habits.primary[0]}>
+                                                                <View style={{
+                                                                    borderWidth: 2,
+                                                                    borderColor: PAGE.habits.primary[0],
+                                                                    width: 100,
+                                                                    borderRadius: 20,
+                                                                    justifyContent: 'center'
+                                                                }}>
+                                                                    <TextInput
+                                                                        style={[globalStyles.body, { textAlign: 'center' }]}
+                                                                        keyboardType="numeric"
+                                                                        value={incrementGoal.toString()}
+                                                                        onChangeText={text => setIncrementGoal(Number(text))}
+                                                                        onFocus={(e) => scrollRef.current?.scrollToFocusedInput(e.nativeEvent.target)}
+                                                                    />
+                                                                </View>
+                                                            </ShadowBox>
+
+                                                            <ShadowBox shadowColor={PAGE.habits.primary[0]}>
+                                                                <Pressable
+                                                                    onPress={() => setIncrementGoal(prev => prev + 1)}
+                                                                    style={{
+                                                                        paddingVertical: 3,
+                                                                        paddingHorizontal: 8,
+                                                                        alignItems: 'center',
+                                                                        justifyContent: 'center'
+                                                                    }}>
+                                                                    <Text style={globalStyles.body}>+</Text>
+                                                                </Pressable>
+                                                            </ShadowBox>
+                                                        </View>
+                                                    </View>
+                                                </View>
+                                            )}
+                                        </View>
+                                    </>
+                                )}
+
+
 
                                 {/* save and cancel button */}
                                 <View style={{
@@ -589,7 +783,7 @@ export default function NewHabitPage() {
                             </View>
                         </ScrollView>
                     </TouchableWithoutFeedback>
-                </KeyboardAvoidingView>
+                </KeyboardAwareScrollView>
             </PageContainer>
 
             <IconPickerModal

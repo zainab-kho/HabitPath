@@ -28,9 +28,9 @@ export interface Habit {
 
   rewardPoints?: number;
 
-  keepUntil?: false; // keep until user checks off
-  increment?: false;  // if user wants to track miles, sips, minutes, etc
-  incrementAmount?: 0;
+  keepUntil?: boolean; // keep until user checks off
+  increment?: boolean;  // if user wants to track miles, sips, minutes, etc
+  incrementAmount?: number;
   incrementType?: 'None';
 
   // core streak state

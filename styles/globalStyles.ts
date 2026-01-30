@@ -5,12 +5,12 @@ import { StyleSheet } from 'react-native';
 export const globalStyles = StyleSheet.create({
     h1: {
         color: '#000',
-        fontSize: 24,
-        fontFamily: 'p1'
+        fontSize: 22,
+        fontFamily: 'p2'
     },
     h2: {
         color: '#000',
-        fontSize: 22,
+        fontSize: 19,
         fontFamily: 'p2'
     },
     h3: {

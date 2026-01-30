@@ -140,7 +140,7 @@ export default function AddAssignmentToDaySheet({
                     onPress={(e) => e.stopPropagation()}
                 >
                     <View style={{ marginTop: 20, marginBottom: 10 }}>
-                        <Text style={[globalStyles.h3, { textAlign: 'center', marginBottom: 5 }]}>Add to {dayLabel}</Text>
+                        <Text style={[globalStyles.h2, { textAlign: 'center', marginBottom: 5 }]}>Add to {dayLabel}</Text>
                         <Text style={[globalStyles.body2, { textAlign: 'center', opacity: 0.6 }]}>
                             {selectedAssignmentIds.length ? `${selectedAssignmentIds.length} selected` : 'Select assignments to work on'}
                         </Text>

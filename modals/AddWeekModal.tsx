@@ -132,7 +132,7 @@ export default function AddWeekModal({ visible, weekPlans, onClose, onSave }: Ad
                     }}
                     onPress={(e) => e.stopPropagation()}
                 >
-                    <Text style={[globalStyles.h3, { marginBottom: 20, textAlign: 'center' }]}>
+                    <Text style={[globalStyles.h2, { marginBottom: 20, textAlign: 'center' }]}>
                         Add Week Plan
                     </Text>
 

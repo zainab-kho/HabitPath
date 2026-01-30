@@ -164,7 +164,7 @@ export default function EditAssignmentModal({ visible, assignment, courses, onCl
                     onPress={(e) => e.stopPropagation()}
                 >
                     <View style={{ marginTop: 20, marginBottom: 10 }}>
-                        <Text style={[globalStyles.h3, { textAlign: 'center', marginBottom: 5 }]}>Edit Assignment</Text>
+                        <Text style={[globalStyles.h2, { textAlign: 'center', marginBottom: 5 }]}>Edit Assignment</Text>
                     </View>
 
                     <ScrollView showsVerticalScrollIndicator={false} style={{ padding: 20 }}>

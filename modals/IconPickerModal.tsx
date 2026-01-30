@@ -50,7 +50,7 @@ export default function IconPickerModal({
                 <Pressable style={styles.modalContainer} onPress={(e) => e.stopPropagation()}>
                     {/* Header */}
                     <View style={styles.header}>
-                        <Text style={globalStyles.h3}>Choose an Icon</Text>
+                        <Text style={globalStyles.h2}>Choose an Icon</Text>
                         <Pressable onPress={onClose} style={styles.closeButton}>
                             <Text style={[globalStyles.body, { fontSize: 24 }]}>×</Text>
                         </Pressable>

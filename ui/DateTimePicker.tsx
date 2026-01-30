@@ -1,5 +1,5 @@
-import { TIME_OPTIONS } from '@/constants'
 import { BUTTON_COLORS, COLORS } from '@/constants/colors'
+import { TIME_OPTIONS } from '@/constants/habits'
 import { SYSTEM_ICONS } from '@/constants/icons'
 import { buttonStyles, globalStyles } from '@/styles'
 import React, { useEffect, useState } from 'react'
@@ -93,7 +93,7 @@ export default function DateTimePicker({
           <Pressable onPress={() => { }} style={styles.sheetContainer}>
             <View style={styles.sheet}>
 
-              <Text style={[globalStyles.h3, styles.title]}>
+              <Text style={[globalStyles.h2, styles.title]}>
                 {showCalendar ? 'Select Date' : 'Date & Time'}
               </Text>
 

@@ -1,7 +1,9 @@
-import { SYSTEM_ICONS } from '@/constants/icons'
-import ShadowBox from '@/ui/ShadowBox'
 import { useRouter } from 'expo-router'
 import { Image, Pressable, Text, View } from 'react-native'
+
+import { SYSTEM_ICONS } from '@/constants/icons'
+import { globalStyles } from '@/styles'
+import ShadowBox from '@/ui/ShadowBox'
 
 interface PageHeaderProps {
   title: string
@@ -30,14 +32,14 @@ export default function PageHeader({
   return (
     <View
       style={{
-        height: 50,
+        height: 40,
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
         marginBottom: 15,
       }}
     >
-      {/* left side - back button or spacer */}
+      {/* left side: back button or spacer */}
       <View style={{ width: 40 }}>
         {showBackButton && (
           <Pressable
@@ -52,21 +54,19 @@ export default function PageHeader({
         )}
       </View>
 
-      {/* center - title */}
+      {/* center: title */}
       <View style={{ flex: 1, alignItems: 'center' }}>
         <Text
-          style={{
-            fontSize: 22,
-            fontFamily: 'p2',
+          style={[ globalStyles.h1, {
             color: textColor,
-          }}
+          }]}
           numberOfLines={1}
         >
           {title}
         </Text>
       </View>
 
-      {/* right side - plus button or spacer */}
+      {/* right side: plus button or spacer */}
       <View style={{ width: 40, alignItems: 'flex-end' }}>
         {showPlusButton && (
           <Pressable onPress={handlePlusPress}>

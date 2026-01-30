@@ -38,7 +38,7 @@ export default function EmptyStateView({
                 alignItems: 'center',
                 justifyContent: 'center'
             }}>
-                <View style={{ paddingHorizontal: 75, paddingVertical: 30, justifyContent: 'center', alignItems: 'center' }}>
+                <View style={{ paddingHorizontal: 20, paddingVertical: 30, justifyContent: 'center', alignItems: 'center' }}>
                     <Image
                         source={icon}
                         style={{

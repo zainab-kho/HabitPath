@@ -39,6 +39,14 @@ export const PAGE = {
   newHabit: {
     background: ['#FDDAC5', '#FEF9E7']
   },
+  quest: {
+    background: ['#00c9ff', '#00d4fb', '#00dff2', '#00e8e5', '#4af0d5', '#59efc9', '#67edbc', '#75ebb0', '#6ae0a6', '#5fd59c', '#54cb92', '#48c088'],
+    primary: ['#FF6E83']
+  },
+  profile: {
+    background: ['#CF8BF3', '#A770EF', '#FDB99B'],
+    primary: ['#FF769C']
+  },
   journal: {
     background: ['#8f94fb', '#bec1ffff'],
     foreground: ['#F9F8FF'],

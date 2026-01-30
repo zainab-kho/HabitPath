@@ -8,6 +8,8 @@ type GradientPath =
   | 'auth.background'
   | 'habitsPage.background'
   | 'newHabit.background'
+  | 'quest.background'
+  | 'profile.background'
   | 'journal.background'
   | 'focus.backgroundMain'
   | 'focus.backgroundBreak'

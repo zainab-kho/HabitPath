@@ -52,7 +52,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       'resetTime',
       'habits',
       'habitProgress',
-      'todayProgress'
+      'todayProgress',
+      'journal_entries',
+
     ])
     const { error } = await supabase.auth.signOut()
     if (error) throw error

@@ -3,6 +3,7 @@ import { PAGE } from '@/constants/colors'
 import { useAuth } from '@/contexts/AuthContext'
 import { buttonStyles, globalStyles, uiStyles } from '@/styles'
 import { AppLinearGradient } from '@/ui/AppLinearGradient'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useRouter } from 'expo-router'
 import { useState } from 'react'
 import {
@@ -30,6 +31,14 @@ export default function LoginScreen() {
 
   const handleAuth = async () => {
     if (!email || !password) {
+      await AsyncStorage.multiRemove([
+        'resetTime',
+        'habits',
+        'habitProgress',
+        'todayProgress',
+        'journal_entries',
+
+      ])
       Alert.alert('Error', 'Please fill in all fields')
       return
     }

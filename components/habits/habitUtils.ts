@@ -5,7 +5,7 @@ import { getHabitDate, getHabitDayOfWeek } from '@/utils/dateUtils';
 
 /**
  * Check if a habit should be active/visible on a given date
- * Respects frequency, selected days, start date, and snooze status
+ * Respects frequency, selected days, start date, snooze status, keepUntil, and increment goals
  * 
  * @param habit - The habit to check
  * @param date - The date to check (defaults to today)
@@ -35,12 +35,30 @@ export const isHabitActiveToday = (
     return false;
   }
 
+  // Get current increment amount for today
+  const currentAmount = habit.incrementHistory?.[todayStr] || 0;
+  
+  // Increment habits with goals now stay visible even when goal is reached
+  // They'll show a checkmark but remain on the list for the day
+  
+  // Increment habits WITHOUT goals stay visible (they can be incremented indefinitely)
+
+  // KeepUntil logic: if habit is marked as keepUntil, it stays visible until explicitly completed
+  // This is handled by the completed flag in the completion history
+  if (habit.keepUntil && habit.completionHistory?.includes(todayStr)) {
+    return false; // Hide if explicitly marked as complete
+  }
+
   // Get day of week using centralized function
   const dayOfWeekIndex = getHabitDayOfWeek(checkDate, resetHour, resetMinute);
   const dayOfWeek = WEEK_DAYS[dayOfWeekIndex];
 
-  // Non-repeating habits (goals) - only show on exact start date
+  // Non-repeating habits (goals) - only show on exact start date (unless keepUntil)
   if (habit.frequency === 'None' || !habit.frequency) {
+    if (habit.keepUntil) {
+      // keepUntil goals stay visible after start date until completed
+      return startDateStr <= todayStr;
+    }
     return startDateStr === todayStr;
   }
 
@@ -67,11 +85,10 @@ export const isHabitActiveToday = (
     if (startDateStr > todayStr) return false; // hasn't started yet
 
     // Parse the start date to get the day of month
-    // Using a consistent parsing method to avoid timezone issues
     const startDateParts = startDateStr.split('-');
-    const startDay = parseInt(startDateParts[2], 10); // day of month from startDate
+    const startDay = parseInt(startDateParts[2], 10);
     
-    // Get today's day of month from the habit date (which respects reset time)
+    // Get today's day of month
     const todayDateParts = todayStr.split('-');
     const todayDay = parseInt(todayDateParts[2], 10);
 
@@ -83,6 +100,7 @@ export const isHabitActiveToday = (
 
 /**
  * Add completed property to habits based on viewing date
+ * For increment habits with goals, also check if goal is reached
  * 
  * @param habits - Array of habits
  * @param date - The date to check completion for
@@ -98,10 +116,30 @@ export const addCompletedProperty = (
 ): (Habit & { completed: boolean })[] => {
   const dateStr = getHabitDate(date, resetHour, resetMinute);
   
-  return habits.map(habit => ({
-    ...habit,
-    completed: habit.completionHistory?.includes(dateStr) ?? false,
-  }));
+  return habits.map(habit => {
+    // Check explicit completion (only from completionHistory)
+    const explicitlyCompleted = habit.completionHistory?.includes(dateStr) ?? false;
+    
+    // For increment habits, we don't auto-mark as "completed" when goal is reached
+    // The visual checkmark is shown by isGoalReached in the component
+    // But the habit isn't considered "completed" unless user manually marks it
+    const completed = explicitlyCompleted;
+    
+    if (habit.increment) {
+      console.log(`🔢 Processing increment habit "${habit.name}":`, {
+        dateStr,
+        incrementHistory: habit.incrementHistory,
+        currentAmount: habit.incrementHistory?.[dateStr] || 0,
+      });
+    }
+    
+    return {
+      ...habit,
+      completed,
+      // Update incrementAmount to today's amount for display
+      incrementAmount: habit.incrementHistory?.[dateStr] || 0,
+    };
+  });
 };
 
 /**

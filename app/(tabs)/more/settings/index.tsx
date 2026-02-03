@@ -6,11 +6,14 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { BUTTON_COLORS, COLORS } from '@/constants/colors';
 import { supabase } from '@/lib/supabase';
-import { buttonStyles, globalStyles } from '@/styles';
+import { globalStyles } from '@/styles';
 import { AppLinearGradient } from '@/ui/AppLinearGradient';
 import PageContainer from '@/ui/PageContainer';
 import PageHeader from '@/ui/PageHeader';
+import ShadowBox from '@/ui/ShadowBox';
 import { TimeWheel, pickerStyles } from '@/ui/TimeWheel';
+import { getResetTime } from '@/utils/habitUtils';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
 export default function SettingsPage() {
@@ -22,70 +25,32 @@ export default function SettingsPage() {
     const MINUTES = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0'));
     const MERIDIEM = ['AM', 'PM'];
 
-    // Set default reset time to 4:00AM
+    // set default reset time to 4:00AM
     const [hour, setHour] = useState('4');
     const [minute, setMinute] = useState('00');
     const [meridiem, setMeridiem] = useState<'AM' | 'PM'>('AM');
     const [showTimePicker, setShowTimePicker] = useState(false);
 
-    // **TODO: get time from cache and load
-
-    // Load saved time on mount
+    // load saved time on mount
     useEffect(() => {
         (async () => {
             if (!user) return;
 
-            const { data, error } = await supabase
-                .from('user_settings')
-                .select('*')
-                .eq('user_id', user.id)
-                .maybeSingle();
+            const { hour, minute } = await getResetTime();
 
-            if (error) {
-                console.error('Error loading settings from Supabase:', error);
-                return;
-            }
+            // convert 24h → 12h for picker
+            const isPM = hour >= 12;
+            const hour12 =
+                hour === 0 ? 12 :
+                    hour > 12 ? hour - 12 :
+                        hour;
 
-            if (data) {
-                setHour(data.end_of_day_hour);
-                setMinute(data.end_of_day_minute);
-                setMeridiem(data.end_of_day_meridiem);
-            }
+            setHour(String(hour12));
+            setMinute(String(minute).padStart(2, '0'));
+            setMeridiem(isPM ? 'PM' : 'AM');
 
-            if (!data) {
-                await supabase.from('user_settings').insert({
-                    user_id: user.id,
-                    end_of_day_hour: '4',
-                    end_of_day_minute: '00',
-                    end_of_day_meridiem: 'AM',
-                });
-            }
-        })();
-    }, [user]);
-
-
-    const formattedTime = `${hour}:${minute} ${meridiem}`;
-
-    useEffect(() => {
-        (async () => {
-            if (!user) return;
-
-            const { data, error } = await supabase
-                .from('user_settings')
-                .select('*')
-                .eq('user_id', user.id)
-                .single(); // we expect only one row per user
-
-            if (error) {
-                console.error('Error loading settings from Supabase:', error);
-                return;
-            }
-
-            if (data) {
-                setHour(data.end_of_day_hour);
-                setMinute(data.end_of_day_minute);
-                setMeridiem(data.end_of_day_meridiem);
-            }
+            console.log(hour);
+            console.log(minute);
         })();
     }, [user]);
 
@@ -109,7 +74,18 @@ export default function SettingsPage() {
             if (error) {
                 console.error('Error saving settings to Supabase:', error);
             } else {
-                console.log('Settings saved:', data);
+                const hour24 =
+                    meridiem === 'AM'
+                        ? hour === '12' ? 0 : Number(hour)
+                        : hour === '12' ? 12 : Number(hour) + 12;
+
+                await AsyncStorage.setItem(
+                    'resetTime',
+                    JSON.stringify({
+                        hour: hour24,
+                        minute: Number(minute),
+                    })
+                );
             }
         } catch (err) {
             console.error('Unexpected error saving settings:', err);
@@ -126,7 +102,7 @@ export default function SettingsPage() {
                         Preferences
                     </Text>
 
-                    {/* Time selection row */}
+                    {/* time selection row */}
                     <View style={settingsStyle.row}>
                         <Text style={globalStyles.body}>End of day time</Text>
 
@@ -134,12 +110,12 @@ export default function SettingsPage() {
                             style={[globalStyles.bubbleLabel, { backgroundColor: COLORS.Time }]}
                             onPress={() => setShowTimePicker(prev => !prev)}
                         >
-                            <Text style={globalStyles.body2}>{formattedTime}</Text>
+                            <Text style={globalStyles.body2}>{hour}:{minute} {meridiem}</Text>
                         </Pressable>
                     </View>
 
                     {showTimePicker && (
-                        <View>
+                        <View style={{ alignItems: 'center', gap: 10, }}>
                             <View style={pickerStyles.container}>
                                 <View style={{ flexDirection: 'row', justifyContent: 'center' }}>
                                     <TimeWheel data={HOURS} selected={hour} onSelect={setHour} />
@@ -152,25 +128,41 @@ export default function SettingsPage() {
                                 </View>
                             </View>
 
-                            <Pressable
-                                style={[
-                                    buttonStyles.button,
-                                    { backgroundColor: BUTTON_COLORS.Done, alignSelf: 'center', marginTop: 20 },
-                                ]}
-                                onPress={onDone}
+                            <ShadowBox
+                                shadowBorderRadius={20}
+                                contentBackgroundColor={BUTTON_COLORS.Done}
+                                style={{}}
                             >
-                                <Text style={globalStyles.body}>Done</Text>
-                            </Pressable>
+                                <Pressable
+                                    onPress={onDone}
+                                    style={{
+                                        alignItems: 'center',
+                                        paddingVertical: 5,
+                                        paddingHorizontal: 15
+                                    }}
+                                >
+                                    <Text style={globalStyles.body1}>Done</Text>
+                                </Pressable>
+                            </ShadowBox>
                         </View>
                     )}
+                </ScrollView>
 
+                <ShadowBox
+                    shadowBorderRadius={20}
+                    contentBackgroundColor={BUTTON_COLORS.Cancel}
+                    style={{ marginBottom: 100, marginHorizontal: 50}}
+                >
                     <Pressable
                         onPress={signOut}
-                        style={[buttonStyles.button, { backgroundColor: COLORS.PrimaryLight, width: 150, alignSelf: 'center', margin: 100 }]}
-                    >
+                        style={{
+                            alignItems: 'center',
+                            paddingVertical: 5,
+                            paddingHorizontal: 15
+                        }}>
                         <Text style={globalStyles.body}>Sign Out</Text>
                     </Pressable>
-                </ScrollView>
+                </ShadowBox>
             </PageContainer>
         </AppLinearGradient>
     );

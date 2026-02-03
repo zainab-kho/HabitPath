@@ -237,7 +237,7 @@ const WeekPlanView: React.FC<WeekPlanViewProps> = ({
                   >
                     <ShadowBox
                       contentBackgroundColor={PAGE.assignments.background[1]}
-                      borderRadius={20}
+                      shadowBorderRadius={20}
                       style={{ alignSelf: 'center', width: '100%' }}
                     >
                       <View style={{

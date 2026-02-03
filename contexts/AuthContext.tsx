@@ -1,5 +1,6 @@
 // @/contexts/AuthContext.tsx
 import { supabase } from '@/lib/supabase'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import type { User } from '@supabase/supabase-js'
 import React, { createContext, useContext, useEffect, useState } from 'react'
 
@@ -47,6 +48,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }
 
   const signOutHandler = async () => {
+    await AsyncStorage.multiRemove([
+      'resetTime',
+      'habits',
+      'habitProgress',
+      'todayProgress',
+      'journal_entries',
+
+    ])
     const { error } = await supabase.auth.signOut()
     if (error) throw error
     setUser(null)

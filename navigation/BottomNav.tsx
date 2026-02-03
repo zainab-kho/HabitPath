@@ -33,11 +33,11 @@ export function BottomNav() {
             route: '/(tabs)/profile',
             icon: SYSTEM_ICONS.profile,
         },
-        {
-            name: 'more',
-            route: '/',
-            icon: SYSTEM_ICONS.more,
-        },
+        // {
+        //     name: 'more',
+        //     route: '/',
+        //     icon: SYSTEM_ICONS.more,
+        // },
     ];
 
     return (

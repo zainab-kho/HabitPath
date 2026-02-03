@@ -72,12 +72,22 @@ export async function loadHabitsFromSupabase(userId: string): Promise<Habit[]> {
       completionHistory: row.completion_history || [],
       snoozedUntil: row.snoozed_until,
       skipped: row.skipped || false,
+      keepUntil: row.keep_until || false,
+      increment: row.increment || false,
+      incrementAmount: row.increment_amount || 0,
+      incrementGoal: row.increment_goal || undefined,
+      incrementType: row.increment_type || undefined,
+      incrementHistory: row.increment_history || {},
+      pathColor: row.path_color,
       created_at: row.created_at,
     })) as Habit[];
 
     console.log('📥 Loaded from Supabase:', habits.length, 'habits');
     habits.forEach(h => {
       console.log(`   - ${h.name}: startDate=${h.startDate}, freq=${h.frequency}`);
+      if (h.increment && h.incrementHistory) {
+        console.log(`      INCREMENT DATA:`, JSON.stringify(h.incrementHistory));
+      }
     });
 
     // Merge with cached completionHistory defensively
@@ -170,6 +180,60 @@ export async function toggleHabitCompletion(
       .update({ completion_history: target.completionHistory })
       .eq('id', habitId)
       .eq('user_id', userId);
+  }
+
+  return updated;
+}
+
+/**
+ * Update increment amount for a habit on a specific date
+ */
+export async function updateHabitIncrement(
+  habitId: string,
+  habits: Habit[],
+  dateStr: string,
+  newAmount: number,
+  userId: string
+): Promise<Habit[]> {
+  const updated = habits.map(habit => {
+    if (habit.id !== habitId) return habit;
+
+    const incrementHistory = habit.incrementHistory || {};
+    
+    return {
+      ...habit,
+      incrementAmount: newAmount,
+      incrementHistory: {
+        ...incrementHistory,
+        [dateStr]: newAmount,
+      },
+    };
+  });
+
+  const target = updated.find(h => h.id === habitId);
+
+  if (target) {
+    console.log('💾 Saving increment to Supabase:', {
+      habitId,
+      dateStr,
+      newAmount,
+      incrementHistory: target.incrementHistory,
+    });
+
+    const { data, error } = await supabase
+      .from('habits')
+      .update({ 
+        increment_amount: newAmount,
+        increment_history: target.incrementHistory,
+      })
+      .eq('id', habitId)
+      .eq('user_id', userId);
+
+    if (error) {
+      console.error('❌ Supabase increment update failed:', error);
+    } else {
+      console.log('✅ Supabase increment update succeeded');
+    }
   }
 
   return updated;

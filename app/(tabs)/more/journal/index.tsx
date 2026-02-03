@@ -15,6 +15,7 @@ import { AppLinearGradient } from '@/ui/AppLinearGradient';
 import EmptyStateView from '@/ui/EmptyStateView';
 import PageContainer from '@/ui/PageContainer';
 import PageHeader from '@/ui/PageHeader';
+import ShadowBox from '@/ui/ShadowBox';
 import { parseLocalDate } from '@/utils/dateUtils';
 
 export default function JournalPage() {
@@ -173,8 +174,7 @@ export default function JournalPage() {
             <PageContainer>
                 <PageHeader
                     title="Journal"
-                    showPlusButton
-                    plusNavigateTo='/more/journal/NewEntry'
+                    // plusNavigateTo='/more/journal/NewEntry'
                     showBackButton
                 />
 
@@ -255,7 +255,7 @@ export default function JournalPage() {
                                     description="How was your day today?"
                                     buttonText="New Entry"
                                     buttonAction={() => {
-                                        router.push('/journal/NewEntry');
+                                        router.push('/more/journal/NewEntry');
                                     }}
                                     buttonColor={PAGE.journal.primary[0]}
                                 />
@@ -263,6 +263,25 @@ export default function JournalPage() {
                         )}
                     </View>
                 </ScrollView>
+
+                {/* floating buttons */}
+                <View style={{ position: 'absolute', top: 0, right: 0, zIndex: 5 }}>
+                    <View style={{ flexDirection: 'row', gap: 10, opacity: 1 }}>
+                        <Pressable onPress={() => router.push('/more/journal/NewEntry')}>
+                            <ShadowBox
+                                contentBackgroundColor={PAGE.journal.border[0]}
+                                contentBorderRadius={30}
+                                shadowBorderRadius={30}
+                                shadowOffset={{x: 1, y: 1}}
+                                >
+                                <View style={{ width: 40, height: 40, justifyContent: 'center', alignItems: 'center' }}>
+                                    <Image source={SYSTEM_ICONS.write} style={{ width: 20, height: 20 }} />
+                                </View>
+                            </ShadowBox>
+                        </Pressable>
+                    </View>
+
+                </View>
             </PageContainer>
         </AppLinearGradient>
     );

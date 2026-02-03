@@ -3,6 +3,7 @@ import { PAGE } from '@/constants/colors'
 import { useAuth } from '@/contexts/AuthContext'
 import { buttonStyles, globalStyles, uiStyles } from '@/styles'
 import { AppLinearGradient } from '@/ui/AppLinearGradient'
+import AsyncStorage from '@react-native-async-storage/async-storage'
 import { useRouter } from 'expo-router'
 import { useState } from 'react'
 import {
@@ -45,6 +46,15 @@ export default function LoginScreen() {
         return
       }
     }
+
+    await AsyncStorage.multiRemove([
+      'resetTime',
+      'habits',
+      'habitProgress',
+      'todayProgress',
+      'journal_entries',
+
+    ])
 
     setLoading(true)
 
@@ -120,34 +130,38 @@ export default function LoginScreen() {
               </View>
 
               {/* Email field */}
-              <Text style={globalStyles.label}>EMAIL</Text>
-              <TextInput
-                style={[uiStyles.inputField, {
-                  borderColor: PAGE.auth.border[0],
-                  marginBottom: 15,
-                }]}
-                placeholder="you@example.com"
-                value={email}
-                onChangeText={setEmail}
-                autoCapitalize="none"
-                keyboardType="email-address"
-                returnKeyType="next"
-              />
+              <View style={{ gap: 10 }}>
+                <Text style={globalStyles.label}>EMAIL</Text>
+                <TextInput
+                  style={[uiStyles.inputField, {
+                    borderColor: PAGE.auth.border[0],
+                    marginBottom: 15,
+                  }]}
+                  placeholder="you@example.com"
+                  value={email}
+                  onChangeText={setEmail}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  returnKeyType="next"
+                />
+              </View>
 
               {/* Password field */}
-              <Text style={globalStyles.label}>PASSWORD</Text>
-              <TextInput
-                style={[uiStyles.inputField, {
-                  borderColor: PAGE.auth.border[0],
-                  marginBottom: 15,
-                }]}
-                placeholder={isSignUp ? "At least 6 characters" : "Password"}
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                returnKeyType={isSignUp ? "next" : "done"}
-                onSubmitEditing={isSignUp ? undefined : handleAuth}
-              />
+              <View style={{ gap: 10 }}>
+                <Text style={globalStyles.label}>PASSWORD</Text>
+                <TextInput
+                  style={[uiStyles.inputField, {
+                    borderColor: PAGE.auth.border[0],
+                    marginBottom: 15,
+                  }]}
+                  placeholder={isSignUp ? "At least 6 characters" : "Password"}
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry
+                  returnKeyType={isSignUp ? "next" : "done"}
+                  onSubmitEditing={isSignUp ? undefined : handleAuth}
+                />
+              </View>
 
               {/* Confirm password - only show for sign up */}
               {isSignUp && (

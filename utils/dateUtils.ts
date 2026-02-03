@@ -74,7 +74,7 @@ export const getCurrentHabitDay = (resetHour = 4, resetMinute = 0): Date => {
  */
 export const formatDateHeader = (date: Date | null): string => {
   if (!date) return 'Loading...';
-  
+
   return date.toLocaleDateString('en-US', {
     weekday: 'short',
     month: 'short',
@@ -99,10 +99,10 @@ export const isSameHabitDay = (
   resetMinute: number = 0
 ): boolean => {
   if (!date1 || !date2) return false;
-  
+
   const habitDate1 = getHabitDate(date1, resetHour, resetMinute);
   const habitDate2 = getHabitDate(date2, resetHour, resetMinute);
-  
+
   return habitDate1 === habitDate2;
 };
 
@@ -321,7 +321,7 @@ export const formatDisplayTime = (date: Date = new Date()): string =>
  * Get today weekday name, e.g., "Monday"
  */
 export const getTodayWeekday = (): string => {
-  const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
   return days[new Date().getDay()];
 };
 
@@ -348,10 +348,10 @@ export const formatDueDateTimeDisplay = (dateString?: string, timeString?: strin
   } else if (dateOnly.getTime() === tomorrowOnly.getTime()) {
     dateStr = 'Tomorrow';
   } else {
-    dateStr = date.toLocaleDateString('en-US', { 
-      weekday: 'short', 
-      month: 'short', 
-      day: 'numeric' 
+    dateStr = date.toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: 'numeric'
     });
   }
 
@@ -389,18 +389,51 @@ export const compareDateStrings = (date1: string, date2: string): number => {
 };
 
 /**
- * Sorts assignments by due date (oldest first), with no due date at the end
+ * Sorts assignments by due date (oldest first), with no due date at the end.
+ * Same due_date -> sort by due_time (earliest first), defaulting missing/invalid times to 12:00 PM.
+ * Remaining ties -> stable deterministic tie-breakers (name/title, then id).
  */
-export const sortByDueDate = <T extends { due_date?: string | null }>(
+export const sortByDueDate = <
+  T extends {
+    due_date?: string | null;
+    due_time?: string | null; // change this if yours is named differently
+    title?: string | null;
+    name?: string | null;
+    id?: string | null;
+  }
+>(
   assignments: T[]
 ): T[] => {
+  const DEFAULT_DUE_MINUTES = 12 * 60; // 12:00 PM
+
+  const toMinutes = (t?: string | null) => {
+    if (!t) return DEFAULT_DUE_MINUTES;
+    const [hh, mm] = t.split(':').map(Number);
+    if (!Number.isFinite(hh) || !Number.isFinite(mm)) return DEFAULT_DUE_MINUTES;
+    return hh * 60 + mm;
+  };
+
+  const getLabel = (a: T) => (a.title ?? a.name ?? '').toLowerCase();
+  const getId = (a: T) => (a.id ?? '').toLowerCase();
+
   return [...assignments].sort((a, b) => {
-    // Assignments without due dates go to the end
-    if (!a.due_date && !b.due_date) return 0;
+    // no due dates go to the end
+    if (!a.due_date && !b.due_date) return getLabel(a).localeCompare(getLabel(b)) || getId(a).localeCompare(getId(b));
     if (!a.due_date) return 1;
     if (!b.due_date) return -1;
-    
-    // Sort by due date (oldest first)
-    return compareDateStrings(a.due_date, b.due_date);
+
+    // date first
+    const dateCmp = compareDateStrings(a.due_date, b.due_date);
+    if (dateCmp !== 0) return dateCmp;
+
+    // then time (default noon)
+    const timeCmp = toMinutes(a.due_time) - toMinutes(b.due_time);
+    if (timeCmp !== 0) return timeCmp;
+
+    // deterministic tie-breakers (NOT created_at)
+    const labelCmp = getLabel(a).localeCompare(getLabel(b));
+    if (labelCmp !== 0) return labelCmp;
+
+    return getId(a).localeCompare(getId(b));
   });
 };

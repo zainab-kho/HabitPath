@@ -7,6 +7,17 @@ import {
   sortByDueDate
 } from '@/utils/dateUtils';
 
+const DEFAULT_DUE_MINUTES = 12 * 60; // 12:00 PM
+
+function getDueMinutes(a: AssignmentWithCourse) {
+  if (!a.due_time) return DEFAULT_DUE_MINUTES;
+
+  const [h, m] = a.due_time.split(':').map(Number);
+  if (Number.isNaN(h) || Number.isNaN(m)) return DEFAULT_DUE_MINUTES;
+
+  return h * 60 + m;
+}
+
 /**
  * get assignments planned for today
  * sorted by the order they were added to the day plan (created_at)
@@ -34,18 +45,6 @@ export function getTodayAssignments(
     .filter((a): a is AssignmentWithCourse => a !== undefined && a.progress !== 'Done');
 }
 
-/**
- * get assignments due (today + tomorrow + overdue) - stays until marked as Done
- */
-export function getDueAssignments(assignments: AssignmentWithCourse[]) {
-  const dueCutoff = addDaysLocal(2);
-
-  const dueAssignments = assignments.filter(
-    a => a.due_date && a.progress !== 'Done' && a.due_date <= dueCutoff
-  );
-
-  return sortByDueDate(dueAssignments);
-}
 
 /**
  * get assignments this week (next 7 days, excluding due)

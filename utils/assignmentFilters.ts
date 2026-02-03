@@ -1,6 +1,6 @@
 // @/utils/assignmentFilters.ts
 import { AssignmentWithCourse, DayPlanAssignment, WeekPlan } from '@/hooks/useAssignmentData';
-import { addDaysLocal, formatLocalDate, getTodayLocal } from '@/utils/dateUtils';
+import { addDaysLocal, formatLocalDate, getTodayLocal, sortByDueDate } from '@/utils/dateUtils';
 
 /**
  * get assignments planned for today
@@ -24,11 +24,18 @@ export function getTodayAssignments(
  * get assignments due (today + tomorrow + overdue) - stays until marked as Done
  */
 export function getDueAssignments(assignments: AssignmentWithCourse[]) {
+  console.log('getDueAssignments called with:', assignments.length, 'assignments');
+  
   const dueCutoff = addDaysLocal(2);
-
-  return assignments.filter(
+  
+  const filtered = assignments.filter(
     a => a.due_date && a.progress !== 'Done' && a.due_date <= dueCutoff
   );
+  
+  console.log('Filtered to:', filtered.length, 'due assignments');
+  console.log('Sample assignment:', filtered[0]);
+  
+  return sortByDueDate(filtered);
 }
 
 /**

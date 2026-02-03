@@ -68,7 +68,7 @@ export default function NewHabitPage() {
     const [moreOptions, setMoreOptions] = useState(false);
     const [keepUntil, setKeepUntil] = useState(false);
     const [increment, setIncrement] = useState(false);
-    const [incrementAmount, setIncrementAmount] = useState(1);
+    const [incrementStep, setincrementStep] = useState(1);
     const [incrementGoal, setIncrementGoal] = useState(0);
     const [incrementType, setIncrementType] = useState<Habit['incrementType']>('None');
 
@@ -156,7 +156,7 @@ export default function NewHabitPage() {
                 rewardPoints,
                 keepUntil,
                 increment,
-                incrementAmount,
+                incrementStep,
                 incrementType,
                 incrementGoal
                 // incrementGoal **TODO: add to supabase
@@ -175,6 +175,7 @@ export default function NewHabitPage() {
                 reward_points: newHabit.rewardPoints,
                 keep_until: newHabit.keepUntil,
                 increment: newHabit.increment,
+                increment_step: newHabit.incrementStep,
                 increment_type: newHabit.incrementType,
                 increment_goal: newHabit.incrementGoal,
                 created_at: new Date().toISOString(),
@@ -640,7 +641,7 @@ export default function NewHabitPage() {
 
                                                                 }}>
                                                                 <Pressable
-                                                                    onPress={() => setIncrementAmount(prev => Math.max(0, prev - 1))}
+                                                                    onPress={() => setincrementStep(prev => Math.max(0, prev - 1))}
                                                                     style={{
                                                                         paddingVertical: 3,
                                                                         paddingHorizontal: 8,
@@ -663,8 +664,8 @@ export default function NewHabitPage() {
                                                                     <TextInput
                                                                         style={[globalStyles.body, { textAlign: 'center' }]}
                                                                         keyboardType="numeric"
-                                                                        value={incrementAmount.toString()}
-                                                                        onChangeText={text => setIncrementAmount(Number(text))}
+                                                                        value={incrementStep.toString()}
+                                                                        onChangeText={text => setincrementStep(Number(text))}
                                                                         onFocus={(e) => scrollRef.current?.scrollToFocusedInput(e.nativeEvent.target)}
                                                                     />
                                                                 </View>
@@ -676,7 +677,7 @@ export default function NewHabitPage() {
 
                                                                 }}>
                                                                 <Pressable
-                                                                    onPress={() => setIncrementAmount(prev => prev + 1)}
+                                                                    onPress={() => setincrementStep(prev => prev + 1)}
                                                                     style={{
                                                                         paddingVertical: 3,
                                                                         paddingHorizontal: 8,

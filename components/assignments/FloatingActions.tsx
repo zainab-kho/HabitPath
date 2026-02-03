@@ -103,15 +103,25 @@ export function FloatingActions({
                 {!showSaveButton && (
                     <View style={{ flexDirection: 'row', gap: 10, opacity: 1 }}>
                         <Pressable onPress={onToggleMenu}>
-                            <ShadowBox contentBackgroundColor={PAGE.assignments.primary[1]} shadowBorderRadius={30}>
-                                <View style={{ width: 40, height: 40, justifyContent: 'center', alignItems: 'center' }}>
+                            <ShadowBox
+                                contentBackgroundColor={PAGE.assignments.primary[1]}
+                                contentBorderRadius={30}
+                                shadowBorderRadius={30}
+                            >
+                                <View
+                                    style={{ width: 40, height: 40, justifyContent: 'center', alignItems: 'center' }}
+                                >
                                     <Image source={SYSTEM_ICONS.more} style={{ width: 20, height: 20 }} />
                                 </View>
                             </ShadowBox>
                         </Pressable>
 
                         <Pressable onPress={onAddAssignment}>
-                            <ShadowBox contentBackgroundColor={PAGE.assignments.primary[0]} shadowBorderRadius={30}>
+                            <ShadowBox
+                                contentBackgroundColor={PAGE.assignments.primary[0]}
+                                contentBorderRadius={30}
+                                shadowBorderRadius={30}
+                            >
                                 <View style={{ width: 40, height: 40, justifyContent: 'center', alignItems: 'center' }}>
                                     <Text style={{ fontSize: 25, textAlign: 'center' }}>+</Text>
                                 </View>

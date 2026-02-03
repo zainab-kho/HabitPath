@@ -76,6 +76,7 @@ export async function loadHabitsFromSupabase(userId: string): Promise<Habit[]> {
       increment: row.increment || false,
       incrementAmount: row.increment_amount || 0,
       incrementGoal: row.increment_goal || undefined,
+      incrementStep: row.increment_step || 1,
       incrementType: row.increment_type || undefined,
       incrementHistory: row.increment_history || {},
       pathColor: row.path_color,

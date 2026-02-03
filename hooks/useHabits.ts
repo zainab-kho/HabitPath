@@ -11,27 +11,20 @@ import {
   skipHabit as skipHabitService,
   snoozeHabit as snoozeHabitService,
   toggleHabitCompletion,
-  updateAppStreak
+  updateAppStreak,
+  updateHabitIncrement
 } from '@/utils/habitsActions';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback, useEffect, useState } from 'react';
 
-/**
- * Smart caching strategy:
- * - Cache habits for last 3 days + next 3 days (7 day window)
- * - Load from cache immediately for instant display
- * - Fetch from Supabase in background to update cache
- * - Show loading only when viewing dates outside cache window
- */
-
 const CACHE_KEY = '@habits_cache';
-const CACHE_WINDOW_DAYS = 3; // Days before and after today to cache
-const DEBUG = true; // Set to false to disable logging
+const CACHE_WINDOW_DAYS = 3;
+const DEBUG = true;
 
 interface HabitsCache {
   habits: Habit[];
-  cachedAt: string; // ISO timestamp
-  cachedForDates: string[]; // Array of date strings this cache is valid for
+  cachedAt: string;
+  cachedForDates: string[];
 }
 
 export function useHabits(viewingDate: Date = new Date()) {
@@ -44,57 +37,39 @@ export function useHabits(viewingDate: Date = new Date()) {
   const [totalPoints, setTotalPoints] = useState(0);
   const [earnedPoints, setEarnedPoints] = useState(0);
 
-  /**
-   * Check if a date is within the cache window (±3 days from today)
-   */
   const isInCacheWindow = useCallback((date: Date, reset: { hour: number; minute: number }): boolean => {
     const today = new Date();
     const daysDiff = Math.abs(daysBetween(date, today));
     return daysDiff <= CACHE_WINDOW_DAYS;
   }, []);
 
-  /**
-   * Get dates in cache window (last 3 days + today + next 3 days)
-   */
   const getCacheWindowDates = useCallback((reset: { hour: number; minute: number }): string[] => {
     const dates: string[] = [];
     const today = new Date();
-    
     for (let i = -CACHE_WINDOW_DAYS; i <= CACHE_WINDOW_DAYS; i++) {
       const date = new Date(today);
       date.setDate(date.getDate() + i);
       dates.push(getHabitDate(date, reset.hour, reset.minute));
     }
-    
     return dates;
   }, []);
 
-  /**
-   * Load habits from cache
-   */
   const loadFromCache = useCallback(async (): Promise<Habit[] | null> => {
     try {
       const cached = await AsyncStorage.getItem(CACHE_KEY);
-      if (!cached)         return null;
-
-
+      if (!cached) return null;
       const cacheData: HabitsCache = JSON.parse(cached);
-      
-      // Check if cache is reasonably fresh (less than 1 hour old)
       const cacheAge = Date.now() - new Date(cacheData.cachedAt).getTime();
       const oneHour = 60 * 60 * 1000;
-      
       if (cacheAge > oneHour) {
         if (DEBUG) console.log('⏰ Cache is stale, will refresh from Supabase');
       }
-
       if (DEBUG) {
         console.log('📦 Cache loaded:');
         console.log('   Cached at:', cacheData.cachedAt);
         console.log('   Number of habits:', cacheData.habits?.length || 0);
         console.log('   Valid for dates:', cacheData.cachedForDates);
       }
-
       return cacheData.habits;
     } catch (err) {
       console.error('❌ Error loading from cache:', err);
@@ -102,9 +77,6 @@ export function useHabits(viewingDate: Date = new Date()) {
     }
   }, []);
 
-  /**
-   * Save habits to cache
-   */
   const saveToCache = useCallback(async (habitsData: Habit[], reset: { hour: number; minute: number }) => {
     try {
       const cacheData: HabitsCache = {
@@ -112,7 +84,6 @@ export function useHabits(viewingDate: Date = new Date()) {
         cachedAt: new Date().toISOString(),
         cachedForDates: getCacheWindowDates(reset),
       };
-      
       await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
       if (DEBUG) console.log('✅ Habits cached successfully');
     } catch (err) {
@@ -120,12 +91,8 @@ export function useHabits(viewingDate: Date = new Date()) {
     }
   }, [getCacheWindowDates]);
 
-  /**
-   * Process habits data (add completed property, calculate stats)
-   */
   const processHabitsData = useCallback((habitsData: Habit[], reset: { hour: number; minute: number }) => {
     const dateStr = getHabitDate(viewingDate, reset.hour, reset.minute);
-    
     if (DEBUG) {
       console.log('🔄 Processing habits data:');
       console.log('   Viewing date:', viewingDate.toISOString());
@@ -133,132 +100,85 @@ export function useHabits(viewingDate: Date = new Date()) {
       console.log('   Reset time:', `${reset.hour}:${reset.minute}`);
       console.log('   Raw habits count:', habitsData.length);
     }
-
-    // Add completed property based on viewing date
-    const habitsWithCompleted = addCompletedToHabits(
-      habitsData,
-      viewingDate,
-      reset.hour,
-      reset.minute
-    );
-    
+    const habitsWithCompleted = addCompletedToHabits(habitsData, viewingDate, reset.hour, reset.minute);
     if (DEBUG) {
       console.log('   Habits with completed property:', habitsWithCompleted.length);
       habitsWithCompleted.forEach(h => {
         console.log(`      - ${h.name}: completed=${h.completed}, start=${h.startDate}, freq=${h.frequency}`);
       });
     }
-
     setHabits(habitsWithCompleted);
-
-    // Calculate points for viewing date
     const earned = habitsData.reduce((sum, h) => {
       if (h.completionHistory?.includes(dateStr)) {
         return sum + (h.rewardPoints || 0);
       }
       return sum;
     }, 0);
-    
     if (DEBUG) {
       console.log('   Points earned on this date:', earned);
     }
-    
     setEarnedPoints(earned);
-
     return habitsData;
   }, [viewingDate]);
 
-  /**
-   * Load habits with smart caching
-   */
   const loadHabits = useCallback(async () => {
     if (!user) {
       setHabits([]);
       setLoading(false);
       return;
     }
-
     try {
       if (DEBUG) {
         console.log('\n🔍 ========== LOADING HABITS ==========');
         console.log('User ID:', user.id);
         console.log('Viewing date:', viewingDate.toISOString());
       }
-
-      // Load reset time first
       const reset = await getResetTime();
       setResetTime(reset);
-
       if (DEBUG) {
         console.log('Reset time:', `${reset.hour}:${reset.minute}`);
         console.log('Habit date for viewing date:', getHabitDate(viewingDate, reset.hour, reset.minute));
       }
-
-      // Check if viewing date is in cache window
       const inCacheWindow = isInCacheWindow(viewingDate, reset);
-      
       if (DEBUG) {
         console.log('In cache window:', inCacheWindow);
       }
-
       if (inCacheWindow) {
-        // Try to load from cache immediately for instant display
         const cached = await loadFromCache();
-        
         if (cached && cached.length > 0) {
           if (DEBUG) console.log('📦 Loading from cache...');
           processHabitsData(cached, reset);
           setLoading(false);
-
-          // Calculate streak and total points from cached data
           const streak = await updateAppStreak(cached, reset.hour, reset.minute);
           setAppStreak(streak);
-
           const total = await getTotalPoints();
           setTotalPoints(total);
         } else {
           if (DEBUG) console.log('📦 Cache empty, will load from Supabase');
         }
-
-        // Fetch from Supabase in background to update cache
         if (DEBUG) console.log('🔄 Fetching fresh data in background...');
         const fresh = await loadHabitsFromSupabase(user.id);
-        
         if (DEBUG) {
           console.log('✅ Fresh data loaded:', fresh.length, 'habits');
         }
-
-        // Update cache
         await saveToCache(fresh, reset);
-        
-        // Update UI with fresh data
         processHabitsData(fresh, reset);
-        
         const freshStreak = await updateAppStreak(fresh, reset.hour, reset.minute);
         setAppStreak(freshStreak);
-
         const freshTotal = await getTotalPoints();
         setTotalPoints(freshTotal);
-
       } else {
-        // Outside cache window - show loading and fetch from Supabase
         if (DEBUG) console.log('⏳ Outside cache window, loading from Supabase...');
         setLoading(true);
-        
         const fresh = await loadHabitsFromSupabase(user.id);
         processHabitsData(fresh, reset);
-        
         const streak = await updateAppStreak(fresh, reset.hour, reset.minute);
         setAppStreak(streak);
-
         const total = await getTotalPoints();
         setTotalPoints(total);
-
         setLoading(false);
       }
-
       if (DEBUG) console.log('========== LOADING COMPLETE ==========\n');
-
       setError(null);
     } catch (err) {
       console.error('❌ Error loading habits:', err);
@@ -267,29 +187,19 @@ export function useHabits(viewingDate: Date = new Date()) {
     }
   }, [user, viewingDate, isInCacheWindow, loadFromCache, saveToCache, processHabitsData]);
 
-  /**
-   * Toggle habit completion with optimistic update
-   */
   const toggleHabit = useCallback(async (habitId: string) => {
     if (!user) return;
-
     const dateStr = getHabitDate(viewingDate, resetTime.hour, resetTime.minute);
-
     try {
-      // Optimistic update - update UI immediately
       const currentHabits = habits.map(({ completed, ...rest }) => rest);
       const targetHabit = currentHabits.find(h => h.id === habitId);
-      
       if (targetHabit) {
         const isCurrentlyCompleted = targetHabit.completionHistory?.includes(dateStr) || false;
-        
         if (DEBUG) {
           console.log('🔄 Toggling habit:', targetHabit.name);
           console.log('   Date:', dateStr);
           console.log('   Currently completed:', isCurrentlyCompleted);
         }
-
-        // Update UI optimistically
         const optimisticHabits = habits.map(h => {
           if (h.id === habitId) {
             return { ...h, completed: !isCurrentlyCompleted };
@@ -297,35 +207,13 @@ export function useHabits(viewingDate: Date = new Date()) {
           return h;
         });
         setHabits(optimisticHabits);
-
-        // Update points optimistically
         const pointChange = isCurrentlyCompleted ? -(targetHabit.rewardPoints || 0) : (targetHabit.rewardPoints || 0);
         setEarnedPoints(prev => prev + pointChange);
       }
-
-      // Update Supabase in background
-      const updatedHabits = await toggleHabitCompletion(
-        habitId,
-        currentHabits,
-        dateStr,
-        resetTime.hour,
-        resetTime.minute,
-        user.id
-      );
-
-      // Update cache
+      const updatedHabits = await toggleHabitCompletion(habitId, currentHabits, dateStr, resetTime.hour, resetTime.minute, user.id);
       await saveToCache(updatedHabits, resetTime);
-
-      // Update state with real data
-      const habitsWithCompleted = addCompletedToHabits(
-        updatedHabits,
-        viewingDate,
-        resetTime.hour,
-        resetTime.minute
-      );
+      const habitsWithCompleted = addCompletedToHabits(updatedHabits, viewingDate, resetTime.hour, resetTime.minute);
       setHabits(habitsWithCompleted);
-
-      // Recalculate accurate points
       const earned = updatedHabits.reduce((sum, h) => {
         if (h.completionHistory?.includes(dateStr)) {
           return sum + (h.rewardPoints || 0);
@@ -333,68 +221,77 @@ export function useHabits(viewingDate: Date = new Date()) {
         return sum;
       }, 0);
       setEarnedPoints(earned);
-
-      // Update app streak
       const streak = await updateAppStreak(updatedHabits, resetTime.hour, resetTime.minute);
       setAppStreak(streak);
-
-      // Update total points
       const total = await getTotalPoints();
       setTotalPoints(total);
     } catch (err) {
       console.error('❌ Error toggling habit:', err);
-      // Revert optimistic update by reloading
       loadHabits();
     }
   }, [habits, viewingDate, resetTime, user, saveToCache, loadHabits]);
 
-  /**
-   * Add a new habit
-   */
+  const updateIncrement = useCallback(async (habitId: string, newAmount: number) => {
+    if (!user) return;
+    const dateStr = getHabitDate(viewingDate, resetTime.hour, resetTime.minute);
+    try {
+      const currentHabits = habits.map(({ completed, ...rest }) => rest);
+      if (DEBUG) {
+        console.log('🔄 Updating increment:', habitId);
+        console.log('   Date:', dateStr);
+        console.log('   New amount:', newAmount);
+      }
+      const optimisticHabits = habits.map(h => {
+        if (h.id === habitId) {
+          const incrementHistory = h.incrementHistory || {};
+          return {
+            ...h,
+            incrementAmount: newAmount,
+            incrementHistory: {
+              ...incrementHistory,
+              [dateStr]: newAmount,
+            },
+          };
+        }
+        return h;
+      });
+      setHabits(optimisticHabits);
+      const updatedHabits = await updateHabitIncrement(habitId, currentHabits, dateStr, newAmount, user.id);
+      await saveToCache(updatedHabits, resetTime);
+      const habitsWithCompleted = addCompletedToHabits(updatedHabits, viewingDate, resetTime.hour, resetTime.minute);
+      setHabits(habitsWithCompleted);
+      if (DEBUG) {
+        console.log('✅ Increment updated successfully');
+      }
+    } catch (err) {
+      console.error('❌ Error updating increment:', err);
+      loadHabits();
+    }
+  }, [habits, viewingDate, resetTime, user, saveToCache, loadHabits]);
+
   const addHabit = useCallback(async (newHabit: Habit) => {
     if (DEBUG) {
       console.log('➕ Adding new habit:', newHabit.name);
       console.log('   Start date:', newHabit.startDate);
       console.log('   Frequency:', newHabit.frequency);
     }
-
-    // Optimistically add to UI
     const habitWithCompleted = {
       ...newHabit,
       completed: false,
     };
     setHabits(prev => [habitWithCompleted, ...prev]);
-
-    // Update cache in background
     const currentHabits = habits.map(({ completed, ...rest }) => rest);
     const updatedHabits = [...currentHabits, newHabit];
     await saveToCache(updatedHabits, resetTime);
   }, [habits, resetTime, saveToCache]);
 
-  /**
-   * Snooze habit
-   */
   const snoozeHabit = useCallback(async (habitId: string) => {
     if (!user) return;
-
     try {
       const currentHabits = habits.map(({ completed, ...rest }) => rest);
-      const updatedHabits = await snoozeHabitService(
-        habitId,
-        currentHabits,
-        viewingDate,
-        user.id
-      );
-
+      const updatedHabits = await snoozeHabitService(habitId, currentHabits, viewingDate, user.id);
       await saveToCache(updatedHabits, resetTime);
-
-      const habitsWithCompleted = addCompletedToHabits(
-        updatedHabits,
-        viewingDate,
-        resetTime.hour,
-        resetTime.minute
-      );
-
+      const habitsWithCompleted = addCompletedToHabits(updatedHabits, viewingDate, resetTime.hour, resetTime.minute);
       setHabits(habitsWithCompleted);
     } catch (err) {
       console.error('❌ Error snoozing habit:', err);
@@ -402,25 +299,13 @@ export function useHabits(viewingDate: Date = new Date()) {
     }
   }, [habits, viewingDate, resetTime, user, saveToCache, loadHabits]);
 
-  /**
-   * Skip habit
-   */
   const skipHabit = useCallback(async (habitId: string) => {
     if (!user) return;
-
     try {
       const currentHabits = habits.map(({ completed, ...rest }) => rest);
       const updatedHabits = await skipHabitService(habitId, currentHabits, user.id);
-
       await saveToCache(updatedHabits, resetTime);
-
-      const habitsWithCompleted = addCompletedToHabits(
-        updatedHabits,
-        viewingDate,
-        resetTime.hour,
-        resetTime.minute
-      );
-
+      const habitsWithCompleted = addCompletedToHabits(updatedHabits, viewingDate, resetTime.hour, resetTime.minute);
       setHabits(habitsWithCompleted);
     } catch (err) {
       console.error('❌ Error skipping habit:', err);
@@ -428,27 +313,14 @@ export function useHabits(viewingDate: Date = new Date()) {
     }
   }, [habits, viewingDate, resetTime, user, saveToCache, loadHabits]);
 
-  /**
-   * Delete habit
-   */
   const deleteHabit = useCallback(async (habitId: string) => {
     if (!user) return;
-
     try {
       const currentHabits = habits.map(({ completed, ...rest }) => rest);
       const updatedHabits = await deleteHabitService(habitId, currentHabits, user.id);
-
       await saveToCache(updatedHabits, resetTime);
-
-      const habitsWithCompleted = addCompletedToHabits(
-        updatedHabits,
-        viewingDate,
-        resetTime.hour,
-        resetTime.minute
-      );
-
+      const habitsWithCompleted = addCompletedToHabits(updatedHabits, viewingDate, resetTime.hour, resetTime.minute);
       setHabits(habitsWithCompleted);
-
       if (DEBUG) {
         console.log('🗑️ Habit deleted, remaining:', habitsWithCompleted.length);
       }
@@ -458,7 +330,6 @@ export function useHabits(viewingDate: Date = new Date()) {
     }
   }, [habits, viewingDate, resetTime, user, saveToCache, loadHabits]);
 
-  // Load on mount and when viewing date changes
   useEffect(() => {
     loadHabits();
   }, [loadHabits]);
@@ -474,6 +345,7 @@ export function useHabits(viewingDate: Date = new Date()) {
     loadHabits,
     addHabit,
     toggleHabit,
+    updateIncrement,
     snoozeHabit,
     skipHabit,
     deleteHabit,

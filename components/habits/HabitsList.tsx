@@ -23,11 +23,12 @@ interface HabitsListProps {
   resetTime: { hour: number; minute: number };
   onToggleHabit: (habitId: string) => void;
   onPressHabit?: (habit: Habit) => void;
+  onIncrementUpdate?: (habitId: string, newAmount: number) => void;
 }
 
 type TimeOfDay = typeof TIME_OPTIONS[number];
 
-const DEBUG = true; // Set to false to disable logging
+const DEBUG = false; // Set to false to disable logging
 
 export default function HabitsList({
   habits,
@@ -35,6 +36,7 @@ export default function HabitsList({
   resetTime,
   onToggleHabit,
   onPressHabit,
+  onIncrementUpdate,
 }: HabitsListProps) {
   const router = useRouter();
   const currentDate = viewingDate || new Date();
@@ -54,6 +56,12 @@ export default function HabitsList({
     isHabitActiveToday(habit, currentDate, resetTime.hour, resetTime.minute)
   );
   const incompleteCount = activeHabits.filter(h => !h.completed).length;
+  const scheduledHabits = habits.filter(habit =>
+    isHabitActiveToday(habit, currentDate, resetTime.hour, resetTime.minute)
+  );
+  const allDoneToday = scheduledHabits.length > 0 && incompleteCount === 0;
+
+  const incompleteHabits = scheduledHabits.filter(h => !h.completed);
 
   // DEBUG: Log what's happening with the filter
   useEffect(() => {
@@ -212,7 +220,7 @@ export default function HabitsList({
     );
   }
 
-  if ((!habits || habits.length === 0)) {
+  if (!habits || habits.length === 0) {
     if (DEBUG) console.log('📭 No habits found in database');
     return (
       <EmptyStateView
@@ -228,88 +236,150 @@ export default function HabitsList({
   }
 
   // empty state
-  if (activeHabits.length === 0) {
-    if (DEBUG) {
-      console.log('📭 No ACTIVE habits for this date');
-      console.log(`   Total habits: ${habits.length}`);
-      console.log(`   Active for ${dateStr}: 0`);
-    }
-
+  if (scheduledHabits.length === 0) {
     return (
       <View style={{ marginTop: 20, alignItems: 'center', gap: 20, }}>
         <Text style={[globalStyles.body, { opacity: 0.7 }]}>You have no habits today! Add a habit?</Text>
 
         <ShadowBox
-          borderRadius={20}
+          shadowBorderRadius={20}
+          contentBorderRadius={20}
           contentBackgroundColor={PAGE.habits.button[0]}
         >
           <Pressable
             onPress={() => router.push('/(tabs)/habits/NewHabitPage')}
             style={{
               paddingVertical: 5,
-              paddingHorizontal: 15,
+              paddingHorizontal: 25,
             }}>
-            <Text style={[globalStyles.body]}>New Habit</Text>
+            <Text style={[globalStyles.body1]}>New Habit</Text>
           </Pressable>
         </ShadowBox>
       </View>
     );
   }
 
-  return (
-    <GestureHandlerRootView style={styles.container}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 }}>
-        <View>
-          <Text style={globalStyles.body}>You have {incompleteCount} {incompleteCount === 1 ? 'goal' : 'goals'} left today!
+  if (incompleteCount === 0) {
+    return (
+      <>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 }}>
+          <View>
+            <Text style={globalStyles.body}>You have {incompleteCount} goals left today!
+            </Text>
+          </View>
+          {/* Toggle Button */}
+          <View style={styles.toggleContainer}>
+            <Pressable
+              onPress={() => setShowCompleted(!showCompleted)}
+            >
+              <Image
+                source={showCompleted ? SYSTEM_ICONS.show : SYSTEM_ICONS.hide}
+                style={styles.toggleIcon}
+              />
+            </Pressable>
+          </View>
+        </View>
+        <View style={{ marginTop: 20, alignItems: 'center', gap: 20 }}>
+
+
+          <Text style={[globalStyles.body, { opacity: 0.7, textAlign: 'center' }]}>
+            🎉 Good job — you finished everything for today!
           </Text>
+
+          <View style={{ flexDirection: 'row', gap: 10 }}>
+            {/* Optional: let them review completed habits */}
+            <ShadowBox
+              shadowBorderRadius={20}
+              contentBorderRadius={20}
+              contentBackgroundColor="#fff"
+            >
+              <Pressable
+                onPress={() => setShowCompleted(true)}
+                style={{ paddingVertical: 6, paddingHorizontal: 18 }}
+              >
+                <Text style={globalStyles.body1}>View completed</Text>
+              </Pressable>
+            </ShadowBox>
+
+            {/* Optional: encourage creating another habit */}
+            <ShadowBox
+              shadowBorderRadius={20}
+              contentBorderRadius={20}
+              contentBackgroundColor={PAGE.habits.button[0]}
+            >
+              <Pressable
+                onPress={() => router.push('/(tabs)/habits/NewHabitPage')}
+                style={{ paddingVertical: 6, paddingHorizontal: 18 }}
+              >
+                <Text style={globalStyles.body1}>Add another</Text>
+              </Pressable>
+            </ShadowBox>
+          </View>
         </View>
-        {/* Toggle Button */}
-        <View style={styles.toggleContainer}>
-          <Pressable
-            onPress={() => setShowCompleted(!showCompleted)}
-          >
-            <Image
-              source={showCompleted ? SYSTEM_ICONS.show : SYSTEM_ICONS.hide}
-              style={styles.toggleIcon}
-            />
-          </Pressable>
-        </View>
+      </>
+    );
+  }
+
+  return (
+  <GestureHandlerRootView style={styles.container}>
+    {/* header row with toggle */}
+    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 }}>
+      <View>
+        <Text style={globalStyles.body}>
+          {allDoneToday
+            ? `You finished everything today!`
+            : `You have ${incompleteCount} ${incompleteCount === 1 ? 'goal' : 'goals'} left today!`}
+        </Text>
       </View>
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.contentContainer}
-      >
-        {TIME_OPTIONS.map(timeOfDay => {
-          const habitsInTime = groupedHabits[timeOfDay];
+      <View style={styles.toggleContainer}>
+        <Pressable onPress={() => setShowCompleted(prev => !prev)}>
+          <Image
+            source={showCompleted ? SYSTEM_ICONS.show : SYSTEM_ICONS.hide}
+            style={styles.toggleIcon}
+          />
+        </Pressable>
+      </View>
+    </View>
 
-          if (habitsInTime.length === 0) return null;
+    {/* optional "good job" banner */}
+    {allDoneToday && (
+      <View style={{ marginTop: 12, alignItems: 'center', gap: 10 }}>
+        <Text style={[globalStyles.body, { opacity: 0.7, textAlign: 'center' }]}>
+          🎉 Good job — you finished everything for today!
+        </Text>
+      </View>
+    )}
 
-          return (
-            <View key={timeOfDay} >
-              <HabitSectionHeader
-                title={timeOfDay}
-                count={habitsInTime.length}
-              />
+    {/* the list STILL renders, so the toggle now works */}
+    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.contentContainer}>
+      {TIME_OPTIONS.map(timeOfDay => {
+        const habitsInTime = groupedHabits[timeOfDay];
+        if (habitsInTime.length === 0) return null;
 
-              <FlatList
-                data={habitsInTime}
-                renderItem={({ item }) => (
-                  <HabitItem
-                    habit={item}
-                    onToggle={() => onToggleHabit(item.id)}
-                    onPress={() => onPressHabit?.(item)}
-                  />
-                )}
-                keyExtractor={(item) => item.id}
-                scrollEnabled={false}
-              />
-            </View>
-          );
-        })}
-      </ScrollView>
-    </GestureHandlerRootView>
-  );
+        return (
+          <View key={timeOfDay}>
+            <HabitSectionHeader title={timeOfDay} count={habitsInTime.length} />
+            <FlatList
+              data={habitsInTime}
+              renderItem={({ item }) => (
+                <HabitItem
+                  habit={item}
+                  dateStr={dateStr}
+                  onToggle={() => onToggleHabit(item.id)}
+                  onPress={() => onPressHabit?.(item)}
+                  onIncrementUpdate={onIncrementUpdate}
+                />
+              )}
+              keyExtractor={(item) => item.id}
+              scrollEnabled={false}
+            />
+          </View>
+        );
+      })}
+    </ScrollView>
+  </GestureHandlerRootView>
+);
 }
 
 const styles = StyleSheet.create({

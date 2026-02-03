@@ -201,7 +201,7 @@ export default function AllAssignments() {
                     <Pressable onPress={() => router.push('/assignments/NewAssignment')}>
                         <ShadowBox
                             contentBackgroundColor={PAGE.assignments.primary[0]}
-                            borderRadius={30}
+                            shadowBorderRadius={30}
                         >
                             <View style={{
                                 width: 40,

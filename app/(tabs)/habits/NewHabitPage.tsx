@@ -1,4 +1,5 @@
 // @/app/(tabs)/habits/NewHabitPage.tsx
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import {
@@ -16,22 +17,25 @@ import {
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import uuid from 'react-native-uuid';
 
+
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
+import { STORAGE_KEYS } from '@/storage/keys';
+import { Habit } from '@/types/Habit';
+import { formatDisplayDate, formatLocalDate } from '@/utils/dateUtils';
+import { getResetTime } from '@/utils/habitUtils';
+
 import { getIconFile } from '@/components/habits/iconUtils';
 import { BUTTON_COLORS, COLORS, PAGE } from '@/constants/colors';
 import { FREQUENCIES, REWARD_OPTIONS, TIME_OPTIONS, WEEK_DAYS } from '@/constants/habits';
 import { SYSTEM_ICONS } from '@/constants/icons';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
 import IconPickerModal from '@/modals/IconPickerModal';
 import { globalStyles } from '@/styles';
-import { Habit } from '@/types/Habit';
 import { AppLinearGradient } from '@/ui/AppLinearGradient';
 import PageContainer from '@/ui/PageContainer';
 import PageHeader from '@/ui/PageHeader';
 import ShadowBox from '@/ui/ShadowBox';
 import SimpleCalendar from '@/ui/SimpleCalendar';
-import { formatDisplayDate, formatLocalDate } from '@/utils/dateUtils';
-import { getResetTime } from '@/utils/habitUtils';
 
 type Frequency = typeof FREQUENCIES[number];
 type TimeOfDay = typeof TIME_OPTIONS[number];
@@ -64,7 +68,7 @@ export default function NewHabitPage() {
     const [moreOptions, setMoreOptions] = useState(false);
     const [keepUntil, setKeepUntil] = useState(false);
     const [increment, setIncrement] = useState(false);
-    const [incrementAmount, setIncrementAmount] = useState(0);
+    const [incrementAmount, setIncrementAmount] = useState(1);
     const [incrementGoal, setIncrementGoal] = useState(0);
     const [incrementType, setIncrementType] = useState<Habit['incrementType']>('None');
 
@@ -111,6 +115,8 @@ export default function NewHabitPage() {
 
     const handleSave = async () => {
         setIsSaving(true);
+        await AsyncStorage.setItem(STORAGE_KEYS.HABITS_DIRTY, '1');
+
 
         try {
             if (!user) throw new Error('No user logged in');
@@ -152,6 +158,7 @@ export default function NewHabitPage() {
                 increment,
                 incrementAmount,
                 incrementType,
+                incrementGoal
                 // incrementGoal **TODO: add to supabase
             };
 
@@ -166,6 +173,10 @@ export default function NewHabitPage() {
                 start_date: newHabit.startDate,
                 selected_date: newHabit.selectedDate,
                 reward_points: newHabit.rewardPoints,
+                keep_until: newHabit.keepUntil,
+                increment: newHabit.increment,
+                increment_type: newHabit.incrementType,
+                increment_goal: newHabit.incrementGoal,
                 created_at: new Date().toISOString(),
             }]);
 
@@ -209,8 +220,8 @@ export default function NewHabitPage() {
                             {/* main card */}
                             <View style={{
                                 backgroundColor: '#fff',
-                                borderWidth: 2,
-                                borderColor: PAGE.habits.border[0],
+                                borderWidth: 1,
+                                // borderColor: PAGE.habits.border[0],
                                 borderRadius: 20,
                                 padding: 30,
                                 gap: 20,
@@ -227,8 +238,8 @@ export default function NewHabitPage() {
                                             width: 50,
                                             height: 50,
                                             borderRadius: 25,
-                                            borderWidth: 2,
-                                            borderColor: COLORS.Primary,
+                                            borderWidth: 1,
+                                            // borderColor: COLORS.Primary,
                                             justifyContent: 'center',
                                             alignItems: 'center',
                                             backgroundColor: COLORS.PrimaryLight,
@@ -249,8 +260,8 @@ export default function NewHabitPage() {
                                             globalStyles.body,
                                             {
                                                 flex: 1,
-                                                borderBottomWidth: 2,
-                                                borderBottomColor: PAGE.habits.border[0],
+                                                borderBottomWidth: 1,
+                                                borderBottomColor: COLORS.PrimaryLight,
                                                 paddingVertical: 10,
                                             }
                                         ]}
@@ -277,7 +288,7 @@ export default function NewHabitPage() {
                                                 flexDirection: 'row',
                                                 alignItems: 'center',
                                                 gap: 10,
-                                                paddingVertical: 8,
+                                                paddingVertical: 5,
                                                 paddingHorizontal: 15,
                                             }}>
                                                 <Image
@@ -321,7 +332,7 @@ export default function NewHabitPage() {
                                                 flexDirection: 'row',
                                                 alignItems: 'center',
                                                 gap: 10,
-                                                paddingVertical: 8,
+                                                paddingVertical: 5,
                                                 paddingHorizontal: 15,
                                             }}>
                                                 <Image
@@ -479,7 +490,7 @@ export default function NewHabitPage() {
                                                                 }
                                                             >
                                                                 <View style={{
-                                                                    paddingVertical: 8,
+                                                                    paddingVertical: 5,
                                                                     alignItems: 'center',
                                                                 }}>
                                                                     <Text style={[
@@ -536,7 +547,7 @@ export default function NewHabitPage() {
                                                     }
                                                 >
                                                     <View style={{
-                                                        paddingVertical: 8,
+                                                        paddingVertical: 5,
                                                         paddingHorizontal: 12,
                                                     }}>
                                                         <Text style={[
@@ -753,9 +764,9 @@ export default function NewHabitPage() {
                                     >
                                         <ShadowBox
                                             contentBackgroundColor={BUTTON_COLORS.Cancel}
-                                            borderRadius={20}
+                                            shadowBorderRadius={20}
                                         >
-                                            <View style={{ paddingVertical: 8, alignItems: 'center' }}>
+                                            <View style={{ paddingVertical: 5, alignItems: 'center' }}>
                                                 <Text style={globalStyles.body}>Cancel</Text>
                                             </View>
                                         </ShadowBox>
@@ -770,9 +781,9 @@ export default function NewHabitPage() {
                                             contentBackgroundColor={
                                                 isSaving ? BUTTON_COLORS.Disabled : BUTTON_COLORS.Done
                                             }
-                                            borderRadius={20}
+                                            shadowBorderRadius={20}
                                         >
-                                            <View style={{ paddingVertical: 8, alignItems: 'center' }}>
+                                            <View style={{ paddingVertical: 5, alignItems: 'center' }}>
                                                 <Text style={globalStyles.body}>
                                                     {isSaving ? 'Saving...' : 'Save'}
                                                 </Text>

@@ -32,9 +32,9 @@ export default function ProgressBar({
             {/* points badge */}
             <Pressable>
                 <ShadowBox
-                    contentBorderColor={COLORS.RewardsAccent}
+                    contentBorderColor='#000'
                     shadowColor={COLORS.RewardsAccent}
-                    shadowBorderColor={COLORS.RewardsAccent}
+                    shadowBorderColor='#000'
                 >
                     <View style={styles.badgeContent}>
                         <Image
@@ -50,17 +50,26 @@ export default function ProgressBar({
 
             {/* progress bar */}
             <View style={styles.progressBarContainer}>
-                <ShadowBox borderRadius={20}>
+                <ShadowBox
+                    shadowBorderRadius={20}
+                    contentBorderColor='#000'
+                    shadowColor={COLORS.Completed}
+                    shadowBorderColor='#000'
+                    shadowOffset={{ x: 0, y: 0 }}
+                >
                     <View style={styles.progressBar}>
                         <View
                             style={[
                                 styles.progressFill,
-                                { width: `${progressPercentage}%` },
+                                {
+                                    width: `${progressPercentage}%`,
+                                    backgroundColor: progressPercentage === 100 ? COLORS.Completed : COLORS.ProgressColor,
+                                },
                             ]}
                         />
                         <View style={styles.progressTextContainer}>
                             <Text style={styles.progressText}>
-                                {Math.round(progressPercentage)}% ({completedHabits ?? 0}/{totalHabits ?? 0})
+                                {Math.round(progressPercentage)}%
                             </Text>
                         </View>
                     </View>
@@ -69,9 +78,9 @@ export default function ProgressBar({
 
             {/* app streak badge */}
             <ShadowBox
-                contentBorderColor={COLORS.StreakAccent}
+                contentBorderColor='#000'
                 shadowColor={COLORS.StreakAccent}
-                shadowBorderColor={COLORS.StreakAccent}
+                shadowBorderColor='#000'
             >
                 <View style={styles.badgeContent}>
                     <Image source={SYSTEM_ICONS.fire} style={styles.badgeIcon} />
@@ -97,6 +106,8 @@ const styles = StyleSheet.create({
         gap: 5,
         paddingHorizontal: 10,
         paddingVertical: 6,
+        width: 70,
+        justifyContent: 'center'
     },
 
     badgeIcon: {
@@ -112,6 +123,8 @@ const styles = StyleSheet.create({
 
     progressBarContainer: {
         flex: 1,
+        justifyContent: 'center',
+        marginTop: 3,
     },
 
     progressBar: {
@@ -127,7 +140,6 @@ const styles = StyleSheet.create({
         top: 0,
         left: 0,
         bottom: 0,
-        backgroundColor: COLORS.ProgressColor,
     },
 
     progressTextContainer: {

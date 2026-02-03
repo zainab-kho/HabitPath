@@ -325,7 +325,7 @@ export default function NewCourse() {
                     </ScrollView>
 
                     <ShadowBox
-                        borderRadius={20}
+                        shadowBorderRadius={20}
                         contentBackgroundColor={BUTTON_COLORS.Done}
                         style={{
                             width: 100,

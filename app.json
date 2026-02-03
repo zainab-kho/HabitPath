@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "habitpath",
+    "name": "HabitPath",
     "slug": "habitpath",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -17,10 +17,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundColor": "#E6F4FE"
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
@@ -52,9 +49,15 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "e8f86b29-c6c3-4f8f-89a3-feb9b1b89582"
+        "projectId": "1ece3597-847f-4c8f-978a-8e909cd4f37a"
       }
     },
-    "owner": "zainabkho"
+    "owner": "zainabkho",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/1ece3597-847f-4c8f-978a-8e909cd4f37a"
+    }
   }
 }

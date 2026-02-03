@@ -120,7 +120,7 @@ export default function IconPickerModal({
                                                             contentBorderColor={isSelected ? '#000' : COLORS.Primary}
                                                             shadowColor={isSelected ? '#000' : COLORS.Primary}
                                                             shadowBorderColor={isSelected ? '#000' : COLORS.Primary}
-                                                            borderRadius={15}
+                                                            shadowBorderRadius={15}
                                                             shadowOffset={{ x: 2, y: 2 }}
                                                         >
                                                             <View style={styles.iconButton}>

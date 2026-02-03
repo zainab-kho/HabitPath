@@ -133,7 +133,7 @@ export default function Assignments() {
             await handleSave();
             setEditMode(false);
             setShowSaveButton(false);
-        } catch (error) {}
+        } catch (error) { }
     };
 
     const handleStatusUpdate = async (assignmentId: string, newStatus: string) => {
@@ -141,7 +141,7 @@ export default function Assignments() {
             await updateAssignmentStatus(assignmentId, newStatus);
             setShowStatusModal(false);
             setSelectedAssignmentForStatus(null);
-        } catch (error) {}
+        } catch (error) { }
     };
 
     const renderAssignmentCard = (assignment: AssignmentWithCourse, showDelete: boolean = false, onDelete?: () => void) => (
@@ -162,7 +162,7 @@ export default function Assignments() {
         return (
             <AppLinearGradient variant="assignments.background">
                 <PageContainer showBottomNav>
-                    <PageHeader title="Assignments" />
+                    <PageHeader title="Assignments" showPlusButton />
                     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
                         <ActivityIndicator size="small" color={PAGE.assignments.primary[0]} />
                     </View>
@@ -176,7 +176,7 @@ export default function Assignments() {
         return (
             <AppLinearGradient variant="assignments.background">
                 <PageContainer showBottomNav>
-                    <PageHeader title="Assignments" />
+                    <PageHeader title="Assignments" showPlusButton />
                     <EmptyStateView
                         icon={SYSTEM_ICONS.tag}
                         title="No courses yet"
@@ -193,7 +193,7 @@ export default function Assignments() {
     return (
         <AppLinearGradient variant="assignments.background">
             <PageContainer showBottomNav>
-                <PageHeader title="Assignments" />
+                <PageHeader title="Assignments" showPlusButton />
 
                 <ScrollView
                     ref={scrollViewRef}

@@ -31,14 +31,6 @@ export default function LoginScreen() {
 
   const handleAuth = async () => {
     if (!email || !password) {
-      await AsyncStorage.multiRemove([
-        'resetTime',
-        'habits',
-        'habitProgress',
-        'todayProgress',
-        'journal_entries',
-
-      ])
       Alert.alert('Error', 'Please fill in all fields')
       return
     }
@@ -54,6 +46,15 @@ export default function LoginScreen() {
         return
       }
     }
+
+    await AsyncStorage.multiRemove([
+      'resetTime',
+      'habits',
+      'habitProgress',
+      'todayProgress',
+      'journal_entries',
+
+    ])
 
     setLoading(true)
 

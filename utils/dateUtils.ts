@@ -5,6 +5,15 @@
  */
 
 /**
+ * Returns "Today", "Tomorrow", or formatted date
+ * Respects habit reset time
+ */
+// export const getHabitDateLabel = (
+//   date: Date,
+//   resetHour: 
+// )
+
+/**
  * Get the habit date string respecting custom reset time
  * If current time is before reset time, counts as previous day
  * 
@@ -42,22 +51,18 @@ export const getHabitDate = (
  * @param resetMinute - Minute when the day resets
  * @returns The current habit day as a Date
  */
-export const getCurrentHabitDay = (
-  resetHour: number = 4,
-  resetMinute: number = 0
-): Date => {
+export const getCurrentHabitDay = (resetHour = 4, resetMinute = 0): Date => {
   const now = new Date();
-  const currentHour = now.getHours();
-  const currentMinute = now.getMinutes();
 
-  // If before reset time, return yesterday's date
-  if (currentHour < resetHour || (currentHour === resetHour && currentMinute < resetMinute)) {
-    const yesterday = new Date(now);
-    yesterday.setDate(yesterday.getDate() - 1);
-    return yesterday;
-  }
+  const beforeReset =
+    now.getHours() < resetHour ||
+    (now.getHours() === resetHour && now.getMinutes() < resetMinute);
 
-  return now;
+  const day = new Date(now);
+  if (beforeReset) day.setDate(day.getDate() - 1);
+
+  // normalize to start of day so it's stable
+  return new Date(day.getFullYear(), day.getMonth(), day.getDate());
 };
 
 /**

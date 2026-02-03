@@ -4,12 +4,13 @@
  * core brand and UI colors used throughout the app
  */
 export const COLORS = {
-  Primary: '#6255B3',
-  PrimaryLight: '#AB98F8',
-  Secondary: '#FF5F57',
-  ProgressColor: '#FFD581',
+  Primary: '#99c8e8',
+  PrimaryLight: '#f49cbb',
+  Secondary: '#dd2d4a',
+  Completed: '#E9E4F0',
+  ProgressColor: '#dcc4ff',
   Rewards: '#FF7F50',
-  RewardsBackground: '#FFE7D5',
+  RewardsBackground: '#E4E986',
   RewardsAccent: '#7FD1AE',
   StreakAccent: '#F55858',
   XPAccent: '#FFB5A0',
@@ -34,7 +35,7 @@ export const PAGE = {
     habitCard: ['#FFFFFF', '#F0F0F0'],
     border: ['#4caff6'],
     primary: ['#FFDDC1', '#FFABAB'],
-    button: ['#f5f2cc']
+    button: ['#FFF5DF']
   }, 
   newHabit: {
     background: ['#FDDAC5', '#FEF9E7']

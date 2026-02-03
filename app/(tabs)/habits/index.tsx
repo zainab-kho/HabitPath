@@ -6,6 +6,7 @@ import { COLORS, PAGE } from '@/constants/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import { useAuth } from '@/contexts/AuthContext';
 import { useHabits } from '@/hooks/useHabits';
+import { STORAGE_KEYS } from '@/storage/keys';
 import { globalStyles } from '@/styles';
 import PageContainer from '@/ui/PageContainer';
 import PageHeader from '@/ui/PageHeader';
@@ -17,14 +18,20 @@ import {
     navigateDate as navigateDateUtil
 } from '@/utils/dateUtils';
 import { getGradientForTime } from '@/utils/gradients';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
-import React, { useState } from 'react';
+import { router, useFocusEffect } from 'expo-router';
+import React, { useCallback, useState } from 'react';
 import { Image, Pressable, Text, View } from 'react-native';
 
 export default function HabitsPage() {
     const { user } = useAuth();
-    const [viewingDate, setViewingDate] = useState<Date>(getCurrentHabitDay());
+
+    const atNoon = (d: Date) =>
+        new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0, 0);
+
+    const [viewingDate, setViewingDate] = useState<Date>(atNoon(getCurrentHabitDay()));
+
 
     // use the habits hook to get all data
     const {
@@ -35,6 +42,8 @@ export default function HabitsPage() {
         totalPoints,
         earnedPoints,
         toggleHabit,
+        updateIncrement,  // ✅ Added for increment habits
+        loadHabits,
     } = useHabits(viewingDate);
 
     // night mode detection (for text color)
@@ -56,19 +65,45 @@ export default function HabitsPage() {
         0
     );
 
+
     // navigate between dates
     const handleNavigateDate = (direction: 'prev' | 'next') => {
         const newDate = navigateDateUtil(viewingDate, direction);
-        setViewingDate(newDate);
+        setViewingDate(atNoon(newDate));
     };
 
-    // jump to today
+    // jump to today (using resetTime)
     const handleGoToToday = () => {
-        setViewingDate(getCurrentHabitDay(resetTime.hour, resetTime.minute));
+        const todayHabitDay = getCurrentHabitDay(resetTime.hour, resetTime.minute);
+        setViewingDate(atNoon(todayHabitDay));
     };
 
     // check if viewing today
     const isViewingToday = isToday(viewingDate, resetTime.hour, resetTime.minute);
+
+    // handle pressing a habit to view details
+    const handlePressHabit = (habit: any) => {
+        // **TODO: Navigate to habit details page
+        // router.push(`/habits/${habit.id}`);
+    };
+
+    useFocusEffect(
+        useCallback(() => {
+            let cancelled = false;
+
+            (async () => {
+                const dirty = await AsyncStorage.getItem(STORAGE_KEYS.HABITS_DIRTY);
+                if (!cancelled && dirty === '1' && !loading) {
+                    await AsyncStorage.removeItem(STORAGE_KEYS.HABITS_DIRTY);
+                    loadHabits();
+
+                    console.log('Reloading habits')
+                }
+            })();
+
+            return () => { cancelled = true; };
+        }, [loadHabits])
+    );
 
     return (
         <LinearGradient
@@ -80,7 +115,7 @@ export default function HabitsPage() {
             <PageContainer showBottomNav>
                 <PageHeader
                     title="Habits"
-                    plusNavigateTo="/(tabs)/more/new-habit"
+                    showPlusButton
                     textColor={textColor}
                 />
 
@@ -103,7 +138,7 @@ export default function HabitsPage() {
                             style={{
                                 width: 20,
                                 height: 20,
-                                tintColor: isViewingToday ? textColor : `${COLORS.Primary}ff`,
+                                tintColor: textColor,
                             }}
                         />
                     </Pressable>
@@ -124,7 +159,7 @@ export default function HabitsPage() {
                             style={[
                                 globalStyles.body2,
                                 {
-                                    color: isViewingToday ? textColor : `${COLORS.Primary}ff`,
+                                    color: isViewingToday ? textColor : `${COLORS.Secondary}`,
                                     fontSize: 13,
                                 },
                             ]}
@@ -143,7 +178,7 @@ export default function HabitsPage() {
                             style={{
                                 width: 20,
                                 height: 20,
-                                tintColor: isViewingToday ? textColor : `${COLORS.Primary}ff`,
+                                tintColor: textColor,
                             }}
                         />
                     </Pressable>
@@ -164,13 +199,18 @@ export default function HabitsPage() {
                     viewingDate={viewingDate}
                     resetTime={resetTime}
                     onToggleHabit={toggleHabit}
+                    onPressHabit={handlePressHabit}  // ✅ Navigate to habit details
+                    onIncrementUpdate={updateIncrement}  // ✅ Handle increment updates
                 />
 
                 {/* floating buttons */}
                 <View style={{ position: 'absolute', bottom: 10, right: 0, zIndex: 5 }}>
                     <View style={{ flexDirection: 'row', gap: 10, opacity: 1 }}>
                         <Pressable onPress={() => router.push('/more/journal/NewEntry')}>
-                            <ShadowBox contentBackgroundColor={PAGE.journal.border[0]} borderRadius={30}>
+                            <ShadowBox
+                                contentBackgroundColor={PAGE.journal.border[0]}
+                                contentBorderRadius={30}
+                                shadowBorderRadius={30}>
                                 <View style={{ width: 40, height: 40, justifyContent: 'center', alignItems: 'center' }}>
                                     <Image source={SYSTEM_ICONS.write} style={{ width: 20, height: 20 }} />
                                 </View>
@@ -178,9 +218,13 @@ export default function HabitsPage() {
                         </Pressable>
 
                         <Pressable onPress={() => router.push('/habits/NewHabitPage')}>
-                            <ShadowBox contentBackgroundColor={PAGE.habits.button[0]} borderRadius={30}>
+                            <ShadowBox
+                                contentBackgroundColor={PAGE.habits.button[0]}
+                                contentBorderRadius={30}
+                                shadowBorderRadius={30}
+                            >
                                 <View style={{ width: 40, height: 40, justifyContent: 'center', alignItems: 'center' }}>
-                                    <Text style={{ fontSize: 25, textAlign: 'center' }}>+</Text>
+                                    <Text style={{ fontSize: 20, textAlign: 'center' }}>+</Text>
                                 </View>
                             </ShadowBox>
                         </Pressable>

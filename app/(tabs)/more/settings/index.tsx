@@ -129,7 +129,7 @@ export default function SettingsPage() {
                             </View>
 
                             <ShadowBox
-                                borderRadius={20}
+                                shadowBorderRadius={20}
                                 contentBackgroundColor={BUTTON_COLORS.Done}
                                 style={{}}
                             >
@@ -149,7 +149,7 @@ export default function SettingsPage() {
                 </ScrollView>
 
                 <ShadowBox
-                    borderRadius={20}
+                    shadowBorderRadius={20}
                     contentBackgroundColor={BUTTON_COLORS.Cancel}
                     style={{ marginBottom: 100, marginHorizontal: 50}}
                 >

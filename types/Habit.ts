@@ -30,8 +30,10 @@ export interface Habit {
 
   keepUntil?: boolean; // keep until user checks off
   increment?: boolean;  // if user wants to track miles, sips, minutes, etc
-  incrementAmount?: number;
-  incrementType?: 'None';
+  incrementAmount?: number; // current amount for today
+  incrementGoal?: number; // target amount for increment (optional)
+  incrementType?: string; // e.g., 'miles', 'sips', 'minutes', 'reps'
+  incrementHistory?: Record<string, number>; // date -> amount mapping
 
   // core streak state
   streak?: number;

@@ -217,7 +217,7 @@ export default function AddWeekModal({ visible, weekPlans, onClose, onSave }: Ad
                         <Pressable onPress={handleCancel} style={{ flex: 1 }}>
                             <ShadowBox
                                 contentBackgroundColor={PAGE.assignments.background[1]}
-                                borderRadius={15}
+                                shadowBorderRadius={15}
                             >
                                 <View style={{ padding: 5 }}>
                                     <Text style={[globalStyles.body, { textAlign: 'center' }]}>
@@ -238,7 +238,7 @@ export default function AddWeekModal({ visible, weekPlans, onClose, onSave }: Ad
                                         ? '#ccc'
                                         : BUTTON_COLORS.Done
                                 }
-                                borderRadius={15}
+                                shadowBorderRadius={15}
                             >
                                 <View style={{ padding: 5 }}>
                                     <Text style={[globalStyles.body, { textAlign: 'center' }]}>

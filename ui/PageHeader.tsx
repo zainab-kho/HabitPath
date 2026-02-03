@@ -1,9 +1,9 @@
-import { useRouter } from 'expo-router'
-import { Image, Pressable, Text, View } from 'react-native'
+import { useDrawer } from '@/navigation/DrawerContext';
+import { useRouter } from 'expo-router';
+import { Image, Pressable, Text, View } from 'react-native';
 
-import { SYSTEM_ICONS } from '@/constants/icons'
-import { globalStyles } from '@/styles'
-import ShadowBox from '@/ui/ShadowBox'
+import { SYSTEM_ICONS } from '@/constants/icons';
+import { globalStyles } from '@/styles';
 
 interface PageHeaderProps {
   title: string
@@ -23,6 +23,7 @@ export default function PageHeader({
   textColor = 'black',
 }: PageHeaderProps) {
   const router = useRouter()
+  const { openDrawer } = useDrawer(); // or toggleDrawer
 
   const handlePlusPress = () => {
     if (onPlusPress) onPlusPress()
@@ -57,7 +58,7 @@ export default function PageHeader({
       {/* center: title */}
       <View style={{ flex: 1, alignItems: 'center' }}>
         <Text
-          style={[ globalStyles.h1, {
+          style={[globalStyles.h1, {
             color: textColor,
           }]}
           numberOfLines={1}
@@ -68,22 +69,34 @@ export default function PageHeader({
 
       {/* right side: plus button or spacer */}
       <View style={{ width: 40, alignItems: 'flex-end' }}>
-        {showPlusButton && (
-          <Pressable onPress={handlePlusPress}>
-            <ShadowBox
-              borderRadius={10}
-            >
-              <Text style={{
-                textAlign: 'center',
-                fontFamily: 'p1',
-                fontSize: 18,
-                paddingVertical: 2,
-                paddingHorizontal: 10,
-              }}>+</Text>
+        {/* {showPlusButton && (
+          // <Pressable onPress={handlePlusPress}>
+          //   <ShadowBox
+          //     shadowBorderRadius={10}
+          //   >
+          //     <Text style={{
+          //       textAlign: 'center',
+          //       fontFamily: 'p1',
+          //       fontSize: 18,
+          //       paddingVertical: 2,
+          //       paddingHorizontal: 10,
+          //     }}>+</Text>
 
-            </ShadowBox>
+          //   </ShadowBox>
+          // </Pressable>
+        )} */}
+
+        {showPlusButton && (
+          <Pressable
+            style={{ width: 40, height: 40, alignItems: 'flex-end', justifyContent: 'center' }} onPress={openDrawer}>
+            <Image
+              source={SYSTEM_ICONS.more}
+              style={{ width: 20, height: 20 }}
+              tintColor="rgba(0,0,0,0.7)"
+            />
           </Pressable>
         )}
+
       </View>
     </View>
   )

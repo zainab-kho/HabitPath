@@ -21,6 +21,13 @@ export function AssignmentCard({ assignment, showDelete = false, onDelete, onSta
         <ShadowBox
             key={assignment.id}
             contentBackgroundColor={PROGRESS_COLORS[assignment.progress]}
+            // style={styles.container}
+            // contentBackgroundColor={isCompleted ? habitColor : '#fff'}
+            contentBorderColor='#000'
+            contentBorderWidth={1}
+            shadowBorderRadius={15}
+            shadowOffset={{ x: 0, y: 0 }}
+            shadowColor={'#000'}
         >
             <View
                 style={{
@@ -36,7 +43,11 @@ export function AssignmentCard({ assignment, showDelete = false, onDelete, onSta
 
                     <View style={{ flexDirection: 'row', gap: 5, alignItems: 'center' }}>
                         {assignment.course && (
-                            <ShadowBox contentBackgroundColor={assignment.course.color || '#fff'}>
+                            <ShadowBox
+                                contentBackgroundColor={assignment.course.color || '#fff'}
+                                shadowOffset={{x: 0, y: 1}}
+
+                            >
                                 <View style={{ paddingHorizontal: 10, paddingVertical: 2 }}>
                                     <Text style={globalStyles.body2}>
                                         {assignment.course.course_number}
@@ -73,9 +84,11 @@ export function AssignmentCard({ assignment, showDelete = false, onDelete, onSta
                     >
                         <ShadowBox
                             contentBackgroundColor={PROGRESS_COLORS[assignment.progress]}
-                            borderRadius={8}
+                            contentBorderRadius={12}
+                            shadowBorderRadius={25}
+                            shadowOffset={{ x: 0, y: 2 }}
                         >
-                            <Text style={[globalStyles.label, { padding: 5 }]}>{assignment.progress}</Text>
+                            <Text style={[globalStyles.label, { paddingVertical: 5, paddingHorizontal: 15 }]}>{assignment.progress}</Text>
                         </ShadowBox>
 
                         <View style={{

@@ -8,10 +8,11 @@ interface ShadowBoxProps {
     shadowColor?: string
     shadowBorderColor?: string
     shadowBorderWidth?: number
+    shadowBorderRadius?: number
     contentBorderColor?: string
     contentBorderWidth?: number
     contentBackgroundColor?: string
-    borderRadius?: number
+    contentBorderRadius?: number
 }
 
 export default function ShadowBox({
@@ -20,11 +21,12 @@ export default function ShadowBox({
     contentBackgroundColor = '#fff',
     contentBorderWidth = 1,
     contentBorderColor = '#000',
+    contentBorderRadius = 15,
     shadowBorderWidth = 1,
-    shadowOffset = { x: 2, y: 2 },
+    shadowOffset = { x: 0, y: 3 },
     shadowBorderColor = '#000',
     shadowColor = '#000',
-    borderRadius = 12,
+    shadowBorderRadius=20,
 }: ShadowBoxProps) {
     return (
         <View style={[styles.container, style]}>
@@ -41,7 +43,7 @@ export default function ShadowBox({
                         backgroundColor: shadowColor,
                         borderColor: shadowBorderColor,
                         borderWidth: shadowBorderWidth,
-                        borderRadius,
+                        borderRadius: shadowBorderRadius,
                     },
                 ]}
             />
@@ -54,7 +56,7 @@ export default function ShadowBox({
                         backgroundColor: contentBackgroundColor,
                         borderColor: contentBorderColor,
                         borderWidth: contentBorderWidth,
-                        borderRadius,
+                        borderRadius: contentBorderRadius,
                     },
                 ]}
             >

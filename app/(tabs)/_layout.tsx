@@ -2,7 +2,14 @@
 import { getGradientForTime } from '@/utils/gradients';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack } from 'expo-router';
+import * as Updates from 'expo-updates';
 import { View } from 'react-native';
+
+console.log('updates enabled?', Updates.isEnabled);
+console.log('updateId', Updates.updateId);
+console.log('runtimeVersion', Updates.runtimeVersion);
+console.log('channel', Updates.channel);
+console.log('createdAt', Updates.createdAt);
 
 export default function TabsLayout() {
   return (

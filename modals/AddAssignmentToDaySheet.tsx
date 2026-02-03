@@ -186,7 +186,7 @@ export default function AddAssignmentToDaySheet({
                         <Pressable onPress={handleCancel} style={{ flex: 1 }}>
                             <ShadowBox
                                 contentBackgroundColor={PAGE.assignments.background[1]}
-                                borderRadius={15}
+                                shadowBorderRadius={15}
                             >
                                 <View style={{ paddingVertical: 6 }}>
                                     <Text style={[globalStyles.body, { textAlign: 'center' }]}>
@@ -207,7 +207,7 @@ export default function AddAssignmentToDaySheet({
                                         ? '#ccc'
                                         : BUTTON_COLORS.Done
                                 }
-                                borderRadius={15}
+                                shadowBorderRadius={15}
                             >
                                 <View style={{ paddingVertical: 6 }}>
                                     <Text style={[globalStyles.body, { textAlign: 'center' }]}>

@@ -33,14 +33,26 @@ export default function HabitItem({
 
   const isIncrement = !!habit.increment;
 
-  // ✅ source of truth for today's increment progress
+  // source of truth for today's increment progress
   const currentAmount = habit.incrementHistory?.[dateStr] ?? 0;
 
-  // ✅ step size from increment_step
+  // step size from increment_step
   const step = habit.incrementStep && habit.incrementStep > 0 ? habit.incrementStep : 1;
 
-  const goalAmount = habit.incrementGoal ?? 0;
-  const hasGoal = !!habit.incrementGoal;
+  // normalize goal: if increment is true, ensure goal is at least 1
+  const goalAmount = useMemo(() => {
+    if (!isIncrement) return 0;
+    
+    // for keepUntil increments, goal MUST exist (default to 1)
+    if (habit.keepUntil) {
+      return habit.incrementGoal && habit.incrementGoal > 0 ? habit.incrementGoal : 1;
+    }
+    
+    // for non-keepUntil increments, goal is optional
+    return habit.incrementGoal ?? 0;
+  }, [isIncrement, habit.keepUntil, habit.incrementGoal]);
+
+  const hasGoal = goalAmount > 0;
   const incrementType = habit.incrementType;
 
   const isGoalReached = isIncrement && hasGoal && currentAmount >= goalAmount;
@@ -52,9 +64,9 @@ export default function HabitItem({
   }, [isIncrement, hasGoal, goalAmount, currentAmount]);
 
   /**
-   * Right-side label behavior:
-   * - Normal habits: ✓ if completed else empty
-   * - Increment habits:
+   * right-side label behavior:
+   * - normal habits: ✓ if completed else empty
+   * - increment habits:
    *    - ✓ if goal reached
    *    - number if currentAmount > 0
    *    - + if 0

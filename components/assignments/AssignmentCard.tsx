@@ -45,7 +45,7 @@ export function AssignmentCard({ assignment, showDelete = false, onDelete, onSta
                         {assignment.course && (
                             <ShadowBox
                                 contentBackgroundColor={assignment.course.color || '#fff'}
-                                shadowOffset={{x: 0, y: 1}}
+                                shadowOffset={{ x: 0, y: 1 }}
 
                             >
                                 <View style={{ paddingHorizontal: 10, paddingVertical: 2 }}>
@@ -95,11 +95,18 @@ export function AssignmentCard({ assignment, showDelete = false, onDelete, onSta
                             paddingVertical: 5,
                             paddingHorizontal: 10,
                             borderRadius: 20,
+                            maxWidth: 80,
                             borderWidth: 1,
                             borderColor: '#000',
                             backgroundColor: ASSIGNMENT_TYPE_COLORS[assignment.type] || PAGE.assignments.backgroundAssignment[0]
                         }}>
-                            <Text style={globalStyles.label}>{assignment.type}</Text>
+                            <Text
+                                style={globalStyles.label}
+                                numberOfLines={1}
+                                ellipsizeMode="tail"
+                            >
+                                {assignment.type}
+                            </Text>
                         </View>
                     </Pressable>
 

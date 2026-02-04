@@ -1,4 +1,10 @@
 // @/app/(tabs)/habits/index.tsx
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { LinearGradient } from 'expo-linear-gradient';
+import { router, useFocusEffect } from 'expo-router';
+import React, { useCallback, useState } from 'react';
+import { Image, Pressable, Text, View } from 'react-native';
+
 import HabitsList from '@/components/habits/HabitsList';
 import { isHabitActiveToday } from '@/components/habits/habitUtils';
 import ProgressBar from '@/components/habits/ProgressBar';
@@ -19,11 +25,6 @@ import {
   navigateDate as navigateDateUtil,
 } from '@/utils/dateUtils';
 import { getGradientForTime } from '@/utils/gradients';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { LinearGradient } from 'expo-linear-gradient';
-import { router, useFocusEffect } from 'expo-router';
-import React, { useCallback, useState } from 'react';
-import { Image, Pressable, Text, View } from 'react-native';
 
 export default function HabitsPage() {
   const { user } = useAuth();

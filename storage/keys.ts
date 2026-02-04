@@ -1,4 +1,7 @@
 export const STORAGE_KEYS = {
+  RESET_TIME: '@reset_time',
+  TOTAL_POINTS: '@total_points',
+
   HABITS_CACHE: '@habits_cache',
   HABITS_DIRTY: '@habits_dirty',
 

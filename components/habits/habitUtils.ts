@@ -1,183 +1,197 @@
-// @/components/habits/habitUtils.ts
 import { WEEK_DAYS } from '@/constants';
 import { Habit } from '@/types/Habit';
 import { getHabitDate, getHabitDayOfWeek } from '@/utils/dateUtils';
 
+/* ============================================================================
+   HABIT CYCLE HELPERS
+============================================================================ */
+
 /**
- * Check if a habit should be active/visible on a given date
- * Respects frequency, selected days, start date, snooze status, keepUntil, and increment goals
- * 
- * @param habit - The habit to check
- * @param date - The date to check (defaults to today)
- * @param resetHour - Hour when the day resets
- * @param resetMinute - Minute when the day resets
- * @returns true if habit should be shown on this date
+ * Returns the start date of the current "cycle" for a habit.
+ *
+ * A cycle represents one scheduled window in which a habit can be completed.
+ * Completion and increment progress are tracked against this cycle start,
+ * NOT the calendar day.
+ *
+ * Examples:
+ * - Daily habit → cycle starts today
+ * - Weekly habit → cycle starts on the most recent selected weekday
+ * - One-time goal → cycle starts on the habit's startDate
+ *
+ * This enables "carry-over" behavior for keepUntil habits:
+ * if the habit is missed, it remains active until the next cycle begins,
+ * at which point it resets automatically.
  */
-export const isHabitActiveToday = (
+export function getHabitCycleStart(
   habit: Habit,
-  date?: Date,
-  resetHour: number = 4,
-  resetMinute: number = 0
-): boolean => {
-  const checkDate = date || new Date();
-  
-  // use centralized date utilities
-  const todayStr = getHabitDate(checkDate, resetHour, resetMinute);
-  const startDateStr = habit.startDate;
+  date: Date,
+  resetHour: number,
+  resetMinute: number
+): string {
+  const todayStr = getHabitDate(date, resetHour, resetMinute);
+  const startStr = habit.startDate;
 
-  // hide if today is BEFORE the start date
-  if (todayStr < startDateStr) {
-    return false;
+  // One-time goals
+  if (!habit.frequency || habit.frequency === 'None') {
+    return startStr;
   }
 
-  // Hide if today is BEFORE the snooze-until date
-  if (habit.snoozedUntil && todayStr < habit.snoozedUntil) {
-    return false;
-  }
-
-  // Get current increment amount for today
-  const currentAmount = habit.incrementHistory?.[todayStr] || 0;
-  
-  // Increment habits with goals now stay visible even when goal is reached
-  // They'll show a checkmark but remain on the list for the day
-  
-  // Increment habits WITHOUT goals stay visible (they can be incremented indefinitely)
-
-  // KeepUntil logic: if habit is marked as keepUntil, it stays visible until explicitly completed
-  // This is handled by the completed flag in the completion history
-  if (habit.keepUntil && habit.completionHistory?.includes(todayStr)) {
-    return false; // Hide if explicitly marked as complete
-  }
-
-  // Get day of week using centralized function
-  const dayOfWeekIndex = getHabitDayOfWeek(checkDate, resetHour, resetMinute);
-  const dayOfWeek = WEEK_DAYS[dayOfWeekIndex];
-
-  // Non-repeating habits (goals) - only show on exact start date (unless keepUntil)
-  if (habit.frequency === 'None' || !habit.frequency) {
-    if (habit.keepUntil) {
-      // keepUntil goals stay visible after start date until completed
-      return startDateStr <= todayStr;
-    }
-    return startDateStr === todayStr;
-  }
-
-  // Daily habits - show every day after start date
+  // Daily habits
   if (habit.frequency === 'Daily') {
-    return startDateStr <= todayStr;
+    return todayStr;
+  }
+
+  // Weekly habits (based on selectedDays)
+  if (habit.frequency === 'Weekly') {
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(date);
+      d.setDate(d.getDate() - i);
+
+      const dStr = getHabitDate(d, resetHour, resetMinute);
+      const dow = WEEK_DAYS[getHabitDayOfWeek(d, resetHour, resetMinute)];
+
+      if (dStr >= startStr && habit.selectedDays?.includes(dow)) {
+        return dStr;
+      }
+    }
+
+    return startStr;
+  }
+
+  // Monthly habits (repeat on same day-of-month as startDate)
+  if (habit.frequency === 'Monthly') {
+    const startDay = parseInt(startStr.split('-')[2], 10);
+    const todayDay = parseInt(todayStr.split('-')[2], 10);
+
+    const cycleDate = new Date(date);
+    if (todayDay < startDay) {
+      cycleDate.setMonth(cycleDate.getMonth() - 1);
+    }
+    cycleDate.setDate(startDay);
+
+    return getHabitDate(cycleDate, resetHour, resetMinute);
+  }
+
+  return todayStr;
+}
+
+/* ============================================================================
+   VISIBILITY / SCHEDULING
+============================================================================ */
+
+/**
+ * Determines whether a habit should be visible on a given date.
+ *
+ * IMPORTANT:
+ * - Visibility is based ONLY on scheduling rules
+ * - Completion does NOT hide a habit
+ * - keepUntil habits are allowed to carry over until the next cycle
+ *
+ * Completion is handled separately by derived state.
+ */
+export function isHabitActiveToday(
+  habit: Habit,
+  date: Date,
+  resetHour: number,
+  resetMinute: number
+): boolean {
+  const todayStr = getHabitDate(date, resetHour, resetMinute);
+
+  // Not started yet
+  if (todayStr < habit.startDate) return false;
+
+  // Snoozed
+  if (habit.snoozedUntil && todayStr < habit.snoozedUntil) return false;
+
+  // One-time goals
+  if (!habit.frequency || habit.frequency === 'None') {
+    return habit.keepUntil
+      ? habit.startDate <= todayStr
+      : habit.startDate === todayStr;
+  }
+
+  // Daily habits
+  if (habit.frequency === 'Daily') {
+    return habit.startDate <= todayStr;
   }
 
   // Weekly habits
   if (habit.frequency === 'Weekly') {
-    // Show on start date regardless of selected day
-    if (startDateStr === todayStr) return true;
-    
-    // After start date, only show on selected days
-    if (startDateStr < todayStr) {
-      return habit.selectedDays?.includes(dayOfWeek) ?? false;
+    if (habit.startDate === todayStr) return true;
+
+    if (habit.startDate < todayStr) {
+      const dow = WEEK_DAYS[getHabitDayOfWeek(date, resetHour, resetMinute)];
+      return habit.selectedDays?.includes(dow) ?? false;
     }
-    
+
     return false;
   }
 
-  // Monthly habits - repeat on the same day of month as startDate
+  // Monthly habits
   if (habit.frequency === 'Monthly') {
-    if (startDateStr > todayStr) return false; // hasn't started yet
+    if (habit.startDate > todayStr) return false;
 
-    // Parse the start date to get the day of month
-    const startDateParts = startDateStr.split('-');
-    const startDay = parseInt(startDateParts[2], 10);
-    
-    // Get today's day of month
-    const todayDateParts = todayStr.split('-');
-    const todayDay = parseInt(todayDateParts[2], 10);
-
+    const startDay = parseInt(habit.startDate.split('-')[2], 10);
+    const todayDay = parseInt(todayStr.split('-')[2], 10);
     return startDay === todayDay;
   }
 
   return false;
-};
+}
+
+/* ============================================================================
+   COMPLETION + PROGRESS (DERIVED STATE)
+============================================================================ */
 
 /**
- * Add completed property to habits based on viewing date
- * For increment habits with goals, also check if goal is reached
- * 
- * @param habits - Array of habits
- * @param date - The date to check completion for
- * @param resetHour - Hour when the day resets
- * @param resetMinute - Minute when the day resets
- * @returns Habits with completed property added
+ * Adds a derived `completed` flag to habits based on the CURRENT CYCLE.
+ *
+ * Completion is stored per-cycle (not per-day), which allows habits
+ * to persist across days until the next scheduled occurrence.
+ *
+ * Increment progress is also keyed to the cycle start so it resets naturally
+ * when the next cycle begins.
  */
-export const addCompletedProperty = (
+export function addCompletedProperty(
   habits: Habit[],
   date: Date,
-  resetHour: number = 4,
-  resetMinute: number = 0
-): (Habit & { completed: boolean })[] => {
-  const dateStr = getHabitDate(date, resetHour, resetMinute);
-  
+  resetHour: number,
+  resetMinute: number
+): (Habit & { completed: boolean })[] {
   return habits.map(habit => {
-    // Check explicit completion (only from completionHistory)
-    const explicitlyCompleted = habit.completionHistory?.includes(dateStr) ?? false;
-    
-    // For increment habits, we don't auto-mark as "completed" when goal is reached
-    // The visual checkmark is shown by isGoalReached in the component
-    // But the habit isn't considered "completed" unless user manually marks it
-    const completed = explicitlyCompleted;
-    
-    if (habit.increment) {
-      console.log(`🔢 Processing increment habit "${habit.name}":`, {
-        dateStr,
-        incrementHistory: habit.incrementHistory,
-        currentAmount: habit.incrementHistory?.[dateStr] || 0,
-      });
-    }
-    
+    const cycleStart = getHabitCycleStart(
+      habit,
+      date,
+      resetHour,
+      resetMinute
+    );
+
+    const completed =
+      habit.completionHistory?.includes(cycleStart) ?? false;
+
     return {
       ...habit,
       completed,
-      // Update incrementAmount to today's amount for display
-      incrementAmount: habit.incrementHistory?.[dateStr] || 0,
+      incrementAmount: habit.incrementHistory?.[cycleStart] ?? 0,
     };
   });
-};
+}
+
+/* ============================================================================
+   FILTERING HELPERS
+============================================================================ */
 
 /**
- * Filter habits that are active on a specific date
- * 
- * @param habits - Array of habits
- * @param date - The date to filter for
- * @param resetHour - Hour when the day resets
- * @param resetMinute - Minute when the day resets
- * @returns Filtered array of active habits
+ * Returns only habits that are scheduled to be active on a given date.
+ * Completion status does not affect this filter.
  */
-export const getActiveHabitsForDate = (
+export function getActiveHabitsForDate(
   habits: Habit[],
   date: Date,
-  resetHour: number = 4,
-  resetMinute: number = 0
-): Habit[] => {
-  return habits.filter(habit => 
+  resetHour: number,
+  resetMinute: number
+): Habit[] {
+  return habits.filter(habit =>
     isHabitActiveToday(habit, date, resetHour, resetMinute)
   );
-};
-
-/**
- * Calculate completion rate for a habit
- * 
- * @param habit - The habit to calculate for
- * @returns Completion rate as percentage (0-100)
- */
-export const getHabitCompletionRate = (habit: Habit): number => {
-  if (!habit.completionHistory || habit.completionHistory.length === 0) {
-    return 0;
-  }
-
-  // Calculate based on days since start
-  const startDate = new Date(habit.startDate);
-  const today = new Date();
-  const daysSinceStart = Math.max(1, Math.floor((today.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)));
-  
-  const completionCount = habit.completionHistory.length;
-  return Math.round((completionCount / daysSinceStart) * 100);
-};
+}

@@ -20,7 +20,6 @@ import {
   updateHabitIncrement,
 } from '@/utils/habitsActions';
 
-const CACHE_KEY = '@habits_cache';
 const CACHE_WINDOW_DAYS = 3;
 const DEBUG = true;
 

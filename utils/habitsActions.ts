@@ -1,12 +1,14 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import { supabase } from '@/lib/supabase';
 import { STORAGE_KEYS } from '@/storage/keys';
 import { Habit } from '@/types/Habit';
 import { getHabitDate } from '@/utils/dateUtils';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 
 /* ============================================================================
-   CACHE TYPES + HELPERS
+    CACHE TYPES + HELPERS
 ============================================================================ */
+
 
 interface HabitsCache {
   habits: Habit[];
@@ -15,7 +17,7 @@ interface HabitsCache {
 }
 
 /**
- * Safely get habits array from cache
+ * safely get habits array from cache
  */
 async function getCachedHabits(): Promise<Habit[]> {
   try {
@@ -24,26 +26,26 @@ async function getCachedHabits(): Promise<Habit[]> {
 
     const parsed = JSON.parse(raw);
 
-    // New cache shape
+    // new cache shape
     if (Array.isArray(parsed?.habits)) {
       return parsed.habits;
     }
 
-    // Old fallback
+    // backup
     if (Array.isArray(parsed)) {
       return parsed;
     }
 
-    console.warn('⚠️ Invalid habits cache shape');
+    console.warn('Error: Invalid habits cache shape');
     return [];
   } catch (err) {
-    console.error('❌ Failed to read habits cache', err);
+    console.error('Error: Failed to read habits cache', err);
     return [];
   }
 }
 
 /* ============================================================================
-   CORE LOAD
+    CORE LOAD 
 ============================================================================ */
 
 export async function loadHabitsFromSupabase(userId: string): Promise<Habit[]> {
@@ -58,14 +60,14 @@ export async function loadHabitsFromSupabase(userId: string): Promise<Habit[]> {
 
     const habits = (data || []).map(row => ({
       id: row.id,
-      user_id: row.user_id,
+      userId: row.user_id,
       name: row.name,
-      habitText: row.name, 
+      habitText: row.name,
       icon: row.icon,
       frequency: row.frequency,
       selectedDays: row.selected_days || [],
       selectedTimeOfDay: row.selected_time_of_day,
-      startDate: row.start_date,  
+      startDate: row.start_date,
       selectedDate: row.selected_date,
       rewardPoints: row.reward_points || 0,
       completionHistory: row.completion_history || [],
@@ -82,15 +84,7 @@ export async function loadHabitsFromSupabase(userId: string): Promise<Habit[]> {
       created_at: row.created_at,
     })) as Habit[];
 
-    console.log('📥 Loaded from Supabase:', habits.length, 'habits');
-    habits.forEach(h => {
-      console.log(`   - ${h.name}: startDate=${h.startDate}, freq=${h.frequency}`);
-      if (h.increment && h.incrementHistory) {
-        console.log(`      INCREMENT DATA:`, JSON.stringify(h.incrementHistory));
-      }
-    });
-
-    // Merge with cached completionHistory defensively
+    // merge with cached completionHistory defensively
     const cachedHabits = await getCachedHabits();
     const cachedMap = new Map(cachedHabits.map(h => [h.id, h]));
 
@@ -108,18 +102,18 @@ export async function loadHabitsFromSupabase(userId: string): Promise<Habit[]> {
 
     return merged;
   } catch (err) {
-    console.error('❌ loadHabitsFromSupabase failed', err);
+    console.error('Error: loadHabitsFromSupabase failed', err);
     return [];
   }
 }
 
 /* ============================================================================
-   RESET TIME
+    RESET TIME
 ============================================================================ */
 
 export async function getResetTime(): Promise<{ hour: number; minute: number }> {
   try {
-    const raw = await AsyncStorage.getItem('@reset_time');
+    const raw = await AsyncStorage.getItem(STORAGE_KEYS.RESET_TIME);
     if (!raw) return { hour: 4, minute: 0 };
 
     return JSON.parse(raw);
@@ -129,9 +123,12 @@ export async function getResetTime(): Promise<{ hour: number; minute: number }> 
 }
 
 /* ============================================================================
-   COMPLETION HELPERS
+      COMPLETION HELPERS
 ============================================================================ */
 
+// marks habits as completed based on the habit-day.
+// uses reset time so actions between midnight and reset
+// still count toward yesterday instead of resetting early.
 export function addCompletedToHabits(
   habits: Habit[],
   date: Date,
@@ -199,7 +196,7 @@ export async function updateHabitIncrement(
     if (habit.id !== habitId) return habit;
 
     const incrementHistory = habit.incrementHistory || {};
-    
+
     return {
       ...habit,
       incrementAmount: newAmount,
@@ -222,7 +219,7 @@ export async function updateHabitIncrement(
 
     const { data, error } = await supabase
       .from('habits')
-      .update({ 
+      .update({
         increment_amount: newAmount,
         increment_history: target.incrementHistory,
       })
@@ -239,6 +236,7 @@ export async function updateHabitIncrement(
   return updated;
 }
 
+// **TODO: implement snooze, skip and delete functions
 /* ============================================================================
    SNOOZE / SKIP / DELETE
 ============================================================================ */
@@ -296,6 +294,7 @@ export async function deleteHabit(
   return habits.filter(h => h.id !== habitId);
 }
 
+// **TODO: correct streak function
 /* ============================================================================
    STREAK + POINTS
 ============================================================================ */
@@ -329,7 +328,7 @@ export async function updateAppStreak(
 
 export async function getTotalPoints(): Promise<number> {
   try {
-    const raw = await AsyncStorage.getItem('@total_points');
+    const raw = await AsyncStorage.getItem(STORAGE_KEYS.TOTAL_POINTS);
     return raw ? Number(raw) : 0;
   } catch {
     return 0;

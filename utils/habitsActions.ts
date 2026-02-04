@@ -1,9 +1,8 @@
 import { supabase } from '@/lib/supabase';
+import { STORAGE_KEYS } from '@/storage/keys';
 import { Habit } from '@/types/Habit';
 import { getHabitDate } from '@/utils/dateUtils';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-const CACHE_KEY = '@habits_cache';
 
 /* ============================================================================
    CACHE TYPES + HELPERS
@@ -20,7 +19,7 @@ interface HabitsCache {
  */
 async function getCachedHabits(): Promise<Habit[]> {
   try {
-    const raw = await AsyncStorage.getItem(CACHE_KEY);
+    const raw = await AsyncStorage.getItem(STORAGE_KEYS.HABITS_CACHE);
     if (!raw) return [];
 
     const parsed = JSON.parse(raw);

@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Habit } from '@/types/Habit';
 import { daysBetween, getHabitDate } from '@/utils/dateUtils';
 
+import { STORAGE_KEYS } from '@/storage/keys';
 import {
   addCompletedToHabits,
   deleteHabit as deleteHabitService,
@@ -104,7 +105,7 @@ export function useHabits(viewingDate: Date = new Date()) {
 
   const loadFromCache = useCallback(async (): Promise<Habit[] | null> => {
     try {
-      const cached = await AsyncStorage.getItem(CACHE_KEY);
+      const cached = await AsyncStorage.getItem(STORAGE_KEYS.HABITS_CACHE);
       if (!cached) return null;
 
       const cacheData: HabitsCache = JSON.parse(cached);
@@ -135,7 +136,7 @@ export function useHabits(viewingDate: Date = new Date()) {
           cachedAt: new Date().toISOString(),
           cachedForDates: getCacheWindowDates(reset),
         };
-        await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(cacheData));
+        await AsyncStorage.setItem(STORAGE_KEYS.HABITS_CACHE, JSON.stringify(cacheData));
         if (DEBUG) console.log('✅ Habits cached successfully');
       } catch (err) {
         console.error('❌ Error saving to cache:', err);

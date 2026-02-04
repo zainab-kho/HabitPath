@@ -195,13 +195,14 @@ export default function AllAssignments() {
                 {/* add assignment button */}
                 <View style={{
                     position: 'absolute',
-                    bottom: 10,
+                    bottom: 50,
                     right: 0,
                 }}>
                     <Pressable onPress={() => router.push('/assignments/NewAssignment')}>
                         <ShadowBox
                             contentBackgroundColor={PAGE.assignments.primary[0]}
                             shadowBorderRadius={30}
+                            contentBorderRadius={30}
                         >
                             <View style={{
                                 width: 40,

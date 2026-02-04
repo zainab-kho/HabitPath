@@ -413,6 +413,6 @@ const styles = StyleSheet.create({
   },
 
   contentContainer: {
-    paddingBottom: 20,
+    paddingBottom: 50,
   },
 });

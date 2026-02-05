@@ -24,6 +24,7 @@ import { buttonStyles, globalStyles, journalStyle } from '@/styles';
 import { AppLinearGradient } from '@/ui/AppLinearGradient';
 import PageContainer from '@/ui/PageContainer';
 import PageHeader from '@/ui/PageHeader';
+import ToggleRow from '@/ui/ToggleRow';
 import { formatDisplayDate, formatDisplayTime, formatLocalDate } from '@/utils/dateUtils';
 
 export const MAIN_MOOD_COLORS = {
@@ -56,6 +57,7 @@ export default function JournalPage() {
     const [localTime, setLocalTime] = useState('');
     const [selectedMood, setSelectedMood] =
         useState<keyof typeof MOOD_COLORS | null>(null);
+    const [lock, setLock] = useState(false);
     const [entry, setEntry] = useState('');
     const [location, setLocation] = useState('');
     const [isSaving, setIsSaving] = useState(false);
@@ -215,6 +217,15 @@ export default function JournalPage() {
                 >
                     <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
                         <ScrollView keyboardShouldPersistTaps="handled">
+                            {/* lock entry */}
+                            {/* <Text style={entryDetailStyle.label}>LOCK ENTRY?</Text> */}
+                            <ToggleRow
+                                label="Lock entry?"
+                                value={lock}
+                                onValueChange={setLock}
+                                trackColorTrue={PAGE.journal.border[0]}
+                            />
+
                             {/* mood */}
                             <Text style={[globalStyles.body, { marginBottom: 10 }]}>Mood</Text>
 
@@ -260,7 +271,7 @@ export default function JournalPage() {
                                 </Text>
                             </Pressable>
 
-                            {/* kocation */}
+                            {/* location */}
                             <Text style={[globalStyles.body, { marginBottom: 10 }]}>Location</Text>
                             <View style={journalStyle.locationCard}>
                                 <TextInput

@@ -98,7 +98,7 @@ export default function EntryDetail() {
 
         setIsSaving(true);
 
-        try {   
+        try {
             // keep date as original Date object - users cannot change entry dates
             const updatedEntry: JournalEntry = {
                 ...entry,
@@ -117,7 +117,7 @@ export default function EntryDetail() {
                     location: editedLocation || null,
                     entry: editedEntry || null,
                 };
-                
+
                 const { error } = await supabase
                     .from('journal_entries')
                     .update(updateData)
@@ -134,13 +134,13 @@ export default function EntryDetail() {
             // update AsyncStorage cache after Supabase succeeds
             const stored = await AsyncStorage.getItem('@journal_entries');
             const allEntries: any[] = stored ? JSON.parse(stored) : [];
-            
+
             // store date as YYYY-MM-DD string to avoid UTC conversion
             const cacheEntry = {
                 ...updatedEntry,
                 date: formatLocalDate(updatedEntry.date)
             };
-            
+
             const updatedEntries = allEntries.map(e => {
                 if (e.id === entry.id) {
                     return cacheEntry;
@@ -219,9 +219,9 @@ export default function EntryDetail() {
     return (
         <AppLinearGradient variant="journal.background">
             <PageContainer>
-                <PageHeader 
+                <PageHeader
                     title={isEditing ? "Edit Entry" : "Journal Entry"}
-                    showBackButton 
+                    showBackButton
                 />
 
                 <KeyboardAvoidingView
@@ -328,12 +328,12 @@ export default function EntryDetail() {
                                     />
 
                                     <Pressable
-                                        style={[buttonStyles.button, { 
+                                        style={[buttonStyles.button, {
                                             alignSelf: 'center',
                                             marginTop: 20,
                                             width: 100,
                                             backgroundColor: BUTTON_COLORS.Delete,
-                                             }]}
+                                        }]}
                                         onPress={handleDelete}
                                     >
                                         <Text style={globalStyles.body}>Delete</Text>

@@ -37,19 +37,35 @@ export default function SettingsPage() {
         setChecking(true);
         setErrorMsg(null);
 
-        const { data, error } = await supabase.auth.signInWithPassword({
-            email: email.trim(),
-            password,
+        // Get the currently logged in user
+        const { data: { user: currentUser } } = await supabase.auth.getUser();
+
+        if (!currentUser) {
+            setErrorMsg('Session expired. Please log in again.');
+            setChecking(false);
+            return;
+        }
+
+        // Verify the email matches the current user
+        if (email.trim().toLowerCase() !== currentUser.email?.toLowerCase()) {
+            setErrorMsg('Email or password is incorrect.');
+            setChecking(false);
+            return;
+        }
+
+        // Verify the password is correct for the current user
+        const { data, error } = await supabase.rpc('verify_current_user_password', {
+            password_input: password
         });
 
         setChecking(false);
 
-        if (error) {
+        if (error || !data?.valid) {
             setErrorMsg('Email or password is incorrect.');
             return;
         }
 
-        // credentials are valid
+        // Credentials are valid and match the current user
         router.replace('/more/settings/ResetPin');
     };
 
@@ -79,7 +95,7 @@ export default function SettingsPage() {
     const onDone = async () => {
         setShowTimePicker(false);
 
-        
+
     };
 
     return (

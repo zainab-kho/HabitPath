@@ -22,11 +22,15 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ error: "not logged in" }), { status: 401 });
   }
 
-  await supabase
+  const { data: settings } = await supabase
     .from("user_settings")
-    .upsert({ user_id: user.user.id, pin_test: pin });
+    .select("pin_test")
+    .eq("user_id", user.user.id)
+    .single();
 
-  return new Response(JSON.stringify({ ok: true }), {
+  const isCorrect = settings?.pin_test === pin;
+
+  return new Response(JSON.stringify({ ok: isCorrect }), {
     status: 200,
     headers: { "Content-Type": "application/json" },
   });

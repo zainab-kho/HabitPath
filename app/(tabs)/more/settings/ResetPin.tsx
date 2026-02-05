@@ -31,7 +31,6 @@ export default function ResetPinPage() {
   }, [step]);
 
   const handleChange = async (text: string) => {
-    // digits only, clamp to length
     const cleaned = text.replace(/\D/g, '').slice(0, PIN_LENGTH);
     setError(null);
     setPin(cleaned);
@@ -45,37 +44,44 @@ export default function ResetPinPage() {
       }
 
       if (cleaned !== firstPin) {
-        setError("Pins don't match. Try again.");
+        setError("pins don't match. try again.");
         setPin('');
         return;
       }
 
-      // PIN confirmed
+      // pin confirmed - save it
       Keyboard.dismiss();
-      // **TODO: save pin then navigate
 
-      const { data: session } = await supabase.auth.getSession();
-      const { data: sessionData } = await supabase.auth.getSession();
-      
-      const token = sessionData.session?.access_token;
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        const token = session?.access_token;
 
-      const { data, error } = await supabase.functions.invoke('set-pin', {
-        body: { pin: cleaned },
-        headers: { Authorization: `Bearer ${token}` },
-      });
+        if (!token) {
+          setError('not logged in. please try again.');
+          setPin('');
+          return;
+        }
 
-      console.log('set-pin:', { data, error });
-      console.log('set-pin result:', { session, error });
+        const { data, error } = await supabase.functions.invoke('set-pin', {
+          body: { pin: cleaned },
+          headers: { Authorization: `Bearer ${token}` },
+        });
 
+        console.log('set-pin result:', { data, error });
 
-      if (error) {
-        setError('Could not save PIN. Try again.');
+        if (error) {
+          setError('could not save pin. try again.');
+          setPin('');
+          return;
+        }
+
+        // success - navigate back
+        router.back();
+      } catch (err) {
+        console.error('error saving pin:', err);
+        setError('could not save pin. try again.');
         setPin('');
-        return;
       }
-
-
-      router.back();
     }
   };
 

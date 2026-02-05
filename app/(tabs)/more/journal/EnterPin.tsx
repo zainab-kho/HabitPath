@@ -27,18 +27,31 @@ export default function EnterPinPage() {
   }, []);
 
   const verifyPin = async (enteredPin: string) => {
-    setChecking(true);
-    setError(null);
+  setChecking(true);
+  setError(null);
+
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    if (!session?.access_token) {
+      setError('not logged in');
+      setPin('');
+      setChecking(false);
+      return;
+    }
 
     const { data, error } = await supabase.functions.invoke('verify-pin', {
       body: { pin: enteredPin },
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+      },
     });
 
     setChecking(false);
     console.log('verify-pin result:', { data, error });
 
     if (error || !data?.ok) {
-      setError('Wrong PIN');
+      setError('wrong pin');
       setPin('');
       return;
     }
@@ -46,7 +59,13 @@ export default function EnterPinPage() {
     await AsyncStorage.setItem(JOURNAL_UNLOCK_KEY, '1');
     Keyboard.dismiss();
     router.back();
-  };
+  } catch (err) {
+    console.error('error verifying pin:', err);
+    setError('could not verify pin');
+    setPin('');
+    setChecking(false);
+  }
+};
 
   const handleChange = (text: string) => {
     const cleaned = text.replace(/\D/g, '').slice(0, PIN_LENGTH);

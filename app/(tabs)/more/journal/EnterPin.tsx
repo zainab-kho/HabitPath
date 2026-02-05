@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { Keyboard, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -26,54 +25,32 @@ export default function EnterPinPage() {
     return () => clearTimeout(t);
   }, []);
 
-  const verifyPin = async (enteredPin: string) => {
-  setChecking(true);
-  setError(null);
-
-  try {
-    const { data: { session } } = await supabase.auth.getSession();
-    
-    if (!session?.access_token) {
-      setError('not logged in');
-      setPin('');
-      setChecking(false);
-      return;
-    }
-
-    const { data, error } = await supabase.functions.invoke('verify-pin', {
-      body: { pin: enteredPin },
-      headers: {
-        Authorization: `Bearer ${session.access_token}`,
-      },
-    });
-
-    setChecking(false);
-    console.log('verify-pin result:', { data, error });
-
-    if (error || !data?.ok) {
-      setError('wrong pin');
-      setPin('');
-      return;
-    }
-
-    await AsyncStorage.setItem(JOURNAL_UNLOCK_KEY, '1');
-    Keyboard.dismiss();
-    router.back();
-  } catch (err) {
-    console.error('error verifying pin:', err);
-    setError('could not verify pin');
-    setPin('');
-    setChecking(false);
-  }
-};
-
-  const handleChange = (text: string) => {
+  const handleChange = async (text: string) => {
     const cleaned = text.replace(/\D/g, '').slice(0, PIN_LENGTH);
-    setPin(cleaned);
     setError(null);
+    setPin(cleaned);
 
-    if (cleaned.length === PIN_LENGTH && !checking) {
-      verifyPin(cleaned);
+    if (cleaned.length === PIN_LENGTH) {
+      Keyboard.dismiss();
+
+      try {
+        const { data, error } = await supabase.rpc('verify_user_pin', {
+          pin_input: cleaned
+        });
+
+        if (error || !data?.valid) {
+          setError('Incorrect pin. Try again.');
+          setPin('');
+          return;
+        }
+
+        // success
+        router.back();
+      } catch (err) {
+        console.error('Error verifying pin:', err);
+        setError('Could not verify pin. Try again.');
+        setPin('');
+      }
     }
   };
 

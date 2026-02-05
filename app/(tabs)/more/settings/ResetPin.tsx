@@ -31,59 +31,60 @@ export default function ResetPinPage() {
   }, [step]);
 
   const handleChange = async (text: string) => {
-    const cleaned = text.replace(/\D/g, '').slice(0, PIN_LENGTH);
-    setError(null);
-    setPin(cleaned);
+  const cleaned = text.replace(/\D/g, '').slice(0, PIN_LENGTH);
+  setError(null);
+  setPin(cleaned);
 
-    if (cleaned.length === PIN_LENGTH) {
-      if (step === 'create') {
-        setFirstPin(cleaned);
-        setPin('');
-        setStep('confirm');
-        return;
-      }
-
-      if (cleaned !== firstPin) {
-        setError("pins don't match. try again.");
-        setPin('');
-        return;
-      }
-
-      // pin confirmed - save it
-      Keyboard.dismiss();
-
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
-
-        if (!token) {
-          setError('not logged in. please try again.');
-          setPin('');
-          return;
-        }
-
-        const { data, error } = await supabase.functions.invoke('set-pin', {
-          body: { pin: cleaned },
-          headers: { Authorization: `Bearer ${token}` },
-        });
-
-        console.log('set-pin result:', { data, error });
-
-        if (error) {
-          setError('could not save pin. try again.');
-          setPin('');
-          return;
-        }
-
-        // success - navigate back
-        router.back();
-      } catch (err) {
-        console.error('error saving pin:', err);
-        setError('could not save pin. try again.');
-        setPin('');
-      }
+  if (cleaned.length === PIN_LENGTH) {
+    if (step === 'create') {
+      setFirstPin(cleaned);
+      setPin('');
+      setStep('confirm');
+      return;
     }
-  };
+
+    if (cleaned !== firstPin) {
+      setError("Pins don't match. Try again.");
+      setPin('');
+      return;
+    }
+
+    // PIN confirmed
+    Keyboard.dismiss();
+
+    try {
+      console.log('Calling set_user_pin with:', cleaned);
+      
+      const { data, error } = await supabase.rpc('set_user_pin', {
+        pin_input: cleaned
+      });
+
+      console.log('Response data:', data);
+      console.log('Response error:', error);
+
+      if (error) {
+        console.log('Full error object:', JSON.stringify(error, null, 2));
+        setError('Could not save pin. Try again.');
+        setPin('');
+        return;
+      }
+
+      if (!data?.success) {
+        console.log('Data success is false:', data);
+        setError('Could not save pin. Try again.');
+        setPin('');
+        return;
+      }
+
+      // success
+      router.back();
+    } catch (err) {
+      console.error('Caught error:', err);
+      setError('Could not save pin. Try again.');
+      setPin('');
+    }
+  }
+};
 
   const resetAll = () => {
     setError(null);

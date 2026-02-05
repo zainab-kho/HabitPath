@@ -51,3 +51,5 @@ app-example
 
 Comments
 STABILITY.md
+.vscode/settings.json
+supabase/functions/set-pin/.npmrc

@@ -338,6 +338,8 @@ export const SYSTEM_ICONS = {
     tag: require('@/assets/icons/system/tag.png'),
     settings: require('@/assets/icons/system/settings-icon.png'),
     delete: require('@/assets/icons/system/delete.png'),
+    lock: require('@/assets/icons/system/lock.png'),
+    padlock: require('@/assets/icons/system/padlock.png'),
 
     sort: require('@/assets/icons/system/sort.png'),
     sortLeft: require('@/assets/icons/system/sort-left.png'),

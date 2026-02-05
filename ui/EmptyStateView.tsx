@@ -44,7 +44,8 @@ export default function EmptyStateView({
             ]}
         >
             <ShadowBox
-                borderRadius={30}
+                contentBorderRadius={30}
+                shadowBorderRadius={30}
                 style={{
                     alignItems: 'center',
                     justifyContent: 'center',

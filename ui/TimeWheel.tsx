@@ -81,7 +81,6 @@ export const pickerStyles = StyleSheet.create({
         borderRadius: 18,
         alignSelf: 'center',
         width: '100%',
-        marginTop: 20,
         padding: 5,
     },
 

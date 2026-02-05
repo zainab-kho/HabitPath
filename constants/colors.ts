@@ -70,6 +70,7 @@ export const PAGE = {
   },
   settings: {
     background: ['#fdfbfb', '#ebedee'],
+    pin: ['#55d7b0ff']
   },
 } as const;
 

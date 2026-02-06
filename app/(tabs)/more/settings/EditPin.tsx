@@ -86,9 +86,6 @@ export default function SettingsPage() {
             setHour(String(hour12));
             setMinute(String(minute).padStart(2, '0'));
             setMeridiem(isPM ? 'PM' : 'AM');
-
-            console.log(hour);
-            console.log(minute);
         })();
     }, [user]);
 

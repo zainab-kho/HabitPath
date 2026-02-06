@@ -28,6 +28,13 @@ export default function JournalPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isUnlocked, setIsUnlocked] = useState(false);
 
+  const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({});
+
+  const toggleExpanded = useCallback((id: string) => {
+    setExpandedIds(prev => ({ ...prev, [id]: !prev[id] }));
+  }, []);
+
+
   const refreshUnlockState = useCallback(async () => {
     const raw = await AsyncStorage.getItem(JOURNAL_UNLOCK_KEY);
     setIsUnlocked(raw === '1');
@@ -120,6 +127,7 @@ export default function JournalPage() {
         time: row.time,
         mood: row.mood,
         location: row.location ?? undefined,
+        lock: row.is_locked ?? undefined,
         entry: row.entry ?? undefined,
       }));
 
@@ -132,22 +140,29 @@ export default function JournalPage() {
     }
   }, [user, groupAndSetEntries]);
 
-  // No locking the page — just refresh icon state + load entries
   useFocusEffect(
     useCallback(() => {
       refreshUnlockState();
       loadEntries();
+
+      return () => {
+        // when page loses focus, auto-lock
+        AsyncStorage.removeItem(JOURNAL_UNLOCK_KEY);
+        setIsUnlocked(false);
+      };
     }, [refreshUnlockState, loadEntries])
   );
 
   const handleHeaderLockPress = useCallback(async () => {
-    if (!isUnlocked) {
-      router.push('/(tabs)/more/journal/EnterPin');
+    if (isUnlocked) {
+      // 🔒 Re-lock instantly (no navigation)
+      await AsyncStorage.removeItem(JOURNAL_UNLOCK_KEY);
+      setIsUnlocked(false);
       return;
     }
 
-    await AsyncStorage.removeItem(JOURNAL_UNLOCK_KEY);
-    setIsUnlocked(false);
+    // 🔓 Currently locked → ask for PIN
+    router.push('/(tabs)/more/journal/EnterPin');
   }, [isUnlocked, router]);
 
   const allEntries = useMemo(() => Object.values(entriesByMonth).flat(), [entriesByMonth]);
@@ -157,11 +172,10 @@ export default function JournalPage() {
       <PageContainer>
         <PageHeader
           title="Journal"
-          showPlusButton
           showBackButton
-          plusNavigateTo="/more/journal/EnterPin"
+          showPlusButton
           navigateIcon={isUnlocked ? SYSTEM_ICONS.padlock : SYSTEM_ICONS.lock}
-          onNavigatePress={handleHeaderLockPress as any}
+          onNavigatePress={handleHeaderLockPress}
         />
 
         <ScrollView
@@ -184,37 +198,72 @@ export default function JournalPage() {
                     ? MOOD_COLORS[entry.mood as keyof typeof MOOD_COLORS]
                     : '#fff';
 
-                  const isLong = !!entry.entry && entry.entry.length > 300;
+                  const isLong = !!entry.entry && entry.entry.length > 250;
+
+                  const canShowEntry = !entry.lock || isUnlocked;
 
                   return (
-                    <Pressable
+                    <ShadowBox
                       key={entry.id}
-                      style={[styles.entryCard, { backgroundColor: bgColor }]}
-                      onPress={() => router.push(`/journal/EntryDetail?id=${entry.id}` as any)}
+                      contentBackgroundColor={bgColor}
+                      style={{ marginBottom: 15 }}
                     >
-                      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                        <Text style={styles.entryDate}>{formattedDate}</Text>
-                        {entry.time && <Text style={styles.entryTime}>{entry.time}</Text>}
+                      <View style={styles.entryCard}>
+                        {/* ✅ HEADER TAP ZONE = navigates to detail */}
+                        <Pressable
+                          onPress={() => router.push(`/(tabs)/more/journal/EntryDetail`)}
+                          style={{ gap: 8 }}
+                        >
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                            <Text style={styles.entryDate}>{formattedDate}</Text>
+                            {entry.time && <Text style={styles.entryTime}>{entry.time}</Text>}
+                          </View>
+
+                          {/* location OR lock icon */}
+                          {canShowEntry ? (
+                            entry.location ? (
+                              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                <Image
+                                  source={SYSTEM_ICONS.location}
+                                  style={{ width: 15, height: 15, tintColor: COLORS.Secondary, marginRight: 5 }}
+                                />
+                                <Text style={styles.entryLocation}>{entry.location}</Text>
+                              </View>
+                            ) : null
+                          ) : (
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                              <Image source={SYSTEM_ICONS.lock} style={{ width: 15, height: 15 }} />
+                            </View>
+                          )}
+                        </Pressable>
+
+                        {/* ✅ BODY (no navigation) */}
+                        {entry.entry && canShowEntry && (() => {
+                          const isExpanded = !!expandedIds[entry.id];
+                          const previewLines = isExpanded ? 999 : 6;
+
+                          return (
+                            <View style={{ marginTop: 10 }}>
+                              <Text style={styles.entryText} numberOfLines={previewLines}>
+                                {entry.entry}
+                              </Text>
+
+                              {/* Only show toggle if it's actually long */}
+                              {isLong && (
+                                <Pressable
+                                  onPress={() => toggleExpanded(entry.id)}
+                                  style={{ alignSelf: 'flex-start', marginTop: 8 }}
+                                >
+                                  <Text style={styles.readMore}>
+                                    {isExpanded ? 'Read less ←' : 'Read more →'}
+                                  </Text>
+                                </Pressable>
+                              )}
+                            </View>
+                          );
+                        })()}
                       </View>
-
-                      {entry.location && (
-                        <View style={{ flexDirection: 'row' }}>
-                          <Image
-                            source={SYSTEM_ICONS.location}
-                            style={{ width: 15, height: 15, tintColor: COLORS.Secondary, marginRight: 5 }}
-                          />
-                          <Text style={styles.entryLocation}>{entry.location}</Text>
-                        </View>
-                      )}
-
-                      {entry.entry && (
-                        <Text style={styles.entryText} numberOfLines={6}>
-                          {entry.entry}
-                        </Text>
-                      )}
-
-                      {isLong && <Text style={styles.readMore}>Read more →</Text>}
-                    </Pressable>
+                    </ShadowBox>
                   );
                 })}
               </View>
@@ -267,13 +316,6 @@ const styles = StyleSheet.create({
   entryCard: {
     padding: 20,
     borderRadius: 15,
-    marginBottom: 15,
-    shadowColor: '#000',
-    shadowOpacity: 1,
-    shadowOffset: { width: 3, height: 3 },
-    shadowRadius: 0,
-    borderColor: '#000',
-    borderWidth: 1,
     overflow: 'visible',
   },
   entryDate: {

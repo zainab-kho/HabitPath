@@ -52,25 +52,18 @@ export default function ResetPinPage() {
     // PIN confirmed
     Keyboard.dismiss();
 
-    try {
-      console.log('Calling set_user_pin with:', cleaned);
-      
+    try {      
       const { data, error } = await supabase.rpc('set_user_pin', {
         pin_input: cleaned
       });
 
-      console.log('Response data:', data);
-      console.log('Response error:', error);
-
       if (error) {
-        console.log('Full error object:', JSON.stringify(error, null, 2));
         setError('Could not save pin. Try again.');
         setPin('');
         return;
       }
 
       if (!data?.success) {
-        console.log('Data success is false:', data);
         setError('Could not save pin. Try again.');
         setPin('');
         return;

@@ -3,16 +3,12 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
     Alert,
-    Keyboard,
-    KeyboardAvoidingView,
-    Platform,
     Pressable,
-    ScrollView,
     Text,
     TextInput,
-    TouchableWithoutFeedback,
     View
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -26,29 +22,7 @@ import PageContainer from '@/ui/PageContainer';
 import PageHeader from '@/ui/PageHeader';
 import ToggleRow from '@/ui/ToggleRow';
 import { formatDisplayDate, formatDisplayTime, formatLocalDate } from '@/utils/dateUtils';
-
-export const MAIN_MOOD_COLORS = {
-    stressed: '#a81ba8ff',
-    sad: '#4075e6ff',
-    okay: '#ff9752',
-    relaxed: '#6dddffff',
-    happy: '#00AC8F',
-};
-
-export const MOOD_COLORS = {
-    great: '#ff68f5ff',
-    happy: '#00AC8F',
-    excited: '#b66dffff',
-    energetic: 'rgba(198, 222, 105, 1)',
-    relaxed: '#6dddffff',
-    okay: '#ff9752',
-    sad: '#4075e6ff',
-    stressed: '#a81ba8ff',
-    anxious: '#548D8B',
-    angry: '#ff3b3bff',
-    frustrated: '#acacacff',
-    sick: '#EEE8A9',
-} as const;
+import { MAIN_MOOD_COLORS, MOOD_COLORS } from '@/constants/colors';
 
 export default function JournalPage() {
     const router = useRouter();
@@ -75,17 +49,13 @@ export default function JournalPage() {
     // visual display: first 4 main moods + (extraMood OR 5th main mood)
     const displayedMoods: (keyof typeof MOOD_COLORS)[] = extraMood
         ? [BASE_MOODS[0], BASE_MOODS[1], extraMood, BASE_MOODS[3], BASE_MOODS[4]]
-        : BASE_MOODS;  // show all 5 main moods
+        : BASE_MOODS;
 
     const handleMoodPress = (mood: keyof typeof MOOD_COLORS) => {
-        // tap same mood again → unselect
         if (selectedMood === mood) {
             setSelectedMood(null);
-            // don't reset extraMood - keep it visible
             return;
         }
-
-        // select the mood
         setSelectedMood(mood);
     };
 
@@ -93,11 +63,9 @@ export default function JournalPage() {
         setSelectedMood(mood);
         setMoodModalOpen(false);
 
-        // if it's one of the base 5 moods, reset to normal
         if (BASE_MOODS.includes(mood as keyof typeof MAIN_MOOD_COLORS)) {
             setExtraMood(null);
         } else {
-            // if it's an extra mood, replace
             setExtraMood(mood);
         }
     };
@@ -125,8 +93,6 @@ export default function JournalPage() {
         try {
             const now = new Date();
             const id = now.toISOString();
-
-            // format date in local timezone for storage
             const localDateString = formatLocalDate(now);
 
             const newEntry: JournalEntry = {
@@ -141,7 +107,7 @@ export default function JournalPage() {
             // save to AsyncStorage
             const cacheEntry = {
                 ...newEntry,
-                date: localDateString, // store as YYYY-MM-DD string, not Date object
+                date: localDateString,
             };
             const existing = await AsyncStorage.getItem('@journal_entries');
             const allEntries: any[] = existing ? JSON.parse(existing) : [];
@@ -150,18 +116,19 @@ export default function JournalPage() {
 
             console.log('**LOG: Entry saved to AsyncStorage (cache)');
 
-            // save to Supabase - use local date string (YYYY-MM-DD) to avoid timezone issues
+            // save to Supabase WITH LOCK STATUS
             const { data, error } = await supabase
                 .from('journal_entries')
                 .insert([
                     {
                         id: id,
                         user_id: user.id,
-                        date: localDateString, // YYYY-MM-DD format in local timezone
+                        date: localDateString,
                         time: localTime,
                         mood: selectedMood,
                         location: location || null,
                         entry: entry || null,
+                        is_locked: lock, // 🔒 SAVE LOCK STATUS
                         created_at: now.toISOString(),
                     }
                 ]);
@@ -178,7 +145,6 @@ export default function JournalPage() {
 
             console.log('**LOG: Journal entry saved:', newEntry);
             router.back();
-
 
         } catch (error) {
             console.error('Error saving journal entry:', error);
@@ -211,131 +177,134 @@ export default function JournalPage() {
                     </Text>
                 </Pressable>
 
-                <KeyboardAvoidingView
-                    style={{ flex: 1 }}
-                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                {/* MUCH BETTER KEYBOARD HANDLING */}
+                <KeyboardAwareScrollView
+                    enableOnAndroid={true}
+                    enableAutomaticScroll={true}
+                    extraScrollHeight={20}
+                    keyboardShouldPersistTaps="handled"
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={{ paddingBottom: 40 }}
                 >
-                    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-                        <ScrollView keyboardShouldPersistTaps="handled">
-                            {/* lock entry */}
-                            {/* <Text style={entryDetailStyle.label}>LOCK ENTRY?</Text> */}
-                            <ToggleRow
-                                label="Lock entry?"
-                                value={lock}
-                                onValueChange={setLock}
-                                trackColorTrue={PAGE.journal.border[0]}
-                            />
+                    {/* lock entry */}
+                    <ToggleRow
+                        label="Lock entry?"
+                        value={lock}
+                        onValueChange={setLock}
+                        trackColorTrue={PAGE.journal.border[0]}
+                    />
 
-                            {/* mood */}
-                            <Text style={[globalStyles.body, { marginBottom: 10 }]}>Mood</Text>
+                    {/* mood */}
+                    <Text style={[globalStyles.body, { marginBottom: 10 }]}>Mood</Text>
 
-                            <View style={journalStyle.card}>
-                                <View style={journalStyle.moodRow}>
-                                    {displayedMoods.map((mood) => {
-                                        const color = MOOD_COLORS[mood];
+                    <View style={journalStyle.card}>
+                        <View style={journalStyle.moodRow}>
+                            {displayedMoods.map((mood) => {
+                                const color = MOOD_COLORS[mood];
 
-                                        return (
-                                            <View key={mood} style={journalStyle.moodItem}>
-                                                <Pressable
-                                                    onPress={() => handleMoodPress(mood)}
-                                                    style={[
-                                                        journalStyle.moodBox,
-                                                        { borderColor: color, shadowColor: color },
-                                                        selectedMood === mood && {
-                                                            backgroundColor: color,
-                                                            shadowColor: '#000',
-                                                            borderColor: '#000',
-                                                        },
-                                                    ]}
-                                                />
-                                                <Text style={journalStyle.moodLabel}>{mood}</Text>
-                                            </View>
-                                        );
-                                    })}
-                                </View>
-                            </View>
+                                return (
+                                    <View key={mood} style={journalStyle.moodItem}>
+                                        <Pressable
+                                            onPress={() => handleMoodPress(mood)}
+                                            style={[
+                                                journalStyle.moodBox,
+                                                { borderColor: color, shadowColor: color },
+                                                selectedMood === mood && {
+                                                    backgroundColor: color,
+                                                    shadowColor: '#000',
+                                                    borderColor: '#000',
+                                                },
+                                            ]}
+                                        />
+                                        <Text style={journalStyle.moodLabel}>{mood}</Text>
+                                    </View>
+                                );
+                            })}
+                        </View>
+                    </View>
 
-                            <Pressable onPress={() => setMoodModalOpen(true)}>
-                                <Text
-                                    style={[
-                                        globalStyles.label,
-                                        {
-                                            textAlign: 'center',
-                                            opacity: 0.5,
-                                            fontSize: 11,
-                                            margin: 10,
-                                        },
-                                    ]}
-                                >
-                                    More
-                                </Text>
-                            </Pressable>
+                    <Pressable onPress={() => setMoodModalOpen(true)}>
+                        <Text
+                            style={[
+                                globalStyles.label,
+                                {
+                                    textAlign: 'center',
+                                    opacity: 0.5,
+                                    fontSize: 11,
+                                    margin: 10,
+                                },
+                            ]}
+                        >
+                            More
+                        </Text>
+                    </Pressable>
 
-                            {/* location */}
-                            <Text style={[globalStyles.body, { marginBottom: 10 }]}>Location</Text>
-                            <View style={journalStyle.locationCard}>
-                                <TextInput
-                                    ref={locationRef}
-                                    style={[
-                                        globalStyles.body,
-                                        {
-                                            paddingHorizontal: 10,
-                                            paddingVertical: 10,
-                                            lineHeight: 18,
-                                        },
-                                    ]}
-                                    placeholder="Where are you right now?"
-                                    placeholderTextColor="rgba(0,0,0,0.5)"
-                                    value={location}
-                                    onChangeText={setLocation}
-                                    cursorColor={PAGE.journal.border[0]}
-                                    selectionColor={PAGE.journal.border[0]}
-                                />
-                            </View>
+                    {/* location */}
+                    <Text style={[globalStyles.body, { marginBottom: 10 }]}>Location</Text>
+                    <View style={journalStyle.locationCard}>
+                        <TextInput
+                            ref={locationRef}
+                            style={[
+                                globalStyles.body,
+                                {
+                                    paddingHorizontal: 10,
+                                    paddingVertical: 10,
+                                    lineHeight: 18,
+                                },
+                            ]}
+                            placeholder="Where are you right now?"
+                            placeholderTextColor="rgba(0,0,0,0.5)"
+                            value={location}
+                            onChangeText={setLocation}
+                            cursorColor={PAGE.journal.border[0]}
+                            selectionColor={PAGE.journal.border[0]}
+                        />
+                    </View>
 
-                            {/* journal */}
-                            <Text style={[globalStyles.body, { marginBottom: 10 }]}>Journal</Text>
+                    {/* journal - NOW WITH BETTER SCROLLING */}
+                    <Text style={[globalStyles.body, { marginBottom: 10 }]}>Journal</Text>
 
-                            <View style={journalStyle.journalCard}>
-                                <TextInput
-                                    ref={inputRef}
-                                    style={[
-                                        globalStyles.body,
-                                        journalStyle.textArea,
-                                        { lineHeight: 20 }
-                                    ]}
-                                    placeholder="What are your thoughts?"
-                                    multiline
-                                    textAlignVertical="top"
-                                    cursorColor={PAGE.journal.border[0]}
-                                    selectionColor={PAGE.journal.border[0]}
-                                    placeholderTextColor="rgba(0,0,0,0.5)"
-                                    value={entry}
-                                    onChangeText={setEntry}
-                                />
-                            </View>
+                    <View style={journalStyle.journalCard}>
+                        <TextInput
+                            ref={inputRef}
+                            style={[
+                                globalStyles.body,
+                                journalStyle.textArea,
+                                { 
+                                    lineHeight: 20,
+                                    minHeight: 200,
+                                }
+                            ]}
+                            placeholder="What are your thoughts?"
+                            multiline
+                            textAlignVertical="top"
+                            cursorColor={PAGE.journal.border[0]}
+                            selectionColor={PAGE.journal.border[0]}
+                            placeholderTextColor="rgba(0,0,0,0.5)"
+                            value={entry}
+                            onChangeText={setEntry}
+                        />
+                    </View>
 
-                            {/* save */}
-                            <Pressable
-                                style={[
-                                    buttonStyles.button,
-                                    {
-                                        alignSelf: 'center',
-                                        margin: 20,
-                                        backgroundColor: PAGE.journal.border[0],
-                                        opacity: isSaving ? 0.6 : 1,
-                                    },
-                                ]}
-                                onPress={handleSave}
-                                disabled={isSaving}
-                            >
-                                <Text style={globalStyles.body}>
-                                    {isSaving ? 'Saving...' : 'Save'}
-                                </Text>
-                            </Pressable>
-                        </ScrollView>
-                    </TouchableWithoutFeedback>
-                </KeyboardAvoidingView>
+                    {/* save */}
+                    <Pressable
+                        style={[
+                            buttonStyles.button,
+                            {
+                                alignSelf: 'center',
+                                margin: 20,
+                                backgroundColor: PAGE.journal.border[0],
+                                opacity: isSaving ? 0.6 : 1,
+                            },
+                        ]}
+                        onPress={handleSave}
+                        disabled={isSaving}
+                    >
+                        <Text style={globalStyles.body}>
+                            {isSaving ? 'Saving...' : 'Save'}
+                        </Text>
+                    </Pressable>
+                </KeyboardAwareScrollView>
             </PageContainer>
 
             <MoodPickerModal

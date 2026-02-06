@@ -206,7 +206,7 @@ export default function HabitsPage() {
         {/* progress bar */}
         <ProgressBar
           totalHabits={progressTotal}
-          completedHabits={progressEarned} // ✅ can be decimal now for partial progress
+          completedHabits={progressEarned} // can be decimal now for partial progress
           earnedPoints={earnedPoints} // keep this if it tracks overall points earned
           totalPossiblePoints={totalActivePoints}
           appStreak={appStreak}
@@ -218,7 +218,7 @@ export default function HabitsPage() {
           viewingDate={viewingDate}
           resetTime={resetTime}
           onToggleHabit={toggleHabit}
-          onPressHabit={handlePressHabit}
+          // onPressHabit={handlePressHabit}
           onIncrementUpdate={updateIncrement}
         />
 

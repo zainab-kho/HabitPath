@@ -5,5 +5,6 @@ export interface JournalEntry {
     time: string,
     mood?: string,
     location?: string,
+    lock?: string,
     entry?: string,
 }

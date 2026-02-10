@@ -11,6 +11,17 @@ A comprehensive React Native mobile application for habit tracking, assignment m
 
 A full-stack mobile productivity app that helps users build better habits, manage coursework, track mood, and achieve long-term goals through an intuitive, visually engaging interface.
 
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/c967af7a-262d-4049-a7ad-ee3fa2707350" width="300" />
+  <img src="https://github.com/user-attachments/assets/82dbe02b-c61d-40cf-bf36-70800cbb5007" width="300" />
+  <img src="https://github.com/user-attachments/assets/3c77dac7-da57-4d72-ab19-1237d7ad654d" width="300" />
+</p>
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/fe505ee0-0faf-4729-8df1-f0fb9a95a352" width="300" />
+  <img src="https://github.com/user-attachments/assets/f77bb4b1-0bcb-4664-bfd2-7f0d406f2059" width="300" />
+</p>
+
+
 ## ✨ Key Features
 
 ### 📊 Smart Habit Tracking

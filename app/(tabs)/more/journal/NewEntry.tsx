@@ -186,7 +186,6 @@ export default function JournalPage() {
                     </Text>
                 </Pressable>
 
-                {/* MUCH BETTER KEYBOARD HANDLING */}
                 <KeyboardAwareScrollView
                     enableOnAndroid={true}
                     enableAutomaticScroll={true}
@@ -302,7 +301,7 @@ export default function JournalPage() {
                             onChangeText={setEntry}
                         />
 
-                        {/* faint action row — notion-style */}
+                        {/* faint action row */}
                         <View style={{
                             flexDirection: 'row',
                             borderTopWidth: 1,
@@ -324,7 +323,7 @@ export default function JournalPage() {
                                 </Text>
                             </Pressable>
 
-                            {/* placeholder for future image option */}
+                            {/* **TODO: implement add images feature */}
                             {/* <Pressable
                                 style={({ pressed }) => ({ opacity: pressed ? 0.4 : 1, flexDirection: 'row', alignItems: 'center', gap: 5 })}
                             >

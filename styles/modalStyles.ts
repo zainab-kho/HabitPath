@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 
-export const globalStyles = StyleSheet.create({
+export const modalStyles = StyleSheet.create({
     overlay: {
         flex: 1,
         backgroundColor: 'rgba(0,0,0,0.5)',

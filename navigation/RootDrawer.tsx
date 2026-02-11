@@ -124,9 +124,9 @@ export function RootDrawer() {
             icon: SYSTEM_ICONS.journal,
         },
         {
-            label: 'Quests',
-            path: '/(tabs)/more/quests',
-            icon: SYSTEM_ICONS.quest,
+            label: 'Assignments',
+            path: '/(tabs)/more/assignments',
+            icon: SYSTEM_ICONS.assignment,
         },
         {
             label: 'Focus',

@@ -161,8 +161,8 @@ export default function Assignments() {
     if (loading) {
         return (
             <AppLinearGradient variant="assignments.background">
-                <PageContainer showBottomNav>
-                    <PageHeader title="Assignments" showPlusButton />
+                <PageContainer>
+                    <PageHeader title="Assignments" showPlusButton showBackButton/>
                     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
                         <ActivityIndicator size="small" color={PAGE.assignments.primary[0]} />
                     </View>
@@ -175,14 +175,14 @@ export default function Assignments() {
     if (courses.length === 0) {
         return (
             <AppLinearGradient variant="assignments.background">
-                <PageContainer showBottomNav>
-                    <PageHeader title="Assignments" showPlusButton />
+                <PageContainer>
+                    <PageHeader title="Assignments" showPlusButton showBackButton/>
                     <EmptyStateView
                         icon={SYSTEM_ICONS.tag}
                         title="No courses yet"
                         description="Add a course? You can add assignments to your course also!"
                         buttonText="New Course"
-                        buttonAction={() => router.push('/assignments/NewCourse')}
+                        buttonAction={() => router.push('/(tabs)/more/assignments/NewCourse')}
                         buttonColor={PAGE.assignments.primary[0]}
                     />
                 </PageContainer>
@@ -192,8 +192,8 @@ export default function Assignments() {
 
     return (
         <AppLinearGradient variant="assignments.background">
-            <PageContainer showBottomNav>
-                <PageHeader title="Assignments" showPlusButton />
+            <PageContainer>
+                <PageHeader title="Assignments" showPlusButton showBackButton/>
 
                 <ScrollView
                     ref={scrollViewRef}
@@ -257,14 +257,14 @@ export default function Assignments() {
                     onToggleMenu={() => setShowMoreMenu(prev => !prev)}
                     onAddCourse={() => {
                         setShowMoreMenu(false);
-                        router.push('/assignments/NewCourse');
+                        router.push('/(tabs)/more/assignments/NewCourse');
                     }}
                     onAddWeek={() => {
                         setShowMoreMenu(false);
                         setShowAddWeekModal(true);
                     }}
                     onEdit={handleEnterEditMode}
-                    onAddAssignment={() => router.push('/assignments/NewAssignment')}
+                    onAddAssignment={() => router.push('/(tabs)/more/assignments/NewAssignment')}
                     onCloseMenu={() => setShowMoreMenu(false)}
                 />
 

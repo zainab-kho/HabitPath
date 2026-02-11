@@ -19,9 +19,9 @@ export function BottomNav() {
             icon: SYSTEM_ICONS.habit,
         },
         {
-            name: 'assignments',
-            route: '/assignments',
-            icon: SYSTEM_ICONS.assignment,
+            name: 'paths',
+            route: '/paths',
+            icon: SYSTEM_ICONS.path,
         },
         {
             name: 'quests',

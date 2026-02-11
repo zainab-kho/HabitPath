@@ -99,7 +99,7 @@ export default function Quests() {
                     title="No quests yet"
                     description="Quests help you work toward bigger goals using habits, tasks, and milestones, while earning points and tracking real progress."
                     buttonText="Start a quest"
-                    buttonAction={() => router.push('/assignments/NewCourse')}
+                    // buttonAction={() => router.push('(tabs)/more/assignments/NewCourse')}
                     buttonColor={PAGE.quest.primary[0]}
                 />
 

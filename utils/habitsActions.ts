@@ -80,6 +80,7 @@ export async function loadHabitsFromSupabase(userId: string): Promise<Habit[]> {
       incrementStep: row.increment_step || 1,
       incrementType: row.increment_type || undefined,
       incrementHistory: row.increment_history || {},
+      path: row.path,
       pathColor: row.path_color,
       created_at: row.created_at,
     })) as Habit[];

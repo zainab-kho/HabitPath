@@ -36,13 +36,13 @@ export const PAGE = {
     border: ['#4caff6'],
     primary: ['#FFDDC1', '#FFABAB'],
     button: ['#FFF5DF']
-  }, 
+  },
   newHabit: {
     background: ['#FDDAC5', '#FEF9E7']
   },
   path: {
     background: ['#A1C4FD', '#C2E9FB'],
-    primary: ['#EC9064'],
+    primary: ['#EC9064', '#899FFF'],
   },
   quest: {
     background: ['#00c9ff', '#00d4fb', '#00dff2', '#00e8e5', '#4af0d5', '#59efc9', '#67edbc', '#75ebb0', '#6ae0a6', '#5fd59c', '#54cb92', '#48c088'],
@@ -70,7 +70,6 @@ export const PAGE = {
     backgroundAssignment: ['#D3CCE3', '#E9E4F0'],
     border: ['#4CE0F6'],
     primary: ['#F5924F', '#EEA2DA', '#4A98E6', '#AF9BE9'],
-    tags: ['#8DF8B7', '#40BAFF', '#FF8B77', '#F9E282', '#FFB456', '#FF90AB', '#AEBEFF', '#9DB0A3' ]
   },
   settings: {
     background: ['#fdfbfb', '#ebedee'],

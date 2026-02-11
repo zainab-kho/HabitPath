@@ -7,4 +7,9 @@ export interface JournalEntry {
     location?: string,
     lock?: string,
     entry?: string,
+    song?: {
+        title: string;
+        artist: string;
+        artworkUrl: string;
+    },
 }

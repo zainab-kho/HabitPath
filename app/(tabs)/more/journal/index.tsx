@@ -5,6 +5,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import MoodPreview from '@/components/journal/MoodPreview';
+import SongCard from '@/components/journal/SongCard';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { JournalEntry } from '@/types/JournalEntry';
@@ -129,6 +130,7 @@ export default function JournalPage() {
         location: row.location ?? undefined,
         lock: row.is_locked ?? undefined,
         entry: row.entry ?? undefined,
+        song: row.song ?? undefined,
       }));
 
       await AsyncStorage.setItem('@journal_entries', JSON.stringify(fresh));
@@ -237,7 +239,14 @@ export default function JournalPage() {
                           )}
                         </Pressable>
 
-                        {/* ✅ BODY (no navigation) */}
+                        {/* song card */}
+                        {entry.song && canShowEntry && (
+                          <View style={{ marginTop: 10, marginHorizontal: -10, }}>
+                            <SongCard lessContrast song={entry.song} />
+                          </View>
+                        )}
+
+                        {/* body */}
                         {entry.entry && canShowEntry && (() => {
                           const isExpanded = !!expandedIds[entry.id];
                           const previewLines = isExpanded ? 999 : 6;
@@ -248,7 +257,7 @@ export default function JournalPage() {
                                 {entry.entry}
                               </Text>
 
-                              {/* Only show toggle if it's actually long */}
+                              {/* only show toggle if it's long */}
                               {isLong && (
                                 <Pressable
                                   onPress={() => toggleExpanded(entry.id)}
@@ -269,7 +278,7 @@ export default function JournalPage() {
               </View>
             ))}
 
-            {/* Empty state */}
+            {/* empty state */}
             {!isLoading && allEntries.length === 0 && (
               <View style={styles.emptyState}>
                 <EmptyStateView

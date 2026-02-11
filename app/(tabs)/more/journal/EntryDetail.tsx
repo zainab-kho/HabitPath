@@ -4,6 +4,8 @@ import { SYSTEM_ICONS } from '@/constants/icons';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import MoodPickerModal from '@/modals/MoodPickerModal';
+import SongPickerModal, { SongData } from '@/modals/SongPickerModal';
+import SongCard from '@/components/journal/SongCard';
 import { buttonStyles, globalStyles } from '@/styles';
 import { JournalEntry } from '@/types/JournalEntry';
 import { AppLinearGradient } from '@/ui/AppLinearGradient';
@@ -22,6 +24,7 @@ export default function EntryDetail() {
     const [entry, setEntry] = useState<JournalEntry | null>(null);
     const [isEditing, setIsEditing] = useState(false);
     const [showMoodPicker, setShowMoodPicker] = useState(false);
+    const [showSongPicker, setShowSongPicker] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
 
     // edit state
@@ -30,6 +33,7 @@ export default function EntryDetail() {
     const [editedLocation, setEditedLocation] = useState('');
     const [editedEntry, setEditedEntry] = useState('');
     const [editedMood, setEditedMood] = useState<keyof typeof MOOD_COLORS | null>(null);
+    const [editedSong, setEditedSong] = useState<SongData | null>(null);
 
     useEffect(() => {
         loadEntry();
@@ -54,6 +58,7 @@ export default function EntryDetail() {
                 setEditedLocation(parsedEntry.location || '');
                 setEditedEntry(parsedEntry.entry || '');
                 setEditedMood(parsedEntry.mood as keyof typeof MOOD_COLORS || null);
+                setEditedSong(parsedEntry.song || null);
             }
 
             // sync with Supabase in background
@@ -78,6 +83,7 @@ export default function EntryDetail() {
                         mood: data.mood as keyof typeof MOOD_COLORS | undefined,
                         location: data.location || undefined,
                         entry: data.entry || undefined,
+                        song: data.song || undefined,
                     };
 
                     setEntry(freshEntry);
@@ -86,6 +92,7 @@ export default function EntryDetail() {
                     setEditedLocation(freshEntry.location || '');
                     setEditedEntry(freshEntry.entry || '');
                     setEditedMood(freshEntry.mood as keyof typeof MOOD_COLORS || null);
+                    setEditedSong(freshEntry.song || null);
                 }
             }
         } catch (error) {
@@ -107,6 +114,7 @@ export default function EntryDetail() {
                 location: editedLocation,
                 entry: editedEntry,
                 mood: editedMood || undefined,
+                song: editedSong || undefined,
             };
 
             // update Supabase first so it's ready when home page loads
@@ -116,6 +124,7 @@ export default function EntryDetail() {
                     mood: editedMood || null,
                     location: editedLocation || null,
                     entry: editedEntry || null,
+                    song: editedSong || null,
                 };
 
                 const { error } = await supabase
@@ -235,6 +244,10 @@ export default function EntryDetail() {
                             contentContainerStyle={{ paddingBottom: 30 }}
                         >
                             <View style={[entryDetailStyle.card, { marginHorizontal: 3, backgroundColor: bgColor }]}>
+                                {entry.song && (
+                                    <SongCard song={entry.song} />
+                                )}
+
                                 <Text style={entryDetailStyle.date}>
                                     {new Date(entry.date).toLocaleDateString('en-US', {
                                         weekday: 'long',
@@ -318,6 +331,21 @@ export default function EntryDetail() {
                                         placeholder="Where were you?"
                                     />
 
+                                    <Text style={entryDetailStyle.label}>SONG</Text>
+                                    {editedSong ? (
+                                        <SongCard
+                                            song={editedSong}
+                                            onRemove={() => setEditedSong(null)}
+                                        />
+                                    ) : (
+                                        <Pressable
+                                            style={entryDetailStyle.songButton}
+                                            onPress={() => setShowSongPicker(true)}
+                                        >
+                                            <Text style={entryDetailStyle.songButtonText}>🎵 add a song</Text>
+                                        </Pressable>
+                                    )}
+
                                     <Text style={entryDetailStyle.label}>ENTRY</Text>
                                     <TextInput
                                         style={[entryDetailStyle.input, entryDetailStyle.textArea]}
@@ -373,6 +401,13 @@ export default function EntryDetail() {
                         setEditedMood(mood);
                         setShowMoodPicker(false);
                     }}
+                />
+
+                {/* song picker modal */}
+                <SongPickerModal
+                    visible={showSongPicker}
+                    onClose={() => setShowSongPicker(false)}
+                    onSelect={(song) => setEditedSong(song)}
                 />
             </PageContainer>
         </AppLinearGradient>
@@ -469,5 +504,19 @@ const entryDetailStyle = StyleSheet.create({
     moodSelectorText: {
         fontFamily: 'p3',
         fontSize: 14,
+    },
+    songButton: {
+        borderWidth: 1,
+        borderColor: '#000',
+        borderRadius: 10,
+        padding: 12,
+        backgroundColor: 'rgba(255,255,255,0.7)',
+        alignItems: 'center',
+        borderStyle: 'dashed',
+    },
+    songButtonText: {
+        fontFamily: 'p1',
+        fontSize: 13,
+        color: '#888',
     },
 });

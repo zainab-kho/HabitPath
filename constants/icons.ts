@@ -350,5 +350,8 @@ export const SYSTEM_ICONS = {
     dots: require('@/assets/icons/system/dots.png'),
     location: require('@/assets/icons/system/location-icon.png'),
     write: require('@/assets/icons/system/write.png'),
+    headphones: require('@/assets/icons/system/headphones.png'),
+    musicNote: require('@/assets/icons/system/music-note.png'),
+    search: require('@/assets/icons/system/search.png'),
 };
 

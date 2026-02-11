@@ -6,23 +6,28 @@ import {
     Pressable,
     Text,
     TextInput,
-    View
+    View,
+    Image
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { JournalEntry } from '@/types/JournalEntry';
-
 import { COLORS, PAGE } from '@/constants/colors';
 import MoodPickerModal from '@/modals/MoodPickerModal';
+import SongPickerModal, { SongData } from '@/modals/SongPickerModal';
+import SongCard from '@/components/journal/SongCard';
+import { formatDisplayDate, formatDisplayTime, formatLocalDate } from '@/utils/dateUtils';
+import { MAIN_MOOD_COLORS, MOOD_COLORS } from '@/constants/colors';
+import { SYSTEM_ICONS } from '@/constants/icons';
+
 import { buttonStyles, globalStyles, journalStyle } from '@/styles';
 import { AppLinearGradient } from '@/ui/AppLinearGradient';
 import PageContainer from '@/ui/PageContainer';
 import PageHeader from '@/ui/PageHeader';
 import ToggleRow from '@/ui/ToggleRow';
-import { formatDisplayDate, formatDisplayTime, formatLocalDate } from '@/utils/dateUtils';
-import { MAIN_MOOD_COLORS, MOOD_COLORS } from '@/constants/colors';
+
 
 export default function JournalPage() {
     const router = useRouter();
@@ -39,6 +44,8 @@ export default function JournalPage() {
     const [moodModalOpen, setMoodModalOpen] = useState(false);
     const [extraMood, setExtraMood] =
         useState<keyof typeof MOOD_COLORS | null>(null);
+    const [song, setSong] = useState<SongData | null>(null);
+    const [songPickerOpen, setSongPickerOpen] = useState(false);
 
     const locationRef = useRef<TextInput>(null);
     const inputRef = useRef<TextInput>(null);
@@ -78,7 +85,7 @@ export default function JournalPage() {
     }, []);
 
     const handleSave = async () => {
-        if (!entry && !selectedMood && !location) {
+        if (!selectedMood && !location && !entry && !song) {
             console.log('Nothing to save!');
             return;
         }
@@ -102,6 +109,7 @@ export default function JournalPage() {
                 mood: selectedMood || undefined,
                 location: location || undefined,
                 entry: entry || undefined,
+                song: song || undefined,
             };
 
             // save to AsyncStorage
@@ -128,7 +136,8 @@ export default function JournalPage() {
                         mood: selectedMood,
                         location: location || null,
                         entry: entry || null,
-                        is_locked: lock, // 🔒 SAVE LOCK STATUS
+                        is_locked: lock,
+                        song: song || null,
                         created_at: now.toISOString(),
                     }
                 ]);
@@ -261,8 +270,16 @@ export default function JournalPage() {
                         />
                     </View>
 
-                    {/* journal - NOW WITH BETTER SCROLLING */}
+                    {/* journal */}
                     <Text style={[globalStyles.body, { marginBottom: 10 }]}>Journal</Text>
+
+                    {/* song card preview above the text box */}
+                    {song && (
+                        <SongCard
+                            song={song}
+                            onRemove={() => setSong(null)}
+                        />
+                    )}
 
                     <View style={journalStyle.journalCard}>
                         <TextInput
@@ -270,7 +287,7 @@ export default function JournalPage() {
                             style={[
                                 globalStyles.body,
                                 journalStyle.textArea,
-                                { 
+                                {
                                     lineHeight: 20,
                                     minHeight: 200,
                                 }
@@ -284,6 +301,37 @@ export default function JournalPage() {
                             value={entry}
                             onChangeText={setEntry}
                         />
+
+                        {/* faint action row — notion-style */}
+                        <View style={{
+                            flexDirection: 'row',
+                            borderTopWidth: 1,
+                            borderTopColor: 'rgba(0,0,0,0.06)',
+                            paddingVertical: 10,
+                            paddingHorizontal: 10,
+                            gap: 16,
+                        }}>
+                            <Pressable
+                                onPress={() => setSongPickerOpen(true)}
+                                style={({ pressed }) => ({ opacity: pressed ? 0.4 : 1, flexDirection: 'row', alignItems: 'center', gap: 5 })}
+                            >
+                                <Image
+                                    source={SYSTEM_ICONS.musicNote}
+                                    style={{ width: 14, height: 14 }}
+                                />
+                                <Text style={{ fontFamily: 'p1', fontSize: 12, color: 'rgba(0,0,0,0.3)' }}>
+                                    {song ? song.title : 'add song'}
+                                </Text>
+                            </Pressable>
+
+                            {/* placeholder for future image option */}
+                            {/* <Pressable
+                                style={({ pressed }) => ({ opacity: pressed ? 0.4 : 1, flexDirection: 'row', alignItems: 'center', gap: 5 })}
+                            >
+                                <Text style={{ fontSize: 14 }}>🖼️</Text>
+                                <Text style={{ fontFamily: 'p1', fontSize: 12, color: 'rgba(0,0,0,0.3)' }}>add image</Text>
+                            </Pressable> */}
+                        </View>
                     </View>
 
                     {/* save */}
@@ -312,6 +360,12 @@ export default function JournalPage() {
                 selectedMood={selectedMood}
                 onClose={() => setMoodModalOpen(false)}
                 onSelect={handleMoodModalSelect}
+            />
+
+            <SongPickerModal
+                visible={songPickerOpen}
+                onClose={() => setSongPickerOpen(false)}
+                onSelect={(s) => setSong(s)}
             />
         </AppLinearGradient>
     );

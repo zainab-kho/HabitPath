@@ -8,11 +8,7 @@ export { layoutStyles } from './layoutStyles';
 export { uiStyles } from './uiStyles';
 export { modalStyles } from './modalStyles';
 
-export { habitCardStyles } from './habitCardStyles';
-export { habitStyles } from './habitStyles';
-
 
 
 // **TODO: clean
-
 // export { optionContainerStyles } from './optionContainerStyles';

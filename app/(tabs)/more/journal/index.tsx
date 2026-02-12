@@ -195,7 +195,7 @@ export default function JournalPage() {
 
                 {entries.map(entry => {
                   const date = new Date(entry.date);
-                  const formattedDate = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                  const formattedDate = date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
                   const bgColor = entry.mood
                     ? MOOD_COLORS[entry.mood as keyof typeof MOOD_COLORS]
                     : '#fff';
@@ -211,9 +211,9 @@ export default function JournalPage() {
                       style={{ marginBottom: 15 }}
                     >
                       <View style={styles.entryCard}>
-                        {/* ✅ HEADER TAP ZONE = navigates to detail */}
+                        {/* navigates to detail */}
                         <Pressable
-                          onPress={() => router.push(`/(tabs)/more/journal/EntryDetail`)}
+                          onPress={() => router.push(`/(tabs)/more/journal/${entry.id}`)}
                           style={{ gap: 8 }}
                         >
                           <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
@@ -227,15 +227,13 @@ export default function JournalPage() {
                               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                                 <Image
                                   source={SYSTEM_ICONS.location}
-                                  style={{ width: 15, height: 15, tintColor: COLORS.Secondary, marginRight: 5 }}
+                                  style={{ width: 15, height: 15, tintColor: COLORS.Secondary, marginRight: 5, marginBottom: 7 }}
                                 />
                                 <Text style={styles.entryLocation}>{entry.location}</Text>
                               </View>
                             ) : null
                           ) : (
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                              <Image source={SYSTEM_ICONS.lock} style={{ width: 15, height: 15 }} />
-                            </View>
+                            <Image source={SYSTEM_ICONS.lock} style={{ width: 15, height: 15 }} />
                           )}
                         </Pressable>
 

@@ -50,13 +50,8 @@ export default function ProgressBar({
 
             {/* progress bar */}
             <View style={styles.progressBarContainer}>
-                <ShadowBox
-                    shadowBorderRadius={20}
-                    contentBorderColor='#000'
-                    shadowColor={COLORS.Completed}
-                    shadowBorderColor='#000'
-                    shadowOffset={{ x: 0, y: 0 }}
-                >
+                <View style={{ borderRadius: 20, backgroundColor: '#fff', borderWidth: 1 }}>
+
                     <View style={styles.progressBar}>
                         <View
                             style={[
@@ -73,7 +68,7 @@ export default function ProgressBar({
                             </Text>
                         </View>
                     </View>
-                </ShadowBox>
+                </View>
             </View>
 
             {/* app streak badge */}

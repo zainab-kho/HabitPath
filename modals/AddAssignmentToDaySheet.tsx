@@ -7,6 +7,7 @@ import React, { useState } from 'react';
 import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
 
 import { AssignmentWithCourse } from '@/hooks/useAssignmentData';
+import { parseLocalDate } from '@/utils/dateUtils';
 
 interface AddAssignmentToDaySheetProps {
     visible: boolean;
@@ -79,16 +80,16 @@ export default function AddAssignmentToDaySheet({
                             </Text>
 
                             <View style={{ flexDirection: 'row', gap: 5, alignItems: 'center' }}>
-                            {assignment.course && (
-                                <ShadowBox contentBackgroundColor={assignment.course.color || '#fff'}>
-                                    <View style={{ paddingHorizontal: 6, paddingVertical: 2 }}>
+                                {assignment.course && (
+                                    <ShadowBox contentBackgroundColor={assignment.course.color || '#fff'}>
+                                        <View style={{ paddingHorizontal: 6, paddingVertical: 2 }}>
                                             <Text style={globalStyles.body2}>
                                                 {assignment.course.course_number}
                                             </Text>
-                                    </View>
-                                </ShadowBox>
-                            )}
-                            {isSelected && (
+                                        </View>
+                                    </ShadowBox>
+                                )}
+                                {isSelected && (
                                     <View style={{
                                         width: 20,
                                         height: 20,
@@ -98,23 +99,24 @@ export default function AddAssignmentToDaySheet({
                                         alignItems: 'center',
                                         borderWidth: 1,
                                     }}>
-                                    <Text style={{ fontSize: 12, fontWeight: 'bold' }}>✓</Text>
-                                </View>
-                            )}
-                        </View>
+                                        <Text style={{ fontSize: 12, fontWeight: 'bold' }}>✓</Text>
+                                    </View>
+                                )}
+                            </View>
                         </View>
 
                         <View style={{ flexDirection: 'row', gap: 8, justifyContent: 'space-between' }}>
                             <View style={[globalStyles.bubbleLabel, { backgroundColor: ASSIGNMENT_TYPE_COLORS[assignment.type] }]}>
                                 <Text style={globalStyles.label}>{assignment.type}</Text>
                             </View>
-                        {assignment.due_date && (
+                            {assignment.due_date && (
                                 <View style={[globalStyles.bubbleLabel, { backgroundColor: '#fff' }]}>
                                     <Text style={globalStyles.label}>
-                                Due: {new Date(assignment.due_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                            </Text>
+                                        Due: {parseLocalDate(assignment.due_date)
+                                            .toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                    </Text>
                                 </View>
-                        )}
+                            )}
                         </View>
                     </View>
                 </ShadowBox>

@@ -139,19 +139,33 @@ export default function HabitsList({
         const sorted = [...activeHabits].sort((a, b) => {
           const indexA = orderIds.indexOf(a.id);
           const indexB = orderIds.indexOf(b.id);
-          if (indexA === -1) return 1;
-          if (indexB === -1) return -1;
-          return indexA - indexB;
+
+          const safeA = indexA === -1 ? Number.MAX_SAFE_INTEGER : indexA;
+          const safeB = indexB === -1 ? Number.MAX_SAFE_INTEGER : indexB;
+
+          // both are new habits not yet in saved order → sort oldest startDate first
+          if (safeA === Number.MAX_SAFE_INTEGER && safeB === Number.MAX_SAFE_INTEGER) {
+            return (a.startDate ?? '').localeCompare(b.startDate ?? '');
+          }
+
+          return safeA - safeB;
         });
         setOrderedHabits(sorted);
       } else {
-        setOrderedHabits(activeHabits);
+        // no saved order yet — default to oldest created first
+        const defaultSorted = [...activeHabits].sort((a, b) =>
+          (a.startDate ?? '').localeCompare(b.startDate ?? '')
+        );
+        setOrderedHabits(defaultSorted);
       }
 
       setLoading(false);
     } catch (error) {
       console.error('Error loading habit order:', error);
-      setOrderedHabits(activeHabits);
+      const fallbackSorted = [...activeHabits].sort((a, b) =>
+        (a.startDate ?? '').localeCompare(b.startDate ?? '')
+      );
+      setOrderedHabits(fallbackSorted);
     }
   };
 

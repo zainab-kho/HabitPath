@@ -242,7 +242,6 @@ const styles = StyleSheet.create({
   container: {
     marginBottom: 12,
     overflow: 'visible',
-    marginLeft: 5,
   },
   content: {
     padding: 12,

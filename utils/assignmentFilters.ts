@@ -25,16 +25,23 @@ export function getTodayAssignments(
  */
 export function getDueAssignments(assignments: AssignmentWithCourse[]) {
   console.log('getDueAssignments called with:', assignments.length, 'assignments');
-  
-  const dueCutoff = addDaysLocal(2);
-  
+
+  const d = new Date();
+  d.setDate(d.getDate() + 2);
+  d.setHours(0, 0, 0, 0);
+
+  const date = formatLocalDate(d);
+  console.log('Due cutoff date:', date);
+
+  const dueCutoff = addDaysLocal(1);
+
   const filtered = assignments.filter(
     a => a.due_date && a.progress !== 'Done' && a.due_date <= dueCutoff
   );
-  
+
   console.log('Filtered to:', filtered.length, 'due assignments');
   console.log('Sample assignment:', filtered[0]);
-  
+
   return sortByDueDate(filtered);
 }
 
@@ -42,7 +49,7 @@ export function getDueAssignments(assignments: AssignmentWithCourse[]) {
  * get assignments this week (next 7 days, excluding due)
  */
 export function getThisWeekAssignments(assignments: AssignmentWithCourse[]) {
-  const dueCutoff = addDaysLocal(2);
+  const dueCutoff = addDaysLocal(1);
   const weekCutoff = addDaysLocal(7);
 
   return assignments.filter(

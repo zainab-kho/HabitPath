@@ -35,12 +35,12 @@ export const getHabitDate = (
   const currentHour = d.getHours();
   const currentMinute = d.getMinutes();
 
-  // If before reset time, count as previous day
   if (currentHour < resetHour || (currentHour === resetHour && currentMinute < resetMinute)) {
     d.setDate(d.getDate() - 1);
   }
 
-  return d.toISOString().split('T')[0]; // Returns YYYY-MM-DD
+  // use local timezone instead of UTC
+  return formatLocalDate(d);
 };
 
 /**

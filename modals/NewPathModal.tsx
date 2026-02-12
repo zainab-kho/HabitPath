@@ -75,7 +75,7 @@ export default function NewPathModal({ visible, onClose, onCreated }: NewPathMod
     const canSave = name.trim().length > 0 && !isSaving;
 
     return (
-        <Modal visible={visible} transparent animationType="fade" onRequestClose={handleClose}>
+        <Modal visible={visible} transparent animationType="none" onRequestClose={handleClose}>
             <Pressable style={styles.overlay} onPress={handleClose}>
                 <Pressable style={styles.card} onPress={(e) => e.stopPropagation()}>
 

@@ -82,7 +82,7 @@ export function FloatingActions({
                             </View>
                         </Pressable>
 
-                        <Pressable onPress={() => router.push('/assignments/AllAssignments')}>
+                        <Pressable onPress={() => router.push('/(tabs)/more/assignments/AllAssignments')}>
                             <View style={{ padding: 5, borderBottomWidth: 1 }}>
                                 <Text style={globalStyles.body}>All Assignments</Text>
                             </View>

@@ -169,7 +169,7 @@ export default function JournalPage() {
                 <PageHeader title="New Entry" showBackButton />
 
                 {/* date / time pill */}
-                <Pressable
+                <View
                     style={{
                         paddingHorizontal: 12,
                         paddingVertical: 6,
@@ -184,7 +184,7 @@ export default function JournalPage() {
                     <Text style={[globalStyles.body2, { fontSize: 13 }]}>
                         {localDate}  •  {localTime}
                     </Text>
-                </Pressable>
+                </View>
 
                 <KeyboardAwareScrollView
                     enableOnAndroid={true}

@@ -7,9 +7,10 @@ import { HABIT_ICONS, SYSTEM_ICONS } from '@/constants/icons';
 import { globalStyles } from '@/styles';
 import { Habit } from '@/types/Habit';
 import ShadowBox from '@/ui/ShadowBox';
+import { HabitWithStatus } from '@/hooks/useHabits';
 
 interface HabitItemProps {
-  habit: Habit & { completed?: boolean };
+  habit: HabitWithStatus;
   dateStr: string;
   onToggle: () => void;
   onPress?: () => void;
@@ -28,7 +29,7 @@ export default function HabitItem({
   const habitIconFile = HABIT_ICONS[habit.icon];
   const habitColor = habit.pathColor || COLORS.Primary;
 
-  const isCompleted = habit.completed ?? false;
+  const isCompleted = habit.status === 'completed';
   const showStreak = (habit.streak ?? 0) >= 3;
 
   const isIncrement = !!habit.increment;

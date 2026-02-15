@@ -443,7 +443,7 @@ export default function Paths() {
     const resetMin = resetTime.minute;
 
     // strip computed "completed" field so we match your Habit type usage elsewhere
-    const habits: Habit[] = allHabitsRaw.map(({ completed, ...rest }: any) => rest);
+    const habits: Habit[] = allHabitsRaw.map(({ status, ...rest }) => rest);
 
     const [paths, setPaths] = useState<Path[]>([]);
     const [loading, setLoading] = useState(true);

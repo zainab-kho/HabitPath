@@ -1,14 +1,18 @@
 // @/hooks/useHabits.ts
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { useAuth } from '@/contexts/AuthContext';
 import { Habit } from '@/types/Habit';
 import { daysBetween, getHabitDate } from '@/utils/dateUtils';
-
 import { STORAGE_KEYS } from '@/storage/keys';
+import { getResetTime } from '@/lib/supabase/queries';
 import {
-  addCompletedToHabits,
+  addStatusToHabits,
+  HabitStatus,
+  isHabitActiveToday,
+} from '@/utils/habitUtils';
+import {
   deleteHabit as deleteHabitService,
   getTotalPoints,
   loadHabitsFromSupabase,
@@ -18,10 +22,13 @@ import {
   updateAppStreak,
   updateHabitIncrement,
 } from '@/utils/habitsActions';
-import { getResetTime } from '@/lib/supabase/queries';
+
+// ─── constants ────────────────────────────────────────────────────────────────
 
 const CACHE_WINDOW_DAYS = 3;
 const DEBUG = true;
+
+// ─── types ────────────────────────────────────────────────────────────────────
 
 interface HabitsCache {
   habits: Habit[];
@@ -29,78 +36,43 @@ interface HabitsCache {
   cachedForDates: string[];
 }
 
-type HabitWithCompleted = Habit & { completed: boolean };
+export type HabitWithStatus = Habit & { status: HabitStatus };
 
-function getProgressUnitsForDay(habits: HabitWithCompleted[], dateStr: string) {
-  let progressTotal = 0;
-  let progressEarned = 0;
-
-  for (const h of habits) {
-    const isIncrement = !!h.increment;
-
-    // If you want to exclude skipped habits from progress, uncomment:
-    // if (h.skipped) continue;
-
-    progressTotal += 1;
-
-    if (!isIncrement) {
-      progressEarned += h.completed ? 1 : 0;
-      continue;
-    }
-
-    const currentAmount = h.incrementHistory?.[dateStr] ?? 0;
-    const goal = typeof h.incrementGoal === 'number' ? h.incrementGoal : 0;
-    const hasGoal = goal > 0;
-
-    if (hasGoal) {
-      progressEarned += Math.min(currentAmount / goal, 1);
-    } else {
-      // no goal -> any progress counts as "done"
-      progressEarned += currentAmount > 0 ? 1 : 0;
-    }
-  }
-
-  return { progressTotal, progressEarned };
-}
+// ─── hook ─────────────────────────────────────────────────────────────────────
 
 export function useHabits(viewingDate: Date = new Date()) {
   const { user } = useAuth();
 
-  // **TODO: instead of completed, compute a "status" that can be "completed", "skipped", "snoozed", "active", "missed"
-  const [habits, setHabits] = useState<(Habit & { completed: boolean })[]>([]);
+  const [habits, setHabits] = useState<HabitWithStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [resetTime, setResetTime] = useState({ hour: 4, minute: 0 });
-
   const [appStreak, setAppStreak] = useState(0);
   const [totalPoints, setTotalPoints] = useState(0);
   const [earnedPoints, setEarnedPoints] = useState(0);
-
-  // progress that includes increment partials
   const [progressTotal, setProgressTotal] = useState(0);
   const [progressEarned, setProgressEarned] = useState(0);
+  const [progressSkipped, setProgressSkipped] = useState(0);
 
-  // expose dateStr so screens/components can use the same one
-  const dateStr = useMemo(() => {
-    return getHabitDate(viewingDate, resetTime.hour, resetTime.minute);
-  }, [viewingDate, resetTime.hour, resetTime.minute]);
+  // derived — same value as getHabitDate(viewingDate, ...) but stable to pass to children
+  const dateStr = getHabitDate(viewingDate, resetTime.hour, resetTime.minute);
+
+  // raw habits from DB/cache — date-independent, used to reprocess on date change without fetching
+  const rawHabitsRef = useRef<Habit[]>([]);
+
+  // ─── cache helpers ──────────────────────────────────────────────────────────
 
   const isInCacheWindow = useCallback((date: Date) => {
-    const today = new Date();
-    const daysDiff = Math.abs(daysBetween(date, today));
-    return daysDiff <= CACHE_WINDOW_DAYS;
+    return Math.abs(daysBetween(date, new Date())) <= CACHE_WINDOW_DAYS;
   }, []);
 
   const getCacheWindowDates = useCallback((reset: { hour: number; minute: number }): string[] => {
-    const dates: string[] = [];
-    const today = new Date();
-    for (let i = -CACHE_WINDOW_DAYS; i <= CACHE_WINDOW_DAYS; i++) {
-      const d = new Date(today);
-      d.setDate(d.getDate() + i);
-      dates.push(getHabitDate(d, reset.hour, reset.minute));
-    }
-    return dates;
+    return Array.from({ length: CACHE_WINDOW_DAYS * 2 + 1 }, (_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() + i - CACHE_WINDOW_DAYS);
+      return getHabitDate(d, reset.hour, reset.minute);
+    });
   }, []);
 
   const loadFromCache = useCallback(async (): Promise<Habit[] | null> => {
@@ -110,15 +82,14 @@ export function useHabits(viewingDate: Date = new Date()) {
 
       const cacheData: HabitsCache = JSON.parse(cached);
 
-      if (DEBUG) {
-        const cacheAge = Date.now() - new Date(cacheData.cachedAt).getTime();
-        const oneHour = 60 * 60 * 1000;
-        if (cacheAge > oneHour) console.log('⏰ Cache is stale, will refresh from Supabase');
+      if (DEBUG)  {
+        console.log('📦 Cache data found:', cacheData.habits?.length ?? 0, 'habits, cached at', cacheData.cachedAt);
+      }
 
-        console.log('📦 Cache loaded:');
-        console.log('   Cached at:', cacheData.cachedAt);
-        console.log('   Number of habits:', cacheData.habits?.length || 0);
-        console.log('   Valid for dates:', cacheData.cachedForDates);
+      if (DEBUG) {
+        const ageMs = Date.now() - new Date(cacheData.cachedAt).getTime();
+        if (ageMs > 60 * 60 * 1000) console.log('⏰ Cache is stale, will refresh from Supabase');
+        console.log('📦 Cache loaded:', cacheData.habits?.length ?? 0, 'habits, cached at', cacheData.cachedAt);
       }
 
       return cacheData.habits;
@@ -145,47 +116,68 @@ export function useHabits(viewingDate: Date = new Date()) {
     [getCacheWindowDates]
   );
 
-  const processHabitsData = useCallback(
-    (habitsData: Habit[], reset: { hour: number; minute: number }) => {
+  // ─── core update helper ─────────────────────────────────────────────────────
+  // Call this after every action that changes habit data.
+  // reset must be passed explicitly — keeping it out of deps prevents the
+  // setResetTime → applyHabitsUpdate recreates → loadHabits recreates → infinite loop.
+
+  const applyHabitsUpdate = useCallback(
+    (updatedHabits: Habit[], reset: { hour: number; minute: number }) => {
+      rawHabitsRef.current = updatedHabits; // keep ref in sync for instant date-change reprocessing
       const ds = getHabitDate(viewingDate, reset.hour, reset.minute);
+      
+      // First, filter to only habits that should be active on this date
+      const activeHabits = updatedHabits.filter(h => 
+        isHabitActiveToday(h, viewingDate, reset.hour, reset.minute)
+      );
+      
+      // Then add status to those active habits
+      const withStatus = addStatusToHabits(activeHabits, viewingDate, reset.hour, reset.minute);
 
-      if (DEBUG) {
-        console.log('🔄 Processing habits data:');
-        console.log('   Viewing date:', viewingDate.toISOString());
-        console.log('   Habit date string:', ds);
-        console.log('   Reset time:', `${reset.hour}:${reset.minute}`);
-        console.log('   Raw habits count:', habitsData.length);
-      }
+      console.log('Applying habits update for date:', ds);
+      console.log('Total habits in DB:', updatedHabits.length);
+      console.log('Habits active for this date:', activeHabits.length);
 
-      const habitsWithCompleted = addCompletedToHabits(habitsData, viewingDate, reset.hour, reset.minute);
-      setHabits(habitsWithCompleted);
+      setHabits(withStatus);
 
-      // ✅ NEW: progress bar (includes increment partials)
-      const { progressTotal, progressEarned } = getProgressUnitsForDay(habitsWithCompleted, ds);
-      setProgressTotal(progressTotal);
-      setProgressEarned(progressEarned);
+      // Calculate progress from habits with status
+      const completedCount = withStatus.filter(h => h.status === 'completed').length;
+      const skippedCount = withStatus.filter(h => h.status === 'skipped').length;
+      const totalCount = withStatus.length;
 
-      // points earned (still based on completionHistory)
-      const earned = habitsData.reduce((sum, h) => {
+      setProgressTotal(totalCount);
+      setProgressEarned(completedCount);
+      setProgressSkipped(skippedCount);
+
+      // Calculate earned points from ALL habits (not just active ones)
+      // because points are awarded on completion date regardless of viewing date
+      const earned = updatedHabits.reduce((sum, h) => {
         if (h.completionHistory?.includes(ds)) return sum + (h.rewardPoints || 0);
         return sum;
       }, 0);
-
       setEarnedPoints(earned);
 
       if (DEBUG) {
-        console.log('   Habits with completed property:', habitsWithCompleted.length);
-        habitsWithCompleted.forEach(h => {
-          console.log(`      - ${h.name}: completed=${h.completed}, start=${h.startDate}, freq=${h.frequency}`);
-        });
-        console.log('   Points earned on this date:', earned);
-        console.log('   Progress:', progressEarned, '/', progressTotal);
+        console.log('🔄 Habits updated:', withStatus.length, 'habits for this date');
+        console.log('📊 Progress calculation:');
+        console.log(`   - Total habits for today: ${totalCount}`);
+        console.log(`   - Completed: ${completedCount}`);
+        console.log(`   - Skipped: ${skippedCount}`);
+        console.log(`   - Active/Missed: ${totalCount - completedCount - skippedCount}`);
+        console.log('   Points earned:', earned);
+        console.log('   Progress:', completedCount, '/', totalCount);
       }
 
-      return habitsData;
+      return withStatus;
     },
-    [viewingDate]
+    [viewingDate] // resetTime intentionally excluded — passed explicitly to avoid infinite loop
   );
+
+  // strips the derived `status` field before passing habits to service functions
+  const stripStatus = (habits: HabitWithStatus[]): Habit[] =>
+    habits.map(({ status, ...rest }) => rest);
+
+  // ─── load ───────────────────────────────────────────────────────────────────
 
   const loadHabits = useCallback(async () => {
     if (!user) {
@@ -195,135 +187,101 @@ export function useHabits(viewingDate: Date = new Date()) {
     }
 
     try {
+      if (DEBUG) {
+        console.log('\n🔍 ========== LOADING HABITS ==========');
+        console.log('   User:', user.id);
+      }
+
       const reset = await getResetTime();
       setResetTime(reset);
 
-      const inCacheWindow = isInCacheWindow(viewingDate);
-
-      if (inCacheWindow) {
+      if (isInCacheWindow(viewingDate)) {
+        // show cache immediately so the UI isn't blank
         const cached = await loadFromCache();
-
         if (cached && cached.length > 0) {
-          processHabitsData(cached, reset);
+          if (DEBUG) console.log('📦 Showing cached data while fetching fresh...');
+          applyHabitsUpdate(cached, reset);
           setLoading(false);
-
-          const streak = await updateAppStreak(cached, reset.hour, reset.minute);
-          setAppStreak(streak);
-
-          const total = await getTotalPoints();
-          setTotalPoints(total);
-        } else {
-          if (DEBUG) console.log('📦 Cache empty, will load from Supabase');
         }
 
-        if (DEBUG) console.log('🔄 Fetching fresh data in background...');
+        // always fetch fresh in background
+        if (DEBUG) console.log('🔄 Fetching fresh data from Supabase...');
         const fresh = await loadHabitsFromSupabase(user.id);
         if (DEBUG) console.log('✅ Fresh data loaded:', fresh.length, 'habits');
 
         await saveToCache(fresh, reset);
-        processHabitsData(fresh, reset);
-
-        const freshStreak = await updateAppStreak(fresh, reset.hour, reset.minute);
-        setAppStreak(freshStreak);
-
-        const freshTotal = await getTotalPoints();
-        setTotalPoints(freshTotal);
-
-        setLoading(false);
+        applyHabitsUpdate(fresh, reset);
       } else {
         if (DEBUG) console.log('⏳ Outside cache window, loading from Supabase...');
         setLoading(true);
 
         const fresh = await loadHabitsFromSupabase(user.id);
-        processHabitsData(fresh, reset);
-
-        const streak = await updateAppStreak(fresh, reset.hour, reset.minute);
-        setAppStreak(streak);
-
-        const total = await getTotalPoints();
-        setTotalPoints(total);
-
-        setLoading(false);
+        applyHabitsUpdate(fresh, reset);
       }
 
-      if (DEBUG) console.log('========== LOADING COMPLETE ==========\n');
+      const [streak, total] = await Promise.all([
+        updateAppStreak(rawHabitsRef.current, reset.hour, reset.minute),
+        getTotalPoints(),
+      ]);
+      setAppStreak(streak);
+      setTotalPoints(total);
+
+      setLoading(false);
       setError(null);
+
+      if (DEBUG) console.log('========== LOADING COMPLETE ==========\n');
     } catch (err) {
       console.error('❌ Error loading habits:', err);
       setError('Failed to load habits');
       setLoading(false);
     }
-  }, [user, viewingDate, isInCacheWindow, loadFromCache, saveToCache, processHabitsData]);
+  // viewingDate intentionally excluded — date changes are handled by the separate effect below
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, isInCacheWindow, loadFromCache, saveToCache, applyHabitsUpdate]);
+
+  // ─── actions ────────────────────────────────────────────────────────────────
 
   const toggleHabit = useCallback(
     async (habitId: string) => {
       if (!user) return;
 
       const ds = getHabitDate(viewingDate, resetTime.hour, resetTime.minute);
+      const currentHabits = stripStatus(habits);
+      const target = currentHabits.find(h => h.id === habitId);
+      if (!target) return;
+
+      const isCurrentlyCompleted = target.completionHistory?.includes(ds) ?? false;
+
+      if (DEBUG) {
+        console.log('🔄 Toggling habit:', target.name, '| date:', ds, '| was completed:', isCurrentlyCompleted);
+      }
+
+      // optimistic: flip status immediately
+      setHabits(prev => prev.map(h =>
+        h.id === habitId
+          ? { ...h, status: isCurrentlyCompleted ? 'active' : 'completed' as HabitStatus }
+          : h
+      ));
+      setEarnedPoints(prev => prev + (isCurrentlyCompleted ? -(target.rewardPoints || 0) : (target.rewardPoints || 0)));
 
       try {
-        const currentHabits = habits.map(({ completed, ...rest }) => rest);
-        const targetHabit = currentHabits.find(h => h.id === habitId);
 
-        if (targetHabit) {
-          const isCurrentlyCompleted = targetHabit.completionHistory?.includes(ds) || false;
-
-          if (DEBUG) {
-            console.log('🔄 Toggling habit:', targetHabit.name);
-            console.log('   Date:', ds);
-            console.log('   Currently completed:', isCurrentlyCompleted);
-          }
-
-          // optimistic
-          const optimisticHabits = habits.map(h => {
-            if (h.id === habitId) return { ...h, completed: !isCurrentlyCompleted };
-            return h;
-          });
-          setHabits(optimisticHabits);
-
-          // points optimistic
-          const pointChange = isCurrentlyCompleted
-            ? -(targetHabit.rewardPoints || 0)
-            : (targetHabit.rewardPoints || 0);
-          setEarnedPoints(prev => prev + pointChange);
-        }
-
-        const updatedHabits = await toggleHabitCompletion(
-          habitId,
-          currentHabits,
-          ds,
-          resetTime.hour,
-          resetTime.minute,
-          user.id
-        );
-
+        const updatedHabits = await toggleHabitCompletion(habitId, currentHabits, ds, resetTime.hour, resetTime.minute, user.id);
         await saveToCache(updatedHabits, resetTime);
+        applyHabitsUpdate(updatedHabits, resetTime);
 
-        const habitsWithCompleted = addCompletedToHabits(updatedHabits, viewingDate, resetTime.hour, resetTime.minute);
-        setHabits(habitsWithCompleted);
-
-        // recompute points + progress
-        const earned = updatedHabits.reduce((sum, h) => {
-          if (h.completionHistory?.includes(ds)) return sum + (h.rewardPoints || 0);
-          return sum;
-        }, 0);
-        setEarnedPoints(earned);
-
-        const { progressTotal, progressEarned } = getProgressUnitsForDay(habitsWithCompleted, ds);
-        setProgressTotal(progressTotal);
-        setProgressEarned(progressEarned);
-
-        const streak = await updateAppStreak(updatedHabits, resetTime.hour, resetTime.minute);
+        const [streak, total] = await Promise.all([
+          updateAppStreak(updatedHabits, resetTime.hour, resetTime.minute),
+          getTotalPoints(),
+        ]);
         setAppStreak(streak);
-
-        const total = await getTotalPoints();
         setTotalPoints(total);
       } catch (err) {
         console.error('❌ Error toggling habit:', err);
         loadHabits();
       }
     },
-    [habits, viewingDate, resetTime, user, saveToCache, loadHabits]
+    [habits, viewingDate, resetTime, user, saveToCache, applyHabitsUpdate, loadHabits]
   );
 
   const updateIncrement = useCallback(
@@ -331,64 +289,39 @@ export function useHabits(viewingDate: Date = new Date()) {
       if (!user) return;
 
       const ds = getHabitDate(viewingDate, resetTime.hour, resetTime.minute);
+      const currentHabits = stripStatus(habits);
+
+      if (DEBUG) console.log('🔄 Updating increment:', habitId, '| amount:', newAmount, '| date:', ds);
+
+      // optimistic
+      setHabits(prev => prev.map(h =>
+        h.id !== habitId ? h : {
+          ...h,
+          incrementAmount: newAmount,
+          incrementHistory: { ...(h.incrementHistory || {}), [ds]: newAmount },
+        }
+      ));
 
       try {
-        const currentHabits = habits.map(({ completed, ...rest }) => rest);
-
-        if (DEBUG) {
-          console.log('🔄 Updating increment:', habitId);
-          console.log('   Date:', ds);
-          console.log('   New amount:', newAmount);
-        }
-
-        // optimistic update: write into incrementHistory[ds]
-        const optimisticHabits = habits.map(h => {
-          if (h.id !== habitId) return h;
-
-          const incrementHistory = h.incrementHistory || {};
-          return {
-            ...h,
-            // optional convenience denormalization:
-            incrementAmount: newAmount,
-            incrementHistory: {
-              ...incrementHistory,
-              [ds]: newAmount,
-            },
-          };
-        });
-
-        setHabits(optimisticHabits);
-
         const updatedHabits = await updateHabitIncrement(habitId, currentHabits, ds, newAmount, user.id);
-
         await saveToCache(updatedHabits, resetTime);
-
-        const habitsWithCompleted = addCompletedToHabits(updatedHabits, viewingDate, resetTime.hour, resetTime.minute);
-        setHabits(habitsWithCompleted);
-
-        // progress may change when increments change
-        const { progressTotal, progressEarned } = getProgressUnitsForDay(habitsWithCompleted, ds);
-        setProgressTotal(progressTotal);
-        setProgressEarned(progressEarned);
-
-        if (DEBUG) console.log('✅ Increment updated successfully');
+        applyHabitsUpdate(updatedHabits, resetTime);
+        if (DEBUG) console.log('✅ Increment updated');
       } catch (err) {
         console.error('❌ Error updating increment:', err);
         loadHabits();
       }
     },
-    [habits, viewingDate, resetTime, user, saveToCache, loadHabits]
+    [habits, viewingDate, resetTime, user, saveToCache, applyHabitsUpdate, loadHabits]
   );
 
   const addHabit = useCallback(
     async (newHabit: Habit) => {
-      const habitWithCompleted = { ...newHabit, completed: false };
-      setHabits(prev => [habitWithCompleted, ...prev]);
+      const withStatus: HabitWithStatus = { ...newHabit, status: 'active' };
+      setHabits(prev => [withStatus, ...prev]);
 
-      const currentHabits = habits.map(({ completed, ...rest }) => rest);
-      const updatedHabits = [...currentHabits, newHabit];
-
-      await saveToCache(updatedHabits, resetTime);
+      const currentHabits = stripStatus(habits);
+      await saveToCache([...currentHabits, newHabit], resetTime);
     },
     [habits, resetTime, saveToCache]
   );
@@ -397,79 +330,66 @@ export function useHabits(viewingDate: Date = new Date()) {
     async (habitId: string) => {
       if (!user) return;
       try {
-        const currentHabits = habits.map(({ completed, ...rest }) => rest);
-        const updatedHabits = await snoozeHabitService(habitId, currentHabits, viewingDate, user.id);
-
+        const updatedHabits = await snoozeHabitService(habitId, stripStatus(habits), viewingDate, user.id);
         await saveToCache(updatedHabits, resetTime);
-
-        const habitsWithCompleted = addCompletedToHabits(updatedHabits, viewingDate, resetTime.hour, resetTime.minute);
-        setHabits(habitsWithCompleted);
-
-        const ds = getHabitDate(viewingDate, resetTime.hour, resetTime.minute);
-        const { progressTotal, progressEarned } = getProgressUnitsForDay(habitsWithCompleted, ds);
-        setProgressTotal(progressTotal);
-        setProgressEarned(progressEarned);
+        applyHabitsUpdate(updatedHabits, resetTime);
       } catch (err) {
         console.error('❌ Error snoozing habit:', err);
         loadHabits();
       }
     },
-    [habits, viewingDate, resetTime, user, saveToCache, loadHabits]
+    [habits, viewingDate, resetTime, user, saveToCache, applyHabitsUpdate, loadHabits]
   );
 
   const skipHabit = useCallback(
     async (habitId: string) => {
       if (!user) return;
       try {
-        const currentHabits = habits.map(({ completed, ...rest }) => rest);
-        const updatedHabits = await skipHabitService(habitId, currentHabits, user.id);
-
+        const updatedHabits = await skipHabitService(habitId, stripStatus(habits), user.id);
         await saveToCache(updatedHabits, resetTime);
-
-        const habitsWithCompleted = addCompletedToHabits(updatedHabits, viewingDate, resetTime.hour, resetTime.minute);
-        setHabits(habitsWithCompleted);
-
-        const ds = getHabitDate(viewingDate, resetTime.hour, resetTime.minute);
-        const { progressTotal, progressEarned } = getProgressUnitsForDay(habitsWithCompleted, ds);
-        setProgressTotal(progressTotal);
-        setProgressEarned(progressEarned);
+        applyHabitsUpdate(updatedHabits, resetTime);
       } catch (err) {
         console.error('❌ Error skipping habit:', err);
         loadHabits();
       }
     },
-    [habits, viewingDate, resetTime, user, saveToCache, loadHabits]
+    [habits, viewingDate, resetTime, user, saveToCache, applyHabitsUpdate, loadHabits]
   );
 
   const deleteHabit = useCallback(
     async (habitId: string) => {
       if (!user) return;
       try {
-        const currentHabits = habits.map(({ completed, ...rest }) => rest);
-        const updatedHabits = await deleteHabitService(habitId, currentHabits, user.id);
-
+        const updatedHabits = await deleteHabitService(habitId, stripStatus(habits), user.id);
         await saveToCache(updatedHabits, resetTime);
-
-        const habitsWithCompleted = addCompletedToHabits(updatedHabits, viewingDate, resetTime.hour, resetTime.minute);
-        setHabits(habitsWithCompleted);
-
-        const ds = getHabitDate(viewingDate, resetTime.hour, resetTime.minute);
-        const { progressTotal, progressEarned } = getProgressUnitsForDay(habitsWithCompleted, ds);
-        setProgressTotal(progressTotal);
-        setProgressEarned(progressEarned);
-
-        if (DEBUG) console.log('🗑️ Habit deleted, remaining:', habitsWithCompleted.length);
+        applyHabitsUpdate(updatedHabits, resetTime);
+        if (DEBUG) console.log('🗑️ Habit deleted, remaining:', updatedHabits.length);
       } catch (err) {
         console.error('❌ Error deleting habit:', err);
         loadHabits();
       }
     },
-    [habits, viewingDate, resetTime, user, saveToCache, loadHabits]
+    [habits, viewingDate, resetTime, user, saveToCache, applyHabitsUpdate, loadHabits]
   );
 
+  // ─── effects ────────────────────────────────────────────────────────────────
+
+  // initial load + re-load when user changes — does NOT re-run on date navigation
   useEffect(() => {
     loadHabits();
   }, [loadHabits]);
+
+  // date navigation — instant reprocess from ref, no fetch, no flicker
+  useEffect(() => {
+    if (rawHabitsRef.current.length > 0) {
+      if (DEBUG) console.log('📅 Date changed, reprocessing from ref for:', viewingDate.toISOString());
+      applyHabitsUpdate(rawHabitsRef.current, resetTime);
+    }
+  }, [viewingDate]); // eslint-disable-line react-hooks/exhaustive-deps
+  // ↑ intentionally only viewingDate — applyHabitsUpdate and resetTime are stable
+  //   enough within a date-nav gesture that we don't need them here
+
+  // ─── return ─────────────────────────────────────────────────────────────────
 
   return {
     habits,
@@ -477,16 +397,14 @@ export function useHabits(viewingDate: Date = new Date()) {
     error,
 
     resetTime,
-    dateStr, // ✅ new: use this everywhere so everything stays aligned
+    dateStr,
 
-    // old points/streak
     appStreak,
     totalPoints,
     earnedPoints,
-
-    // ✅ new: progress for bar (supports increment partials)
     progressTotal,
     progressEarned,
+    progressSkipped,
 
     loadHabits,
     addHabit,

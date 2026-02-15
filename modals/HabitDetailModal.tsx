@@ -20,6 +20,7 @@ import { BUTTON_COLORS, COLORS, PAGE } from '@/constants/colors';
 import { SYSTEM_ICONS, HABIT_ICONS } from '@/constants/icons';
 import { globalStyles } from '@/styles';
 import ShadowBox from '@/ui/ShadowBox';
+import { HabitWithStatus } from '@/hooks/useHabits';
 
 interface Path {
     id: string;
@@ -30,7 +31,7 @@ interface Path {
 
 interface HabitDetailModalProps {
     visible: boolean;
-    habit: Habit | null;
+    habit: HabitWithStatus | null;
     onClose: () => void;
     onUpdate: () => void;
 }
@@ -43,7 +44,7 @@ const WEEK_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 export default function HabitDetailModal({ visible, habit, onClose, onUpdate }: HabitDetailModalProps) {
     const { user } = useAuth();
     const [isEditMode, setIsEditMode] = useState(false);
-    const [editedHabit, setEditedHabit] = useState<Habit | null>(null);
+    const [editedHabit, setEditedHabit] = useState<HabitWithStatus | null>(null);
     const [paths, setPaths] = useState<Path[]>([]);
     const [isSaving, setIsSaving] = useState(false);
 

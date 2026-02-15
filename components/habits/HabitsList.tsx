@@ -19,8 +19,10 @@ import EmptyStateView from '@/ui/EmptyStateView';
 import ShadowBox from '@/ui/ShadowBox';
 import { getHabitDate } from '@/utils/dateUtils';
 
+import { HabitWithStatus } from '@/hooks/useHabits';
+
 interface HabitsListProps {
-  habits: (Habit & { completed: boolean })[];
+  habits: HabitWithStatus[];  // was: (Habit & { completed: boolean })[]
   viewingDate: Date | null;
   resetTime: { hour: number; minute: number };
   onToggleHabit: (habitId: string) => void;
@@ -42,12 +44,11 @@ export default function HabitsList({
   const currentDate = viewingDate || new Date();
   const dateStr = getHabitDate(currentDate, resetTime.hour, resetTime.minute);
 
-  const [loading, setLoading] = useState(true);
   const [showCompleted, setShowCompleted] = useState(true);
-  const [orderedHabits, setOrderedHabits] = useState<(Habit & { completed: boolean })[]>([]);
+  const [orderedHabits, setOrderedHabits] = useState<HabitWithStatus[]>([]);
   
   // Modal state
-  const [selectedHabit, setSelectedHabit] = useState<Habit | null>(null);
+  const [selectedHabit, setSelectedHabit] = useState<HabitWithStatus | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
 
   const ORDER_STORAGE_KEY = `@habit_order_${dateStr}`;
@@ -55,7 +56,7 @@ export default function HabitsList({
   const activeHabits = habits.filter(habit =>
     isHabitActiveToday(habit, currentDate, resetTime.hour, resetTime.minute)
   );
-  const incompleteCount = activeHabits.filter(h => !h.completed).length;
+  const incompleteCount = activeHabits.filter(h => h.status !== 'completed').length;
   const scheduledHabits = habits.filter(habit =>
     isHabitActiveToday(habit, currentDate, resetTime.hour, resetTime.minute)
   );
@@ -110,7 +111,7 @@ export default function HabitsList({
           }
         }
 
-        if (habit.completed) {
+        if (habit.status === 'completed') {
           console.log(`      ✓ Completed: YES`);
         }
       });
@@ -159,7 +160,6 @@ export default function HabitsList({
         setOrderedHabits(defaultSorted);
       }
 
-      setLoading(false);
     } catch (error) {
       console.error('Error loading habit order:', error);
       const fallbackSorted = [...activeHabits].sort((a, b) =>
@@ -169,7 +169,7 @@ export default function HabitsList({
     }
   };
 
-  const saveDailyOrder = async (newOrder: (Habit & { completed: boolean })[]) => {
+  const saveDailyOrder = async (newOrder: HabitWithStatus[]) => {
     try {
       const orderIds = newOrder.map(h => h.id);
       await AsyncStorage.setItem(ORDER_STORAGE_KEY, JSON.stringify(orderIds));
@@ -178,8 +178,8 @@ export default function HabitsList({
     }
   };
 
-  const groupByTimeOfDay = (habitsList: (Habit & { completed: boolean })[]) => {
-    const grouped: Record<TimeOfDay, (Habit & { completed: boolean })[]> = {
+  const groupByTimeOfDay = (habitsList: HabitWithStatus[]) => {
+    const grouped: Record<TimeOfDay, HabitWithStatus[]> = {
       'Wake Up': [],
       'Morning': [],
       'Anytime': [],
@@ -202,11 +202,11 @@ export default function HabitsList({
 
   const visibleHabits = showCompleted
     ? orderedHabits
-    : orderedHabits.filter(h => !h.completed);
+    : orderedHabits.filter(h => h.status !== 'completed');
 
   const groupedHabits = groupByTimeOfDay(visibleHabits);
 
-  const handleDragEnd = (timeOfDay: TimeOfDay, newOrder: (Habit & { completed: boolean })[]) => {
+  const handleDragEnd = (timeOfDay: TimeOfDay, newOrder: HabitWithStatus[]) => {
     const otherHabits = orderedHabits.filter(
       h => (h.selectedTimeOfDay || 'Anytime') !== timeOfDay
     );
@@ -229,7 +229,7 @@ export default function HabitsList({
   };
 
   // Handle habit press - open modal
-  const handleHabitPress = (habit: Habit) => {
+  const handleHabitPress = (habit: HabitWithStatus) => {
     setSelectedHabit(habit);
     setModalVisible(true);
   };
@@ -238,16 +238,6 @@ export default function HabitsList({
   const handleModalUpdate = () => {
     loadDailyOrder();
   };
-
-  if (loading) {
-    if (DEBUG) console.log('🔄 HabitsList is loading...');
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="small" color={COLORS.Primary} />
-        <Text style={styles.loadingText}>Loading habits...</Text>
-      </View>
-    );
-  }
 
   if (!habits || habits.length === 0) {
     if (DEBUG) console.log('📭 No habits found in database');

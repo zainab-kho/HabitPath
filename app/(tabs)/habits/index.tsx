@@ -42,6 +42,9 @@ export default function HabitsPage() {
     appStreak,
     totalPoints,
     earnedPoints,
+    progressTotal,
+    progressEarned,
+    progressSkipped,
     toggleHabit,
     updateIncrement,
     loadHabits,
@@ -58,34 +61,6 @@ export default function HabitsPage() {
   );
 
   const dateStr = getHabitDate(viewingDate, resetTime.hour, resetTime.minute);
-
-  const { progressTotal, progressEarned } = (() => {
-    let total = 0;
-    let earned = 0;
-
-    for (const h of activeHabits) {
-      const isIncrement = !!h.increment;
-
-      total += 1;
-
-      if (!isIncrement) {
-        earned += h.completed ? 1 : 0;
-        continue;
-      }
-
-      const currentAmount = h.incrementHistory?.[dateStr] ?? 0;
-      const goal = typeof h.incrementGoal === 'number' ? h.incrementGoal : 0;
-      const hasGoal = goal > 0;
-
-      if (hasGoal) {
-        earned += Math.min(currentAmount / goal, 1);
-      } else {
-        earned += currentAmount > 0 ? 1 : 0;
-      }
-    }
-
-    return { progressTotal: total, progressEarned: earned };
-  })();
 
   // calculate totals for points badge (unchanged)
   const totalActivePoints = activeHabits.reduce(
@@ -206,8 +181,9 @@ export default function HabitsPage() {
         {/* progress bar */}
         <ProgressBar
           totalHabits={progressTotal}
-          completedHabits={progressEarned} // can be decimal now for partial progress
-          earnedPoints={earnedPoints} // keep this if it tracks overall points earned
+          completedHabits={progressEarned}
+          skippedHabits={progressSkipped} 
+          earnedPoints={earnedPoints}
           totalPossiblePoints={totalActivePoints}
           appStreak={appStreak}
         />

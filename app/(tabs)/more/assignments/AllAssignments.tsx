@@ -104,7 +104,7 @@ export default function AllAssignments() {
                         title="No assignments yet"
                         description="Add an assignment to get started!"
                         buttonText="New Assignment"
-                        buttonAction={() => router.push('/assignments/NewAssignment')}
+                        buttonAction={() => router.push('/(tabs)/more/assignments/NewAssignment')}
                         buttonColor={PAGE.assignments.primary[0]}
                     />
                 </PageContainer>
@@ -198,7 +198,7 @@ export default function AllAssignments() {
                     bottom: 50,
                     right: 0,
                 }}>
-                    <Pressable onPress={() => router.push('/assignments/NewAssignment')}>
+                    <Pressable onPress={() => router.push('/(tabs)/more/assignments/NewAssignment')}>
                         <ShadowBox
                             contentBackgroundColor={PAGE.assignments.primary[0]}
                             shadowBorderRadius={30}

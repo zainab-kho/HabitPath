@@ -10,7 +10,7 @@ import { STORAGE_KEYS } from '@/storage/keys';
 import {
   addCompletedToHabits,
   deleteHabit as deleteHabitService,
-  getResetTime,
+  // getResetTime,
   getTotalPoints,
   loadHabitsFromSupabase,
   skipHabit as skipHabitService,
@@ -19,6 +19,7 @@ import {
   updateAppStreak,
   updateHabitIncrement,
 } from '@/utils/habitsActions';
+import { getResetTime } from '@/lib/supabase/queries';
 
 const CACHE_WINDOW_DAYS = 3;
 const DEBUG = true;
@@ -76,11 +77,11 @@ export function useHabits(viewingDate: Date = new Date()) {
   const [totalPoints, setTotalPoints] = useState(0);
   const [earnedPoints, setEarnedPoints] = useState(0);
 
-  // ✅ new: progress that includes increment partials
+  // progress that includes increment partials
   const [progressTotal, setProgressTotal] = useState(0);
   const [progressEarned, setProgressEarned] = useState(0);
 
-  // ✅ expose dateStr so screens/components can use the same one
+  // expose dateStr so screens/components can use the same one
   const dateStr = useMemo(() => {
     return getHabitDate(viewingDate, resetTime.hour, resetTime.minute);
   }, [viewingDate, resetTime.hour, resetTime.minute]);

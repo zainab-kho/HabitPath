@@ -11,7 +11,7 @@ import { AppLinearGradient } from '@/ui/AppLinearGradient';
 import PageContainer from '@/ui/PageContainer';
 import PageHeader from '@/ui/PageHeader';
 import ShadowBox from '@/ui/ShadowBox';
-import { getResetTime } from '@/utils/habitUtils';
+import { getResetTime } from '@/lib/supabase/queries';
 
 export default function SettingsPage() {
     const router = useRouter();
@@ -76,7 +76,7 @@ export default function SettingsPage() {
 
             const { hour, minute } = await getResetTime();
 
-            // convert 24h → 12h for picker
+            // convert 24h to 12h for picker
             const isPM = hour >= 12;
             const hour12 =
                 hour === 0 ? 12 :

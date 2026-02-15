@@ -109,21 +109,6 @@ export async function loadHabitsFromSupabase(userId: string): Promise<Habit[]> {
 }
 
 /* ============================================================================
-    RESET TIME
-============================================================================ */
-
-export async function getResetTime(): Promise<{ hour: number; minute: number }> {
-  try {
-    const raw = await AsyncStorage.getItem(STORAGE_KEYS.RESET_TIME);
-    if (!raw) return { hour: 4, minute: 0 };
-
-    return JSON.parse(raw);
-  } catch {
-    return { hour: 4, minute: 0 };
-  }
-}
-
-/* ============================================================================
       COMPLETION HELPERS
 ============================================================================ */
 

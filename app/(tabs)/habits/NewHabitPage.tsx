@@ -23,7 +23,7 @@ import { supabase } from '@/lib/supabase';
 import { STORAGE_KEYS } from '@/storage/keys';
 import { Habit } from '@/types/Habit';
 import { formatDisplayDate, formatLocalDate } from '@/utils/dateUtils';
-import { getResetTime } from '@/utils/habitUtils';
+import { getResetTime } from '@/lib/supabase/queries';
 
 import { getIconFile } from '@/components/habits/iconUtils';
 import { BUTTON_COLORS, COLORS, PAGE } from '@/constants/colors';

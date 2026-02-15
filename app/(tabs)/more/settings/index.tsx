@@ -12,7 +12,7 @@ import PageContainer from '@/ui/PageContainer';
 import PageHeader from '@/ui/PageHeader';
 import ShadowBox from '@/ui/ShadowBox';
 import { TimeWheel, pickerStyles } from '@/ui/TimeWheel';
-import { getResetTime } from '@/utils/habitUtils';
+import { getResetTime } from '@/lib/supabase/queries';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 

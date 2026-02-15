@@ -195,28 +195,15 @@ export function useHabits(viewingDate: Date = new Date()) {
     }
 
     try {
-      if (DEBUG) {
-        console.log('\n🔍 ========== LOADING HABITS ==========');
-        console.log('User ID:', user.id);
-        console.log('Viewing date:', viewingDate.toISOString());
-      }
-
       const reset = await getResetTime();
       setResetTime(reset);
 
-      if (DEBUG) {
-        console.log('Reset time:', `${reset.hour}:${reset.minute}`);
-        console.log('Habit date for viewing date:', getHabitDate(viewingDate, reset.hour, reset.minute));
-      }
-
       const inCacheWindow = isInCacheWindow(viewingDate);
-      if (DEBUG) console.log('In cache window:', inCacheWindow);
 
       if (inCacheWindow) {
         const cached = await loadFromCache();
 
         if (cached && cached.length > 0) {
-          if (DEBUG) console.log('📦 Loading from cache...');
           processHabitsData(cached, reset);
           setLoading(false);
 

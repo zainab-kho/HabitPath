@@ -85,7 +85,7 @@ export async function loadHabitsFromSupabase(userId: string): Promise<Habit[]> {
       created_at: row.created_at,
     })) as Habit[];
 
-    // merge with cached completionHistory defensively
+    // merge with cached completionHistory to avoid losing any recent completions that haven't synced to Supabase yet
     const cachedHabits = await getCachedHabits();
     const cachedMap = new Map(cachedHabits.map(h => [h.id, h]));
 
@@ -94,10 +94,10 @@ export async function loadHabitsFromSupabase(userId: string): Promise<Habit[]> {
 
       return {
         ...habit,
-        completionHistory:
-          habit.completionHistory?.length
-            ? habit.completionHistory
-            : cached?.completionHistory || [],
+        completionHistory: Array.from(new Set([
+          ...(habit.completionHistory || []),
+          ...(cached?.completionHistory || []),
+        ]))
       };
     });
 
@@ -158,11 +158,15 @@ export async function toggleHabitCompletion(
   const target = updated.find(h => h.id === habitId);
 
   if (target) {
-    await supabase
-      .from('habits')
-      .update({ completion_history: target.completionHistory })
-      .eq('id', habitId)
-      .eq('user_id', userId);
+    try {
+      const { error } = await supabase
+        .from('habits')
+        .update({ completion_history: target.completionHistory })
+        .eq('id', habitId)
+        .eq('user_id', userId);
+    } catch {
+      throw new Error('Failed to update habit completion');
+    }
   }
 
   return updated;

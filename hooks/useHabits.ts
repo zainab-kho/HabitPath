@@ -10,7 +10,6 @@ import { STORAGE_KEYS } from '@/storage/keys';
 import {
   addCompletedToHabits,
   deleteHabit as deleteHabitService,
-  // getResetTime,
   getTotalPoints,
   loadHabitsFromSupabase,
   skipHabit as skipHabitService,
@@ -67,6 +66,7 @@ function getProgressUnitsForDay(habits: HabitWithCompleted[], dateStr: string) {
 export function useHabits(viewingDate: Date = new Date()) {
   const { user } = useAuth();
 
+  // **TODO: instead of completed, compute a "status" that can be "completed", "skipped", "snoozed", "active", "missed"
   const [habits, setHabits] = useState<(Habit & { completed: boolean })[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

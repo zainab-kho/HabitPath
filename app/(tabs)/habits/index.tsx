@@ -197,8 +197,8 @@ export default function HabitsPage() {
           resetTime={resetTime}
           onToggleHabit={toggleHabit}
           onIncrementUpdate={updateIncrement}
-          onSkipHabit={skipHabit}      // ← Add this
-          onSnoozeHabit={snoozeHabit}  // ← Add this
+          onSkipHabit={skipHabit}     
+          onSnoozeHabit={snoozeHabit} 
         />
 
         {/* floating buttons */}

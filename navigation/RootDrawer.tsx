@@ -130,7 +130,7 @@ export function RootDrawer() {
         },
         {
             label: 'Focus',
-            path: '/(tabs)/more/stopwatch',
+            path: '/(tabs)/more/focus',
             icon: SYSTEM_ICONS.stopwatch,
         },
         {

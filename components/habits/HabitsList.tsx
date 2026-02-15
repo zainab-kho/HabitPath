@@ -22,11 +22,13 @@ import { getHabitDate } from '@/utils/dateUtils';
 import { HabitWithStatus } from '@/hooks/useHabits';
 
 interface HabitsListProps {
-  habits: HabitWithStatus[];  // was: (Habit & { completed: boolean })[]
+  habits: HabitWithStatus[];
   viewingDate: Date | null;
   resetTime: { hour: number; minute: number };
   onToggleHabit: (habitId: string) => void;
   onIncrementUpdate?: (habitId: string, newAmount: number) => void;
+  onSkipHabit?: (habitId: string) => void;
+  onSnoozeHabit?: (habitId: string) => void;
 }
 
 type TimeOfDay = typeof TIME_OPTIONS[number];
@@ -39,6 +41,8 @@ export default function HabitsList({
   resetTime,
   onToggleHabit,
   onIncrementUpdate,
+  onSkipHabit,
+  onSnoozeHabit,
 }: HabitsListProps) {
   const router = useRouter();
   const currentDate = viewingDate || new Date();
@@ -144,7 +148,6 @@ export default function HabitsList({
           const safeA = indexA === -1 ? Number.MAX_SAFE_INTEGER : indexA;
           const safeB = indexB === -1 ? Number.MAX_SAFE_INTEGER : indexB;
 
-          // both are new habits not yet in saved order → sort oldest startDate first
           if (safeA === Number.MAX_SAFE_INTEGER && safeB === Number.MAX_SAFE_INTEGER) {
             return (a.startDate ?? '').localeCompare(b.startDate ?? '');
           }
@@ -153,7 +156,6 @@ export default function HabitsList({
         });
         setOrderedHabits(sorted);
       } else {
-        // no saved order yet — default to oldest created first
         const defaultSorted = [...activeHabits].sort((a, b) =>
           (a.startDate ?? '').localeCompare(b.startDate ?? '')
         );
@@ -228,13 +230,11 @@ export default function HabitsList({
     saveDailyOrder(updatedOrder);
   };
 
-  // Handle habit press - open modal
   const handleHabitPress = (habit: HabitWithStatus) => {
     setSelectedHabit(habit);
     setModalVisible(true);
   };
 
-  // Handle modal update - reload habits
   const handleModalUpdate = () => {
     loadDailyOrder();
   };
@@ -277,71 +277,8 @@ export default function HabitsList({
     );
   }
 
-  if (incompleteCount === 0) {
-    return (
-      <>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 }}>
-          <View>
-            <Text style={globalStyles.body}>You have {incompleteCount} goals left today!</Text>
-          </View>
-          <View style={styles.toggleContainer}>
-            <Pressable onPress={() => saveToggleState()}>
-              <Image
-                source={showCompleted ? SYSTEM_ICONS.show : SYSTEM_ICONS.hide}
-                style={styles.toggleIcon}
-              />
-            </Pressable>
-          </View>
-        </View>
-
-        {allDoneToday && (
-          <View style={{ marginTop: 12, alignItems: 'center', gap: 10 }}>
-            <Text style={[globalStyles.body, { opacity: 0.7, textAlign: 'center' }]}>
-              🎉 Good job — you finished everything for today!
-            </Text>
-          </View>
-        )}
-
-        <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.contentContainer}>
-          {TIME_OPTIONS.map(timeOfDay => {
-            const habitsInTime = groupedHabits[timeOfDay];
-            if (habitsInTime.length === 0) return null;
-
-            return (
-              <View key={timeOfDay}>
-                <HabitSectionHeader title={timeOfDay} count={habitsInTime.length} />
-                <FlatList
-                  data={habitsInTime}
-                  renderItem={({ item }) => (
-                    <HabitItem
-                      habit={item}
-                      dateStr={dateStr}
-                      onToggle={() => onToggleHabit(item.id)}
-                      onPress={() => handleHabitPress(item)}
-                      onIncrementUpdate={onIncrementUpdate}
-                    />
-                  )}
-                  keyExtractor={(item) => item.id}
-                  scrollEnabled={false}
-                />
-              </View>
-            );
-          })}
-        </ScrollView>
-
-        {/* Habit Detail Modal */}
-        <HabitDetailModal
-          visible={modalVisible}
-          habit={selectedHabit}
-          onClose={() => setModalVisible(false)}
-          onUpdate={handleModalUpdate}
-        />
-      </>
-    );
-  }
-
-  return (
-    <GestureHandlerRootView style={styles.container}>
+  const renderHabitsList = () => (
+    <>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 }}>
         <View>
           <Text style={globalStyles.body}>You have {incompleteCount} goals left today!</Text>
@@ -381,6 +318,8 @@ export default function HabitsList({
                     onToggle={() => onToggleHabit(item.id)}
                     onPress={() => handleHabitPress(item)}
                     onIncrementUpdate={onIncrementUpdate}
+                    onSkip={() => onSkipHabit?.(item.id)}
+                    onSnooze={() => onSnoozeHabit?.(item.id)}
                   />
                 )}
                 keyExtractor={(item) => item.id}
@@ -391,13 +330,18 @@ export default function HabitsList({
         })}
       </ScrollView>
 
-      {/* Habit Detail Modal */}
       <HabitDetailModal
         visible={modalVisible}
         habit={selectedHabit}
         onClose={() => setModalVisible(false)}
         onUpdate={handleModalUpdate}
       />
+    </>
+  );
+
+  return (
+    <GestureHandlerRootView style={styles.container}>
+      {renderHabitsList()}
     </GestureHandlerRootView>
   );
 }

@@ -1,6 +1,7 @@
 // @/components/habits/HabitItem.tsx
-import React, { useMemo } from 'react';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useMemo, useRef } from 'react';
+import { Animated, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import Swipeable from 'react-native-gesture-handler/Swipeable';
 
 import { COLORS } from '@/constants/colors';
 import { HABIT_ICONS, SYSTEM_ICONS } from '@/constants/icons';
@@ -15,6 +16,8 @@ interface HabitItemProps {
   onToggle: () => void;
   onPress?: () => void;
   onIncrementUpdate?: (habitId: string, newAmount: number) => void;
+  onSkip?: () => void;
+  onSnooze?: () => void;
 }
 
 const AUTO_COMPLETE_ON_GOAL = false;
@@ -25,7 +28,10 @@ export default function HabitItem({
   onToggle,
   onPress,
   onIncrementUpdate,
+  onSkip,
+  onSnooze,
 }: HabitItemProps) {
+  const swipeableRef = useRef<Swipeable>(null);
   const habitIconFile = HABIT_ICONS[habit.icon];
   const habitColor = habit.pathColor || COLORS.Primary;
 
@@ -43,12 +49,12 @@ export default function HabitItem({
   // normalize goal: if increment is true, ensure goal is at least 1
   const goalAmount = useMemo(() => {
     if (!isIncrement) return 0;
-    
+
     // for keepUntil increments, goal MUST exist (default to 1)
     if (habit.keepUntil) {
       return habit.incrementGoal && habit.incrementGoal > 0 ? habit.incrementGoal : 1;
     }
-    
+
     // for non-keepUntil increments, goal is optional
     return habit.incrementGoal ?? 0;
   }, [isIncrement, habit.keepUntil, habit.incrementGoal]);
@@ -111,134 +117,194 @@ export default function HabitItem({
     onIncrementUpdate?.(habit.id, newTotal);
   };
 
+  const renderRightActions = (
+    progress: Animated.AnimatedInterpolation<number>,
+    dragX: Animated.AnimatedInterpolation<number>
+  ) => {
+    const translateSkip = progress.interpolate({
+      inputRange: [0, 1],
+      outputRange: [120, 0],
+    });
+
+    const translateSnooze = progress.interpolate({
+      inputRange: [0, 1],
+      outputRange: [60, 0],
+    });
+
+    return (
+      <View style={swipeStyles.actionsContainer}>
+        <Animated.View
+          style={[
+            { transform: [{ translateX: translateSnooze }] },
+          ]}
+        >
+          <Pressable
+            onPress={() => {
+              swipeableRef.current?.close();
+              if (onSnooze) onSnooze();
+            }}
+            style={swipeStyles.actionButtonInner}
+          >
+            <Image source={SYSTEM_ICONS.snooze} style={swipeStyles.actionIcon} />
+          </Pressable>
+        </Animated.View>
+
+        <Animated.View
+          style={[
+            swipeStyles.actionButton,
+            { transform: [{ translateX: translateSkip }] },
+          ]}
+        >
+          <Pressable
+            onPress={() => {
+              swipeableRef.current?.close();
+              if (onSkip) onSkip();
+            }}
+            style={swipeStyles.actionButtonInner}
+          >
+            <Image source={SYSTEM_ICONS.skip} style={swipeStyles.actionIcon} />
+          </Pressable>
+        </Animated.View>
+      </View>
+    );
+  };
+
   return (
-    <ShadowBox
-      style={styles.container}
-      contentBackgroundColor={effectivelyCompleted ? habitColor : '#fff'}
-      contentBorderColor="#000"
-      contentBorderWidth={1}
-      shadowBorderRadius={15}
-      shadowOffset={effectivelyCompleted ? { x: 0, y: 0 } : { x: 0, y: 5 }}
-      shadowColor={effectivelyCompleted ? '#000' : habitColor}
+    <Swipeable
+      ref={swipeableRef}
+      renderRightActions={renderRightActions}
+      overshootRight={false}
+      friction={2}
     >
-      <Pressable onPress={onPress} style={styles.content}>
-        <View style={styles.mainRow}>
-          <View style={styles.leftSection}>
-            {/* icon */}
-            <View style={styles.iconContainer}>
-              {habitIconFile ? (
-                <Image source={habitIconFile} style={styles.iconImage} />
-              ) : (
-                <Text style={styles.icon} />
-              )}
-            </View>
-
-            {/* name and badges */}
-            <View style={styles.textSection}>
-              <Text style={[globalStyles.body, styles.habitName]}>
-                {habit.name}
-              </Text>
-
-              <View style={styles.badgesRow}>
-                {/* points badge */}
-                {!!habit.rewardPoints && habit.rewardPoints > 0 && (
-                  <View style={[styles.badge, styles.pointsBadge]}>
-                    <Image
-                      source={SYSTEM_ICONS.reward}
-                      style={[styles.badgeIcon, { tintColor: COLORS.Rewards }]}
-                    />
-                    <Text style={styles.badgeText}>{habit.rewardPoints}</Text>
-                  </View>
+      <ShadowBox
+        style={styles.container}
+        contentBackgroundColor={effectivelyCompleted ? habitColor : '#fff'}
+        contentBorderColor="#000"
+        contentBorderWidth={1}
+        shadowBorderRadius={15}
+        shadowOffset={effectivelyCompleted ? { x: 0, y: 0 } : { x: 0, y: 5 }}
+        shadowColor={effectivelyCompleted ? '#000' : habitColor}
+      >
+        <Pressable onPress={onPress} style={styles.content}>
+          <View style={styles.mainRow}>
+            <View style={styles.leftSection}>
+              {/* icon */}
+              <View style={styles.iconContainer}>
+                {habitIconFile ? (
+                  <Image source={habitIconFile} style={styles.iconImage} />
+                ) : (
+                  <Text style={styles.icon} />
                 )}
+              </View>
 
-                {/* streak badge */}
-                {showStreak && (
-                  <View style={[styles.badge, styles.streakBadge]}>
-                    <Image source={SYSTEM_ICONS.fire} style={styles.badgeIcon} />
-                    <Text style={[styles.badgeText, styles.streakText]}>
-                      {habit.streak}
-                    </Text>
-                  </View>
-                )}
+              {/* name and badges */}
+              <View style={styles.textSection}>
+                <Text style={[globalStyles.body, styles.habitName]}>
+                  {habit.name}
+                </Text>
 
-                {/* increment badge (no goal) */}
-                {isIncrement && !hasGoal && (
-                  <View style={[styles.badge, styles.incrementBadge]}>
-                    <Image
-                      source={SYSTEM_ICONS.star}
-                      style={[styles.badgeIcon, { tintColor: COLORS.Star }]}
-                    />
-                    <Text style={styles.incrementBadgeText}>{currentAmount}</Text>
-                  </View>
-                )}
+                <View style={styles.badgesRow}>
+                  {/* points badge */}
+                  {!!habit.rewardPoints && habit.rewardPoints > 0 && (
+                    <View style={[styles.badge, styles.pointsBadge]}>
+                      <Image
+                        source={SYSTEM_ICONS.reward}
+                        style={[styles.badgeIcon, { tintColor: COLORS.Rewards }]}
+                      />
+                      <Text style={styles.badgeText}>{habit.rewardPoints}</Text>
+                    </View>
+                  )}
 
-                {/* progress bar (goal exists) */}
-                {isIncrement && hasGoal && (
-                  <View style={styles.progressBarContainer}>
-                    <View
-                      style={[
-                        styles.progressBarFill,
-                        {
-                          width: `${progressPercentage}%`,
-                          backgroundColor: isGoalReached ? '#54d697' : COLORS.ProgressColor,
-                        },
-                      ]}
-                    />
-                    <View style={styles.progressOverlay} pointerEvents="none">
+                  {/* streak badge */}
+                  {showStreak && (
+                    <View style={[styles.badge, styles.streakBadge]}>
+                      <Image source={SYSTEM_ICONS.fire} style={styles.badgeIcon} />
+                      <Text style={[styles.badgeText, styles.streakText]}>
+                        {habit.streak}
+                      </Text>
+                    </View>
+                  )}
+
+                  {/* increment badge (no goal) */}
+                  {isIncrement && !hasGoal && (
+                    <View style={[styles.badge, styles.incrementBadge]}>
                       <Image
                         source={SYSTEM_ICONS.star}
                         style={[styles.badgeIcon, { tintColor: COLORS.Star }]}
                       />
-
-                      <Text style={styles.incrementBadgeText}>
-                        {incrementType && incrementType !== 'None'
-                          ? `${goalAmount - currentAmount} ${incrementType.toLowerCase()} left`
-                          : `${currentAmount} / ${goalAmount}`}
-                      </Text>
+                      <Text style={styles.incrementBadgeText}>{currentAmount}</Text>
                     </View>
-                  </View>
-                )}
+                  )}
+
+                  {/* progress bar (goal exists) */}
+                  {isIncrement && hasGoal && (
+                    <View style={styles.progressBarContainer}>
+                      <View
+                        style={[
+                          styles.progressBarFill,
+                          {
+                            width: `${progressPercentage}%`,
+                            backgroundColor: isGoalReached ? '#54d697' : COLORS.ProgressColor,
+                          },
+                        ]}
+                      />
+                      <View style={styles.progressOverlay} pointerEvents="none">
+                        <Image
+                          source={SYSTEM_ICONS.star}
+                          style={[styles.badgeIcon, { tintColor: COLORS.Star }]}
+                        />
+
+                        <Text style={styles.incrementBadgeText}>
+                          {incrementType && incrementType !== 'None'
+                            ? `${goalAmount - currentAmount} ${incrementType.toLowerCase()} left`
+                            : `${currentAmount} / ${goalAmount}`}
+                        </Text>
+                      </View>
+                    </View>
+                  )}
+                </View>
               </View>
             </View>
-          </View>
 
-          {/* right-side action */}
-          <Pressable
-            onPress={handleRightAction}
-            onLongPress={isIncrement ? handleLongPress : undefined}
-            delayLongPress={600}
-          >
-            <ShadowBox
-              shadowBorderRadius={8}
-              contentBorderRadius={8}
-              contentBorderColor={habit.keepUntil ? COLORS.Primary : '#000'}
-              contentBackgroundColor="#fff"
-              shadowColor={habit.keepUntil ? COLORS.Primary : '#000'}
-              shadowBorderColor={habit.keepUntil ? COLORS.Primary : '#000'}
-              shadowOffset={{ x: -1, y: 1 }}
+            {/* right-side action */}
+            <Pressable
+              onPress={handleRightAction}
+              onLongPress={isIncrement ? handleLongPress : undefined}
+              delayLongPress={600}
             >
-              <View style={styles.checkbox}>
-                {isIncrement ? (
-                  <Text
-                    style={[
-                      styles.rightTextDone,
-                    ]}
-                    numberOfLines={1}
-                  >
-                    {effectivelyCompleted ? '✓' : '+'}
-                  </Text>
-                ) : (
-                  effectivelyCompleted && <Text style={styles.rightTextDone}>✓</Text>
-                )}
-              </View>
-            </ShadowBox>
-          </Pressable>
-        </View>
-      </Pressable>
-    </ShadowBox>
+              <ShadowBox
+                shadowBorderRadius={8}
+                contentBorderRadius={8}
+                contentBorderColor={habit.keepUntil ? COLORS.Primary : '#000'}
+                contentBackgroundColor="#fff"
+                shadowColor={habit.keepUntil ? COLORS.Primary : '#000'}
+                shadowBorderColor={habit.keepUntil ? COLORS.Primary : '#000'}
+                shadowOffset={{ x: -1, y: 1 }}
+              >
+                <View style={styles.checkbox}>
+                  {isIncrement ? (
+                    <Text
+                      style={[
+                        styles.rightTextDone,
+                      ]}
+                      numberOfLines={1}
+                    >
+                      {effectivelyCompleted ? '✓' : '+'}
+                    </Text>
+                  ) : (
+                    effectivelyCompleted && <Text style={styles.rightTextDone}>✓</Text>
+                  )}
+                </View>
+              </ShadowBox>
+            </Pressable>
+          </View>
+        </Pressable>
+      </ShadowBox>
+    </Swipeable>
   );
 }
 
+// your original styles - untouched!
 const styles = StyleSheet.create({
   container: {
     marginBottom: 12,
@@ -368,5 +434,40 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 10,
+  },
+});
+
+// New styles only for swipe actions
+const swipeStyles = StyleSheet.create({
+  actionsContainer: {
+    flexDirection: 'row',
+    marginBottom: 12,
+    gap: 8,
+    paddingLeft: 10,
+  },
+  actionButton: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: 50,
+    height: '100%',
+  },
+  actionButtonInner: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    width: '100%',
+    borderRadius: 15,
+    gap: 4,
+  },
+  actionIcon: {
+    width: 30,
+    height: 30,
+    tintColor: '#54d697'
+  },
+  actionText: {
+    color: 'white',
+    fontSize: 11,
+    fontFamily: 'label',
+    fontWeight: '600',
   },
 });

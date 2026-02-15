@@ -48,6 +48,8 @@ export default function HabitsPage() {
     toggleHabit,
     updateIncrement,
     loadHabits,
+    snoozeHabit,
+    skipHabit,
   } = useHabits(viewingDate);
 
   // night mode detection (for text color)
@@ -182,7 +184,7 @@ export default function HabitsPage() {
         <ProgressBar
           totalHabits={progressTotal}
           completedHabits={progressEarned}
-          skippedHabits={progressSkipped} 
+          skippedHabits={progressSkipped}
           earnedPoints={earnedPoints}
           totalPossiblePoints={totalActivePoints}
           appStreak={appStreak}
@@ -194,8 +196,9 @@ export default function HabitsPage() {
           viewingDate={viewingDate}
           resetTime={resetTime}
           onToggleHabit={toggleHabit}
-          // onPressHabit={handlePressHabit}
           onIncrementUpdate={updateIncrement}
+          onSkipHabit={skipHabit}      // ← Add this
+          onSnoozeHabit={snoozeHabit}  // ← Add this
         />
 
         {/* floating buttons */}

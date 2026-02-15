@@ -318,6 +318,9 @@ export const ICON_CATEGORIES2: Record<string, HabitIcon[]> = {
 export const SYSTEM_ICONS = {
     // nav bar icons
     habit: require('@/assets/icons/system/habit-icon.png'),
+    snooze: require('@/assets/icons/system/snooze.png'),
+    skip: require('@/assets/icons/system/skip.png'),
+
     assignment: require('@/assets/icons/system/assignment.png'),
     journal: require('@/assets/icons/system/journal-icon.png'),
 

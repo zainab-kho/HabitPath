@@ -1,26 +1,225 @@
 import { supabase } from '@/lib/supabase';
 import { Habit } from '@/types/Habit';
 
-export const fetchHabitsForDate = async (
+/* ============================================================================
+   LOAD
+============================================================================ */
+
+/**
+ * Loads all habits for a user from Supabase, merging completion history
+ * with any cached data to avoid losing recent offline completions.
+ */
+export async function loadHabitsFromSupabase(
   userId: string,
+  cachedHabits: Habit[] = []
+): Promise<Habit[]> {
+  try {
+    const { data, error } = await supabase
+      .from('habits')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    const habits = (data || []).map(row => ({
+      id: row.id,
+      userId: row.user_id,
+      name: row.name,
+      habitText: row.name,
+      icon: row.icon,
+      frequency: row.frequency,
+      selectedDays: row.selected_days || [],
+      selectedTimeOfDay: row.selected_time_of_day,
+      startDate: row.start_date,
+      selectedDate: row.selected_date,
+      rewardPoints: row.reward_points || 0,
+      completionHistory: row.completion_history || [],
+      snoozedUntil: row.snoozed_until,
+      skipped: row.skipped || false,
+      keepUntil: row.keep_until || false,
+      increment: row.increment || false,
+      incrementAmount: row.increment_amount || 0,
+      incrementGoal: row.increment_goal || undefined,
+      incrementStep: row.increment_step || 1,
+      incrementType: row.increment_type || undefined,
+      incrementHistory: row.increment_history || {},
+      path: row.path,
+      pathColor: row.path_color,
+      created_at: row.created_at,
+    })) as Habit[];
+
+    // merge with cached completionHistory to avoid losing recent offline completions
+    const cachedMap = new Map(cachedHabits.map(h => [h.id, h]));
+
+    const merged = habits.map(habit => {
+      const cached = cachedMap.get(habit.id);
+      return {
+        ...habit,
+        completionHistory: Array.from(new Set([
+          ...(habit.completionHistory || []),
+          ...(cached?.completionHistory || []),
+        ])),
+      };
+    });
+
+    return merged;
+  } catch (err) {
+    console.error('Error: loadHabitsFromSupabase failed', err);
+    return [];
+  }
+}
+
+/* ============================================================================
+   TOGGLE / UPDATE
+============================================================================ */
+
+export async function toggleHabitCompletion(
+  habitId: string,
+  habits: Habit[],
+  dateStr: string,
+  resetHour: number,
+  resetMinute: number,
+  userId: string
+): Promise<Habit[]> {
+  const updated = habits.map(habit => {
+    if (habit.id !== habitId) return habit;
+
+    const history = habit.completionHistory || [];
+    const completed = history.includes(dateStr);
+
+    return {
+      ...habit,
+      completionHistory: completed
+        ? history.filter(d => d !== dateStr)
+        : [...history, dateStr],
+    };
+  });
+
+  const target = updated.find(h => h.id === habitId);
+
+  if (target) {
+    try {
+      const { error } = await supabase
+        .from('habits')
+        .update({ completion_history: target.completionHistory })
+        .eq('id', habitId)
+        .eq('user_id', userId);
+    } catch {
+      throw new Error('Failed to update habit completion');
+    }
+  }
+
+  return updated;
+}
+
+export async function updateHabitIncrement(
+  habitId: string,
+  habits: Habit[],
+  dateStr: string,
+  newAmount: number,
+  userId: string
+): Promise<Habit[]> {
+  const updated = habits.map(habit => {
+    if (habit.id !== habitId) return habit;
+
+    const incrementHistory = habit.incrementHistory || {};
+
+    return {
+      ...habit,
+      incrementAmount: newAmount,
+      incrementHistory: {
+        ...incrementHistory,
+        [dateStr]: newAmount,
+      },
+    };
+  });
+
+  const target = updated.find(h => h.id === habitId);
+
+  if (target) {
+    const { error } = await supabase
+      .from('habits')
+      .update({
+        increment_amount: newAmount,
+        increment_history: target.incrementHistory,
+      })
+      .eq('id', habitId)
+      .eq('user_id', userId);
+
+    if (error) {
+      console.error('Supabase increment update failed:', error);
+    }
+  }
+
+  return updated;
+}
+
+/* ============================================================================
+   SNOOZE / SKIP / DELETE
+============================================================================ */
+
+export async function snoozeHabit(
+  habitId: string,
+  habits: Habit[],
   viewingDate: Date,
-  dateString: string
-): Promise<Habit[]> => {
-  const { data, error } = await supabase
+  userId: string
+): Promise<Habit[]> {
+  const updated = habits.map(h =>
+    h.id === habitId
+      ? { ...h, snoozedUntil: viewingDate.toISOString() }
+      : h
+  );
+
+  await supabase
     .from('habits')
-    .select('*')
-    .eq('user_id', userId)
-    .lte('start_date', dateString)
-    .or(`archived_at.is.null,archived_at.gt.${viewingDate.toISOString()}`);
+    .update({ snoozed_until: viewingDate.toISOString() })
+    .eq('id', habitId)
+    .eq('user_id', userId);
 
-  if (error) throw error;
-  return data ?? [];
-};
+  return updated;
+}
 
-export const archiveStaleHabits = async (
+export async function skipHabit(
+  habitId: string,
+  habits: Habit[],
+  userId: string
+): Promise<Habit[]> {
+  const updated = habits.map(h =>
+    h.id === habitId ? { ...h, skipped: true } : h
+  );
+
+  await supabase
+    .from('habits')
+    .update({ skipped: true })
+    .eq('id', habitId)
+    .eq('user_id', userId);
+
+  return updated;
+}
+
+export async function deleteHabit(
+  habitId: string,
+  habits: Habit[],
+  userId: string
+): Promise<Habit[]> {
+  await supabase
+    .from('habits')
+    .delete()
+    .eq('id', habitId)
+    .eq('user_id', userId);
+
+  return habits.filter(h => h.id !== habitId);
+}
+
+/* ============================================================================
+   ARCHIVE
+============================================================================ */
+
+export async function archiveStaleHabits(
   userId: string,
   daysThreshold = 14
-): Promise<void> => {
+): Promise<void> {
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - daysThreshold);
   const cutoffStr = cutoff.toISOString().split('T')[0];
@@ -34,4 +233,4 @@ export const archiveStaleHabits = async (
     .lt('start_date', cutoffStr);
 
   if (error) throw error;
-};
+}

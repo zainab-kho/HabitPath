@@ -6,7 +6,7 @@ import React, { useCallback, useState } from 'react';
 import { Image, Pressable, Text, View } from 'react-native';
 
 import HabitsList from '@/components/habits/HabitsList';
-import { isHabitActiveToday } from '@/components/habits/habitUtils';
+import { isHabitActiveToday } from '@/utils/habitUtils';
 import ProgressBar from '@/components/habits/ProgressBar';
 import { COLORS, PAGE } from '@/constants/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';

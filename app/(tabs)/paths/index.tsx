@@ -1,6 +1,6 @@
 // app/(tabs)/paths/index.tsx
 import { PATH_COLORS, type PathColorKey } from '@/colors/pathColors';
-import { isHabitActiveToday } from '@/components/habits/habitUtils';
+import { isHabitActiveToday } from '@/utils/habitUtils';
 import { COLORS, PAGE } from '@/constants/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import { useAuth } from '@/contexts/AuthContext';

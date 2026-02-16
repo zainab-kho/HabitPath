@@ -3,6 +3,37 @@ import { Habit } from '@/types/Habit';
 import { getHabitDate, getHabitDayOfWeek } from '@/utils/dateUtils';
 
 /* ============================================================================
+   STREAK
+============================================================================ */
+
+export async function updateAppStreak(
+  habits: Habit[],
+  resetHour: number,
+  resetMinute: number
+): Promise<number> {
+  if (habits.length === 0) return 0;
+
+  const today = new Date();
+  let streak = 0;
+
+  for (let i = 0; i < 365; i++) {
+    const date = new Date(today);
+    date.setDate(today.getDate() - i);
+
+    const dateStr = getHabitDate(date, resetHour, resetMinute);
+
+    const completedAny = habits.some(h =>
+      h.completionHistory?.includes(dateStr)
+    );
+
+    if (!completedAny) break;
+    streak++;
+  }
+
+  return streak;
+}
+
+/* ============================================================================
    HABIT CYCLE HELPERS
 ============================================================================ */
 
@@ -273,100 +304,7 @@ export function isHabitActiveToday(
 }
 
 /* ============================================================================
-   COMPLETION + PROGRESS (DERIVED STATE)
-============================================================================ */
-
-/**
- * Adds a derived `completed` flag to habits based on the CURRENT CYCLE.
- *
- * For increment habits:
- * - Ensures incrementGoal defaults to 1 if missing
- * - Loads progress from incrementHistory[cycleStart]
- *
- * Completion is stored per-cycle, which allows habits to persist across days
- * until the next scheduled occurrence (for keepUntil habits).
- */
-export function addCompletedProperty(
-  habits: Habit[],
-  date: Date,
-  resetHour: number,
-  resetMinute: number
-): (Habit & { completed: boolean })[] {
-  return habits.map(habit => {
-    const cycleStart = getHabitCycleStart(
-      habit,
-      date,
-      resetHour,
-      resetMinute
-    );
-
-    // Check if completed via checkmark
-    let completed = habit.completionHistory?.includes(cycleStart) ?? false;
-
-    // For increment habits, ensure goal defaults to 1
-    const incrementGoal = habit.increment
-      ? (habit.incrementGoal && habit.incrementGoal > 0 ? habit.incrementGoal : 1)
-      : habit.incrementGoal;
-
-    const currentAmount = habit.incrementHistory?.[cycleStart] ?? 0;
-
-    // DEBUG: Always log for habits with "increment" in the name
-    if (habit.name.toLowerCase().includes('increment')) {
-      console.log(`\n🔍 Checking "${habit.name}":`);
-      console.log(`   habit.increment: ${habit.increment}`);
-      console.log(`   completed (from history): ${completed}`);
-      console.log(`   incrementGoal (raw): ${habit.incrementGoal}`);
-      console.log(`   incrementGoal (normalized): ${incrementGoal}`);
-      console.log(`   currentAmount: ${currentAmount}`);
-      console.log(`   cycleStart: ${cycleStart}`);
-      console.log(`   keepUntil: ${habit.keepUntil}`);
-    }
-
-    // For increment habits, also check if goal was reached
-    // This makes them show as "completed" for the toggle hide/show
-    if (habit.increment && !completed && incrementGoal) {
-      const goalReached = currentAmount >= incrementGoal;
-      
-      console.log(`   ✅ Entering goal check:`)
-      console.log(`   goalReached: ${goalReached} (${currentAmount} >= ${incrementGoal})`);
-      
-      completed = goalReached;
-    }
-
-    if (habit.name.toLowerCase().includes('increment')) {
-      console.log(`   FINAL completed: ${completed}\n`);
-    }
-
-    return {
-      ...habit,
-      completed,
-      incrementAmount: currentAmount,
-      incrementGoal, // normalized goal
-    };
-  });
-}
-
-/* ============================================================================
-   FILTERING HELPERS
-============================================================================ */
-
-/**
- * Returns only habits that are scheduled to be active on a given date.
- * Completion status does not affect this filter.
- */
-export function getActiveHabitsForDate(
-  habits: Habit[],
-  date: Date,
-  resetHour: number,
-  resetMinute: number
-): Habit[] {
-  return habits.filter(habit =>
-    isHabitActiveToday(habit, date, resetHour, resetMinute)
-  );
-}
-
-/* ============================================================================
-   STATUS (replaces completed: boolean)
+   STATUS
 ============================================================================ */
 
 export type HabitStatus = 'completed' | 'skipped' | 'snoozed' | 'active' | 'missed';

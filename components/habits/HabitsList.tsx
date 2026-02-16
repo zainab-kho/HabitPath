@@ -7,7 +7,7 @@ import { useRouter } from 'expo-router';
 
 import HabitItem from '@/components/habits/HabitItem';
 import HabitSectionHeader from '@/components/habits/HabitSectionHeader';
-import { isHabitActiveToday } from '@/components/habits/habitUtils';
+import { isHabitActiveToday } from '@/utils/habitUtils';
 import HabitDetailModal from '@/modals/HabitDetailModal';
 import { COLORS, PAGE } from '@/constants/colors';
 import { TIME_OPTIONS } from '@/constants/habits';

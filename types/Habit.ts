@@ -33,8 +33,10 @@ export interface Habit {
   tempTimeOfDayDate?: string;
 
   // exceptions
+  snoozedFrom?: string; // YYYY-MM-DD date string when the habit was snoozed
   snoozedUntil?: string; // YYYY-MM-DD date string until which the habit is snoozed
   skippedDates?: string[]; // array of date strings when the habit was skipped
+  archivedAt?: string; // ISO date string when the habit was archived (for skipped one-time habits)
 
   // more complex habit types
   keepUntil?: boolean; // keep until user checks off

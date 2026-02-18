@@ -204,7 +204,7 @@ export default function HabitsList({
 
   const visibleHabits = showCompleted
     ? orderedHabits
-    : orderedHabits.filter(h => h.status !== 'completed');
+    : orderedHabits.filter(h => h.status !== 'completed' && h.status !== 'skipped');
 
   const groupedHabits = groupByTimeOfDay(visibleHabits);
 

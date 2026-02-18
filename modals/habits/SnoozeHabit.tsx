@@ -1,13 +1,17 @@
 // @/modals/habits/SnoozeHabit.tsx
+import React, { useEffect, useState } from 'react';
+import { Image, Modal, Pressable, Text, View } from 'react-native';
+
+// hooks
+import { HabitWithStatus } from '@/hooks/useHabits';
+import { formatLocalDate } from '@/utils/dateUtils';
+
+// styles and constants
 import { BUTTON_COLORS, PAGE } from '@/constants/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import { globalStyles } from '@/styles';
-import { HabitWithStatus } from '@/hooks/useHabits';
 import SimpleCalendar from '@/ui/SimpleCalendar';
 import ShadowBox from '@/ui/ShadowBox';
-import { formatLocalDate } from '@/utils/dateUtils';
-import React, { useEffect, useState } from 'react';
-import { Image, Modal, Pressable, Text, View } from 'react-native';
 
 interface SnoozeHabitProps {
   visible: boolean;
@@ -19,8 +23,8 @@ interface SnoozeHabitProps {
 }
 
 /**
- * Formats a YYYY-MM-DD date string into a friendly label.
- * Returns "Tomorrow" if it's tomorrow, otherwise "Mon, Feb 17" etc.
+ * formats a YYYY-MM-DD date string into a friendly label.
+ * returns "Tomorrow" if it's tomorrow, otherwise "Mon, Feb 17" etc.
  */
 function formatSnoozeLabel(dateStr: string): string {
   const tomorrow = new Date();
@@ -67,7 +71,6 @@ export default function SnoozeHabitModal({
 
   const handleCalendarSelect = (date: Date) => {
     const newDateStr = formatLocalDate(date);
-    console.log(`(**TESTING) SnoozeHabitModal: calendar selected ${newDateStr}`);
     setPendingDate(newDateStr);
     setShowCalendar(false);
   };
@@ -75,24 +78,19 @@ export default function SnoozeHabitModal({
   const handleDone = () => {
     // if user changed the date from the original, persist it
     if (pendingDate !== snoozeDateStr) {
-      console.log(`(**TESTING) SnoozeHabitModal: updating snooze date from ${snoozeDateStr} to ${pendingDate}`);
       onUpdateSnoozeDate(habit.id, pendingDate);
     }
     onClose();
   };
 
   const handleUndo = () => {
-    console.log(`(**TESTING) SnoozeHabitModal: undoing snooze for ${habit.id}`);
     onUndoSnooze(habit.id);
     onClose();
   };
 
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
-      <Pressable
-        style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center' }}
-        onPress={onClose}
-      >
+      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center' }}>
         <Pressable
           style={{
             backgroundColor: '#fff',
@@ -167,7 +165,7 @@ export default function SnoozeHabitModal({
           <View style={{ flexDirection: 'row', borderTopWidth: 1, padding: 10, gap: 10 }}>
             <Pressable onPress={handleUndo} style={{ flex: 1 }}>
               <ShadowBox
-                contentBackgroundColor={'#f5f5f5'}
+                contentBackgroundColor={BUTTON_COLORS.Cancel}
                 shadowBorderRadius={15}
               >
                 <View style={{ paddingVertical: 6 }}>
@@ -192,7 +190,7 @@ export default function SnoozeHabitModal({
             </Pressable>
           </View>
         </Pressable>
-      </Pressable>
+      </View>
     </Modal>
   );
 }

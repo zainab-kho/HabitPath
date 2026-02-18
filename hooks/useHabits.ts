@@ -1,12 +1,14 @@
 // @/hooks/useHabits.ts
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { unstable_batchedUpdates } from 'react-native';
 
 import { useAuth } from '@/contexts/AuthContext';
 import { Habit } from '@/types/Habit';
-import { getHabitDate } from '@/utils/dateUtils';
+import { formatLocalDate, getHabitDate } from '@/utils/dateUtils';
 import { getResetTime } from '@/lib/supabase/queries';
 import {
   addStatusToHabits,
+  getProgressUnitsForDay,
   HabitStatus,
   isHabitActiveToday,
   updateAppStreak,
@@ -47,52 +49,57 @@ export function useHabits(viewingDate: Date = new Date()) {
   const [progressEarned, setProgressEarned] = useState(0);
   const [progressSkipped, setProgressSkipped] = useState(0);
 
-  // derived — same value as getHabitDate(viewingDate, ...) but stable to pass to children
   const dateStr = getHabitDate(viewingDate, resetTime.hour, resetTime.minute);
 
   // raw habits from DB/cache — date-independent, used to reprocess on date change without fetching
   const rawHabitsRef = useRef<Habit[]>([]);
 
   // ─── core update helper ─────────────────────────────────────────────────────
-  // Call this after every action that changes habit data.
-  // reset must be passed explicitly — keeping it out of deps prevents the
-  // setResetTime → applyHabitsUpdate recreates → loadHabits recreates → infinite loop.
-
+  // call this after every action that changes habit data.
+  // reset must be passed explicitly
   const applyHabitsUpdate = useCallback(
     (updatedHabits: Habit[], reset: { hour: number; minute: number }) => {
-      rawHabitsRef.current = updatedHabits; // keep ref in sync for instant date-change reprocessing
+      rawHabitsRef.current = updatedHabits;
       const ds = getHabitDate(viewingDate, reset.hour, reset.minute);
 
-      // First, filter to only habits that should be active on this date
       const activeHabits = updatedHabits.filter(h =>
         isHabitActiveToday(h, viewingDate, reset.hour, reset.minute)
       );
 
-      // Then add status to those active habits
-      const withStatus = addStatusToHabits(activeHabits, viewingDate, reset.hour, reset.minute);
+      const sortedActive = [...activeHabits].sort((a, b) => {
+        if (a.startDate !== b.startDate) return a.startDate.localeCompare(b.startDate);
 
-      setHabits(withStatus);
+        const ac = (a as any).created_at ?? '';
+        const bc = (b as any).created_at ?? '';
+        if (ac && bc && ac !== bc) return ac.localeCompare(bc);
 
-      // Calculate progress from habits with status
-      const completedCount = withStatus.filter(h => h.status === 'completed').length;
-      const skippedCount = withStatus.filter(h => h.status === 'skipped').length;
-      const totalCount = withStatus.length;
+        return (a.name || '').localeCompare(b.name || '');
+      });
 
-      setProgressTotal(totalCount);
-      setProgressEarned(completedCount);
-      setProgressSkipped(skippedCount);
+      const withStatus = addStatusToHabits(sortedActive, viewingDate, reset.hour, reset.minute);
 
-      // Calculate earned points from ALL habits (not just active ones)
-      // because points are awarded on completion date regardless of viewing date
+      // compute progress units for progress bar
+      const { progressTotal, progressEarned, progressSkipped } =
+        getProgressUnitsForDay(withStatus, ds);
+
+      // earned points for the day (for display in header)
       const earned = updatedHabits.reduce((sum, h) => {
         if (h.completionHistory?.includes(ds)) return sum + (h.rewardPoints || 0);
         return sum;
       }, 0);
-      setEarnedPoints(earned);
+
+      // **TODO: find a way to make everything load at the same time
+      unstable_batchedUpdates(() => {
+        setHabits(withStatus);
+        setProgressTotal(progressTotal);
+        setProgressEarned(progressEarned);
+        setProgressSkipped(progressSkipped);
+        setEarnedPoints(earned);
+      });
 
       return withStatus;
     },
-    [viewingDate] // resetTime intentionally excluded — passed explicitly to avoid infinite loop
+    [viewingDate]
   );
 
   // strips the derived `status` field before passing habits to service functions
@@ -146,8 +153,6 @@ export function useHabits(viewingDate: Date = new Date()) {
       setError('Failed to load habits');
       setLoading(false);
     }
-  // viewingDate intentionally excluded — date changes are handled by the separate effect below
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, applyHabitsUpdate]);
 
   // ─── actions ────────────────────────────────────────────────────────────────
@@ -229,11 +234,33 @@ export function useHabits(viewingDate: Date = new Date()) {
     [habits, resetTime]
   );
 
+  /**
+   * Snooze a habit. Defaults to tomorrow if no snoozeDateStr provided.
+   * Pass null as snoozeDateStr to undo a snooze.
+   */
   const snoozeHabit = useCallback(
-    async (habitId: string) => {
+    async (habitId: string, snoozeDateStr?: string | null) => {
       if (!user) return;
+
+      // default to tomorrow (timezone-safe YYYY-MM-DD)
+      let targetDate = snoozeDateStr;
+      if (targetDate === undefined) {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        targetDate = formatLocalDate(tomorrow);
+      }
+
+      console.log(`(**TESTING) useHabits.snoozeHabit: habitId=${habitId}, targetDate=${targetDate}`);
+
       try {
-        const updatedHabits = await snoozeHabitService(habitId, stripStatus(habits), viewingDate, user.id);
+        const ds = getHabitDate(viewingDate, resetTime.hour, resetTime.minute);
+        const updatedHabits = await snoozeHabitService(
+          habitId,
+          stripStatus(habits),
+          targetDate,
+          user.id,
+          ds
+        );
         await saveToCache(updatedHabits, resetTime);
         applyHabitsUpdate(updatedHabits, resetTime);
       } catch (err) {
@@ -241,14 +268,23 @@ export function useHabits(viewingDate: Date = new Date()) {
         loadHabits();
       }
     },
-    [habits, viewingDate, resetTime, user, applyHabitsUpdate, loadHabits]
+    [habits, resetTime, user, applyHabitsUpdate, loadHabits]
   );
 
+  /**
+   * Skip a habit for the current viewing date.
+   * - Repeating habits: adds date to skippedDates array
+   * - One-time habits: archives the habit
+   */
   const skipHabit = useCallback(
     async (habitId: string) => {
       if (!user) return;
+
+      const ds = getHabitDate(viewingDate, resetTime.hour, resetTime.minute);
+      console.log(`(**TESTING) useHabits.skipHabit: habitId=${habitId}, dateStr=${ds}`);
+
       try {
-        const updatedHabits = await skipHabitService(habitId, stripStatus(habits), user.id);
+        const updatedHabits = await skipHabitService(habitId, stripStatus(habits), ds, user.id);
         await saveToCache(updatedHabits, resetTime);
         applyHabitsUpdate(updatedHabits, resetTime);
       } catch (err) {
@@ -286,7 +322,7 @@ export function useHabits(viewingDate: Date = new Date()) {
     if (rawHabitsRef.current.length > 0) {
       applyHabitsUpdate(rawHabitsRef.current, resetTime);
     }
-  }, [viewingDate]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [viewingDate, resetTime]); // include resetTime // eslint-disable-line react-hooks/exhaustive-deps
   // ↑ intentionally only viewingDate — applyHabitsUpdate and resetTime are stable
   //   enough within a date-nav gesture that we don't need them here
 

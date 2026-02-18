@@ -36,6 +36,7 @@ export default function HabitItem({
   const habitColor = habit.pathColor || COLORS.Primary;
 
   const isCompleted = habit.status === 'completed';
+  const isSkipped = habit.status === 'skipped';
   const showStreak = (habit.streak ?? 0) >= 3;
 
   const isIncrement = !!habit.increment;
@@ -168,6 +169,45 @@ export default function HabitItem({
       </View>
     );
   };
+
+  // skipped habits: muted style, no swipe actions, no checkbox
+  if (isSkipped) {
+    return (
+      <View style={{ opacity: 0.45 }}>
+        <ShadowBox
+          style={styles.container}
+          contentBackgroundColor="#f0f0f0"
+          contentBorderColor="#ccc"
+          contentBorderWidth={1}
+          shadowBorderRadius={15}
+          shadowOffset={{ x: 0, y: 0 }}
+          shadowColor="#ccc"
+        >
+          <View style={styles.content}>
+            <View style={styles.mainRow}>
+              <View style={styles.leftSection}>
+                <View style={styles.iconContainer}>
+                  {habitIconFile ? (
+                    <Image source={habitIconFile} style={styles.iconImage} />
+                  ) : (
+                    <Text style={styles.icon} />
+                  )}
+                </View>
+                <View style={styles.textSection}>
+                  <Text style={[globalStyles.body, styles.habitName, { textDecorationLine: 'line-through' }]}>
+                    {habit.name}
+                  </Text>
+                  <Text style={[globalStyles.label, { fontSize: 11, opacity: 0.6 }]}>
+                    Skipped
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </View>
+        </ShadowBox>
+      </View>
+    );
+  }
 
   return (
     <Swipeable

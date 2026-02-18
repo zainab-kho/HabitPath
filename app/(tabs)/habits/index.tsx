@@ -11,7 +11,8 @@ import ProgressBar from '@/components/habits/ProgressBar';
 import { COLORS, PAGE } from '@/constants/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import { useAuth } from '@/contexts/AuthContext';
-import { useHabits } from '@/hooks/useHabits';
+import { useHabits, HabitWithStatus } from '@/hooks/useHabits';
+import SnoozeHabitModal from '@/modals/habits/SnoozeHabit';
 import { STORAGE_KEYS } from '@/storage/keys';
 import { globalStyles } from '@/styles';
 import PageContainer from '@/ui/PageContainer';
@@ -19,6 +20,7 @@ import PageHeader from '@/ui/PageHeader';
 import ShadowBox from '@/ui/ShadowBox';
 import {
   formatDateHeader,
+  formatLocalDate,
   getCurrentHabitDay,
   getHabitDate,
   isToday,
@@ -51,6 +53,38 @@ export default function HabitsPage() {
     snoozeHabit,
     skipHabit,
   } = useHabits(viewingDate);
+
+  // snooze modal state
+  const [snoozeModalVisible, setSnoozeModalVisible] = useState(false);
+  const [snoozeTargetHabit, setSnoozeTargetHabit] = useState<HabitWithStatus | null>(null);
+  const [snoozeDateStr, setSnoozeDateStr] = useState('');
+
+  const handleSnoozeHabit = async (habitId: string) => {
+    // find the habit before snoozing (it will disappear from the list after)
+    const target = habits.find(h => h.id === habitId) ?? null;
+
+    // compute tomorrow's date (timezone-safe)
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = formatLocalDate(tomorrow);
+
+    // snooze to tomorrow immediately
+    await snoozeHabit(habitId);
+
+    // open modal so user can change date or undo
+    setSnoozeTargetHabit(target);
+    setSnoozeDateStr(tomorrowStr);
+    setSnoozeModalVisible(true);
+  };
+
+  const handleUpdateSnoozeDate = async (habitId: string, newDateStr: string) => {
+    await snoozeHabit(habitId, newDateStr);
+  };
+
+  const handleUndoSnooze = async (habitId: string) => {
+    console.log(`(**TESTING) HabitsPage.handleUndoSnooze: habitId=${habitId}`);
+    await snoozeHabit(habitId, null);
+  };
 
   // night mode detection (for text color)
   const currentHour = new Date().getHours();
@@ -197,8 +231,18 @@ export default function HabitsPage() {
           resetTime={resetTime}
           onToggleHabit={toggleHabit}
           onIncrementUpdate={updateIncrement}
-          onSkipHabit={skipHabit}     
-          onSnoozeHabit={snoozeHabit} 
+          onSkipHabit={skipHabit}
+          onSnoozeHabit={handleSnoozeHabit}
+        />
+
+        {/* snooze confirmation modal */}
+        <SnoozeHabitModal
+          visible={snoozeModalVisible}
+          onClose={() => setSnoozeModalVisible(false)}
+          habit={snoozeTargetHabit}
+          snoozeDateStr={snoozeDateStr}
+          onUpdateSnoozeDate={handleUpdateSnoozeDate}
+          onUndoSnooze={handleUndoSnooze}
         />
 
         {/* floating buttons */}

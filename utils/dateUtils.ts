@@ -1,26 +1,14 @@
 // @/utils/dateUtils.ts
-/**
- * Centralized Date Utilities
- * All date-related functions for the habit tracking system
- */
+// utility functions for handling dates in the habit tracking app, respecting custom reset times and local timezone.
 
 /**
- * Returns "Today", "Tomorrow", or formatted date
- * Respects habit reset time
- */
-// export const getHabitDateLabel = (
-//   date: Date,
-//   resetHour: 
-// )
-
-/**
- * Get the habit date string respecting custom reset time
- * If current time is before reset time, counts as previous day
+ * get the habit date string respecting custom reset time
+ * if current time is before reset time, counts as previous day
  * 
- * @param date - The date to convert
- * @param resetHour - Hour when the day resets (0-23)
- * @param resetMinute - Minute when the day resets (0-59)
- * @returns Date string in YYYY-MM-DD format
+ * @param date - date to convert
+ * @param resetHour - hour when the day resets (0-23)
+ * @param resetMinute - minute when the day resets (0-59)
+ * @returns date string in YYYY-MM-DD format
  */
 export const getHabitDate = (
   date: Date | null,
@@ -42,6 +30,8 @@ export const getHabitDate = (
   // use local timezone instead of UTC
   return formatLocalDate(d);
 };
+
+
 
 /**
  * Get the current habit day as a Date object

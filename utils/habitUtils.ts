@@ -1,3 +1,4 @@
+// @/utils/habitUtils.ts
 import { WEEK_DAYS } from '@/constants';
 import { Habit } from '@/types/Habit';
 import { getHabitDate, getHabitDayOfWeek } from '@/utils/dateUtils';
@@ -47,33 +48,33 @@ function isHabitScheduledForDate(
   resetMinute: number
 ): boolean {
   const dateStr = getHabitDate(date, resetHour, resetMinute);
-  
+
   // Not started yet
   if (dateStr < habit.startDate) return false;
-  
+
   // One-time goals
   if (!habit.frequency || habit.frequency === 'None') {
     return dateStr === habit.startDate;
   }
-  
+
   // Daily habits
   if (habit.frequency === 'Daily') {
     return true;
   }
-  
+
   // Weekly habits
   if (habit.frequency === 'Weekly') {
     const dow = WEEK_DAYS[getHabitDayOfWeek(date, resetHour, resetMinute)];
     return habit.selectedDays?.includes(dow) ?? false;
   }
-  
+
   // Monthly habits
   if (habit.frequency === 'Monthly') {
     const startDay = parseInt(habit.startDate.split('-')[2], 10);
     const thisDay = parseInt(dateStr.split('-')[2], 10);
     return startDay === thisDay;
   }
-  
+
   return false;
 }
 
@@ -110,19 +111,19 @@ export function getHabitCycleStart(
   // For keepUntil habits, find the FIRST incomplete scheduled day
   if (habit.keepUntil && habit.completionHistory) {
     let earliestIncomplete: string | null = null;
-    
+
     // Look back up to 365 days for incomplete work
     for (let i = 0; i < 365; i++) {
       const d = new Date(date);
       d.setDate(date.getDate() - i);
       const dStr = getHabitDate(d, resetHour, resetMinute);
-      
+
       // Stop if we go before start date
       if (dStr < startStr) break;
-      
+
       // Check if this day was scheduled
       const wasScheduled = isHabitScheduledForDate(habit, d, resetHour, resetMinute);
-      
+
       if (wasScheduled) {
         // If completed, stop here - cycle starts AFTER completion
         if (habit.completionHistory.includes(dStr)) {
@@ -132,7 +133,7 @@ export function getHabitCycleStart(
         earliestIncomplete = dStr;
       }
     }
-    
+
     // If we found incomplete work, use that as cycle start
     if (earliestIncomplete) {
       return earliestIncomplete;
@@ -140,7 +141,7 @@ export function getHabitCycleStart(
   }
 
   // Standard cycle logic for non-keepUntil or when no incomplete history
-  
+
   // Daily habits
   if (habit.frequency === 'Daily') {
     return todayStr;
@@ -206,32 +207,69 @@ export function isHabitActiveToday(
   const actualTodayStr = getHabitDate(new Date(), resetHour, resetMinute);
   const isViewingToday = todayStr === actualTodayStr;
 
+  // Archived handling:
+  // - repeating habits: archived means "never show"
+  // - one-time habits: allow showing on the day they were skipped/completed/start for history
+  if (habit.archivedAt) {
+    const isOneTime = !habit.frequency || habit.frequency === 'None';
+    if (!isOneTime) return false;
+
+    // one-time: show ONLY on meaningful history days
+    if (todayStr === habit.startDate) return true;
+    if (habit.skippedDates?.includes(todayStr)) return true;
+    if (habit.completionHistory?.includes(todayStr)) return true;
+
+    return false;
+  }
+
   // Not started yet
   if (todayStr < habit.startDate) return false;
 
-  // Snoozed
-  if (habit.snoozedUntil && todayStr < habit.snoozedUntil) return false;
+  // Snoozed — hidden until snoozedUntil day (reappears ON that day)
+  // .slice(0,10) normalizes legacy ISO strings ("2026-02-17T05:00:00Z" → "2026-02-17")
+  const snoozeDay = habit.snoozedUntil?.slice(0, 10);
+  const snoozeFrom = habit.snoozedFrom?.slice(0, 10);
+
+  if (snoozeDay && snoozeFrom) {
+    // Hide it on the day it was snoozed FROM
+    if (todayStr === snoozeFrom) return false;
+
+    // Force show it on the day it was snoozed TO
+    if (todayStr === snoozeDay) return true;
+
+    // Otherwise snooze doesn't affect other browsing days
+  }
+
+  // Show history days even for archived habits
+  if (habit.skippedDates?.includes(todayStr)) return true;
+  if (habit.completionHistory?.includes(todayStr)) return true;
+
+  // Archived one-time habits: hide on all other days
+  if (habit.archivedAt && (!habit.frequency || habit.frequency === 'None')) return false;
+
+  // If it was completed on this day, also show it for history.
+  if (habit.completionHistory?.includes(todayStr)) return true;
 
   // One-time goals (freq = None)
   if (!habit.frequency || habit.frequency === 'None') {
     if (habit.keepUntil) {
       const cycleStart = getHabitCycleStart(habit, date, resetHour, resetMinute);
-      
+
       // Check if completed (either checkmark OR reached increment goal)
       let isCompleted = habit.completionHistory?.includes(cycleStart) ?? false;
-      
+
       // For increment habits, also check if goal was reached
       if (habit.increment && !isCompleted) {
         const currentAmount = habit.incrementHistory?.[cycleStart] ?? 0;
         const goal = habit.incrementGoal && habit.incrementGoal > 0 ? habit.incrementGoal : 1;
         isCompleted = currentAmount >= goal;
       }
-      
+
       // If completed, ONLY show on the completion date (for viewing history)
       if (isCompleted) {
         return todayStr === cycleStart;
       }
-      
+
       // If incomplete:
       // - Show on start date
       // - Show on actual TODAY if started in past (carry over)
@@ -239,11 +277,11 @@ export function isHabitActiveToday(
       if (todayStr === habit.startDate) {
         return true; // Show on start date
       }
-      
+
       if (isViewingToday && todayStr > habit.startDate) {
         return true; // Carry over to actual today only
       }
-      
+
       return false;
     } else {
       // Normal one-time goals: show only on start date
@@ -254,18 +292,18 @@ export function isHabitActiveToday(
   // For repeating keepUntil habits, check if there's incomplete work carrying over
   if (habit.keepUntil) {
     const cycleStart = getHabitCycleStart(habit, date, resetHour, resetMinute);
-    
+
     // If cycle started in the past and not completed, show it ONLY on actual today
     if (cycleStart < todayStr) {
       let isCompleted = habit.completionHistory?.includes(cycleStart) ?? false;
-      
+
       // For increment habits, also check if goal was reached
       if (habit.increment && !isCompleted) {
         const currentAmount = habit.incrementHistory?.[cycleStart] ?? 0;
         const goal = habit.incrementGoal && habit.incrementGoal > 0 ? habit.incrementGoal : 1;
         isCompleted = currentAmount >= goal;
       }
-      
+
       if (!isCompleted && isViewingToday) {
         return true; // Carry over to actual today only
       }
@@ -273,7 +311,7 @@ export function isHabitActiveToday(
   }
 
   // Standard scheduling rules for repeating habits
-  
+
   // Daily habits
   if (habit.frequency === 'Daily') {
     return habit.startDate <= todayStr;
@@ -316,7 +354,9 @@ export const getHabitStatus = (
   todayStr: string, // must be computed via getHabitDate to respect reset hour — never raw new Date()
 ): HabitStatus => {
   // snoozed check first so snoozed habits don't show as missed
-  if (habit.snoozedUntil && dateStr <= habit.snoozedUntil) return 'snoozed';
+  // use < (not <=) so the habit is active ON the snoozedUntil day
+  // .slice(0,10) normalizes legacy ISO strings ("2026-02-17T05:00:00Z" → "2026-02-17")
+  if (habit.snoozedUntil && dateStr < habit.snoozedUntil.slice(0, 10)) return 'snoozed';
 
   // completed via checkmark
   if (habit.completionHistory?.includes(dateStr)) return 'completed';
@@ -324,8 +364,16 @@ export const getHabitStatus = (
   // completed via increment goal reached
   if (habit.increment) {
     const amount = habit.incrementHistory?.[dateStr] ?? 0;
-    const goal = habit.incrementGoal && habit.incrementGoal > 0 ? habit.incrementGoal : 1;
-    if (amount >= goal) return 'completed';
+
+    // goal logic must match HabitItem:
+    // - keepUntil increments: goal defaults to 1
+    // - non-keepUntil increments: goal is optional (0/undefined means no "completion by goal")
+    const goal =
+      habit.keepUntil
+        ? (habit.incrementGoal && habit.incrementGoal > 0 ? habit.incrementGoal : 1)
+        : (habit.incrementGoal ?? 0);
+
+    if (goal > 0 && amount >= goal) return 'completed';
   }
 
   // explicitly skipped

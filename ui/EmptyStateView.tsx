@@ -10,6 +10,7 @@ const ICON_MARGIN_BOTTOM = 10;
 
 interface EmptyStateViewProps {
     icon: ImageSourcePropType;
+    iconTintColor?: string;
     title: string;
     description?: string;
     buttonText?: string;
@@ -23,6 +24,7 @@ interface EmptyStateViewProps {
 
 export default function EmptyStateView({
     icon,
+    iconTintColor,
     title,
     description,
     buttonText,
@@ -62,7 +64,7 @@ export default function EmptyStateView({
                         style={{
                             width: ICON_SIZE,
                             height: ICON_SIZE,
-                            tintColor: COLORS.Primary,
+                            tintColor: iconTintColor || COLORS.Primary,
                         }}
                     />
 
@@ -80,12 +82,12 @@ export default function EmptyStateView({
                         )}
                     </View>
 
-                    <View style={{ flexDirection: 'row', gap: 10 }}>
+                    <View style={{ flexDirection: 'row', gap: 10}}>
                         {buttonText && buttonAction && (
-                            <ShadowBox contentBackgroundColor={buttonColor || PAGE.journal.primary[0]}>
+                            <ShadowBox contentBackgroundColor={buttonColor || COLORS.Primary}>
                                 <Pressable
                                     onPress={buttonAction}
-                                    style={{ paddingVertical: 6, paddingHorizontal: 12, minWidth: 100 }}
+                                    style={{ paddingVertical: 6, paddingHorizontal: 12, minWidth: 100, alignItems: 'center' }}
                                 >
                                     <Text style={globalStyles.body}>{buttonText}</Text>
                                 </Pressable>
@@ -93,10 +95,10 @@ export default function EmptyStateView({
                         )}
 
                         {secondButtonText && secondButtonAction && (
-                            <ShadowBox contentBackgroundColor={secondButtonColor || PAGE.journal.primary[0]}>
+                            <ShadowBox contentBackgroundColor={secondButtonColor || COLORS.PrimaryLight}>
                                 <Pressable
                                     onPress={secondButtonAction}
-                                    style={{ paddingVertical: 6, paddingHorizontal: 12, minWidth: 100 }}
+                                    style={{ paddingVertical: 6, paddingHorizontal: 12, minWidth: 100, alignItems: 'center' }}
                                 >
                                     <Text style={globalStyles.body}>{secondButtonText}</Text>
                                 </Pressable>

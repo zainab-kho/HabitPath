@@ -356,5 +356,8 @@ export const SYSTEM_ICONS = {
     headphones: require('@/assets/icons/system/headphones.png'),
     musicNote: require('@/assets/icons/system/music-note.png'),
     search: require('@/assets/icons/system/search.png'),
+
+    // rewards icons
+    gift: require('@/assets/icons/system/gift.png'),
 };
 

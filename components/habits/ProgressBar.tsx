@@ -28,8 +28,8 @@ export default function ProgressBar({
   // totalHabits already includes everything (active + completed + missed + skipped)
   // so we use it as the denominator directly
   const completedPct = totalHabits > 0 ? Math.min((completedHabits / totalHabits) * 100, 100) : 0;
-  const skippedPct   = totalHabits > 0 ? Math.min((skippedHabits  / totalHabits) * 100, 100) : 0;
-  
+  const skippedPct = totalHabits > 0 ? Math.min((skippedHabits / totalHabits) * 100, 100) : 0;
+
   // Calculate non-completed, non-skipped habits (active + missed)
   const activeAndMissed = totalHabits - completedHabits - skippedHabits;
   const isAllDone = totalHabits > 0 && completedHabits >= totalHabits;
@@ -37,7 +37,7 @@ export default function ProgressBar({
   return (
     <View style={styles.container}>
       {/* points badge */}
-      <Pressable>
+      <Pressable onPress={() => router.push('/(tabs)/more/rewards' as any)}>
         <ShadowBox
           contentBorderColor='#000'
           shadowColor={COLORS.RewardsAccent}

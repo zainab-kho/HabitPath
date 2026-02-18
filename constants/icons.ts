@@ -359,5 +359,6 @@ export const SYSTEM_ICONS = {
 
     // rewards icons
     gift: require('@/assets/icons/system/gift.png'),
+    photo: require('@/assets/icons/system/photo.png'),
 };
 

@@ -22,6 +22,25 @@ export const COLORS = {
 } as const;
 
 /**
+ * **TODO: centralize and standardize rewards, paths, courses
+ * preset color palettes for user-generated tags (rewards, paths, courses)
+ */
+export const PRESET_COLORS = [
+  '#FFD581', // golden butter (already good)
+  '#FFB5A0', // coral peach (XPAccent vibe)
+  '#F4B6C2', // bold blush pink
+  '#99C8E8', // your Primary (strong sky blue)
+  '#DCC4FF', // vibrant lavender
+  '#A3F7BB', // fresh mint
+  '#7FD1AE', // RewardsAccent tone
+  '#FFE066', // brighter yellow pop
+  '#FF8FAB', // richer pink
+  '#B8B5FF', // deeper periwinkle
+  '#6DDDDD', // bright aqua
+  '#FFC6FF', // electric pastel magenta
+] as const;
+
+/**
  * page-specific color schemes (backgrounds, borders, etc.)
  */
 export const PAGE = {
@@ -76,7 +95,8 @@ export const PAGE = {
     pin: ['#55d7b0ff']
   },
   rewards: {
-    background: ['#FFD581', '#FFF3D0', '#FFE5B4'],
+    background: ['#f9ffa6', '#ffe8b1', '#FF7F50'],
+    primary: ['#B9C042', COLORS.Rewards],
   },
 } as const;
 

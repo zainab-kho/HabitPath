@@ -45,49 +45,55 @@ export default function MoodPreview({ entries }: MoodPreviewProps) {
   }, [entries]);
 
   const renderDayCell = (moods: string[] | undefined) => {
-    if (!moods || moods.length === 0) {
-      // no mood - empty/gray
-      return <View style={[styles.dayCell, { backgroundColor: '#f0f0f0ff' }]} />;
-    }
+  if (!moods || moods.length === 0) {
+    return <View style={[styles.dayCell, { backgroundColor: '#f0f0f0ff' }]} />;
+  }
 
-    if (moods.length === 1) {
-      // single mood - solid color
-      const bgColor = MOOD_COLORS[moods[0] as keyof typeof MOOD_COLORS];
-      return <View style={[styles.dayCell, { backgroundColor: bgColor }]} />;
-    }
+  const unique = [...moods].reverse().slice(0, 6); // reverse if you want newest first visually
+  const colors = unique.map(m => MOOD_COLORS[m as keyof typeof MOOD_COLORS]);
 
-    // multiple moods - use gradient or split
-    // OPTION 1: gradient (smooth blend)
-    const colors = moods.map(mood => MOOD_COLORS[mood as keyof typeof MOOD_COLORS]);
+  if (colors.length === 1) {
+    return <View style={[styles.dayCell, { backgroundColor: colors[0] }]} />;
+  }
+
+  // 2–3 moods: keep your original stripes
+  if (colors.length <= 3) {
     return (
-      <LinearGradient
-        colors={colors as any}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.dayCell}
-      />
+      <View style={styles.dayCell}>
+        {colors.map((c, idx) => (
+          <View key={idx} style={{ flex: 1, backgroundColor: c }} />
+        ))}
+      </View>
     );
+  }
 
-    // OPTION 2: vertical stripes (uncomment to use instead)
-    // return (
-    //   <View style={styles.dayCell}>
-    //     {moods.map((mood, idx) => (
-    //       <View
-    //         key={idx}
-    //         style={{
-    //           flex: 1,
-    //           backgroundColor: MOOD_COLORS[mood as keyof typeof MOOD_COLORS],
-    //         }}
-    //       />
-    //     ))}
-    //   </View>
-    // );
-  };
+  // 4–6 moods: 3 on top, remaining on bottom
+  const top = colors.slice(0, 3);
+  const bottom = colors.slice(3); // length 1..3
+
+  return (
+    <View style={[styles.dayCell, { flexDirection: 'column' }]}>
+      {/* top row */}
+      <View style={{ flex: 1, flexDirection: 'row' }}>
+        {top.map((c, idx) => (
+          <View key={idx} style={{ flex: 1, backgroundColor: c }} />
+        ))}
+      </View>
+
+      {/* bottom row */}
+      <View style={{ flex: 1, flexDirection: 'row' }}>
+        {bottom.map((c, idx) => (
+          <View key={idx} style={{ flex: 1, backgroundColor: c }} />
+        ))}
+      </View>
+    </View>
+  );
+};
 
   return (
     <ShadowBox
       shadowColor={PAGE.journal.border[0]}
-      style={{ marginBottom: 20}}
+      style={{ marginBottom: 20 }}
     >
       <Pressable
         style={styles.container}

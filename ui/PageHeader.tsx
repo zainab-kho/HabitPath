@@ -9,10 +9,11 @@ import { globalStyles } from '@/styles';
 interface PageHeaderProps {
   title: string;
   showBackButton?: boolean;
-  showPlusButton?: boolean; // (this is basically "show right button" in your current usage)
+  // **TODO: change to 'showRightButton' and 'onRightPress' for more generic usage across the app**
+  showPlusButton?: boolean;
   onPlusPress?: () => void;
-  navigateIcon?: ImageSourcePropType;   // ✅ fixed
-  onNavigatePress?: () => void;         // ✅ added
+  navigateIcon?: ImageSourcePropType;  
+  onNavigatePress?: () => void; 
   plusNavigateTo?: string;
   textColor?: string;
 }

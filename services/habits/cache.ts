@@ -83,3 +83,11 @@ export async function getTotalPoints(): Promise<number> {
     return 0;
   }
 }
+
+export async function saveTotalPoints(points: number): Promise<void> {
+  try {
+    await AsyncStorage.setItem(STORAGE_KEYS.TOTAL_POINTS, String(points));
+  } catch (err) {
+    console.error('Error saving total points:', err);
+  }
+}

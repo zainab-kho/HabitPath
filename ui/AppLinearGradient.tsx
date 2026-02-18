@@ -16,7 +16,8 @@ type GradientPath =
   | 'focus.backgroundBreak'
   | 'assignments.background'
   | 'assignments.backgroundAssignment'
-  | 'settings.background';
+  | 'settings.background'
+  | 'rewards.background';
 
 interface Props {
   variant: GradientPath;

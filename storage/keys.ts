@@ -12,4 +12,8 @@ export const STORAGE_KEYS = {
 
   USER_SETTINGS: '@user_settings',
   ONBOARDING_COMPLETE: '@onboarding_complete',
+
+  REWARDS: '@rewards',
+  REDEEMED_POINTS: '@redeemed_points',
+  EXCHANGE_RATE: '@exchange_rate',
 } as const;

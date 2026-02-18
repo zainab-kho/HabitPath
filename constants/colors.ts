@@ -75,6 +75,9 @@ export const PAGE = {
     background: ['#fdfbfb', '#ebedee'],
     pin: ['#55d7b0ff']
   },
+  rewards: {
+    background: ['#FFD581', '#FFF3D0', '#FFE5B4'],
+  },
 } as const;
 
 /**

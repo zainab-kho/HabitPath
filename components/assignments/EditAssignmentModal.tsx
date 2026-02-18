@@ -13,6 +13,7 @@ import { Alert, Image, Modal, Pressable, ScrollView, Text, TextInput, View } fro
 import SimpleCalendar from '@/ui/SimpleCalendar';
 import { TimeWheel } from '@/ui/TimeWheel';
 import { dateToISODateString, formatDateForForm, parseLocalDate } from '@/utils/dateUtils';
+import { router } from 'expo-router';
 
 interface EditAssignmentModalProps {
     visible: boolean;
@@ -67,7 +68,6 @@ export default function EditAssignmentModal({ visible, assignment, courses, onCl
                     type,
                     progress,
                     course_id: courseId || null,
-                    // Use centralized date formatting
                     due_date: dueDate ? dateToISODateString(dueDate) : null,
                     due_time: dueTime || null,
                     updated_at: new Date().toISOString()
@@ -75,13 +75,15 @@ export default function EditAssignmentModal({ visible, assignment, courses, onCl
                 .eq('id', assignment.id)
                 .eq('user_id', user.id);
 
-            if (error) throw error;
+            if (error) {
+                Alert.alert('Error updating assignment:', error.message);
+            };
 
-            Alert.alert('Success', 'Assignment updated successfully');
+            // Alert.alert('Success', 'Assignment updated successfully');
             onClose();
             // Trigger refresh by reloading the page
             setTimeout(() => {
-                window.location.reload();
+                router.back();
             }, 500);
         } catch (error) {
             console.error('Error updating assignment:', error);
@@ -122,7 +124,7 @@ export default function EditAssignmentModal({ visible, assignment, courses, onCl
                             Alert.alert('Success', 'Assignment deleted');
                             onClose();
                             setTimeout(() => {
-                                window.location.reload();
+                                router.back();
                             }, 500);
                         } catch (error) {
                             console.error('Error deleting assignment:', error);

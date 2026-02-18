@@ -2,7 +2,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import MoodPreview from '@/components/journal/MoodPreview';
 import SongCard from '@/components/journal/SongCard';
@@ -168,6 +168,25 @@ export default function JournalPage() {
   }, [isUnlocked, router]);
 
   const allEntries = useMemo(() => Object.values(entriesByMonth).flat(), [entriesByMonth]);
+
+  if (isLoading) {
+    return (
+      <AppLinearGradient variant="journal.background">
+        <PageContainer>
+          <PageHeader
+            title="Journal"
+            showBackButton
+            showPlusButton
+            navigateIcon={SYSTEM_ICONS.lock}
+            onNavigatePress={handleHeaderLockPress}
+          />
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+            <ActivityIndicator size="small" color={PAGE.journal.primary[0]} />
+          </View>
+        </PageContainer>
+      </AppLinearGradient>
+    );
+  }
 
   return (
     <AppLinearGradient variant="journal.background">

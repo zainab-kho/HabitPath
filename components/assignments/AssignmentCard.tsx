@@ -21,8 +21,6 @@ export function AssignmentCard({ assignment, showDelete = false, onDelete, onSta
         <ShadowBox
             key={assignment.id}
             contentBackgroundColor={PROGRESS_COLORS[assignment.progress]}
-            // style={styles.container}
-            // contentBackgroundColor={isCompleted ? habitColor : '#fff'}
             contentBorderColor='#000'
             contentBorderWidth={1}
             shadowBorderRadius={15}
@@ -80,7 +78,7 @@ export function AssignmentCard({ assignment, showDelete = false, onDelete, onSta
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Pressable
                         onPress={onStatusPress}
-                        style={{ flexDirection: 'row', gap: 10, justifyContent: 'flex-start' }}
+                        style={{ flexDirection: 'row', gap: 3, justifyContent: 'flex-start' }}
                     >
                         <ShadowBox
                             contentBackgroundColor={PROGRESS_COLORS[assignment.progress]}
@@ -88,7 +86,9 @@ export function AssignmentCard({ assignment, showDelete = false, onDelete, onSta
                             shadowBorderRadius={25}
                             shadowOffset={{ x: 0, y: 2 }}
                         >
-                            <Text style={[globalStyles.label, { paddingVertical: 5, paddingHorizontal: 15 }]}>{assignment.progress}</Text>
+                            <Text style={[globalStyles.label, { paddingVertical: 5, paddingHorizontal: 6 }]}>
+                                {assignment.progress == 'Finished (not submitted)' ? 'Not submitted' : assignment.progress}
+                                </Text>
                         </ShadowBox>
 
                         <View style={{

@@ -304,7 +304,7 @@ export default function JournalPage() {
                   description="How was your day today?"
                   buttonText="New Entry"
                   buttonAction={() => router.push('/more/journal/NewEntry')}
-                  buttonColor={PAGE.journal.primary[0]}
+                  buttonColor={PAGE.journal.border[0]}
                 />
               </View>
             )}

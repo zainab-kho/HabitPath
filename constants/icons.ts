@@ -323,6 +323,7 @@ export const SYSTEM_ICONS = {
 
     assignment: require('@/assets/icons/system/assignment.png'),
     journal: require('@/assets/icons/system/journal-icon.png'),
+    stats: require('@/assets/icons/system/stats.png'),
 
     path: require('@/assets/icons/system/path-icon.png'),
     path2: require('@/assets/icons/system/path-icon2.png'),

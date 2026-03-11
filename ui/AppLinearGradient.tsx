@@ -17,7 +17,8 @@ type GradientPath =
   | 'assignments.background'
   | 'assignments.backgroundAssignment'
   | 'settings.background'
-  | 'rewards.background';
+  | 'rewards.background'
+  | 'stats.background';
 
 interface Props {
   variant: GradientPath;

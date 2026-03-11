@@ -295,8 +295,12 @@ export const formatDisplayDate = (date: Date): string =>
 /**
  * Formats a date string (YYYY-MM-DD) for display
  */
-export const formatDisplayDateString = (dateString: string): string =>
-  formatDisplayDate(parseLocalDate(dateString));
+export const formatDisplayDateString = (
+  dateString?: string | null
+): string => {
+  if (!dateString) return '';
+  return formatDisplayDate(parseLocalDate(dateString));
+};
 
 /**
  * Formats current time, e.g., "3:45 PM"

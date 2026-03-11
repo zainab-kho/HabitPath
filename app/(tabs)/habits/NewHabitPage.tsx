@@ -18,6 +18,7 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 import uuid from 'react-native-uuid';
 
 
+import { PATH_COLORS, type PathColorKey } from '@/colors/pathColors';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { STORAGE_KEYS } from '@/storage/keys';
@@ -71,6 +72,27 @@ export default function NewHabitPage() {
     const [incrementStep, setincrementStep] = useState(1);
     const [incrementGoal, setIncrementGoal] = useState(0);
     const [incrementType, setIncrementType] = useState<Habit['incrementType']>('None');
+
+    // paths
+    interface PathOption { id: string; name: string; color: string; }
+    const [paths, setPaths] = useState<PathOption[]>([]);
+    const [selectedPathIds, setSelectedPathIds] = useState<string[]>([]);
+
+    React.useEffect(() => {
+        if (!user) return;
+        supabase
+            .from('paths')
+            .select('id, name, color')
+            .eq('user_id', user.id)
+            .order('name')
+            .then(({ data }) => setPaths((data as PathOption[]) ?? []));
+    }, [user]);
+
+    const togglePath = (id: string) => {
+        setSelectedPathIds(prev =>
+            prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]
+        );
+    };
 
     // ui state
     const [isSaving, setIsSaving] = useState(false);
@@ -178,6 +200,7 @@ export default function NewHabitPage() {
                 increment_step: newHabit.incrementStep,
                 increment_type: newHabit.incrementType,
                 increment_goal: newHabit.incrementGoal,
+                path_ids: selectedPathIds,
                 created_at: new Date().toISOString(),
             }]);
 
@@ -563,234 +586,271 @@ export default function NewHabitPage() {
                                     </View>
                                 </View>
 
-                                {/* **TODO: create More options logic */}
-                                <Pressable
-                                    onPress={() => setMoreOptions(!moreOptions)}
-                                    style={{
-                                        marginTop: 10,
-                                        alignSelf: 'center',
-                                        opacity: 0.6,
+                                <View style={{ gap: 10 }}>
+
+                                    {/* paths */}
+                                    <Text style={[globalStyles.label]}>
+                                        PATHS
+                                    </Text>
+                                    <View style={{
+                                        flexDirection: 'row',
+                                        flexWrap: 'wrap',
+                                        gap: 8,
                                     }}>
-                                    <Text style={globalStyles.label}>{moreOptions ? 'Less options' : 'More options'}</Text>
-                                </Pressable>
+                                        {paths.length === 0 ? (
+                                            <Text style={[globalStyles.label, { opacity: 0.4 }]}>No paths yet</Text>
+                                        ) : (
+                                            paths.map((path) => {
+                                                const selected = selectedPathIds.includes(path.id);
+                                                const colorHex = PATH_COLORS[path.color as PathColorKey] ?? '#999';
+                                                return (
+                                                    <Pressable key={path.id} onPress={() => togglePath(path.id)}>
+                                                        <ShadowBox
+                                                            contentBackgroundColor={selected ? colorHex : '#fff'}
+                                                            contentBorderColor={selected ? '#000' : colorHex}
+                                                            shadowBorderColor={selected ? '#000' : colorHex}
+                                                            shadowColor={selected ? '#000' : colorHex}
+                                                        >
+                                                            <View style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
+                                                                <Text style={globalStyles.body1}>{path.name}</Text>
+                                                            </View>
+                                                        </ShadowBox>
+                                                    </Pressable>
+                                                );
+                                            })
+                                        )}
 
-                                {moreOptions && (
-                                    <>
-                                        <View style={{ gap: 10 }}>
-                                            {/* keep until until */}
-                                            <View style={{
-                                                flexDirection: 'row',
-                                                justifyContent: 'space-between',
-                                                alignItems: 'center',
-                                                marginBottom: 10,
-                                            }}>
-                                                <Text style={globalStyles.body}>Keep until finished?</Text>
-                                                <Switch
-                                                    trackColor={{ true: PAGE.habits.primary[1] }}
-                                                    value={keepUntil}
-                                                    onValueChange={setKeepUntil}
-                                                />
-                                            </View>
+                                    </View>
 
-                                            {/* increment tracking toggle */}
-                                            <View style={{
-                                                flexDirection: 'row',
-                                                justifyContent: 'space-between',
-                                                alignItems: 'center',
-                                                marginBottom: 10,
-                                            }}>
-                                                <Text style={globalStyles.body}>Track in increments?</Text>
-                                                <Switch
-                                                    trackColor={{ true: PAGE.habits.primary[1] }}
-                                                    value={increment}
-                                                    onValueChange={setIncrement}
-                                                />
-                                            </View>
+                                    {/* **TODO: create More options logic */}
+                                    <Pressable
+                                        onPress={() => setMoreOptions(!moreOptions)}
+                                        style={{
+                                            marginTop: 10,
+                                            alignSelf: 'center',
+                                            opacity: 0.6,
+                                        }}>
+                                        <Text style={globalStyles.label}>{moreOptions ? 'Less options' : 'More options'}</Text>
+                                    </Pressable>
 
-                                            {/* increment type & amount (only if increment enabled) */}
-                                            {increment && (
-                                                <View style={{ gap: 30 }}>
-                                                    <View style={{ gap: 10 }}>
+                                    {moreOptions && (
+                                        <>
+                                            <View style={{ gap: 10 }}>
+                                                {/* keep until until */}
+                                                <View style={{
+                                                    flexDirection: 'row',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center',
+                                                    marginBottom: 10,
+                                                }}>
+                                                    <Text style={globalStyles.body}>Keep until finished?</Text>
+                                                    <Switch
+                                                        trackColor={{ true: PAGE.habits.primary[1] }}
+                                                        value={keepUntil}
+                                                        onValueChange={setKeepUntil}
+                                                    />
+                                                </View>
 
-                                                        <Text style={globalStyles.label}>INCREMENT TYPE</Text>
-                                                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                                                            {['None', 'Minutes', 'Miles', 'Sips'].map((type) => (
-                                                                <Pressable key={type} onPress={() => setIncrementType(type as Habit['incrementType'])}>
-                                                                    <ShadowBox
-                                                                        contentBackgroundColor={incrementType === type ? PAGE.habits.primary[1] : '#fff'}
-                                                                        contentBorderColor={incrementType === type ? '#000' : PAGE.habits.primary[1]}
-                                                                        shadowBorderColor={incrementType === type ? '#000' : PAGE.habits.primary[1]}
-                                                                        shadowColor={incrementType === type ? '#000' : PAGE.habits.primary[1]}
-                                                                    >
-                                                                        <View style={{ paddingVertical: 6, paddingHorizontal: 10 }}>
-                                                                            <Text style={globalStyles.body1}>{type}</Text>
-                                                                        </View>
-                                                                    </ShadowBox>
-                                                                </Pressable>
-                                                            ))}
-                                                        </View>
-                                                    </View>
+                                                {/* increment tracking toggle */}
+                                                <View style={{
+                                                    flexDirection: 'row',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center',
+                                                    marginBottom: 10,
+                                                }}>
+                                                    <Text style={globalStyles.body}>Track in increments?</Text>
+                                                    <Switch
+                                                        trackColor={{ true: PAGE.habits.primary[1] }}
+                                                        value={increment}
+                                                        onValueChange={setIncrement}
+                                                    />
+                                                </View>
 
+                                                {/* increment type & amount (only if increment enabled) */}
+                                                {increment && (
                                                     <View style={{ gap: 30 }}>
-                                                        <Text style={globalStyles.label}>INCREMENT AMOUNT</Text>
+                                                        <View style={{ gap: 10 }}>
 
-                                                        <View style={{ flexDirection: 'row', alignSelf: 'center', gap: 10 }}>
-                                                            <ShadowBox
-                                                                shadowColor={PAGE.habits.primary[1]}
-                                                                style={{
-
-                                                                }}>
-                                                                <Pressable
-                                                                    onPress={() => setincrementStep(prev => Math.max(0, prev - 1))}
-                                                                    style={{
-                                                                        paddingVertical: 3,
-                                                                        paddingHorizontal: 8,
-                                                                        alignItems: 'center',
-                                                                        justifyContent: 'center'
-                                                                    }}>
-                                                                    <Text style={globalStyles.body}>-</Text>
-                                                                </Pressable>
-                                                            </ShadowBox>
-
-                                                            <ShadowBox
-                                                                shadowColor={PAGE.habits.primary[1]}>
-                                                                <View style={{
-                                                                    borderWidth: 2,
-                                                                    borderColor: PAGE.habits.primary[0],
-                                                                    width: 100,
-                                                                    borderRadius: 20,
-                                                                    justifyContent: 'center'
-                                                                }}>
-                                                                    <TextInput
-                                                                        style={[globalStyles.body, { textAlign: 'center' }]}
-                                                                        keyboardType="numeric"
-                                                                        value={incrementStep.toString()}
-                                                                        onChangeText={text => setincrementStep(Number(text))}
-                                                                        onFocus={(e) => scrollRef.current?.scrollToFocusedInput(e.nativeEvent.target)}
-                                                                    />
-                                                                </View>
-                                                            </ShadowBox>
-
-                                                            <ShadowBox
-                                                                shadowColor={PAGE.habits.primary[1]}
-                                                                style={{
-
-                                                                }}>
-                                                                <Pressable
-                                                                    onPress={() => setincrementStep(prev => prev + 1)}
-                                                                    style={{
-                                                                        paddingVertical: 3,
-                                                                        paddingHorizontal: 8,
-                                                                        alignItems: 'center',
-                                                                        justifyContent: 'center'
-                                                                    }}>
-                                                                    <Text style={globalStyles.body}>+</Text>
-                                                                </Pressable>
-                                                            </ShadowBox>
+                                                            <Text style={globalStyles.label}>INCREMENT TYPE</Text>
+                                                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                                                                {['None', 'Minutes', 'Miles', 'Sips'].map((type) => (
+                                                                    <Pressable key={type} onPress={() => setIncrementType(type as Habit['incrementType'])}>
+                                                                        <ShadowBox
+                                                                            contentBackgroundColor={incrementType === type ? PAGE.habits.primary[1] : '#fff'}
+                                                                            contentBorderColor={incrementType === type ? '#000' : PAGE.habits.primary[1]}
+                                                                            shadowBorderColor={incrementType === type ? '#000' : PAGE.habits.primary[1]}
+                                                                            shadowColor={incrementType === type ? '#000' : PAGE.habits.primary[1]}
+                                                                        >
+                                                                            <View style={{ paddingVertical: 6, paddingHorizontal: 10 }}>
+                                                                                <Text style={globalStyles.body1}>{type}</Text>
+                                                                            </View>
+                                                                        </ShadowBox>
+                                                                    </Pressable>
+                                                                ))}
+                                                            </View>
                                                         </View>
 
-                                                        {/* 
+                                                        <View style={{ gap: 30 }}>
+                                                            <Text style={globalStyles.label}>INCREMENT AMOUNT</Text>
+
+                                                            <View style={{ flexDirection: 'row', alignSelf: 'center', gap: 10 }}>
+                                                                <ShadowBox
+                                                                    shadowColor={PAGE.habits.primary[1]}
+                                                                    style={{
+
+                                                                    }}>
+                                                                    <Pressable
+                                                                        onPress={() => setincrementStep(prev => Math.max(0, prev - 1))}
+                                                                        style={{
+                                                                            paddingVertical: 3,
+                                                                            paddingHorizontal: 8,
+                                                                            alignItems: 'center',
+                                                                            justifyContent: 'center'
+                                                                        }}>
+                                                                        <Text style={globalStyles.body}>-</Text>
+                                                                    </Pressable>
+                                                                </ShadowBox>
+
+                                                                <ShadowBox
+                                                                    shadowColor={PAGE.habits.primary[1]}>
+                                                                    <View style={{
+                                                                        borderWidth: 2,
+                                                                        borderColor: PAGE.habits.primary[0],
+                                                                        width: 100,
+                                                                        borderRadius: 20,
+                                                                        justifyContent: 'center'
+                                                                    }}>
+                                                                        <TextInput
+                                                                            style={[globalStyles.body, { textAlign: 'center' }]}
+                                                                            keyboardType="numeric"
+                                                                            value={incrementStep.toString()}
+                                                                            onChangeText={text => setincrementStep(Number(text))}
+                                                                            onFocus={(e) => scrollRef.current?.scrollToFocusedInput(e.nativeEvent.target)}
+                                                                        />
+                                                                    </View>
+                                                                </ShadowBox>
+
+                                                                <ShadowBox
+                                                                    shadowColor={PAGE.habits.primary[1]}
+                                                                    style={{
+
+                                                                    }}>
+                                                                    <Pressable
+                                                                        onPress={() => setincrementStep(prev => prev + 1)}
+                                                                        style={{
+                                                                            paddingVertical: 3,
+                                                                            paddingHorizontal: 8,
+                                                                            alignItems: 'center',
+                                                                            justifyContent: 'center'
+                                                                        }}>
+                                                                        <Text style={globalStyles.body}>+</Text>
+                                                                    </Pressable>
+                                                                </ShadowBox>
+                                                            </View>
+
+                                                            {/* 
                                                         **TODO: add goal input (option)
                                                         1. 
                                                          */}
-                                                    </View>
+                                                        </View>
 
-                                                    <View style={{ gap: 30 }}>
-                                                        <Text style={globalStyles.label}>INCREMENT GOAL (OPTIONAL)</Text>
+                                                        <View style={{ gap: 30 }}>
+                                                            <Text style={globalStyles.label}>INCREMENT GOAL (OPTIONAL)</Text>
 
-                                                        <View style={{ flexDirection: 'row', alignSelf: 'center', gap: 10 }}>
-                                                            <ShadowBox shadowColor={PAGE.habits.primary[0]}>
-                                                                <Pressable
-                                                                    onPress={() => setIncrementGoal(prev => Math.max(0, prev - 1))}
-                                                                    style={{
-                                                                        paddingVertical: 3,
-                                                                        paddingHorizontal: 8,
-                                                                        alignItems: 'center',
+                                                            <View style={{ flexDirection: 'row', alignSelf: 'center', gap: 10 }}>
+                                                                <ShadowBox shadowColor={PAGE.habits.primary[0]}>
+                                                                    <Pressable
+                                                                        onPress={() => setIncrementGoal(prev => Math.max(0, prev - 1))}
+                                                                        style={{
+                                                                            paddingVertical: 3,
+                                                                            paddingHorizontal: 8,
+                                                                            alignItems: 'center',
+                                                                            justifyContent: 'center'
+                                                                        }}>
+                                                                        <Text style={globalStyles.body}>-</Text>
+                                                                    </Pressable>
+                                                                </ShadowBox>
+
+                                                                <ShadowBox shadowColor={PAGE.habits.primary[0]}>
+                                                                    <View style={{
+                                                                        borderWidth: 2,
+                                                                        borderColor: PAGE.habits.primary[0],
+                                                                        width: 100,
+                                                                        borderRadius: 20,
                                                                         justifyContent: 'center'
                                                                     }}>
-                                                                    <Text style={globalStyles.body}>-</Text>
-                                                                </Pressable>
-                                                            </ShadowBox>
+                                                                        <TextInput
+                                                                            style={[globalStyles.body, { textAlign: 'center' }]}
+                                                                            keyboardType="numeric"
+                                                                            value={incrementGoal.toString()}
+                                                                            onChangeText={text => setIncrementGoal(Number(text))}
+                                                                            onFocus={(e) => scrollRef.current?.scrollToFocusedInput(e.nativeEvent.target)}
+                                                                        />
+                                                                    </View>
+                                                                </ShadowBox>
 
-                                                            <ShadowBox shadowColor={PAGE.habits.primary[0]}>
-                                                                <View style={{
-                                                                    borderWidth: 2,
-                                                                    borderColor: PAGE.habits.primary[0],
-                                                                    width: 100,
-                                                                    borderRadius: 20,
-                                                                    justifyContent: 'center'
-                                                                }}>
-                                                                    <TextInput
-                                                                        style={[globalStyles.body, { textAlign: 'center' }]}
-                                                                        keyboardType="numeric"
-                                                                        value={incrementGoal.toString()}
-                                                                        onChangeText={text => setIncrementGoal(Number(text))}
-                                                                        onFocus={(e) => scrollRef.current?.scrollToFocusedInput(e.nativeEvent.target)}
-                                                                    />
-                                                                </View>
-                                                            </ShadowBox>
-
-                                                            <ShadowBox shadowColor={PAGE.habits.primary[0]}>
-                                                                <Pressable
-                                                                    onPress={() => setIncrementGoal(prev => prev + 1)}
-                                                                    style={{
-                                                                        paddingVertical: 3,
-                                                                        paddingHorizontal: 8,
-                                                                        alignItems: 'center',
-                                                                        justifyContent: 'center'
-                                                                    }}>
-                                                                    <Text style={globalStyles.body}>+</Text>
-                                                                </Pressable>
-                                                            </ShadowBox>
+                                                                <ShadowBox shadowColor={PAGE.habits.primary[0]}>
+                                                                    <Pressable
+                                                                        onPress={() => setIncrementGoal(prev => prev + 1)}
+                                                                        style={{
+                                                                            paddingVertical: 3,
+                                                                            paddingHorizontal: 8,
+                                                                            alignItems: 'center',
+                                                                            justifyContent: 'center'
+                                                                        }}>
+                                                                        <Text style={globalStyles.body}>+</Text>
+                                                                    </Pressable>
+                                                                </ShadowBox>
+                                                            </View>
                                                         </View>
                                                     </View>
+                                                )}
+                                            </View>
+                                        </>
+                                    )}
+
+
+
+                                    {/* save and cancel button */}
+                                    <View style={{
+                                        flexDirection: 'row',
+                                        gap: 10,
+                                        marginTop: 30,
+                                        justifyContent: 'center',
+                                    }}>
+                                        <Pressable
+                                            onPress={() => router.back()}
+                                            style={{ flex: 1, maxWidth: 100 }}
+                                        >
+                                            <ShadowBox
+                                                contentBackgroundColor={BUTTON_COLORS.Cancel}
+                                                shadowBorderRadius={20}
+                                            >
+                                                <View style={{ paddingVertical: 5, alignItems: 'center' }}>
+                                                    <Text style={globalStyles.body}>Cancel</Text>
                                                 </View>
-                                            )}
-                                        </View>
-                                    </>
-                                )}
+                                            </ShadowBox>
+                                        </Pressable>
 
-
-
-                                {/* save and cancel button */}
-                                <View style={{
-                                    flexDirection: 'row',
-                                    gap: 10,
-                                    marginTop: 30,
-                                    justifyContent: 'center',
-                                }}>
-                                    <Pressable
-                                        onPress={() => router.back()}
-                                        style={{ flex: 1, maxWidth: 100 }}
-                                    >
-                                        <ShadowBox
-                                            contentBackgroundColor={BUTTON_COLORS.Cancel}
-                                            shadowBorderRadius={20}
+                                        <Pressable
+                                            onPress={handleSave}
+                                            disabled={isSaving}
+                                            style={{ flex: 1, maxWidth: 100 }}
                                         >
-                                            <View style={{ paddingVertical: 5, alignItems: 'center' }}>
-                                                <Text style={globalStyles.body}>Cancel</Text>
-                                            </View>
-                                        </ShadowBox>
-                                    </Pressable>
-
-                                    <Pressable
-                                        onPress={handleSave}
-                                        disabled={isSaving}
-                                        style={{ flex: 1, maxWidth: 100 }}
-                                    >
-                                        <ShadowBox
-                                            contentBackgroundColor={
-                                                isSaving ? BUTTON_COLORS.Disabled : BUTTON_COLORS.Done
-                                            }
-                                            shadowBorderRadius={20}
-                                        >
-                                            <View style={{ paddingVertical: 5, alignItems: 'center' }}>
-                                                <Text style={globalStyles.body}>
-                                                    {isSaving ? 'Saving...' : 'Save'}
-                                                </Text>
-                                            </View>
-                                        </ShadowBox>
-                                    </Pressable>
+                                            <ShadowBox
+                                                contentBackgroundColor={
+                                                    isSaving ? BUTTON_COLORS.Disabled : BUTTON_COLORS.Done
+                                                }
+                                                shadowBorderRadius={20}
+                                            >
+                                                <View style={{ paddingVertical: 5, alignItems: 'center' }}>
+                                                    <Text style={globalStyles.body}>
+                                                        {isSaving ? 'Saving...' : 'Save'}
+                                                    </Text>
+                                                </View>
+                                            </ShadowBox>
+                                        </Pressable>
+                                    </View>
                                 </View>
                             </View>
                         </ScrollView>

@@ -22,6 +22,25 @@ export const COLORS = {
 } as const;
 
 /**
+ * **TODO: centralize and standardize rewards, paths, courses
+ * preset color palettes for user-generated tags (rewards, paths, courses)
+ */
+export const PRESET_COLORS = [
+  '#FFD581', // golden butter (already good)
+  '#FFB5A0', // coral peach (XPAccent vibe)
+  '#F4B6C2', // bold blush pink
+  '#99C8E8', // your Primary (strong sky blue)
+  '#DCC4FF', // vibrant lavender
+  '#A3F7BB', // fresh mint
+  '#7FD1AE', // RewardsAccent tone
+  '#FFE066', // brighter yellow pop
+  '#FF8FAB', // richer pink
+  '#B8B5FF', // deeper periwinkle
+  '#6DDDDD', // bright aqua
+  '#FFC6FF', // electric pastel magenta
+] as const;
+
+/**
  * page-specific color schemes (backgrounds, borders, etc.)
  */
 export const PAGE = {
@@ -36,12 +55,16 @@ export const PAGE = {
     border: ['#4caff6'],
     primary: ['#FFDDC1', '#FFABAB'],
     button: ['#FFF5DF']
-  }, 
+  },
   newHabit: {
     background: ['#FDDAC5', '#FEF9E7']
   },
+  path: {
+    background: ['#caefd7', '#f5bfd7', '#abc9e9'],
+    primary: ['#EC9064', '#899FFF'],
+  },
   quest: {
-    background: ['#00c9ff', '#00d4fb', '#00dff2', '#00e8e5', '#4af0d5', '#59efc9', '#67edbc', '#75ebb0', '#6ae0a6', '#5fd59c', '#54cb92', '#48c088'],
+    background: ['#FE9494', '#FFE4E2', '#ABB967'],
     primary: ['#FF6E83']
   },
   profile: {
@@ -66,12 +89,33 @@ export const PAGE = {
     backgroundAssignment: ['#D3CCE3', '#E9E4F0'],
     border: ['#4CE0F6'],
     primary: ['#F5924F', '#EEA2DA', '#4A98E6', '#AF9BE9'],
-    tags: ['#8DF8B7', '#40BAFF', '#FF8B77', '#F9E282', '#FFB456', '#FF90AB', '#AEBEFF', '#9DB0A3' ]
   },
   settings: {
     background: ['#fdfbfb', '#ebedee'],
+    pin: ['#55d7b0ff']
   },
+  rewards: {
+    background: ['#f9ffa6', '#ffe8b1', '#FF7F50'],
+    primary: ['#B9C042', COLORS.Rewards],
+  },
+  stats: {
+    background: ['#f89999', '#f6c0ba', '#99aceb']
+  }
 } as const;
+
+/**
+ * tag colors for focus session tags
+ */
+export const TAG_COLORS: Record<string, string> = {
+  Study:    '#DCC4FF', // lavender
+  Work:     '#99C8E8', // sky blue
+  Reading:  '#A3F7BB', // mint
+  Writing:  '#FFB5A0', // coral peach
+  Coding:   '#6DDDDD', // aqua
+  Research: '#FFE066', // yellow
+  Planning: '#F4B6C2', // blush pink
+  Review:   '#B8B5FF', // periwinkle
+};
 
 /**
  * button action colors
@@ -100,18 +144,43 @@ export const MAIN_MOOD_COLORS = {
  * full mood palette for detailed mood tracking
  */
 export const MOOD_COLORS = {
-  great: '#ff68f5ff',
-  happy: '#00AC8F',
-  excited: '#b66dffff',
-  energetic: '#c6de69', // converted from rgba for consistency
-  relaxed: '#6dddffff',
-  okay: '#ff9752',
-  sad: '#4075e6ff',
-  stressed: '#a81ba8ff',
-  anxious: '#548D8B',
-  angry: '#ff3b3bff',
-  frustrated: '#acacacff',
-  sick: '#EEE8A9',
+  // 🌈 very positive
+  great: '#FF6AF0',        // playful pink
+  excited: '#B76CFF',     // vibrant purple
+  energetic: '#C7DE6A',   // fresh lime
+  joyful: '#FFD166',      // sunny yellow
+
+  // 🙂 positive / content
+  happy: '#00AC8F',       // teal-green
+  relaxed: '#6DDDFF',     // soft sky blue
+  peaceful: '#8ED1C6',    // muted aqua
+  grateful: '#F4B6C2',    // warm blush
+
+  // 😐 neutral
+  okay: '#FF9752',        // soft orange
+  tired: '#C2B8A3',       // warm beige
+  numb: '#9AA3A8',        // cool gray
+  bored: '#B0B0B0',       // neutral gray
+
+  // 😣 stressed / uneasy
+  stressed: '#A81BA8',    // sharp purple
+  anxious: '#548D8B',     // muted teal
+  overwhelmed: '#7B6D8D', // dusty violet
+  frustrated: '#ACACAC',  // flat gray
+
+  // 😞 low / heavy
+  sad: '#4075E6',         // soft blue
+  lonely: '#6B7C9E',      // desaturated blue
+  depressed: '#4B5563',   // dark slate
+  hopeless: '#374151',    // deeper slate
+
+  // 😡 anger
+  angry: '#FF3B3B',       // strong red
+  irritated: '#E85D5D',   // muted red
+
+  // 🤒 physical state
+  sick: '#EEE8A9',        // pale yellow
+  exhausted: '#8B8B8B',   // dull gray
 } as const;
 
 // type helpers for TypeScript autocomplete

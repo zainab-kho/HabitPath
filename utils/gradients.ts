@@ -5,7 +5,7 @@ export const getGradientForTime = (): [string, string, ...string[]] => {
   if (hour >= 5 && hour < 7)
     return ['#e0c3fc', '#8ec5fc'];
 
-  if (hour >= 7 && hour < 8)
+  if (hour >= 7 && hour < 9)
     return ['#fdfbfb', '#fdfbfb', '#ffafbd'];
 
   if (hour >= 9 && hour < 12)

@@ -3,51 +3,31 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
     Alert,
-    Keyboard,
-    KeyboardAvoidingView,
-    Platform,
     Pressable,
-    ScrollView,
     Text,
     TextInput,
-    TouchableWithoutFeedback,
-    View
+    View,
+    Image
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { JournalEntry } from '@/types/JournalEntry';
-
 import { COLORS, PAGE } from '@/constants/colors';
 import MoodPickerModal from '@/modals/MoodPickerModal';
+import SongPickerModal, { SongData } from '@/modals/SongPickerModal';
+import SongCard from '@/components/journal/SongCard';
+import { formatDisplayDate, formatDisplayTime, formatLocalDate } from '@/utils/dateUtils';
+import { MAIN_MOOD_COLORS, MOOD_COLORS } from '@/constants/colors';
+import { SYSTEM_ICONS } from '@/constants/icons';
+
 import { buttonStyles, globalStyles, journalStyle } from '@/styles';
 import { AppLinearGradient } from '@/ui/AppLinearGradient';
 import PageContainer from '@/ui/PageContainer';
 import PageHeader from '@/ui/PageHeader';
-import { formatDisplayDate, formatDisplayTime, formatLocalDate } from '@/utils/dateUtils';
+import ToggleRow from '@/ui/ToggleRow';
 
-export const MAIN_MOOD_COLORS = {
-    stressed: '#a81ba8ff',
-    sad: '#4075e6ff',
-    okay: '#ff9752',
-    relaxed: '#6dddffff',
-    happy: '#00AC8F',
-};
-
-export const MOOD_COLORS = {
-    great: '#ff68f5ff',
-    happy: '#00AC8F',
-    excited: '#b66dffff',
-    energetic: 'rgba(198, 222, 105, 1)',
-    relaxed: '#6dddffff',
-    okay: '#ff9752',
-    sad: '#4075e6ff',
-    stressed: '#a81ba8ff',
-    anxious: '#548D8B',
-    angry: '#ff3b3bff',
-    frustrated: '#acacacff',
-    sick: '#EEE8A9',
-} as const;
 
 export default function JournalPage() {
     const router = useRouter();
@@ -56,6 +36,7 @@ export default function JournalPage() {
     const [localTime, setLocalTime] = useState('');
     const [selectedMood, setSelectedMood] =
         useState<keyof typeof MOOD_COLORS | null>(null);
+    const [lock, setLock] = useState(false);
     const [entry, setEntry] = useState('');
     const [location, setLocation] = useState('');
     const [isSaving, setIsSaving] = useState(false);
@@ -63,6 +44,8 @@ export default function JournalPage() {
     const [moodModalOpen, setMoodModalOpen] = useState(false);
     const [extraMood, setExtraMood] =
         useState<keyof typeof MOOD_COLORS | null>(null);
+    const [song, setSong] = useState<SongData | null>(null);
+    const [songPickerOpen, setSongPickerOpen] = useState(false);
 
     const locationRef = useRef<TextInput>(null);
     const inputRef = useRef<TextInput>(null);
@@ -73,17 +56,13 @@ export default function JournalPage() {
     // visual display: first 4 main moods + (extraMood OR 5th main mood)
     const displayedMoods: (keyof typeof MOOD_COLORS)[] = extraMood
         ? [BASE_MOODS[0], BASE_MOODS[1], extraMood, BASE_MOODS[3], BASE_MOODS[4]]
-        : BASE_MOODS;  // show all 5 main moods
+        : BASE_MOODS;
 
     const handleMoodPress = (mood: keyof typeof MOOD_COLORS) => {
-        // tap same mood again → unselect
         if (selectedMood === mood) {
             setSelectedMood(null);
-            // don't reset extraMood - keep it visible
             return;
         }
-
-        // select the mood
         setSelectedMood(mood);
     };
 
@@ -91,11 +70,9 @@ export default function JournalPage() {
         setSelectedMood(mood);
         setMoodModalOpen(false);
 
-        // if it's one of the base 5 moods, reset to normal
         if (BASE_MOODS.includes(mood as keyof typeof MAIN_MOOD_COLORS)) {
             setExtraMood(null);
         } else {
-            // if it's an extra mood, replace
             setExtraMood(mood);
         }
     };
@@ -108,7 +85,7 @@ export default function JournalPage() {
     }, []);
 
     const handleSave = async () => {
-        if (!entry && !selectedMood && !location) {
+        if (!selectedMood && !location && !entry && !song) {
             console.log('Nothing to save!');
             return;
         }
@@ -123,8 +100,6 @@ export default function JournalPage() {
         try {
             const now = new Date();
             const id = now.toISOString();
-
-            // format date in local timezone for storage
             const localDateString = formatLocalDate(now);
 
             const newEntry: JournalEntry = {
@@ -134,12 +109,13 @@ export default function JournalPage() {
                 mood: selectedMood || undefined,
                 location: location || undefined,
                 entry: entry || undefined,
+                song: song || undefined,
             };
 
             // save to AsyncStorage
             const cacheEntry = {
                 ...newEntry,
-                date: localDateString, // store as YYYY-MM-DD string, not Date object
+                date: localDateString,
             };
             const existing = await AsyncStorage.getItem('@journal_entries');
             const allEntries: any[] = existing ? JSON.parse(existing) : [];
@@ -148,18 +124,20 @@ export default function JournalPage() {
 
             console.log('**LOG: Entry saved to AsyncStorage (cache)');
 
-            // save to Supabase - use local date string (YYYY-MM-DD) to avoid timezone issues
+            // save to Supabase WITH LOCK STATUS
             const { data, error } = await supabase
                 .from('journal_entries')
                 .insert([
                     {
                         id: id,
                         user_id: user.id,
-                        date: localDateString, // YYYY-MM-DD format in local timezone
+                        date: localDateString,
                         time: localTime,
                         mood: selectedMood,
                         location: location || null,
                         entry: entry || null,
+                        is_locked: lock,
+                        song: song || null,
                         created_at: now.toISOString(),
                     }
                 ]);
@@ -177,7 +155,6 @@ export default function JournalPage() {
             console.log('**LOG: Journal entry saved:', newEntry);
             router.back();
 
-
         } catch (error) {
             console.error('Error saving journal entry:', error);
             Alert.alert('Error', 'Failed to save entry. Please try again.');
@@ -192,7 +169,7 @@ export default function JournalPage() {
                 <PageHeader title="New Entry" showBackButton />
 
                 {/* date / time pill */}
-                <Pressable
+                <View
                     style={{
                         paddingHorizontal: 12,
                         paddingVertical: 6,
@@ -207,124 +184,174 @@ export default function JournalPage() {
                     <Text style={[globalStyles.body2, { fontSize: 13 }]}>
                         {localDate}  •  {localTime}
                     </Text>
-                </Pressable>
+                </View>
 
-                <KeyboardAvoidingView
-                    style={{ flex: 1 }}
-                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                <KeyboardAwareScrollView
+                    enableOnAndroid={true}
+                    enableAutomaticScroll={true}
+                    extraScrollHeight={20}
+                    keyboardShouldPersistTaps="handled"
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={{ paddingBottom: 40 }}
                 >
-                    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-                        <ScrollView keyboardShouldPersistTaps="handled">
-                            {/* mood */}
-                            <Text style={[globalStyles.body, { marginBottom: 10 }]}>Mood</Text>
+                    {/* lock entry */}
+                    <ToggleRow
+                        label="Lock entry?"
+                        value={lock}
+                        onValueChange={setLock}
+                        trackColorTrue={PAGE.journal.border[0]}
+                    />
 
-                            <View style={journalStyle.card}>
-                                <View style={journalStyle.moodRow}>
-                                    {displayedMoods.map((mood) => {
-                                        const color = MOOD_COLORS[mood];
+                    {/* mood */}
+                    <Text style={[globalStyles.body, { marginBottom: 10 }]}>Mood</Text>
 
-                                        return (
-                                            <View key={mood} style={journalStyle.moodItem}>
-                                                <Pressable
-                                                    onPress={() => handleMoodPress(mood)}
-                                                    style={[
-                                                        journalStyle.moodBox,
-                                                        { borderColor: color, shadowColor: color },
-                                                        selectedMood === mood && {
-                                                            backgroundColor: color,
-                                                            shadowColor: '#000',
-                                                            borderColor: '#000',
-                                                        },
-                                                    ]}
-                                                />
-                                                <Text style={journalStyle.moodLabel}>{mood}</Text>
-                                            </View>
-                                        );
-                                    })}
-                                </View>
-                            </View>
+                    <View style={journalStyle.card}>
+                        <View style={journalStyle.moodRow}>
+                            {displayedMoods.map((mood) => {
+                                const color = MOOD_COLORS[mood];
 
-                            <Pressable onPress={() => setMoodModalOpen(true)}>
-                                <Text
-                                    style={[
-                                        globalStyles.label,
-                                        {
-                                            textAlign: 'center',
-                                            opacity: 0.5,
-                                            fontSize: 11,
-                                            margin: 10,
-                                        },
-                                    ]}
-                                >
-                                    More
-                                </Text>
-                            </Pressable>
+                                return (
+                                    <View key={mood} style={journalStyle.moodItem}>
+                                        <Pressable
+                                            onPress={() => handleMoodPress(mood)}
+                                            style={[
+                                                journalStyle.moodBox,
+                                                { borderColor: color, shadowColor: color },
+                                                selectedMood === mood && {
+                                                    backgroundColor: color,
+                                                    shadowColor: '#000',
+                                                    borderColor: '#000',
+                                                },
+                                            ]}
+                                        />
+                                        <Text style={journalStyle.moodLabel}>{mood}</Text>
+                                    </View>
+                                );
+                            })}
+                        </View>
+                    </View>
 
-                            {/* kocation */}
-                            <Text style={[globalStyles.body, { marginBottom: 10 }]}>Location</Text>
-                            <View style={journalStyle.locationCard}>
-                                <TextInput
-                                    ref={locationRef}
-                                    style={[
-                                        globalStyles.body,
-                                        {
-                                            paddingHorizontal: 10,
-                                            paddingVertical: 10,
-                                            lineHeight: 18,
-                                        },
-                                    ]}
-                                    placeholder="Where are you right now?"
-                                    placeholderTextColor="rgba(0,0,0,0.5)"
-                                    value={location}
-                                    onChangeText={setLocation}
-                                    cursorColor={PAGE.journal.border[0]}
-                                    selectionColor={PAGE.journal.border[0]}
-                                />
-                            </View>
+                    <Pressable onPress={() => setMoodModalOpen(true)}>
+                        <Text
+                            style={[
+                                globalStyles.label,
+                                {
+                                    textAlign: 'center',
+                                    opacity: 0.5,
+                                    fontSize: 11,
+                                    margin: 10,
+                                },
+                            ]}
+                        >
+                            More
+                        </Text>
+                    </Pressable>
 
-                            {/* journal */}
-                            <Text style={[globalStyles.body, { marginBottom: 10 }]}>Journal</Text>
+                    {/* location */}
+                    <Text style={[globalStyles.body, { marginBottom: 10 }]}>Location</Text>
+                    <View style={journalStyle.locationCard}>
+                        <TextInput
+                            ref={locationRef}
+                            style={[
+                                globalStyles.body,
+                                {
+                                    paddingHorizontal: 10,
+                                    paddingVertical: 10,
+                                    lineHeight: 18,
+                                },
+                            ]}
+                            placeholder="Where are you right now?"
+                            placeholderTextColor="rgba(0,0,0,0.5)"
+                            value={location}
+                            onChangeText={setLocation}
+                            cursorColor={PAGE.journal.border[0]}
+                            selectionColor={PAGE.journal.border[0]}
+                        />
+                    </View>
 
-                            <View style={journalStyle.journalCard}>
-                                <TextInput
-                                    ref={inputRef}
-                                    style={[
-                                        globalStyles.body,
-                                        journalStyle.textArea,
-                                        { lineHeight: 20 }
-                                    ]}
-                                    placeholder="What are your thoughts?"
-                                    multiline
-                                    textAlignVertical="top"
-                                    cursorColor={PAGE.journal.border[0]}
-                                    selectionColor={PAGE.journal.border[0]}
-                                    placeholderTextColor="rgba(0,0,0,0.5)"
-                                    value={entry}
-                                    onChangeText={setEntry}
-                                />
-                            </View>
+                    {/* journal */}
+                    <Text style={[globalStyles.body, { marginBottom: 10 }]}>Journal</Text>
 
-                            {/* save */}
+                    {/* song card preview above the text box */}
+                    {song && (
+                        <SongCard
+                            song={song}
+                            onRemove={() => setSong(null)}
+                        />
+                    )}
+
+                    <View style={journalStyle.journalCard}>
+                        <TextInput
+                            ref={inputRef}
+                            style={[
+                                globalStyles.body,
+                                journalStyle.textArea,
+                                {
+                                    lineHeight: 20,
+                                    minHeight: 200,
+                                }
+                            ]}
+                            placeholder="What are your thoughts?"
+                            multiline
+                            textAlignVertical="top"
+                            cursorColor={PAGE.journal.border[0]}
+                            selectionColor={PAGE.journal.border[0]}
+                            placeholderTextColor="rgba(0,0,0,0.5)"
+                            value={entry}
+                            onChangeText={setEntry}
+                        />
+
+                        {/* faint action row */}
+                        <View style={{
+                            flexDirection: 'row',
+                            borderTopWidth: 1,
+                            borderTopColor: 'rgba(0,0,0,0.06)',
+                            paddingVertical: 10,
+                            paddingHorizontal: 10,
+                            gap: 16,
+                        }}>
                             <Pressable
-                                style={[
-                                    buttonStyles.button,
-                                    {
-                                        alignSelf: 'center',
-                                        margin: 20,
-                                        backgroundColor: PAGE.journal.border[0],
-                                        opacity: isSaving ? 0.6 : 1,
-                                    },
-                                ]}
-                                onPress={handleSave}
-                                disabled={isSaving}
+                                onPress={() => setSongPickerOpen(true)}
+                                style={({ pressed }) => ({ opacity: pressed ? 0.4 : 1, flexDirection: 'row', alignItems: 'center', gap: 5 })}
                             >
-                                <Text style={globalStyles.body}>
-                                    {isSaving ? 'Saving...' : 'Save'}
+                                <Image
+                                    source={SYSTEM_ICONS.musicNote}
+                                    style={{ width: 14, height: 14 }}
+                                />
+                                <Text style={{ fontFamily: 'p1', fontSize: 12, color: 'rgba(0,0,0,0.3)' }}>
+                                    {song ? song.title : 'add song'}
                                 </Text>
                             </Pressable>
-                        </ScrollView>
-                    </TouchableWithoutFeedback>
-                </KeyboardAvoidingView>
+
+                            {/* **TODO: implement add images feature */}
+                            {/* <Pressable
+                                style={({ pressed }) => ({ opacity: pressed ? 0.4 : 1, flexDirection: 'row', alignItems: 'center', gap: 5 })}
+                            >
+                                <Text style={{ fontSize: 14 }}>🖼️</Text>
+                                <Text style={{ fontFamily: 'p1', fontSize: 12, color: 'rgba(0,0,0,0.3)' }}>add image</Text>
+                            </Pressable> */}
+                        </View>
+                    </View>
+
+                    {/* save */}
+                    <Pressable
+                        style={[
+                            buttonStyles.button,
+                            {
+                                alignSelf: 'center',
+                                margin: 20,
+                                backgroundColor: PAGE.journal.border[0],
+                                opacity: isSaving ? 0.6 : 1,
+                            },
+                        ]}
+                        onPress={handleSave}
+                        disabled={isSaving}
+                    >
+                        <Text style={globalStyles.body}>
+                            {isSaving ? 'Saving...' : 'Save'}
+                        </Text>
+                    </Pressable>
+                </KeyboardAwareScrollView>
             </PageContainer>
 
             <MoodPickerModal
@@ -332,6 +359,12 @@ export default function JournalPage() {
                 selectedMood={selectedMood}
                 onClose={() => setMoodModalOpen(false)}
                 onSelect={handleMoodModalSelect}
+            />
+
+            <SongPickerModal
+                visible={songPickerOpen}
+                onClose={() => setSongPickerOpen(false)}
+                onSelect={(s) => setSong(s)}
             />
         </AppLinearGradient>
     );

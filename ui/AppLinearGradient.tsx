@@ -8,6 +8,7 @@ type GradientPath =
   | 'auth.background'
   | 'habitsPage.background'
   | 'newHabit.background'
+  | 'path.background'
   | 'quest.background'
   | 'profile.background'
   | 'journal.background'
@@ -15,7 +16,9 @@ type GradientPath =
   | 'focus.backgroundBreak'
   | 'assignments.background'
   | 'assignments.backgroundAssignment'
-  | 'settings.background';
+  | 'settings.background'
+  | 'rewards.background'
+  | 'stats.background';
 
 interface Props {
   variant: GradientPath;

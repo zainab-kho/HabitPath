@@ -318,8 +318,12 @@ export const ICON_CATEGORIES2: Record<string, HabitIcon[]> = {
 export const SYSTEM_ICONS = {
     // nav bar icons
     habit: require('@/assets/icons/system/habit-icon.png'),
+    snooze: require('@/assets/icons/system/snooze.png'),
+    skip: require('@/assets/icons/system/skip.png'),
+
     assignment: require('@/assets/icons/system/assignment.png'),
     journal: require('@/assets/icons/system/journal-icon.png'),
+    stats: require('@/assets/icons/system/stats.png'),
 
     path: require('@/assets/icons/system/path-icon.png'),
     path2: require('@/assets/icons/system/path-icon2.png'),
@@ -338,6 +342,8 @@ export const SYSTEM_ICONS = {
     tag: require('@/assets/icons/system/tag.png'),
     settings: require('@/assets/icons/system/settings-icon.png'),
     delete: require('@/assets/icons/system/delete.png'),
+    lock: require('@/assets/icons/system/lock.png'),
+    padlock: require('@/assets/icons/system/padlock.png'),
 
     sort: require('@/assets/icons/system/sort.png'),
     sortLeft: require('@/assets/icons/system/sort-left.png'),
@@ -348,5 +354,12 @@ export const SYSTEM_ICONS = {
     dots: require('@/assets/icons/system/dots.png'),
     location: require('@/assets/icons/system/location-icon.png'),
     write: require('@/assets/icons/system/write.png'),
+    headphones: require('@/assets/icons/system/headphones.png'),
+    musicNote: require('@/assets/icons/system/music-note.png'),
+    search: require('@/assets/icons/system/search.png'),
+
+    // rewards icons
+    gift: require('@/assets/icons/system/gift.png'),
+    photo: require('@/assets/icons/system/photo.png'),
 };
 

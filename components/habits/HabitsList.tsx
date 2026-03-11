@@ -1,69 +1,81 @@
-// components/habits/HabitsList.tsx - DEBUG VERSION
+// components/habits/HabitsList.tsx
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, FlatList, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { useRouter } from 'expo-router';
 
 import HabitItem from '@/components/habits/HabitItem';
 import HabitSectionHeader from '@/components/habits/HabitSectionHeader';
-import { isHabitActiveToday } from '@/components/habits/habitUtils';
+import { isHabitActiveToday } from '@/utils/habitUtils';
+import HabitDetailModal from '@/modals/HabitDetailModal';
 import { COLORS, PAGE } from '@/constants/colors';
 import { TIME_OPTIONS } from '@/constants/habits';
 import { SYSTEM_ICONS } from '@/constants/icons';
+import { STORAGE_KEYS } from '@/storage/keys';
 import { globalStyles } from '@/styles';
 import { Habit } from '@/types/Habit';
 import EmptyStateView from '@/ui/EmptyStateView';
 import ShadowBox from '@/ui/ShadowBox';
 import { getHabitDate } from '@/utils/dateUtils';
-import { useRouter } from 'expo-router';
+
+import { HabitWithStatus } from '@/hooks/useHabits';
 
 interface HabitsListProps {
-  habits: (Habit & { completed: boolean })[];
+  habits: HabitWithStatus[];
   viewingDate: Date | null;
   resetTime: { hour: number; minute: number };
   onToggleHabit: (habitId: string) => void;
-  onPressHabit?: (habit: Habit) => void;
   onIncrementUpdate?: (habitId: string, newAmount: number) => void;
+  onSkipHabit?: (habitId: string) => void;
+  onSnoozeHabit?: (habitId: string) => void;
 }
 
 type TimeOfDay = typeof TIME_OPTIONS[number];
 
-const DEBUG = false; // Set to false to disable logging
+const DEBUG = false;
 
 export default function HabitsList({
   habits,
   viewingDate,
   resetTime,
   onToggleHabit,
-  onPressHabit,
   onIncrementUpdate,
+  onSkipHabit,
+  onSnoozeHabit,
 }: HabitsListProps) {
   const router = useRouter();
   const currentDate = viewingDate || new Date();
   const dateStr = getHabitDate(currentDate, resetTime.hour, resetTime.minute);
 
-  const [loading, setLoading] = useState(true);
   const [showCompleted, setShowCompleted] = useState(true);
-  const [orderedHabits, setOrderedHabits] = useState<(Habit & { completed: boolean })[]>([]);
-  const [showNewHabitModal, setShowNewHabitModal] = useState(false);
+  const [orderedHabits, setOrderedHabits] = useState<HabitWithStatus[]>([]);
+  
+  // Modal state
+  const [selectedHabit, setSelectedHabit] = useState<HabitWithStatus | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
 
-
-  // storage key for today's order
   const ORDER_STORAGE_KEY = `@habit_order_${dateStr}`;
 
-  // filter habits active for the current viewing date
   const activeHabits = habits.filter(habit =>
     isHabitActiveToday(habit, currentDate, resetTime.hour, resetTime.minute)
   );
-  const incompleteCount = activeHabits.filter(h => !h.completed).length;
+  const incompleteCount = activeHabits.filter(h => h.status !== 'completed').length;
   const scheduledHabits = habits.filter(habit =>
     isHabitActiveToday(habit, currentDate, resetTime.hour, resetTime.minute)
   );
   const allDoneToday = scheduledHabits.length > 0 && incompleteCount === 0;
 
-  const incompleteHabits = scheduledHabits.filter(h => !h.completed);
+  const saveToggleState = async () => {
+    const nextValue = !showCompleted;
+    setShowCompleted(nextValue);
+    await AsyncStorage.setItem(
+      STORAGE_KEYS.TOGGLE_STATE,
+      nextValue ? '1' : '0'
+    );
+    console.log(nextValue ? 'showing completed' : 'hiding completed');
+  };
 
-  // DEBUG: Log what's happening with the filter
   useEffect(() => {
     if (DEBUG) {
       console.log('\n📋 ========== HABITS LIST DEBUG ==========');
@@ -86,7 +98,6 @@ export default function HabitsList({
         if (!isActive) {
           console.log(`      ❓ Why not active?`);
 
-          // Check each condition
           if (habit.startDate > dateStr) {
             console.log(`         - Start date (${habit.startDate}) is AFTER today (${dateStr})`);
           }
@@ -104,7 +115,7 @@ export default function HabitsList({
           }
         }
 
-        if (habit.completed) {
+        if (habit.status === 'completed') {
           console.log(`      ✓ Completed: YES`);
         }
       });
@@ -113,9 +124,15 @@ export default function HabitsList({
     }
   }, [habits, activeHabits, dateStr, currentDate, resetTime]);
 
-  // load saved order for today
   useEffect(() => {
     loadDailyOrder();
+
+    (async () => {
+      const stored = await AsyncStorage.getItem(STORAGE_KEYS.TOGGLE_STATE);
+      if (stored !== null) {
+        setShowCompleted(stored === '1');
+      }
+    })();
   }, [habits, dateStr]);
 
   const loadDailyOrder = async () => {
@@ -124,27 +141,37 @@ export default function HabitsList({
 
       if (savedOrder) {
         const orderIds = JSON.parse(savedOrder);
-        // sort habits based on saved order
         const sorted = [...activeHabits].sort((a, b) => {
           const indexA = orderIds.indexOf(a.id);
           const indexB = orderIds.indexOf(b.id);
-          if (indexA === -1) return 1;
-          if (indexB === -1) return -1;
-          return indexA - indexB;
+
+          const safeA = indexA === -1 ? Number.MAX_SAFE_INTEGER : indexA;
+          const safeB = indexB === -1 ? Number.MAX_SAFE_INTEGER : indexB;
+
+          if (safeA === Number.MAX_SAFE_INTEGER && safeB === Number.MAX_SAFE_INTEGER) {
+            return (a.startDate ?? '').localeCompare(b.startDate ?? '');
+          }
+
+          return safeA - safeB;
         });
         setOrderedHabits(sorted);
       } else {
-        setOrderedHabits(activeHabits);
+        const defaultSorted = [...activeHabits].sort((a, b) =>
+          (a.startDate ?? '').localeCompare(b.startDate ?? '')
+        );
+        setOrderedHabits(defaultSorted);
       }
 
-      setLoading(false)
     } catch (error) {
       console.error('Error loading habit order:', error);
-      setOrderedHabits(activeHabits);
+      const fallbackSorted = [...activeHabits].sort((a, b) =>
+        (a.startDate ?? '').localeCompare(b.startDate ?? '')
+      );
+      setOrderedHabits(fallbackSorted);
     }
   };
 
-  const saveDailyOrder = async (newOrder: (Habit & { completed: boolean })[]) => {
+  const saveDailyOrder = async (newOrder: HabitWithStatus[]) => {
     try {
       const orderIds = newOrder.map(h => h.id);
       await AsyncStorage.setItem(ORDER_STORAGE_KEY, JSON.stringify(orderIds));
@@ -153,9 +180,8 @@ export default function HabitsList({
     }
   };
 
-  // Group habits by time of day
-  const groupByTimeOfDay = (habitsList: (Habit & { completed: boolean })[]) => {
-    const grouped: Record<TimeOfDay, (Habit & { completed: boolean })[]> = {
+  const groupByTimeOfDay = (habitsList: HabitWithStatus[]) => {
+    const grouped: Record<TimeOfDay, HabitWithStatus[]> = {
       'Wake Up': [],
       'Morning': [],
       'Anytime': [],
@@ -169,7 +195,6 @@ export default function HabitsList({
       if (grouped[timeOfDay]) {
         grouped[timeOfDay].push(habit);
       } else {
-        // Fallback to Anytime if not a valid time option
         grouped['Anytime'].push(habit);
       }
     });
@@ -177,23 +202,19 @@ export default function HabitsList({
     return grouped;
   };
 
-  // Filter based on showCompleted toggle
   const visibleHabits = showCompleted
     ? orderedHabits
-    : orderedHabits.filter(h => !h.completed);
+    : orderedHabits.filter(h => h.status !== 'completed' && h.status !== 'skipped');
 
   const groupedHabits = groupByTimeOfDay(visibleHabits);
 
-  // Handle drag end for a specific time section
-  const handleDragEnd = (timeOfDay: TimeOfDay, newOrder: (Habit & { completed: boolean })[]) => {
-    // Update the overall order by replacing this time section
+  const handleDragEnd = (timeOfDay: TimeOfDay, newOrder: HabitWithStatus[]) => {
     const otherHabits = orderedHabits.filter(
       h => (h.selectedTimeOfDay || 'Anytime') !== timeOfDay
     );
 
     const updatedOrder = [...otherHabits];
 
-    // Insert the reordered section at the right position
     TIME_OPTIONS.forEach(time => {
       if (time === timeOfDay) {
         updatedOrder.push(...newOrder);
@@ -209,16 +230,14 @@ export default function HabitsList({
     saveDailyOrder(updatedOrder);
   };
 
-  // loading state
-  if (loading) {
-    if (DEBUG) console.log('🔄 HabitsList is loading...');
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="small" color={COLORS.Primary} />
-        <Text style={styles.loadingText}>Loading habits...</Text>
-      </View>
-    );
-  }
+  const handleHabitPress = (habit: HabitWithStatus) => {
+    setSelectedHabit(habit);
+    setModalVisible(true);
+  };
+
+  const handleModalUpdate = () => {
+    loadDailyOrder();
+  };
 
   if (!habits || habits.length === 0) {
     if (DEBUG) console.log('📭 No habits found in database');
@@ -235,10 +254,9 @@ export default function HabitsList({
     );
   }
 
-  // empty state
   if (scheduledHabits.length === 0) {
     return (
-      <View style={{ marginTop: 20, alignItems: 'center', gap: 20, }}>
+      <View style={{ marginTop: 20, alignItems: 'center', gap: 20 }}>
         <Text style={[globalStyles.body, { opacity: 0.7 }]}>You have no habits today! Add a habit?</Text>
 
         <ShadowBox
@@ -259,127 +277,73 @@ export default function HabitsList({
     );
   }
 
-  if (incompleteCount === 0) {
-    return (
-      <>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 }}>
-          <View>
-            <Text style={globalStyles.body}>You have {incompleteCount} goals left today!
-            </Text>
-          </View>
-          {/* Toggle Button */}
-          <View style={styles.toggleContainer}>
-            <Pressable
-              onPress={() => setShowCompleted(!showCompleted)}
-            >
-              <Image
-                source={showCompleted ? SYSTEM_ICONS.show : SYSTEM_ICONS.hide}
-                style={styles.toggleIcon}
-              />
-            </Pressable>
-          </View>
+  const renderHabitsList = () => (
+    <>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 }}>
+        <View>
+          <Text style={globalStyles.body}>You have {incompleteCount} goals left today!</Text>
         </View>
-        <View style={{ marginTop: 20, alignItems: 'center', gap: 20 }}>
+        <View style={styles.toggleContainer}>
+          <Pressable onPress={() => saveToggleState()}>
+            <Image
+              source={showCompleted ? SYSTEM_ICONS.show : SYSTEM_ICONS.hide}
+              style={styles.toggleIcon}
+            />
+          </Pressable>
+        </View>
+      </View>
 
-
+      {allDoneToday && (
+        <View style={{ marginTop: 12, alignItems: 'center', gap: 10 }}>
           <Text style={[globalStyles.body, { opacity: 0.7, textAlign: 'center' }]}>
             🎉 Good job — you finished everything for today!
           </Text>
-
-          <View style={{ flexDirection: 'row', gap: 10 }}>
-            {/* Optional: let them review completed habits */}
-            <ShadowBox
-              shadowBorderRadius={20}
-              contentBorderRadius={20}
-              contentBackgroundColor="#fff"
-            >
-              <Pressable
-                onPress={() => setShowCompleted(true)}
-                style={{ paddingVertical: 6, paddingHorizontal: 18 }}
-              >
-                <Text style={globalStyles.body1}>View completed</Text>
-              </Pressable>
-            </ShadowBox>
-
-            {/* Optional: encourage creating another habit */}
-            <ShadowBox
-              shadowBorderRadius={20}
-              contentBorderRadius={20}
-              contentBackgroundColor={PAGE.habits.button[0]}
-            >
-              <Pressable
-                onPress={() => router.push('/(tabs)/habits/NewHabitPage')}
-                style={{ paddingVertical: 6, paddingHorizontal: 18 }}
-              >
-                <Text style={globalStyles.body1}>Add another</Text>
-              </Pressable>
-            </ShadowBox>
-          </View>
         </View>
-      </>
-    );
-  }
+      )}
+
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.contentContainer}>
+        {TIME_OPTIONS.map(timeOfDay => {
+          const habitsInTime = groupedHabits[timeOfDay];
+          if (habitsInTime.length === 0) return null;
+
+          return (
+            <View key={timeOfDay}>
+              <HabitSectionHeader title={timeOfDay} count={habitsInTime.length} />
+              <FlatList
+                data={habitsInTime}
+                renderItem={({ item }) => (
+                  <HabitItem
+                    habit={item}
+                    dateStr={dateStr}
+                    onToggle={() => onToggleHabit(item.id)}
+                    onPress={() => handleHabitPress(item)}
+                    onIncrementUpdate={onIncrementUpdate}
+                    onSkip={() => onSkipHabit?.(item.id)}
+                    onSnooze={() => onSnoozeHabit?.(item.id)}
+                  />
+                )}
+                keyExtractor={(item) => item.id}
+                scrollEnabled={false}
+              />
+            </View>
+          );
+        })}
+      </ScrollView>
+
+      <HabitDetailModal
+        visible={modalVisible}
+        habit={selectedHabit}
+        onClose={() => setModalVisible(false)}
+        onUpdate={handleModalUpdate}
+      />
+    </>
+  );
 
   return (
-  <GestureHandlerRootView style={styles.container}>
-    {/* header row with toggle */}
-    <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 }}>
-      <View>
-        <Text style={globalStyles.body}>
-          {allDoneToday
-            ? `You finished everything today!`
-            : `You have ${incompleteCount} ${incompleteCount === 1 ? 'goal' : 'goals'} left today!`}
-        </Text>
-      </View>
-
-      <View style={styles.toggleContainer}>
-        <Pressable onPress={() => setShowCompleted(prev => !prev)}>
-          <Image
-            source={showCompleted ? SYSTEM_ICONS.show : SYSTEM_ICONS.hide}
-            style={styles.toggleIcon}
-          />
-        </Pressable>
-      </View>
-    </View>
-
-    {/* optional "good job" banner */}
-    {allDoneToday && (
-      <View style={{ marginTop: 12, alignItems: 'center', gap: 10 }}>
-        <Text style={[globalStyles.body, { opacity: 0.7, textAlign: 'center' }]}>
-          🎉 Good job — you finished everything for today!
-        </Text>
-      </View>
-    )}
-
-    {/* the list STILL renders, so the toggle now works */}
-    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.contentContainer}>
-      {TIME_OPTIONS.map(timeOfDay => {
-        const habitsInTime = groupedHabits[timeOfDay];
-        if (habitsInTime.length === 0) return null;
-
-        return (
-          <View key={timeOfDay}>
-            <HabitSectionHeader title={timeOfDay} count={habitsInTime.length} />
-            <FlatList
-              data={habitsInTime}
-              renderItem={({ item }) => (
-                <HabitItem
-                  habit={item}
-                  dateStr={dateStr}
-                  onToggle={() => onToggleHabit(item.id)}
-                  onPress={() => onPressHabit?.(item)}
-                  onIncrementUpdate={onIncrementUpdate}
-                />
-              )}
-              keyExtractor={(item) => item.id}
-              scrollEnabled={false}
-            />
-          </View>
-        );
-      })}
-    </ScrollView>
-  </GestureHandlerRootView>
-);
+    <GestureHandlerRootView style={styles.container}>
+      {renderHabitsList()}
+    </GestureHandlerRootView>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -413,6 +377,6 @@ const styles = StyleSheet.create({
   },
 
   contentContainer: {
-    paddingBottom: 20,
+    paddingBottom: 50,
   },
 });

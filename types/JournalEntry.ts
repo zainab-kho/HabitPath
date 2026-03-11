@@ -5,5 +5,11 @@ export interface JournalEntry {
     time: string,
     mood?: string,
     location?: string,
+    lock?: string,
     entry?: string,
+    song?: {
+        title: string;
+        artist: string;
+        artworkUrl: string;
+    },
 }

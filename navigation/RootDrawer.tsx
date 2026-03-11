@@ -124,14 +124,19 @@ export function RootDrawer() {
             icon: SYSTEM_ICONS.journal,
         },
         {
-            label: 'Quests',
-            path: '/(tabs)/more/quests',
-            icon: SYSTEM_ICONS.quest,
+            label: 'Assignments',
+            path: '/(tabs)/more/assignments',
+            icon: SYSTEM_ICONS.assignment,
         },
         {
             label: 'Focus',
-            path: '/(tabs)/more/stopwatch',
+            path: '/(tabs)/more/focus',
             icon: SYSTEM_ICONS.stopwatch,
+        },
+        {
+            label: 'Stats',
+            path: '/(tabs)/more/stats',
+            icon: SYSTEM_ICONS.stats,
         },
         {
             label: 'Settings',

@@ -6,11 +6,9 @@ export { globalStyles } from './globalStyles';
 export { journalStyle } from './journalStyles';
 export { layoutStyles } from './layoutStyles';
 export { uiStyles } from './uiStyles';
+export { modalStyles } from './modalStyles';
 
 
 
 // **TODO: clean
-// export { habitCardStyles } from './habitCardStyles';
-// export { habitStyles } from './habitStyles';
 // export { optionContainerStyles } from './optionContainerStyles';
-// export { ui } from './uiStyles';

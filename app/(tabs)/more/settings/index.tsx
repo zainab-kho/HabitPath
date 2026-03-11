@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { BUTTON_COLORS, COLORS } from '@/constants/colors';
+import { BUTTON_COLORS, COLORS, PAGE } from '@/constants/colors';
 import { supabase } from '@/lib/supabase';
 import { globalStyles } from '@/styles';
 import { AppLinearGradient } from '@/ui/AppLinearGradient';
@@ -12,7 +12,7 @@ import PageContainer from '@/ui/PageContainer';
 import PageHeader from '@/ui/PageHeader';
 import ShadowBox from '@/ui/ShadowBox';
 import { TimeWheel, pickerStyles } from '@/ui/TimeWheel';
-import { getResetTime } from '@/utils/habitUtils';
+import { getResetTime } from '@/lib/supabase/queries';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
@@ -97,8 +97,12 @@ export default function SettingsPage() {
             <PageContainer showBottomNav={false}>
                 <PageHeader title="Settings" showBackButton />
 
-                <ScrollView contentContainerStyle={{ marginHorizontal: 30 }}>
-                    <Text style={[globalStyles.h4, { textAlign: 'center', marginBottom: 30 }]}>
+                <ScrollView contentContainerStyle={{
+                    paddingHorizontal: 30,
+                    gap: 20,
+                }}>
+                    {/* <View style={{gap: 10}} */}
+                    <Text style={[globalStyles.h4, { textAlign: 'center' }]}>
                         Preferences
                     </Text>
 
@@ -146,12 +150,26 @@ export default function SettingsPage() {
                             </ShadowBox>
                         </View>
                     )}
+
+                    {/* edit pin */}
+                    <ShadowBox
+                        contentBorderRadius={20}
+                        shadowBorderRadius={20}
+                        contentBackgroundColor={PAGE.settings.pin[0]}
+                    >
+                        <Pressable
+                            onPress={() => router.push('/more/settings/EditPin')}
+                            style={{ paddingVertical: 5, paddingHorizontal: 15, flex: 1, alignItems: 'center' }}
+                        >
+                            <Text style={globalStyles.body1}>Edit Pin</Text>
+                        </Pressable>
+                    </ShadowBox>
                 </ScrollView>
 
                 <ShadowBox
                     shadowBorderRadius={20}
                     contentBackgroundColor={BUTTON_COLORS.Cancel}
-                    style={{ marginBottom: 100, marginHorizontal: 50}}
+                    style={{ marginBottom: 100, marginHorizontal: 50 }}
                 >
                     <Pressable
                         onPress={signOut}
@@ -164,7 +182,7 @@ export default function SettingsPage() {
                     </Pressable>
                 </ShadowBox>
             </PageContainer>
-        </AppLinearGradient>
+        </AppLinearGradient >
     );
 }
 

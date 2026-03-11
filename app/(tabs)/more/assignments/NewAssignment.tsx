@@ -176,7 +176,7 @@ export default function NewAssignment() {
 
                                 <Pressable
                                     onPress={() => {
-                                        router.push('/assignments/NewCourse')
+                                        router.push('/(tabs)/more/assignments/NewCourse')
                                     }}
                                 >
                                 <ShadowBox contentBackgroundColor={PAGE.assignments.primary[0]}>

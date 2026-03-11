@@ -1,239 +1,283 @@
 // @/app/(tabs)/habits/index.tsx
-import HabitsList from '@/components/habits/HabitsList';
-import { isHabitActiveToday } from '@/components/habits/habitUtils';
-import ProgressBar from '@/components/habits/ProgressBar';
-import { COLORS, PAGE } from '@/constants/colors';
-import { SYSTEM_ICONS } from '@/constants/icons';
-import { useAuth } from '@/contexts/AuthContext';
-import { useHabits } from '@/hooks/useHabits';
-import { STORAGE_KEYS } from '@/storage/keys';
-import { globalStyles } from '@/styles';
-import PageContainer from '@/ui/PageContainer';
-import PageHeader from '@/ui/PageHeader';
-import ShadowBox from '@/ui/ShadowBox';
-import {
-    formatDateHeader,
-    getCurrentHabitDay,
-    isToday,
-    navigateDate as navigateDateUtil
-} from '@/utils/dateUtils';
-import { getGradientForTime } from '@/utils/gradients';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { Image, Pressable, Text, View } from 'react-native';
 
+import HabitsList from '@/components/habits/HabitsList';
+import { isHabitActiveToday } from '@/utils/habitUtils';
+import ProgressBar from '@/components/habits/ProgressBar';
+import { COLORS, PAGE } from '@/constants/colors';
+import { SYSTEM_ICONS } from '@/constants/icons';
+import { useAuth } from '@/contexts/AuthContext';
+import { useHabits, HabitWithStatus } from '@/hooks/useHabits';
+import SnoozeHabitModal from '@/modals/habits/SnoozeHabit';
+import { STORAGE_KEYS } from '@/storage/keys';
+import { globalStyles } from '@/styles';
+import PageContainer from '@/ui/PageContainer';
+import PageHeader from '@/ui/PageHeader';
+import ShadowBox from '@/ui/ShadowBox';
+import {
+  formatDateHeader,
+  formatLocalDate,
+  getCurrentHabitDay,
+  getHabitDate,
+  isToday,
+  navigateDate as navigateDateUtil,
+} from '@/utils/dateUtils';
+import { getGradientForTime } from '@/utils/gradients';
+
 export default function HabitsPage() {
-    const { user } = useAuth();
+  const { user } = useAuth();
 
-    const atNoon = (d: Date) =>
-        new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0, 0);
+  const atNoon = (d: Date) =>
+    new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0, 0);
 
-    const [viewingDate, setViewingDate] = useState<Date>(atNoon(getCurrentHabitDay()));
+  const [viewingDate, setViewingDate] = useState<Date>(atNoon(getCurrentHabitDay()));
 
+  // use the habits hook to get all data
+  const {
+    habits,
+    loading,
+    resetTime,
+    appStreak,
+    totalPoints,
+    earnedPoints,
+    progressTotal,
+    progressEarned,
+    progressSkipped,
+    toggleHabit,
+    updateIncrement,
+    loadHabits,
+    snoozeHabit,
+    skipHabit,
+  } = useHabits(viewingDate);
 
-    // use the habits hook to get all data
-    const {
-        habits,
-        loading,
-        resetTime,
-        appStreak,
-        totalPoints,
-        earnedPoints,
-        toggleHabit,
-        updateIncrement,  // ✅ Added for increment habits
-        loadHabits,
-    } = useHabits(viewingDate);
+  // snooze modal state
+  const [snoozeModalVisible, setSnoozeModalVisible] = useState(false);
+  const [snoozeTargetHabit, setSnoozeTargetHabit] = useState<HabitWithStatus | null>(null);
+  const [snoozeDateStr, setSnoozeDateStr] = useState('');
 
-    // night mode detection (for text color)
-    const currentHour = new Date().getHours();
-    const isNightMode = currentHour >= 21 || currentHour < 5;
-    const textColor = isNightMode ? 'white' : 'black';
+  const handleSnoozeHabit = async (habitId: string) => {
+    // find the habit before snoozing (it will disappear from the list after)
+    const target = habits.find(h => h.id === habitId) ?? null;
 
-    // filter only active habits for the current viewing date
-    const activeHabits = habits.filter(habit =>
-        isHabitActiveToday(habit, viewingDate, resetTime.hour, resetTime.minute)
-    );
+    // compute tomorrow's date (timezone-safe)
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowStr = formatLocalDate(tomorrow);
 
-    // calculate totals for progress bar
-    // when loading outside cache window, show 0s until data arrives
-    const totalHabits = activeHabits.length;
-    const completedHabits = activeHabits.filter(h => h.completed).length;
-    const totalActivePoints = activeHabits.reduce(
-        (sum, h) => sum + (h.rewardPoints || 0),
-        0
-    );
+    // snooze to tomorrow immediately
+    await snoozeHabit(habitId);
 
+    // open modal so user can change date or undo
+    setSnoozeTargetHabit(target);
+    setSnoozeDateStr(tomorrowStr);
+    setSnoozeModalVisible(true);
+  };
 
-    // navigate between dates
-    const handleNavigateDate = (direction: 'prev' | 'next') => {
-        const newDate = navigateDateUtil(viewingDate, direction);
-        setViewingDate(atNoon(newDate));
-    };
+  const handleUpdateSnoozeDate = async (habitId: string, newDateStr: string) => {
+    await snoozeHabit(habitId, newDateStr);
+  };
 
-    // jump to today (using resetTime)
-    const handleGoToToday = () => {
-        const todayHabitDay = getCurrentHabitDay(resetTime.hour, resetTime.minute);
-        setViewingDate(atNoon(todayHabitDay));
-    };
+  const handleUndoSnooze = async (habitId: string) => {
+    console.log(`(**TESTING) HabitsPage.handleUndoSnooze: habitId=${habitId}`);
+    await snoozeHabit(habitId, null);
+  };
 
-    // check if viewing today
-    const isViewingToday = isToday(viewingDate, resetTime.hour, resetTime.minute);
+  // night mode detection (for text color)
+  const currentHour = new Date().getHours();
+  const isNightMode = currentHour >= 21 || currentHour < 5;
+  const textColor = isNightMode ? 'white' : 'black';
 
-    // handle pressing a habit to view details
-    const handlePressHabit = (habit: any) => {
-        // **TODO: Navigate to habit details page
-        // router.push(`/habits/${habit.id}`);
-    };
+  // filter only active habits for the current viewing date
+  const activeHabits = habits.filter(habit =>
+    isHabitActiveToday(habit, viewingDate, resetTime.hour, resetTime.minute)
+  );
 
-    useFocusEffect(
-        useCallback(() => {
-            let cancelled = false;
+  const dateStr = getHabitDate(viewingDate, resetTime.hour, resetTime.minute);
 
-            (async () => {
-                const dirty = await AsyncStorage.getItem(STORAGE_KEYS.HABITS_DIRTY);
-                if (!cancelled && dirty === '1' && !loading) {
-                    await AsyncStorage.removeItem(STORAGE_KEYS.HABITS_DIRTY);
-                    loadHabits();
+  // calculate totals for points badge (unchanged)
+  const totalActivePoints = activeHabits.reduce(
+    (sum, h) => sum + (h.rewardPoints || 0),
+    0
+  );
 
-                    console.log('Reloading habits')
-                }
-            })();
+  // navigate between dates
+  const handleNavigateDate = (direction: 'prev' | 'next') => {
+    const newDate = navigateDateUtil(viewingDate, direction);
+    setViewingDate(atNoon(newDate));
+  };
 
-            return () => { cancelled = true; };
-        }, [loadHabits])
-    );
+  // jump to today (using resetTime)
+  const handleGoToToday = () => {
+    const todayHabitDay = getCurrentHabitDay(resetTime.hour, resetTime.minute);
+    setViewingDate(atNoon(todayHabitDay));
+  };
 
-    return (
-        <LinearGradient
-            colors={getGradientForTime()}
-            start={{ x: 0.5, y: 0 }}
-            end={{ x: 0.5, y: 1 }}
-            style={{ flex: 1 }}
+  // check if viewing today
+  const isViewingToday = isToday(viewingDate, resetTime.hour, resetTime.minute);
+
+  // handle pressing a habit to view details
+  const handlePressHabit = (habit: any) => {
+    // **TODO: Navigate to habit details page
+    // router.push(`/habits/${habit.id}`);
+  };
+
+  useFocusEffect(
+    useCallback(() => {
+      let cancelled = false;
+
+      (async () => {
+        const dirty = await AsyncStorage.getItem(STORAGE_KEYS.HABITS_DIRTY);
+        if (!cancelled && dirty === '1' && !loading) {
+          await AsyncStorage.removeItem(STORAGE_KEYS.HABITS_DIRTY);
+          loadHabits();
+
+          console.log('Reloading habits');
+        }
+      })();
+
+      return () => {
+        cancelled = true;
+      };
+    }, [loadHabits])
+  );
+
+  return (
+    <LinearGradient
+      colors={getGradientForTime()}
+      start={{ x: 0.5, y: 0 }}
+      end={{ x: 0.5, y: 1 }}
+      style={{ flex: 1 }}
+    >
+      <PageContainer showBottomNav>
+        <PageHeader title="Habits" showPlusButton textColor={textColor} />
+
+        {/* date navigator */}
+        <View
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            marginBottom: 10,
+          }}
         >
-            <PageContainer showBottomNav>
-                <PageHeader
-                    title="Habits"
-                    showPlusButton
-                    textColor={textColor}
-                />
+          {/* previous day button */}
+          <Pressable onPress={() => handleNavigateDate('prev')} style={{ padding: 5 }}>
+            <Image
+              source={SYSTEM_ICONS.sortLeft}
+              style={{
+                width: 20,
+                height: 20,
+                tintColor: textColor,
+              }}
+            />
+          </Pressable>
 
-                {/* date navigator */}
+          {/* date display / jump to Today */}
+          <Pressable
+            style={{
+              paddingHorizontal: 10,
+              paddingVertical: 5,
+              borderRadius: 12,
+              borderWidth: 1,
+              borderColor: '#000',
+              backgroundColor: COLORS.PrimaryLight,
+            }}
+            onPress={handleGoToToday}
+          >
+            <Text
+              style={[
+                globalStyles.body2,
+                {
+                  color: isViewingToday ? textColor : `${COLORS.Secondary}`,
+                  fontSize: 13,
+                },
+              ]}
+            >
+              {formatDateHeader(viewingDate)}
+            </Text>
+          </Pressable>
+
+          {/* next day button */}
+          <Pressable onPress={() => handleNavigateDate('next')} style={{ padding: 5 }}>
+            <Image
+              source={SYSTEM_ICONS.sortRight}
+              style={{
+                width: 20,
+                height: 20,
+                tintColor: textColor,
+              }}
+            />
+          </Pressable>
+        </View>
+
+        {/* progress bar */}
+        <ProgressBar
+          totalHabits={progressTotal}
+          completedHabits={progressEarned}
+          skippedHabits={progressSkipped}
+          earnedPoints={earnedPoints}
+          totalPossiblePoints={totalActivePoints}
+          appStreak={appStreak}
+        />
+
+        {/* habits list */}
+        <HabitsList
+          habits={habits}
+          viewingDate={viewingDate}
+          resetTime={resetTime}
+          onToggleHabit={toggleHabit}
+          onIncrementUpdate={updateIncrement}
+          onSkipHabit={skipHabit}
+          onSnoozeHabit={handleSnoozeHabit}
+        />
+
+        {/* snooze confirmation modal */}
+        <SnoozeHabitModal
+          visible={snoozeModalVisible}
+          onClose={() => setSnoozeModalVisible(false)}
+          habit={snoozeTargetHabit}
+          snoozeDateStr={snoozeDateStr}
+          onUpdateSnoozeDate={handleUpdateSnoozeDate}
+          onUndoSnooze={handleUndoSnooze}
+        />
+
+        {/* floating buttons */}
+        <View style={{ position: 'absolute', bottom: 10, right: 0, zIndex: 5 }}>
+          <View style={{ flexDirection: 'row', gap: 10, opacity: 1 }}>
+            <Pressable onPress={() => router.push('/more/journal/NewEntry')}>
+              <ShadowBox
+                contentBackgroundColor={PAGE.journal.border[0]}
+                contentBorderRadius={30}
+                shadowBorderRadius={30}
+              >
                 <View
-                    style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        marginBottom: 10,
-                    }}
+                  style={{ width: 40, height: 40, justifyContent: 'center', alignItems: 'center' }}
                 >
-                    {/* previous day button */}
-                    <Pressable
-                        onPress={() => handleNavigateDate('prev')}
-                        style={{ padding: 5 }}
-                    >
-                        <Image
-                            source={SYSTEM_ICONS.sortLeft}
-                            style={{
-                                width: 20,
-                                height: 20,
-                                tintColor: textColor,
-                            }}
-                        />
-                    </Pressable>
-
-                    {/* date display / jump to Today */}
-                    <Pressable
-                        style={{
-                            paddingHorizontal: 10,
-                            paddingVertical: 5,
-                            borderRadius: 12,
-                            borderWidth: 1,
-                            borderColor: '#000',
-                            backgroundColor: COLORS.PrimaryLight,
-                        }}
-                        onPress={handleGoToToday}
-                    >
-                        <Text
-                            style={[
-                                globalStyles.body2,
-                                {
-                                    color: isViewingToday ? textColor : `${COLORS.Secondary}`,
-                                    fontSize: 13,
-                                },
-                            ]}
-                        >
-                            {formatDateHeader(viewingDate)}
-                        </Text>
-                    </Pressable>
-
-                    {/* next day button */}
-                    <Pressable
-                        onPress={() => handleNavigateDate('next')}
-                        style={{ padding: 5 }}
-                    >
-                        <Image
-                            source={SYSTEM_ICONS.sortRight}
-                            style={{
-                                width: 20,
-                                height: 20,
-                                tintColor: textColor,
-                            }}
-                        />
-                    </Pressable>
+                  <Image source={SYSTEM_ICONS.write} style={{ width: 20, height: 20 }} />
                 </View>
+              </ShadowBox>
+            </Pressable>
 
-                {/* progress bar */}
-                <ProgressBar
-                    totalHabits={totalHabits}
-                    completedHabits={completedHabits}
-                    earnedPoints={earnedPoints} // keep this if it tracks overall points earned
-                    totalPossiblePoints={totalActivePoints}
-                    appStreak={appStreak}
-                />
-
-                {/* habits list */}
-                <HabitsList
-                    habits={habits}
-                    viewingDate={viewingDate}
-                    resetTime={resetTime}
-                    onToggleHabit={toggleHabit}
-                    onPressHabit={handlePressHabit}  // ✅ Navigate to habit details
-                    onIncrementUpdate={updateIncrement}  // ✅ Handle increment updates
-                />
-
-                {/* floating buttons */}
-                <View style={{ position: 'absolute', bottom: 10, right: 0, zIndex: 5 }}>
-                    <View style={{ flexDirection: 'row', gap: 10, opacity: 1 }}>
-                        <Pressable onPress={() => router.push('/more/journal/NewEntry')}>
-                            <ShadowBox
-                                contentBackgroundColor={PAGE.journal.border[0]}
-                                contentBorderRadius={30}
-                                shadowBorderRadius={30}>
-                                <View style={{ width: 40, height: 40, justifyContent: 'center', alignItems: 'center' }}>
-                                    <Image source={SYSTEM_ICONS.write} style={{ width: 20, height: 20 }} />
-                                </View>
-                            </ShadowBox>
-                        </Pressable>
-
-                        <Pressable onPress={() => router.push('/habits/NewHabitPage')}>
-                            <ShadowBox
-                                contentBackgroundColor={PAGE.habits.button[0]}
-                                contentBorderRadius={30}
-                                shadowBorderRadius={30}
-                            >
-                                <View style={{ width: 40, height: 40, justifyContent: 'center', alignItems: 'center' }}>
-                                    <Text style={{ fontSize: 20, textAlign: 'center' }}>+</Text>
-                                </View>
-                            </ShadowBox>
-                        </Pressable>
-                    </View>
-
+            <Pressable onPress={() => router.push('/habits/NewHabitPage')}>
+              <ShadowBox
+                contentBackgroundColor={PAGE.habits.button[0]}
+                contentBorderRadius={30}
+                shadowBorderRadius={30}
+              >
+                <View
+                  style={{ width: 40, height: 40, justifyContent: 'center', alignItems: 'center' }}
+                >
+                  <Text style={{ fontSize: 20, textAlign: 'center' }}>+</Text>
                 </View>
-
-
-            </PageContainer>
-        </LinearGradient>
-    );
+              </ShadowBox>
+            </Pressable>
+          </View>
+        </View>
+      </PageContainer>
+    </LinearGradient>
+  );
 }

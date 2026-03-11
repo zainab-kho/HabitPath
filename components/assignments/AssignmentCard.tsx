@@ -21,8 +21,6 @@ export function AssignmentCard({ assignment, showDelete = false, onDelete, onSta
         <ShadowBox
             key={assignment.id}
             contentBackgroundColor={PROGRESS_COLORS[assignment.progress]}
-            // style={styles.container}
-            // contentBackgroundColor={isCompleted ? habitColor : '#fff'}
             contentBorderColor='#000'
             contentBorderWidth={1}
             shadowBorderRadius={15}
@@ -45,7 +43,7 @@ export function AssignmentCard({ assignment, showDelete = false, onDelete, onSta
                         {assignment.course && (
                             <ShadowBox
                                 contentBackgroundColor={assignment.course.color || '#fff'}
-                                shadowOffset={{x: 0, y: 1}}
+                                shadowOffset={{ x: 0, y: 1 }}
 
                             >
                                 <View style={{ paddingHorizontal: 10, paddingVertical: 2 }}>
@@ -80,7 +78,7 @@ export function AssignmentCard({ assignment, showDelete = false, onDelete, onSta
                 <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Pressable
                         onPress={onStatusPress}
-                        style={{ flexDirection: 'row', gap: 10, justifyContent: 'flex-start' }}
+                        style={{ flexDirection: 'row', gap: 3, justifyContent: 'flex-start' }}
                     >
                         <ShadowBox
                             contentBackgroundColor={PROGRESS_COLORS[assignment.progress]}
@@ -88,18 +86,27 @@ export function AssignmentCard({ assignment, showDelete = false, onDelete, onSta
                             shadowBorderRadius={25}
                             shadowOffset={{ x: 0, y: 2 }}
                         >
-                            <Text style={[globalStyles.label, { paddingVertical: 5, paddingHorizontal: 15 }]}>{assignment.progress}</Text>
+                            <Text style={[globalStyles.label, { paddingVertical: 5, paddingHorizontal: 6 }]}>
+                                {assignment.progress == 'Finished (not submitted)' ? 'Not submitted' : assignment.progress}
+                                </Text>
                         </ShadowBox>
 
                         <View style={{
                             paddingVertical: 5,
                             paddingHorizontal: 10,
                             borderRadius: 20,
+                            maxWidth: 80,
                             borderWidth: 1,
                             borderColor: '#000',
                             backgroundColor: ASSIGNMENT_TYPE_COLORS[assignment.type] || PAGE.assignments.backgroundAssignment[0]
                         }}>
-                            <Text style={globalStyles.label}>{assignment.type}</Text>
+                            <Text
+                                style={globalStyles.label}
+                                numberOfLines={1}
+                                ellipsizeMode="tail"
+                            >
+                                {assignment.type}
+                            </Text>
                         </View>
                     </Pressable>
 

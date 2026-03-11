@@ -66,7 +66,7 @@ export const journalStyle = StyleSheet.create({
     },
 
     textArea: {
-        height: 260,
+        height: 250,
         paddingVertical: 12,
         paddingHorizontal: 10,
         fontSize: 15,

@@ -52,6 +52,8 @@ export default function SettingsPage() {
 
             console.log(hour);
             console.log(minute);
+
+            await resetPointsBalance(hour, minute);
         })();
     }, [user]);
 

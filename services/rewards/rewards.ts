@@ -9,6 +9,8 @@ import {
   getPointsResetDateFromDb,
   setPointsResetDateInDb,
 } from '@/lib/supabase/queries/stats';
+import { getHabitDate } from '@/utils/dateUtils';
+
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -96,14 +98,20 @@ export async function clearWishlist(userId: string): Promise<void> {
   console.log('[**LOG rewards] clearWishlist → done')
 }
 
-export async function resetPointsBalance(): Promise<void> {
-  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-  // **LOG
-  console.log('[**LOG rewards] resetPointsBalance → setting reset_date to', today, 'and redeemed to 0')
-  await setPointsResetDateInDb(today);
+export async function resetPointsBalance(resetHour: number = 4, resetMinute: number = 0): Promise<void> {
+  // Use the user's habit reset time to determine "today"
+  // Set to the START of the current habit-day so completions from
+  // this habit-day onward are counted, but nothing before it.
+  // We subtract 1 day so today's completions (which equal this date) are INCLUDED.
+  const currentHabitDay = getHabitDate(new Date(), resetHour, resetMinute); // e.g. "2025-03-10"
+  
+  // Store the day BEFORE today so the filter `date > resetDate` includes today's completions
+  const resetDate = new Date(currentHabitDay);
+  resetDate.setDate(resetDate.getDate() - 1);
+  const resetDateStr = resetDate.toISOString().split('T')[0]; // "2025-03-09"
+
+  await setPointsResetDateInDb(resetDateStr);
   await setRedeemedPointsInDb(0);
-  // **LOG
-  console.log('[**LOG rewards] resetPointsBalance → done')
 }
 
 // ─── photo upload ─────────────────────────────────────────────────────────────

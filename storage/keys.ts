@@ -16,4 +16,10 @@ export const STORAGE_KEYS = {
   REWARDS: '@rewards',
   REDEEMED_POINTS: '@redeemed_points',
   EXCHANGE_RATE: '@exchange_rate',
+
+  // bumped when a breaking cache change is made — triggers a one-time wipe on next launch
+  CACHE_VERSION: '@cache_version',
 } as const;
+
+// increment this whenever old cached data needs to be force-wiped across all devices
+export const CURRENT_CACHE_VERSION = '2';

@@ -13,6 +13,7 @@ import {
     computeTotalPointsFromHabits,
     deleteReward,
     getExchangeRate,
+    getPointsResetDate,
     getRedeemedPoints,
     getRewards,
     saveExchangeRate,
@@ -38,6 +39,7 @@ export default function RewardsPage() {
 
     const [totalEarnedAllTime, setTotalEarnedAllTime] = useState(0);
     const [redeemedPoints, setRedeemedPoints] = useState(0);
+    const [pointsResetDate, setPointsResetDate] = useState<string | null>(null);
     const [availablePoints, setAvailablePoints] = useState(0);
     const [rewards, setRewards] = useState<Reward[]>([]);
     const [habits, setHabits] = useState<Habit[]>([]);
@@ -55,16 +57,25 @@ export default function RewardsPage() {
     );
 
     const loadData = async () => {
+        // **LOG
+        console.log('[**LOG rewards page] loadData start — user:', user?.email)
+
         // Check if exchange rate has been set; if not, prompt
         const rate = await getExchangeRate();
+        // **LOG
+        console.log('[**LOG rewards page] exchange rate:', rate)
         if (rate === null) {
             setShowExchangeModal(true);
         }
 
         // Load habits from cache — used both for history display and computing total points
+        // NOTE: "Total Earned" is always computed from habit completion history.
+        // Clearing rewards does NOT change this number — only "Redeemed" resets to 0.
         let habitsArr: Habit[] = [];
         try {
             const raw = await AsyncStorage.getItem(STORAGE_KEYS.HABITS_CACHE);
+            // **LOG
+            console.log('[**LOG rewards page] habits cache raw length:', raw?.length ?? 0)
             if (raw) {
                 const parsed = JSON.parse(raw);
                 habitsArr = Array.isArray(parsed?.habits)
@@ -73,26 +84,39 @@ export default function RewardsPage() {
                         ? parsed
                         : [];
                 setHabits(habitsArr);
-
             }
         } catch (e) {
             console.error('Error loading habits cache:', e);
         }
 
-        // Compute all-time total from completionHistory × rewardPoints across all habits
-        const totalEarned = computeTotalPointsFromHabits(habitsArr);
-        setTotalEarnedAllTime(totalEarned);
-
-        // Load redeemed points
+        // Load reset date and redeemed points from Supabase
         const redeemed = await getRedeemedPoints();
+        // **LOG
+        console.log('[**LOG rewards page] redeemed from DB:', redeemed)
         setRedeemedPoints(redeemed);
 
-        // Available = total - redeemed
-        setAvailablePoints(totalEarned - redeemed);
+        const resetDate = await getPointsResetDate();
+        // **LOG
+        console.log('[**LOG rewards page] points reset date from DB:', resetDate)
+        setPointsResetDate(resetDate);
+
+        // Only count completions strictly after the reset date (pre-reset toggles don't affect balance)
+        const totalEarned = computeTotalPointsFromHabits(habitsArr, resetDate ?? undefined);
+        // **LOG
+        console.log('[**LOG rewards page] totalEarned (since reset):', totalEarned, '| habit count:', habitsArr.length, '| resetDate:', resetDate)
+        setTotalEarnedAllTime(totalEarned);
+
+        // Available = totalEarned - redeemed
+        const available = Math.max(0, totalEarned - redeemed);
+        setAvailablePoints(available);
+        // **LOG
+        console.log('[**LOG rewards page] available:', available)
 
         // Load rewards from Supabase
         if (user) {
             const loadedRewards = await getRewards(user.id);
+            // **LOG
+            console.log('[**LOG rewards page] rewards loaded from DB:', loadedRewards.length)
             setRewards(loadedRewards);
         }
         setLoading(false);
@@ -191,83 +215,140 @@ export default function RewardsPage() {
                 />
 
                 <ScrollView contentContainerStyle={{ paddingBottom: 40, marginRight: 3, }} showsVerticalScrollIndicator={false}>
-
-                    {/* points summary card */}
-                    <ShadowBox shadowColor={PAGE.rewards.primary[0]}>
-                        <View style={s.statsCard}>
-
-                            <Text style={[globalStyles.body, { marginBottom: 15, alignSelf: 'center' }]}>
-                                Points Summary
-                            </Text>
-                            <View style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
-
-                                {/* available */}
-
-                                <Pressable style={s.statItem} onPress={() => openHistory('available')}>
-                                    <ShadowBox
-                                        shadowBorderColor='#FFD581'
-                                        shadowColor='#FFD581'
-                                        contentBorderColor='#FFD581'
-                                    >
-                                        <View style={[s.statBadge]}>
-                                            <Image source={SYSTEM_ICONS.reward} style={{ width: 15, height: 15, tintColor: COLORS.Rewards }} />
-                                            <Text style={globalStyles.body}>{availablePoints}</Text>
-                                        </View>
-                                    </ShadowBox>
-
-                                    <Text style={[globalStyles.label, { fontSize: 11 }]}>AVAILABLE</Text>
-                                </Pressable>
-
-                                {/* total */}
-                                <Pressable style={s.statItem} onPress={() => openHistory('total')}>
-                                    <ShadowBox
-                                        shadowBorderColor={COLORS.RewardsAccent}
-                                        shadowColor={COLORS.RewardsAccent}
-                                        contentBorderColor={COLORS.RewardsAccent}
-                                    >
-                                        <View style={[s.statBadge]}>
-                                            <Image source={SYSTEM_ICONS.reward} style={{ width: 15, height: 15, tintColor: COLORS.Rewards }} />
-                                            <Text style={globalStyles.body}>{totalEarnedAllTime}</Text>
-                                        </View>
-                                    </ShadowBox>
-                                    <Text style={[globalStyles.label, { fontSize: 11 }]}>TOTAL</Text>
-                                </Pressable>
-
-                                {/* redeemed */}
-                                <Pressable style={s.statItem} onPress={() => openHistory('redeemed')}>
-                                    <ShadowBox
-                                        shadowBorderColor={COLORS.Rewards}
-                                        shadowColor={COLORS.Rewards}
-                                        contentBorderColor={COLORS.Rewards}
-                                    >
-                                        <View style={[s.statBadge]}>
-                                            <Image source={SYSTEM_ICONS.reward} style={{ width: 15, height: 15, tintColor: COLORS.Rewards }} />
-                                            <Text style={globalStyles.body}>{redeemedPoints}</Text>
-                                        </View>
-                                    </ShadowBox>
-                                    <Text style={[globalStyles.label, { fontSize: 11 }]}>REDEEMED</Text>
-                                </Pressable>
-                            </View>
-                        </View>
-                    </ShadowBox>
-
                     {loading ? (
                         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 150 }}>
                             <ActivityIndicator size="small" color={PAGE.rewards.primary[0]} />
                         </View>
                     ) : (unclaimedRewards.length === 0 ? (
-                        <EmptyStateView
-                            icon={SYSTEM_ICONS.gift}
-                            iconTintColor={COLORS.Rewards}
-                            title="No Items in Wishlist Yet!"
-                            description="Add things you'd like to reward yourself with after completing habits!"
-                            buttonText="Add Item"
-                            buttonAction={() => router.push('/(tabs)/more/rewards/NewRewardItem')}
-                            buttonColor={PAGE.rewards.primary[0]}
-                            containerStyle={{ marginTop: 30 }}
-                        />
+                        <View>
+                            {/* points summary card */}
+                            <ShadowBox shadowColor={PAGE.rewards.primary[0]}>
+                                <View style={s.statsCard}>
+
+                                    <Text style={[globalStyles.body, { marginBottom: 15, alignSelf: 'center' }]}>
+                                        Points Summary
+                                    </Text>
+                                    <View style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
+
+                                        {/* available */}
+                                        <Pressable style={s.statItem} onPress={() => openHistory('available')}>
+                                            <ShadowBox
+                                                shadowBorderColor='#FFD581'
+                                                shadowColor='#FFD581'
+                                                contentBorderColor='#FFD581'
+                                            >
+                                                <View style={[s.statBadge]}>
+                                                    <Image source={SYSTEM_ICONS.reward} style={{ width: 15, height: 15, tintColor: COLORS.Rewards }} />
+                                                    <Text style={globalStyles.body}>{availablePoints}</Text>
+                                                </View>
+                                            </ShadowBox>
+
+                                            <Text style={[globalStyles.label, { fontSize: 11 }]}>AVAILABLE</Text>
+                                        </Pressable>
+
+                                        {/* total */}
+                                        <Pressable style={s.statItem} onPress={() => openHistory('total')}>
+                                            <ShadowBox
+                                                shadowBorderColor={COLORS.RewardsAccent}
+                                                shadowColor={COLORS.RewardsAccent}
+                                                contentBorderColor={COLORS.RewardsAccent}
+                                            >
+                                                <View style={[s.statBadge]}>
+                                                    <Image source={SYSTEM_ICONS.reward} style={{ width: 15, height: 15, tintColor: COLORS.Rewards }} />
+                                                    <Text style={globalStyles.body}>{totalEarnedAllTime}</Text>
+                                                </View>
+                                            </ShadowBox>
+                                            <Text style={[globalStyles.label, { fontSize: 11 }]}>TOTAL</Text>
+                                        </Pressable>
+
+                                        {/* redeemed */}
+                                        <Pressable style={s.statItem} onPress={() => openHistory('redeemed')}>
+                                            <ShadowBox
+                                                shadowBorderColor={COLORS.Rewards}
+                                                shadowColor={COLORS.Rewards}
+                                                contentBorderColor={COLORS.Rewards}
+                                            >
+                                                <View style={[s.statBadge]}>
+                                                    <Image source={SYSTEM_ICONS.reward} style={{ width: 15, height: 15, tintColor: COLORS.Rewards }} />
+                                                    <Text style={globalStyles.body}>{redeemedPoints}</Text>
+                                                </View>
+                                            </ShadowBox>
+                                            <Text style={[globalStyles.label, { fontSize: 11 }]}>REDEEMED</Text>
+                                        </Pressable>
+                                    </View>
+                                </View>
+                            </ShadowBox>
+
+                            <EmptyStateView
+                                icon={SYSTEM_ICONS.gift}
+                                iconTintColor={COLORS.Rewards}
+                                title="No Items in Wishlist Yet!"
+                                description="Add things you'd like to reward yourself with after completing habits!"
+                                buttonText="Add Item"
+                                buttonAction={() => router.push('/(tabs)/more/rewards/NewRewardItem')}
+                                buttonColor={PAGE.rewards.primary[0]}
+                                containerStyle={{ marginTop: 30 }}
+                            />
+                        </View>
                     ) : (
                         <View>
+                            {/* points summary card */}
+                            <ShadowBox shadowColor={PAGE.rewards.primary[0]}>
+                                <View style={s.statsCard}>
+
+                                    <Text style={[globalStyles.body, { marginBottom: 15, alignSelf: 'center' }]}>
+                                        Points Summary
+                                    </Text>
+                                    <View style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
+
+                                        {/* available */}
+                                        <Pressable style={s.statItem} onPress={() => openHistory('available')}>
+                                            <ShadowBox
+                                                shadowBorderColor='#FFD581'
+                                                shadowColor='#FFD581'
+                                                contentBorderColor='#FFD581'
+                                            >
+                                                <View style={[s.statBadge]}>
+                                                    <Image source={SYSTEM_ICONS.reward} style={{ width: 15, height: 15, tintColor: COLORS.Rewards }} />
+                                                    <Text style={globalStyles.body}>{availablePoints}</Text>
+                                                </View>
+                                            </ShadowBox>
+
+                                            <Text style={[globalStyles.label, { fontSize: 11 }]}>AVAILABLE</Text>
+                                        </Pressable>
+
+                                        {/* total */}
+                                        <Pressable style={s.statItem} onPress={() => openHistory('total')}>
+                                            <ShadowBox
+                                                shadowBorderColor={COLORS.RewardsAccent}
+                                                shadowColor={COLORS.RewardsAccent}
+                                                contentBorderColor={COLORS.RewardsAccent}
+                                            >
+                                                <View style={[s.statBadge]}>
+                                                    <Image source={SYSTEM_ICONS.reward} style={{ width: 15, height: 15, tintColor: COLORS.Rewards }} />
+                                                    <Text style={globalStyles.body}>{totalEarnedAllTime}</Text>
+                                                </View>
+                                            </ShadowBox>
+                                            <Text style={[globalStyles.label, { fontSize: 11 }]}>TOTAL</Text>
+                                        </Pressable>
+
+                                        {/* redeemed */}
+                                        <Pressable style={s.statItem} onPress={() => openHistory('redeemed')}>
+                                            <ShadowBox
+                                                shadowBorderColor={COLORS.Rewards}
+                                                shadowColor={COLORS.Rewards}
+                                                contentBorderColor={COLORS.Rewards}
+                                            >
+                                                <View style={[s.statBadge]}>
+                                                    <Image source={SYSTEM_ICONS.reward} style={{ width: 15, height: 15, tintColor: COLORS.Rewards }} />
+                                                    <Text style={globalStyles.body}>{redeemedPoints}</Text>
+                                                </View>
+                                            </ShadowBox>
+                                            <Text style={[globalStyles.label, { fontSize: 11 }]}>REDEEMED</Text>
+                                        </Pressable>
+                                    </View>
+                                </View>
+                            </ShadowBox>
                             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginVertical: 15 }}>
                                 <Text style={globalStyles.body}>My Wishlist ({unclaimedRewards.length})</Text>
                             </View>

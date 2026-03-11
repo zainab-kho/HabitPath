@@ -1,8 +1,14 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@/lib/supabase';
-import { STORAGE_KEYS } from '@/storage/keys';
 import { Reward } from '@/types/Reward';
 import { Habit } from '@/types/Habit';
+import {
+  getRedeemedPointsFromDb,
+  setRedeemedPointsInDb,
+  getExchangeRateFromDb,
+  setExchangeRateInDb,
+  getPointsResetDateFromDb,
+  setPointsResetDateInDb,
+} from '@/lib/supabase/queries/stats';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -41,44 +47,19 @@ function rewardToRow(reward: Reward, userId: string) {
 // ─── rewards CRUD ────────────────────────────────────────────────────────────
 
 export async function getRewards(userId: string): Promise<Reward[]> {
-  try {
-    const { data, error } = await supabase
-      .from('rewards')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: true });
+  const { data, error } = await supabase
+    .from('rewards')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: true });
 
-    if (error) throw error;
-
-    const rewards = (data ?? []).map(rowToReward);
-    // keep local cache in sync
-    await AsyncStorage.setItem(STORAGE_KEYS.REWARDS, JSON.stringify(rewards));
-    return rewards;
-  } catch (err) {
-    console.error('getRewards failed, falling back to cache:', err);
-    try {
-      const raw = await AsyncStorage.getItem(STORAGE_KEYS.REWARDS);
-      return raw ? JSON.parse(raw) : [];
-    } catch {
-      return [];
-    }
-  }
+  if (error) throw error;
+  return (data ?? []).map(rowToReward);
 }
 
 export async function addReward(reward: Reward, userId: string): Promise<void> {
-  const row = rewardToRow(reward, userId);
-  console.log('addReward userId:', userId);
-  console.log('addReward row.user_id:', row.user_id);
-
-  const { data: authData } = await supabase.auth.getUser();
-  console.log('auth uid:', authData?.user?.id);
-
-  const { error } = await supabase.from('rewards').insert([row]);
-
-  if (error) {
-    console.log('addReward failed:', error);
-    throw error;
-  }
+  const { error } = await supabase.from('rewards').insert([rewardToRow(reward, userId)]);
+  if (error) throw error;
 }
 
 export async function updateReward(reward: Reward, userId: string): Promise<void> {
@@ -99,6 +80,30 @@ export async function deleteReward(rewardId: string, userId: string): Promise<vo
     .eq('user_id', userId);
 
   if (error) throw error;
+}
+
+export async function clearWishlist(userId: string): Promise<void> {
+  // **LOG
+  console.log('[**LOG rewards] clearWishlist → deleting all rewards for user_id:', userId)
+  const { error } = await supabase
+    .from('rewards')
+    .delete()
+    .eq('user_id', userId);
+  // **LOG
+  console.log('[**LOG rewards] clearWishlist → delete error:', error)
+  if (error) throw error;
+  // **LOG
+  console.log('[**LOG rewards] clearWishlist → done')
+}
+
+export async function resetPointsBalance(): Promise<void> {
+  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+  // **LOG
+  console.log('[**LOG rewards] resetPointsBalance → setting reset_date to', today, 'and redeemed to 0')
+  await setPointsResetDateInDb(today);
+  await setRedeemedPointsInDb(0);
+  // **LOG
+  console.log('[**LOG rewards] resetPointsBalance → done')
 }
 
 // ─── photo upload ─────────────────────────────────────────────────────────────
@@ -126,12 +131,11 @@ export async function deleteReward(rewardId: string, userId: string): Promise<vo
 //   return data.publicUrl;
 // }
 
-// ─── redeemed points (still local — no table for this) ───────────────────────
+// ─── redeemed points ──────────────────────────────────────────────────────────
 
 export async function getRedeemedPoints(): Promise<number> {
   try {
-    const raw = await AsyncStorage.getItem(STORAGE_KEYS.REDEEMED_POINTS);
-    return raw ? Number(raw) : 0;
+    return await getRedeemedPointsFromDb();
   } catch {
     return 0;
   }
@@ -140,18 +144,17 @@ export async function getRedeemedPoints(): Promise<number> {
 export async function addRedeemedPoints(points: number): Promise<void> {
   try {
     const current = await getRedeemedPoints();
-    await AsyncStorage.setItem(STORAGE_KEYS.REDEEMED_POINTS, String(current + points));
+    await setRedeemedPointsInDb(current + points);
   } catch (err) {
     console.error('Error updating redeemed points:', err);
   }
 }
 
-// ─── exchange rate (local) ───────────────────────────────────────────────────
+// ─── exchange rate ────────────────────────────────────────────────────────────
 
 export async function getExchangeRate(): Promise<number | null> {
   try {
-    const raw = await AsyncStorage.getItem(STORAGE_KEYS.EXCHANGE_RATE);
-    return raw ? Number(raw) : null;
+    return await getExchangeRateFromDb();
   } catch {
     return null;
   }
@@ -159,17 +162,32 @@ export async function getExchangeRate(): Promise<number | null> {
 
 export async function saveExchangeRate(rate: number): Promise<void> {
   try {
-    await AsyncStorage.setItem(STORAGE_KEYS.EXCHANGE_RATE, String(rate));
+    await setExchangeRateInDb(rate);
   } catch (err) {
     console.error('Error saving exchange rate:', err);
   }
 }
 
+// ─── points reset date ────────────────────────────────────────────────────────
+
+export async function getPointsResetDate(): Promise<string | null> {
+  try {
+    return await getPointsResetDateFromDb();
+  } catch {
+    return null;
+  }
+}
+
 // ─── points computation ──────────────────────────────────────────────────────
 
-export function computeTotalPointsFromHabits(habits: Habit[]): number {
+// resetDate (YYYY-MM-DD): when set, only completions strictly after this date are counted.
+// This ensures pre-reset habit toggles have no effect on the post-reset balance.
+export function computeTotalPointsFromHabits(habits: Habit[], resetDate?: string): number {
   return habits.reduce((sum, h) => {
-    const completions = h.completionHistory?.length ?? 0;
+    const history = h.completionHistory ?? [];
+    const completions = resetDate
+      ? history.filter(date => date > resetDate).length
+      : history.length;
     return sum + completions * (h.rewardPoints ?? 0);
   }, 0);
 }

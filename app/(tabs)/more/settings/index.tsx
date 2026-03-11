@@ -2,7 +2,7 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { BUTTON_COLORS, COLORS, PAGE } from '@/constants/colors';
 import { supabase } from '@/lib/supabase';
@@ -14,6 +14,7 @@ import ShadowBox from '@/ui/ShadowBox';
 import { TimeWheel, pickerStyles } from '@/ui/TimeWheel';
 import { getResetTime } from '@/lib/supabase/queries';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { clearWishlist, resetPointsBalance } from '@/services/rewards/rewards';
 
 
 export default function SettingsPage() {
@@ -92,6 +93,52 @@ export default function SettingsPage() {
         }
     };
 
+    const handleClearWishlist = () => {
+        Alert.alert(
+            'Clear Wishlist',
+            'This will permanently delete all items from your wishlist. Your points balance will not change. This cannot be undone.',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Clear Wishlist',
+                    style: 'destructive',
+                    onPress: async () => {
+                        if (!user) return;
+                        try {
+                            await clearWishlist(user.id);
+                            Alert.alert('Done', 'Your wishlist has been cleared.');
+                        } catch (err) {
+                            Alert.alert('Error', 'Something went wrong. Please try again.');
+                        }
+                    },
+                },
+            ]
+        );
+    };
+
+    const handleResetPointsBalance = () => {
+        Alert.alert(
+            'Reset Points Balance',
+            'This will zero out your available points. Your habits and wishlist will not be affected. This cannot be undone.',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Reset Balance',
+                    style: 'destructive',
+                    onPress: async () => {
+                        if (!user) return;
+                        try {
+                            await resetPointsBalance();
+                            Alert.alert('Done', 'Your points balance has been reset to zero.');
+                        } catch (err) {
+                            Alert.alert('Error', 'Something went wrong. Please try again.');
+                        }
+                    },
+                },
+            ]
+        );
+    };
+
     return (
         <AppLinearGradient variant="settings.background">
             <PageContainer showBottomNav={false}>
@@ -162,6 +209,38 @@ export default function SettingsPage() {
                             style={{ paddingVertical: 5, paddingHorizontal: 15, flex: 1, alignItems: 'center' }}
                         >
                             <Text style={globalStyles.body1}>Edit Pin</Text>
+                        </Pressable>
+                    </ShadowBox>
+
+                    <Text style={[globalStyles.h4, { textAlign: 'center', marginTop: 10 }]}>
+                        Data
+                    </Text>
+
+                    {/* clear wishlist */}
+                    <ShadowBox
+                        contentBorderRadius={20}
+                        shadowBorderRadius={20}
+                        contentBackgroundColor={BUTTON_COLORS.Cancel}
+                    >
+                        <Pressable
+                            onPress={handleClearWishlist}
+                            style={{ paddingVertical: 5, paddingHorizontal: 15, flex: 1, alignItems: 'center' }}
+                        >
+                            <Text style={globalStyles.body1}>Clear Wishlist</Text>
+                        </Pressable>
+                    </ShadowBox>
+
+                    {/* reset points balance */}
+                    <ShadowBox
+                        contentBorderRadius={20}
+                        shadowBorderRadius={20}
+                        contentBackgroundColor={BUTTON_COLORS.Cancel}
+                    >
+                        <Pressable
+                            onPress={handleResetPointsBalance}
+                            style={{ paddingVertical: 5, paddingHorizontal: 15, flex: 1, alignItems: 'center' }}
+                        >
+                            <Text style={globalStyles.body1}>Reset Points Balance</Text>
                         </Pressable>
                     </ShadowBox>
                 </ScrollView>

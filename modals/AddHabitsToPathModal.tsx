@@ -77,6 +77,10 @@ export default function AddHabitsToPathModal({
 
         // ---- non-recurring habits below ----
 
+        // snoozed to a future date — still pending, show it
+        const snoozeDay = h.snoozedUntil?.slice(0, 10);
+        if (snoozeDay && snoozeDay > TODAY_STR) return true;
+
         const everCompleted = (h.completionHistory?.length ?? 0) > 0;
 
         // 4) keepUntil (boolean): keep showing until EVER completed, then disappear forever
@@ -93,15 +97,21 @@ export default function AddHabitsToPathModal({
     });
 
     // ── sorting ──────────────────────────────────────────────────────────────
-    // 1. one-time habits active today (most urgent — show at top)
+    const isSnoozed = (h: Habit) => {
+        const sd = h.snoozedUntil?.slice(0, 10);
+        return !!(sd && sd > TODAY_STR);
+    };
+    // 1. snoozed habits (any frequency) — pinned at top so they're not missed
+    const snoozedHabits = availableHabits.filter(isSnoozed);
+    // 2. one-time habits active today (most urgent)
     const oneTimeToday = availableHabits.filter(
-        h => !isRecurring(h) && isActiveToday(h)
+        h => !isSnoozed(h) && !isRecurring(h) && isActiveToday(h)
     );
-    // 2. recurring habits
-    const recurring = availableHabits.filter(isRecurring);
-    // 3. future one-time habits (startDate > today)
+    // 3. recurring habits (not snoozed)
+    const recurring = availableHabits.filter(h => !isSnoozed(h) && isRecurring(h));
+    // 4. future one-time habits (startDate > today, not snoozed)
     const oneTimeFuture = availableHabits.filter(
-        h => !isRecurring(h) && h.startDate > TODAY_STR
+        h => !isSnoozed(h) && !isRecurring(h) && h.startDate > TODAY_STR
     );
 
     // ── handlers ─────────────────────────────────────────────────────────────
@@ -214,7 +224,7 @@ export default function AddHabitsToPathModal({
         );
     };
 
-    const hasAny = oneTimeToday.length + recurring.length + oneTimeFuture.length > 0;
+    const hasAny = snoozedHabits.length + oneTimeToday.length + recurring.length + oneTimeFuture.length > 0;
 
     return (
         <Modal visible={visible} transparent animationType="none" onRequestClose={handleCancel}>
@@ -247,6 +257,7 @@ export default function AddHabitsToPathModal({
                     {/* list */}
                     <ScrollView style={{ paddingHorizontal: 3 }}>
                         <View style={{ padding: 20 }}>
+                            <Section title="Snoozed" habits={snoozedHabits} />
                             <Section title="One-time (today)" habits={oneTimeToday} />
                             <Section title="Recurring" habits={recurring} />
                             <Section title="One-time (upcoming)" habits={oneTimeFuture} />

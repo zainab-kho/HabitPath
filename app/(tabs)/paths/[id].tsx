@@ -15,13 +15,14 @@ import { AppLinearGradient } from '@/ui/AppLinearGradient';
 import PageContainer from '@/ui/PageContainer';
 import PageHeader from '@/ui/PageHeader';
 import ShadowBox from '@/ui/ShadowBox';
-import { getHabitDate } from '@/utils/dateUtils';
+import { getHabitDate, formatDisplayDateString } from '@/utils/dateUtils';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Image,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -251,6 +252,7 @@ export default function PathDetail() {
   const [path, setPath] = useState<Path | null>(null);
   const [pathLoading, setPathLoading] = useState(true);
   const [showAddHabits, setShowAddHabits] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
   // All habits from cache — not date-filtered, so we see recurring + future + past
   const [allHabitsAll, setAllHabitsAll] = useState<Habit[]>([]);
 
@@ -260,17 +262,49 @@ export default function PathDetail() {
   const isRecurring = (h: Habit) =>
     h.frequency === 'Daily' || h.frequency === 'Weekly' || h.frequency === 'Monthly';
 
-  // A habit is "visible" if it's recurring, a future one-timer, or a keepUntil not yet done
+  // A habit is visible if: recurring, snoozed-to-future, today's one-timer (not yet done),
+  // future one-timer, or keepUntil not yet completed.
   const isVisible = (h: Habit): boolean => {
+    const snoozeDay = h.snoozedUntil?.slice(0, 10);
+    if (snoozeDay && snoozeDay > todayStr) return true; // snoozed — still pending
     if (isRecurring(h)) return true;
-    if (h.startDate > todayStr) return true;
     if (h.keepUntil) return (h.completionHistory?.length ?? 0) === 0;
+    if (h.startDate === todayStr) return !h.completionHistory?.includes(todayStr);
+    if (h.startDate > todayStr) return true;
     return false;
+  };
+
+  // A habit is archived if it's a completed or past one-timer (not recurring, not snoozed).
+  const isArchived = (h: Habit): boolean => {
+    const snoozeDay = h.snoozedUntil?.slice(0, 10);
+    if (snoozeDay && snoozeDay > todayStr) return false;
+    if (isRecurring(h)) return false;
+    if (h.keepUntil) return (h.completionHistory?.length ?? 0) > 0;
+    if (h.startDate < todayStr) return true;
+    if (h.startDate === todayStr) return !!h.completionHistory?.includes(todayStr);
+    return false;
+  };
+
+  // Returns a human-readable "next due" label for a habit card.
+  const nextDueLabel = (h: Habit): string | null => {
+    const snoozeDay = h.snoozedUntil?.slice(0, 10);
+    if (snoozeDay && snoozeDay > todayStr) return `Snoozed → ${formatDisplayDateString(snoozeDay)}`;
+    if (h.keepUntil) return 'Until completed';
+    if (!isRecurring(h)) {
+      if (h.startDate > todayStr) return formatDisplayDateString(h.startDate);
+      return 'Today';
+    }
+    return null; // recurring — the frequency badge is enough
   };
 
   // Habits in this path (from the full cache, with smart date filtering)
   const pathHabits = path
     ? allHabitsAll.filter(h => h.path === path.name && isVisible(h))
+    : [];
+
+  // Past/completed one-time habits in this path (shown in Archived modal)
+  const archivedHabits = path
+    ? allHabitsAll.filter(h => h.path === path.name && isArchived(h))
     : [];
 
   // Habits with no path assigned, visible per the same rules
@@ -417,7 +451,6 @@ export default function PathDetail() {
   const weekCompletions = completionsThisWeek(pathHabits, resetHour, resetMin);
   const pts = totalPoints(pathHabits);
   const bestStreak = Math.max(...pathHabits.map(h => h.bestStreak ?? 0), 0);
-  const recentDays = lastNDays(7, resetHour, resetMin);
 
   return (
     <AppLinearGradient variant="path.background">
@@ -464,13 +497,24 @@ export default function PathDetail() {
           {/* ── habits list ── */}
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionLabel}>HABITS</Text>
-            <Pressable onPress={() => setShowAddHabits(true)}>
-              <ShadowBox contentBackgroundColor={colorHex} shadowBorderRadius={12} shadowOffset={{ x: 1, y: 1 }}>
-                <View style={styles.addBtn}>
-                  <Text style={styles.addBtnText}>+ Add</Text>
-                </View>
-              </ShadowBox>
-            </Pressable>
+            <View style={{ flexDirection: 'row', gap: 8 }}>
+              {archivedHabits.length > 0 && (
+                <Pressable onPress={() => setShowArchived(true)}>
+                  <ShadowBox contentBackgroundColor="rgba(0,0,0,0.06)" shadowBorderRadius={12} shadowOffset={{ x: 1, y: 1 }}>
+                    <View style={styles.addBtn}>
+                      <Text style={[styles.addBtnText, { color: '#666' }]}>📦 Archived</Text>
+                    </View>
+                  </ShadowBox>
+                </Pressable>
+              )}
+              <Pressable onPress={() => setShowAddHabits(true)}>
+                <ShadowBox contentBackgroundColor={colorHex} shadowBorderRadius={12} shadowOffset={{ x: 1, y: 1 }}>
+                  <View style={styles.addBtn}>
+                    <Text style={styles.addBtnText}>+ Add</Text>
+                  </View>
+                </ShadowBox>
+              </Pressable>
+            </View>
           </View>
 
           {pathHabits.length === 0 ? (
@@ -508,26 +552,22 @@ export default function PathDetail() {
                       )}
                     </View>
 
-                    {/* name + week dots */}
+                    {/* name + meta */}
                     <View style={{ flex: 1 }}>
                       <Text style={globalStyles.body} numberOfLines={1}>
                         {habit.name}
                       </Text>
-
-                      <View style={styles.dotsRow}>
-                        {recentDays.map(d => (
-                          <View
-                            key={d}
-                            style={[
-                              styles.dot,
-                              {
-                                backgroundColor: habit.completionHistory?.includes(d)
-                                  ? colorHex
-                                  : 'rgba(0,0,0,0.08)',
-                              },
-                            ]}
-                          />
-                        ))}
+                      <View style={{ flexDirection: 'row', gap: 6, marginTop: 5, flexWrap: 'wrap' }}>
+                        <View style={[globalStyles.bubbleLabel, { backgroundColor: colorHex + '22', borderColor: colorHex + '55' }]}>
+                          <Text style={[globalStyles.label, { opacity: 1, color: '#444' }]}>
+                            {isRecurring(habit) ? `↻ ${habit.frequency}` : '1× One-time'}
+                          </Text>
+                        </View>
+                        {nextDueLabel(habit) && (
+                          <View style={[globalStyles.bubbleLabel, { backgroundColor: 'rgba(0,0,0,0.04)', borderColor: 'rgba(0,0,0,0.1)' }]}>
+                            <Text style={globalStyles.label}>{nextDueLabel(habit)}</Text>
+                          </View>
+                        )}
                       </View>
                     </View>
 
@@ -565,9 +605,21 @@ export default function PathDetail() {
                           <Text style={{ fontSize: 16 }}>✦</Text>
                         )}
                       </View>
-                      <Text style={[globalStyles.body, { flex: 1 }]} numberOfLines={1}>
-                        {habit.name}
-                      </Text>
+                      <View style={{ flex: 1 }}>
+                        <Text style={globalStyles.body} numberOfLines={1}>{habit.name}</Text>
+                        <View style={{ flexDirection: 'row', gap: 6, marginTop: 5, flexWrap: 'wrap' }}>
+                          <View style={[globalStyles.bubbleLabel, { backgroundColor: 'rgba(0,0,0,0.04)', borderColor: 'rgba(0,0,0,0.1)' }]}>
+                            <Text style={globalStyles.label}>
+                              {isRecurring(habit) ? `↻ ${habit.frequency}` : '1× One-time'}
+                            </Text>
+                          </View>
+                          {nextDueLabel(habit) && (
+                            <View style={[globalStyles.bubbleLabel, { backgroundColor: 'rgba(0,0,0,0.04)', borderColor: 'rgba(0,0,0,0.1)' }]}>
+                              <Text style={globalStyles.label}>{nextDueLabel(habit)}</Text>
+                            </View>
+                          )}
+                        </View>
+                      </View>
                       <Pressable onPress={() => handleAddHabit(habit.id)}>
                         <ShadowBox
                           contentBackgroundColor={colorHex}
@@ -607,6 +659,70 @@ export default function PathDetail() {
           onClose={() => setShowAddHabits(false)}
           onSave={handleSaveHabits}
         />
+
+        {/* ── archived habits modal ── */}
+        <Modal
+          visible={showArchived}
+          transparent
+          animationType="fade"
+          onRequestClose={() => setShowArchived(false)}
+        >
+          <Pressable
+            style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}
+            onPress={() => setShowArchived(false)}
+          >
+            <Pressable
+              style={{
+                backgroundColor: '#fff',
+                borderRadius: 24,
+                borderWidth: 2,
+                borderColor: colorHex,
+                maxHeight: '70%',
+                margin: 12,
+              }}
+              onPress={e => e.stopPropagation()}
+            >
+              <View style={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: 12 }}>
+                <Text style={[globalStyles.h2, { textAlign: 'center' }]}>Archived</Text>
+                <Text style={[globalStyles.body2, { textAlign: 'center', opacity: 0.5, marginTop: 4 }]}>
+                  Completed or past one-time habits
+                </Text>
+              </View>
+              <ScrollView style={{ paddingHorizontal: 16 }} contentContainerStyle={{ paddingBottom: 20 }}>
+                {archivedHabits.map(habit => {
+                  const iconFile = habit.icon ? HABIT_ICONS[habit.icon] : null;
+                  const completedDate = habit.completionHistory?.slice(-1)[0];
+                  return (
+                    <ShadowBox
+                      key={habit.id}
+                      contentBackgroundColor="rgba(0,0,0,0.03)"
+                      shadowBorderRadius={12}
+                      shadowOffset={{ x: 0, y: 1 }}
+                      style={{ marginBottom: 8 }}
+                    >
+                      <View style={[styles.habitRow, { opacity: 0.75 }]}>
+                        <View style={[styles.habitIconWrap, { backgroundColor: 'rgba(0,0,0,0.06)' }]}>
+                          {iconFile
+                            ? <Image source={iconFile} style={styles.habitIcon} />
+                            : <Text style={{ fontSize: 16 }}>✦</Text>
+                          }
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={globalStyles.body} numberOfLines={1}>{habit.name}</Text>
+                          <Text style={[globalStyles.label, { marginTop: 3, opacity: 0.6 }]}>
+                            {completedDate
+                              ? `✓ Completed ${formatDisplayDateString(completedDate)}`
+                              : `Scheduled ${formatDisplayDateString(habit.startDate)}`}
+                          </Text>
+                        </View>
+                      </View>
+                    </ShadowBox>
+                  );
+                })}
+              </ScrollView>
+            </Pressable>
+          </Pressable>
+        </Modal>
       </PageContainer>
     </AppLinearGradient>
   );
@@ -688,16 +804,6 @@ const styles = StyleSheet.create({
   habitIcon: {
     width: 24,
     height: 24,
-  },
-  dotsRow: {
-    flexDirection: 'row',
-    gap: 4,
-    marginTop: 4,
-  },
-  dot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
   },
   streakBadge: {
     fontFamily: 'p2',

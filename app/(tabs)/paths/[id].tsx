@@ -1,6 +1,8 @@
 // app/(tabs)/paths/[id].tsx
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BUTTON_COLORS } from '@/constants/colors';
 import { PATH_COLORS, type PathColorKey } from '@/colors/pathColors';
+import { STORAGE_KEYS } from '@/storage/keys';
 import { HABIT_ICONS } from '@/constants/icons';
 import { useAuth } from '@/contexts/AuthContext';
 import { useHabits } from '@/hooks/useHabits';
@@ -249,9 +251,47 @@ export default function PathDetail() {
   const [path, setPath] = useState<Path | null>(null);
   const [pathLoading, setPathLoading] = useState(true);
   const [showAddHabits, setShowAddHabits] = useState(false);
+  // All habits from cache — not date-filtered, so we see recurring + future + past
+  const [allHabitsAll, setAllHabitsAll] = useState<Habit[]>([]);
 
-  // derived — always reflects latest completion history from the hook
-  const pathHabits = path ? allHabits.filter(h => h.path === path.name) : [];
+  // ── helpers ──────────────────────────────────────────────────────────────
+  const todayStr = getHabitDate(new Date(), resetHour, resetMin);
+
+  const isRecurring = (h: Habit) =>
+    h.frequency === 'Daily' || h.frequency === 'Weekly' || h.frequency === 'Monthly';
+
+  // A habit is "visible" if it's recurring, a future one-timer, or a keepUntil not yet done
+  const isVisible = (h: Habit): boolean => {
+    if (isRecurring(h)) return true;
+    if (h.startDate > todayStr) return true;
+    if (h.keepUntil) return (h.completionHistory?.length ?? 0) === 0;
+    return false;
+  };
+
+  // Habits in this path (from the full cache, with smart date filtering)
+  const pathHabits = path
+    ? allHabitsAll.filter(h => h.path === path.name && isVisible(h))
+    : [];
+
+  // Habits with no path assigned, visible per the same rules
+  const unassignedHabits = path
+    ? allHabitsAll.filter(h => !h.path && isVisible(h))
+    : [];
+
+  const loadAllHabits = useCallback(async () => {
+    try {
+      const raw = await AsyncStorage.getItem(STORAGE_KEYS.HABITS_CACHE);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        const habits: Habit[] = Array.isArray(parsed?.habits)
+          ? parsed.habits
+          : Array.isArray(parsed) ? parsed : [];
+        setAllHabitsAll(habits.filter(h => !h.archivedAt));
+      }
+    } catch (e) {
+      console.error('Error loading habits cache:', e);
+    }
+  }, []);
 
   const loadPath = useCallback(async () => {
     if (!user || !id) return;
@@ -271,12 +311,13 @@ export default function PathDetail() {
       }
 
       setPath(pathData as Path);
+      await loadAllHabits();
     } catch (err) {
       console.error('Error loading path:', err);
     } finally {
       setPathLoading(false);
     }
-  }, [user, id, router]);
+  }, [user, id, router, loadAllHabits]);
 
   useEffect(() => { loadPath(); }, [loadPath]);
 
@@ -321,8 +362,25 @@ export default function PathDetail() {
 
       setShowAddHabits(false);
       await loadHabits();
+      await loadAllHabits();
     } catch (err) {
       console.error('Error saving habits to path:', err);
+    }
+  };
+
+  // Quick-add a single unassigned habit to this path
+  const handleAddHabit = async (habitId: string) => {
+    if (!path || !user) return;
+    try {
+      await supabase
+        .from('habits')
+        .update({ path: path.name, path_color: colorHex })
+        .eq('id', habitId)
+        .eq('user_id', user.id);
+      await loadHabits();
+      await loadAllHabits();
+    } catch (err) {
+      console.error('Error adding habit to path:', err);
     }
   };
 
@@ -483,7 +541,53 @@ export default function PathDetail() {
             })
           )}
 
-          <Pressable onPress={handleDeletePath} style={{ width: 100, alignSelf: 'center' }}>
+          {/* ── unassigned habits ── */}
+          {unassignedHabits.length > 0 && (
+            <View style={{ marginTop: 20 }}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionLabel}>NOT IN ANY PATH ({unassignedHabits.length})</Text>
+              </View>
+              {unassignedHabits.map(habit => {
+                const iconFile = habit.icon ? HABIT_ICONS[habit.icon] : null;
+                return (
+                  <ShadowBox
+                    key={habit.id}
+                    contentBackgroundColor="#fff"
+                    shadowBorderRadius={14}
+                    shadowOffset={{ x: 0, y: 2 }}
+                    style={{ marginBottom: 8 }}
+                  >
+                    <View style={styles.habitRow}>
+                      <View style={[styles.habitIconWrap, { backgroundColor: 'rgba(0,0,0,0.06)' }]}>
+                        {iconFile ? (
+                          <Image source={iconFile} style={styles.habitIcon} />
+                        ) : (
+                          <Text style={{ fontSize: 16 }}>✦</Text>
+                        )}
+                      </View>
+                      <Text style={[globalStyles.body, { flex: 1 }]} numberOfLines={1}>
+                        {habit.name}
+                      </Text>
+                      <Pressable onPress={() => handleAddHabit(habit.id)}>
+                        <ShadowBox
+                          contentBackgroundColor={colorHex}
+                          contentBorderRadius={20}
+                          shadowBorderRadius={20}
+                          shadowOffset={{ x: 1, y: 1 }}
+                        >
+                          <View style={{ paddingVertical: 4, paddingHorizontal: 12 }}>
+                            <Text style={[globalStyles.label, { opacity: 1, fontSize: 11 }]}>+ Add</Text>
+                          </View>
+                        </ShadowBox>
+                      </Pressable>
+                    </View>
+                  </ShadowBox>
+                );
+              })}
+            </View>
+          )}
+
+          <Pressable onPress={handleDeletePath} style={{ width: 100, alignSelf: 'center', marginTop: 20 }}>
             <ShadowBox contentBackgroundColor={BUTTON_COLORS.Delete} shadowBorderRadius={15}>
               <View style={{ paddingVertical: 6 }}>
                 <Text style={[globalStyles.body, { textAlign: 'center' }]}>
@@ -496,7 +600,7 @@ export default function PathDetail() {
 
         <AddHabitsToPathModal
           visible={showAddHabits}
-          allHabits={allHabits}
+          allHabits={allHabitsAll.length > 0 ? allHabitsAll : allHabits}
           pathHabitIds={pathHabitIds}
           pathColor={colorHex}
           pathName={path.name}

@@ -76,7 +76,7 @@ export default function NewHabitPage() {
     // paths
     interface PathOption { id: string; name: string; color: string; }
     const [paths, setPaths] = useState<PathOption[]>([]);
-    const [selectedPathIds, setSelectedPathIds] = useState<string[]>([]);
+    const [selectedPathId, setSelectedPathId] = useState<string | null>(null);
 
     React.useEffect(() => {
         if (!user) return;
@@ -88,10 +88,9 @@ export default function NewHabitPage() {
             .then(({ data }) => setPaths((data as PathOption[]) ?? []));
     }, [user]);
 
+    // Single-select: tap same path to deselect, tap different path to switch
     const togglePath = (id: string) => {
-        setSelectedPathIds(prev =>
-            prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]
-        );
+        setSelectedPathId(prev => prev === id ? null : id);
     };
 
     // ui state
@@ -184,6 +183,14 @@ export default function NewHabitPage() {
                 // incrementGoal **TODO: add to supabase
             };
 
+            // Resolve the selected path's name + hex color so the habit
+            // shows up immediately in the path detail view (which filters by h.path === path.name)
+            const selectedPath = paths.find(p => p.id === selectedPathId) ?? null;
+            const pathName = selectedPath?.name ?? null;
+            const pathColorHex = selectedPath
+                ? (PATH_COLORS[selectedPath.color as PathColorKey] ?? null)
+                : null;
+
             const { error } = await supabase.from('habits').insert([{
                 id: newHabit.id,
                 user_id: user.id,
@@ -200,7 +207,9 @@ export default function NewHabitPage() {
                 increment_step: newHabit.incrementStep,
                 increment_type: newHabit.incrementType,
                 increment_goal: newHabit.incrementGoal,
-                path_ids: selectedPathIds,
+                path: pathName,
+                path_color: pathColorHex,
+                path_ids: selectedPathId ? [selectedPathId] : [],
                 created_at: new Date().toISOString(),
             }]);
 
@@ -601,7 +610,7 @@ export default function NewHabitPage() {
                                             <Text style={[globalStyles.label, { opacity: 0.4 }]}>No paths yet</Text>
                                         ) : (
                                             paths.map((path) => {
-                                                const selected = selectedPathIds.includes(path.id);
+                                                const selected = selectedPathId === path.id;
                                                 const colorHex = PATH_COLORS[path.color as PathColorKey] ?? '#999';
                                                 return (
                                                     <Pressable key={path.id} onPress={() => togglePath(path.id)}>

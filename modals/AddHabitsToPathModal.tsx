@@ -84,9 +84,10 @@ export default function AddHabitsToPathModal({
             return !everCompleted;
         }
 
-        // 5) normal one-time: only show on the start date (today), and hide if completed today
-        if (h.startDate !== TODAY_STR) return false;
-        if (h.completionHistory?.includes(TODAY_STR)) return false;
+        // 5) normal one-time: hide past habits; future and today are allowed
+        if (h.startDate < TODAY_STR) return false;
+        // hide today's if already completed today
+        if (h.startDate === TODAY_STR && h.completionHistory?.includes(TODAY_STR)) return false;
 
         return true;
     });
@@ -98,6 +99,10 @@ export default function AddHabitsToPathModal({
     );
     // 2. recurring habits
     const recurring = availableHabits.filter(isRecurring);
+    // 3. future one-time habits (startDate > today)
+    const oneTimeFuture = availableHabits.filter(
+        h => !isRecurring(h) && h.startDate > TODAY_STR
+    );
 
     // ── handlers ─────────────────────────────────────────────────────────────
     const toggle = (id: string) => {
@@ -209,7 +214,7 @@ export default function AddHabitsToPathModal({
         );
     };
 
-    const hasAny = oneTimeToday.length + recurring.length > 0;
+    const hasAny = oneTimeToday.length + recurring.length + oneTimeFuture.length > 0;
 
     return (
         <Modal visible={visible} transparent animationType="none" onRequestClose={handleCancel}>
@@ -242,8 +247,9 @@ export default function AddHabitsToPathModal({
                     {/* list */}
                     <ScrollView style={{ paddingHorizontal: 3 }}>
                         <View style={{ padding: 20 }}>
-                            <Section title="One-time (today only)" habits={oneTimeToday} />
+                            <Section title="One-time (today)" habits={oneTimeToday} />
                             <Section title="Recurring" habits={recurring} />
+                            <Section title="One-time (upcoming)" habits={oneTimeFuture} />
 
                             {!hasAny && (
                                 <Text style={[globalStyles.body, { textAlign: 'center', opacity: 0.5, marginTop: 20 }]}>

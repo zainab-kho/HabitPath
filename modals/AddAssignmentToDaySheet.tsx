@@ -94,7 +94,7 @@ export default function AddAssignmentToDaySheet({
                                         width: 20,
                                         height: 20,
                                         borderRadius: 10,
-                                        backgroundColor: BUTTON_COLORS.Done,
+                                        backgroundColor: BUTTON_COLORS.Save,
                                         justifyContent: 'center',
                                         alignItems: 'center',
                                         borderWidth: 1,
@@ -207,7 +207,7 @@ export default function AddAssignmentToDaySheet({
                                 contentBackgroundColor={
                                     selectedAssignmentIds.length === 0 || isAdding
                                         ? '#ccc'
-                                        : BUTTON_COLORS.Done
+                                        : BUTTON_COLORS.Save
                                 }
                                 shadowBorderRadius={15}
                             >

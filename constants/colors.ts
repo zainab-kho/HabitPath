@@ -13,7 +13,7 @@ export const COLORS = {
   RewardsBackground: '#E4E986',
   RewardsAccent: '#7FD1AE',
   StreakAccent: '#F55858',
-  XPAccent: '#FFB5A0',
+  XPAccent: '#E69F94',
   Star: '#ea3434ff',
   Time: '#FFE6FF',
   ReadMore: '#0000EE',
@@ -121,7 +121,8 @@ export const TAG_COLORS: Record<string, string> = {
  * button action colors
  */
 export const BUTTON_COLORS = {
-  Done: '#70A9FF',
+  Save: '#70A9FF',
+  Done: '#FFD581',
   Close: '#ffc8c8ff',
   Delete: '#ff5656',
   Edit: '#d8c8ffff',

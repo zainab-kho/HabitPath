@@ -839,7 +839,7 @@ export default function NewHabitPage() {
                                         >
                                             <ShadowBox
                                                 contentBackgroundColor={
-                                                    isSaving ? BUTTON_COLORS.Disabled : BUTTON_COLORS.Done
+                                                    isSaving ? BUTTON_COLORS.Disabled : BUTTON_COLORS.Save
                                                 }
                                                 shadowBorderRadius={20}
                                             >

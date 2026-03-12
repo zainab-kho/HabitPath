@@ -178,7 +178,7 @@ export default function SnoozeHabitModal({
 
             <Pressable onPress={handleDone} style={{ flex: 1 }}>
               <ShadowBox
-                contentBackgroundColor={BUTTON_COLORS.Done}
+                contentBackgroundColor={BUTTON_COLORS.Save}
                 shadowBorderRadius={15}
               >
                 <View style={{ paddingVertical: 6 }}>

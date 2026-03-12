@@ -156,7 +156,7 @@ function SessionModal({
                                 >
                                     <ShadowBox
                                         contentBackgroundColor={
-                                            BUTTON_COLORS.Done
+                                            BUTTON_COLORS.Save
                                         }
                                         shadowBorderRadius={15}
                                     >

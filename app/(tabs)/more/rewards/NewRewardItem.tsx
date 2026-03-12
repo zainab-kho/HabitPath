@@ -555,7 +555,7 @@ export default function NewRewardItem() {
 
                   <Pressable onPress={handleSave} disabled={saving} style={{ flex: 1, maxWidth: 120 }}>
                     <ShadowBox
-                      contentBackgroundColor={saving ? BUTTON_COLORS.Disabled : BUTTON_COLORS.Done}
+                      contentBackgroundColor={saving ? BUTTON_COLORS.Disabled : BUTTON_COLORS.Save}
                       shadowBorderRadius={20}
                     >
                       <View style={{ paddingVertical: 5, alignItems: 'center' }}>

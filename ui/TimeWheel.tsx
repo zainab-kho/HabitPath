@@ -115,6 +115,6 @@ export const pickerStyles = StyleSheet.create({
         backgroundColor: 'rgba(255, 255, 255, 0.2)',
         borderTopWidth: 2,
         borderBottomWidth: 2,
-        borderColor: BUTTON_COLORS.Done,
+        borderColor: BUTTON_COLORS.Save,
     },
 });

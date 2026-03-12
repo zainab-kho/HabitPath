@@ -134,7 +134,7 @@ export default function NewPathModal({ visible, onClose, onCreated }: NewPathMod
 
                         <Pressable onPress={handleSave} style={{ flex: 1 }}>
                             <ShadowBox
-                                contentBackgroundColor={BUTTON_COLORS.Done}
+                                contentBackgroundColor={BUTTON_COLORS.Save}
                                 shadowBorderRadius={15}
                             >
                                 <View style={{ paddingVertical: 6 }}>

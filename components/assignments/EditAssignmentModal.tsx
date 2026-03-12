@@ -374,7 +374,7 @@ export default function EditAssignmentModal({ visible, assignment, courses, onCl
                             disabled={isSaving}
                         >
                             <ShadowBox
-                                contentBackgroundColor={isSaving ? '#ccc' : BUTTON_COLORS.Done
+                                contentBackgroundColor={isSaving ? '#ccc' : BUTTON_COLORS.Save
                                 }
                                 shadowBorderRadius={15}
                             >

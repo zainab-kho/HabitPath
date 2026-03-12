@@ -265,7 +265,7 @@ export default function AddHabitsToPathModal({
 
                         <Pressable onPress={handleSave} style={{ flex: 1 }}>
                             <ShadowBox
-                                contentBackgroundColor={changedCount === 0 ? BUTTON_COLORS.Disabled : BUTTON_COLORS.Done}
+                                contentBackgroundColor={changedCount === 0 ? BUTTON_COLORS.Disabled : BUTTON_COLORS.Save}
                                 shadowBorderRadius={15}
                             >
                                 <View style={{ paddingVertical: 6 }}>

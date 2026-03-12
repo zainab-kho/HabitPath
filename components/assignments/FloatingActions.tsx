@@ -144,7 +144,7 @@ export function FloatingActions({
                         </Pressable>
 
                         <Pressable onPress={onSave} disabled={isSaving}>
-                            <ShadowBox contentBackgroundColor={BUTTON_COLORS.Done}>
+                            <ShadowBox contentBackgroundColor={BUTTON_COLORS.Save}>
                                 <View style={{ width: 150, paddingVertical: 6, alignItems: 'center' }}>
                                     <Text style={globalStyles.body}>{isSaving ? 'Saving...' : 'Save'}</Text>
                                 </View>

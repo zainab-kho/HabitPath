@@ -339,7 +339,7 @@ export default function HabitDetailModal({ visible, habit, onClose, onUpdate }: 
                     {isEditMode && (
                         <View style={{ marginTop: 10 }}>
                             <ShadowBox
-                                contentBackgroundColor={BUTTON_COLORS.Done}
+                                contentBackgroundColor={BUTTON_COLORS.Save}
                                 contentBorderRadius={20}
                                 shadowBorderRadius={20}
                             >

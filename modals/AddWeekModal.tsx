@@ -236,7 +236,7 @@ export default function AddWeekModal({ visible, weekPlans, onClose, onSave }: Ad
                                 contentBackgroundColor={
                                     selectedDays.length === 0
                                         ? '#ccc'
-                                        : BUTTON_COLORS.Done
+                                        : BUTTON_COLORS.Save
                                 }
                                 shadowBorderRadius={15}
                             >

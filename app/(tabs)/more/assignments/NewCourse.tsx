@@ -326,7 +326,7 @@ export default function NewCourse() {
 
                     <ShadowBox
                         shadowBorderRadius={20}
-                        contentBackgroundColor={BUTTON_COLORS.Done}
+                        contentBackgroundColor={BUTTON_COLORS.Save}
                         style={{
                             width: 100,
                             alignSelf: 'center',

@@ -285,7 +285,7 @@ export default function EntryDetail() {
 
                             <View style={{ alignItems: 'center', marginTop: 30, marginBottom: 30 }}>
                                 <Pressable
-                                    style={[buttonStyles.button, { backgroundColor: BUTTON_COLORS.Done }]}
+                                    style={[buttonStyles.button, { backgroundColor: BUTTON_COLORS.Save }]}
                                     onPress={() => setIsEditing(true)}
                                 >
                                     <Text style={globalStyles.body}>Edit</Text>

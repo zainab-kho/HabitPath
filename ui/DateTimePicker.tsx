@@ -197,7 +197,7 @@ export default function DateTimePicker({
                 <Pressable style={buttonStyles.button} onPress={handleClose}>
                   <Text style={[globalStyles.body]}>Cancel</Text>
                 </Pressable>
-                <Pressable style={[buttonStyles.button, { backgroundColor: BUTTON_COLORS.Done }]} onPress={handleSave}>
+                <Pressable style={[buttonStyles.button, { backgroundColor: BUTTON_COLORS.Save }]} onPress={handleSave}>
                   <Text style={[globalStyles.body]}>Save</Text>
                 </Pressable>
               </View>

@@ -49,11 +49,6 @@ export default function SettingsPage() {
             setHour(String(hour12));
             setMinute(String(minute).padStart(2, '0'));
             setMeridiem(isPM ? 'PM' : 'AM');
-
-            console.log(hour);
-            console.log(minute);
-
-            await resetPointsBalance(hour, minute);
         })();
     }, [user]);
 
@@ -130,7 +125,11 @@ export default function SettingsPage() {
                     onPress: async () => {
                         if (!user) return;
                         try {
-                            await resetPointsBalance();
+                            // Convert picker state (12h) back to 24h for the reset calculation
+                            const hour24 = meridiem === 'AM'
+                                ? Number(hour) === 12 ? 0 : Number(hour)
+                                : Number(hour) === 12 ? 12 : Number(hour) + 12;
+                            await resetPointsBalance(hour24, Number(minute));
                             Alert.alert('Done', 'Your points balance has been reset to zero.');
                         } catch (err) {
                             Alert.alert('Error', 'Something went wrong. Please try again.');
@@ -183,7 +182,7 @@ export default function SettingsPage() {
 
                             <ShadowBox
                                 shadowBorderRadius={20}
-                                contentBackgroundColor={BUTTON_COLORS.Done}
+                                contentBackgroundColor={BUTTON_COLORS.Save}
                                 style={{}}
                             >
                                 <Pressable

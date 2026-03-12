@@ -124,7 +124,7 @@ export default function TagPickerModal({ visible, selectedTag, onClose, onSelect
                             style={{ flex: 1 }}
                         >
                             <ShadowBox
-                                contentBackgroundColor={BUTTON_COLORS.Done}
+                                contentBackgroundColor={BUTTON_COLORS.Save}
                                 shadowBorderRadius={15}
                             >
                                 <Text style={[globalStyles.body, { textAlign: 'center', padding: 8 }]}>

@@ -143,7 +143,7 @@ export default function RewardsPage() {
 
         Alert.alert(
             'Claim Your Reward?',
-            `${reward.name}\n-${reward.costPoints} points\n\nNew balance: ${availablePoints - reward.costPoints} points`,
+            `${reward.name}\n-${reward.costPoints} points\n\nNew balance: ${availablePoints - reward.costPoints} points${reward.recurring ? '\n\n↻ This reward will stay in your list for next time.' : ''}`,
             [
                 { text: 'Cancel', style: 'cancel' },
                 {
@@ -152,7 +152,8 @@ export default function RewardsPage() {
                         try {
                             const claimedReward = {
                                 ...reward,
-                                isClaimed: true,
+                                // Recurring rewards stay unclaimed so they remain in the wishlist
+                                isClaimed: reward.recurring ? false : true,
                                 dateClaimed: new Date().toISOString().split('T')[0],
                             };
                             await updateReward(claimedReward, user!.id);
@@ -184,7 +185,7 @@ export default function RewardsPage() {
     };
 
     const unclaimedRewards = rewards
-        .filter(r => !r.isClaimed)
+        .filter(r => !r.isClaimed || r.recurring)
         .sort((a, b) => a.costDollars - b.costDollars);
 
     return (
@@ -405,8 +406,6 @@ export default function RewardsPage() {
                                                                 {reward.name}
                                                             </Text>
 
-
-
                                                             {/* Tags */}
                                                             <View style={s.tagsContainer}>
                                                                 {(reward.tags ?? []).slice(0, 2).map(tag => (
@@ -547,5 +546,18 @@ const s = StyleSheet.create({
         paddingHorizontal: 5,
         paddingVertical: 2,
         borderRadius: 8,
+    },
+    recurringBadge: {
+        backgroundColor: COLORS.RewardsBackground,
+        borderColor: COLORS.RewardsAccent,
+        borderWidth: 1,
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 8,
+        marginBottom: 5,
+    },
+    recurringBadgeText: {
+        fontSize: 9,
+        fontFamily: 'label',
     },
 });

@@ -73,7 +73,9 @@ export default function PointsHistoryModal({
     setVisibleCount(PAGE_SIZE);
   }, [type]);
 
-  const claimedRewards = rewards.filter(r => r.isClaimed);
+  // Include recurring rewards that have been claimed at least once (dateClaimed is set)
+  // even though their isClaimed stays false so they remain in the wishlist
+  const claimedRewards = rewards.filter(r => r.isClaimed || !!r.dateClaimed);
 
   // Dedup by habit.id, aggregate post-reset completions, sort newest-first
   const allHabitsWithPoints = useMemo<HabitEntry[]>(() => {
@@ -330,6 +332,11 @@ export default function PointsHistoryModal({
                       <View style={{ flex: 1, gap: 6 }}>
                         <Text style={[globalStyles.body1, { fontSize: 14 }]} numberOfLines={1}>{reward.name}</Text>
                         <View style={s.badgesRow}>
+                          {reward.recurring && (
+                            <View style={[s.badge, s.dateBadge]}>
+                              <Text style={[globalStyles.label, { fontSize: 9, opacity: 1 }]}>↻ Recurring</Text>
+                            </View>
+                          )}
                           <View style={[s.badge, s.pointsBadge]}>
                             <Image source={SYSTEM_ICONS.reward} style={{ width: 12, height: 12, tintColor: COLORS.Rewards }} />
                             <Text style={s.badgeText}>-{reward.costPoints} pts</Text>

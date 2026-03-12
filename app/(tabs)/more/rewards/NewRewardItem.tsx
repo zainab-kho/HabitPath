@@ -15,6 +15,7 @@ import {
   Image,
   Keyboard,
   Pressable,
+  Switch,
   Text,
   TextInput,
   TouchableWithoutFeedback,
@@ -42,6 +43,7 @@ export default function NewRewardItem() {
   const [exchangeRate, setExchangeRate] = useState(10);
   const [photoUri, setPhotoUri] = useState<string | undefined>(undefined);
   const [saving, setSaving] = useState(false);
+  const [recurring, setRecurring] = useState(false);
 
   useEffect(() => {
     getExchangeRate().then(rate => {
@@ -102,7 +104,7 @@ export default function NewRewardItem() {
 
     setSaving(true);
     try {
-      // Upload local image to Supabase Storage if one was selected
+      // upload local image to Supabase Storage if one was selected
       let resolvedPhotoUri = photoUri;
 
       const newReward: Reward = {
@@ -114,6 +116,7 @@ export default function NewRewardItem() {
         photoUri: resolvedPhotoUri,
         tags: selectedTags,
         notes: notes.trim() || undefined,
+        recurring,
         dateAdded: new Date().toISOString().split('T')[0],
         isClaimed: false,
       };
@@ -156,9 +159,9 @@ export default function NewRewardItem() {
                 <View style={{ gap: 10 }}>
                   <Text style={globalStyles.label}>REWARD NAME</Text>
                   <TextInput
-                    style={[uiStyles.inputField, { borderColor: PAGE.rewards.primary[0] }]}
+                    style={[uiStyles.inputField, { borderColor: '#000' }]}
                     placeholder="e.g. Coffee shop treat"
-                    placeholderTextColor="rgba(0,0,0,0.4)"
+                    placeholderTextColor={COLORS.PlaceHolder}
                     value={name}
                     onChangeText={setName}
                     cursorColor={PAGE.rewards.primary[0]}
@@ -176,6 +179,7 @@ export default function NewRewardItem() {
                       shadowColor={PAGE.rewards.primary[0]}
                       shadowBorderColor={PAGE.rewards.primary[0]}
                     >
+                      {/* minus button */}
                       <Pressable
                         onPress={() => setRewardPrice(prev => Math.max(0, parseInt(prev) - 1).toString())}
                         style={{
@@ -184,10 +188,11 @@ export default function NewRewardItem() {
                           alignItems: 'center',
                           justifyContent: 'center'
                         }}>
-                        <Text style={globalStyles.body}>-</Text>
+                        <Text style={globalStyles.body1}>-</Text>
                       </Pressable>
                     </ShadowBox>
 
+                    {/* input field */}
                     <ShadowBox
                       contentBorderColor={PAGE.rewards.primary[0]}
                       shadowColor={PAGE.rewards.primary[0]}
@@ -199,9 +204,10 @@ export default function NewRewardItem() {
                         justifyContent: 'center',
                       }}>
                         <TextInput
-                          style={[globalStyles.body, { textAlign: 'center' }]}
+                          style={[globalStyles.body1, { textAlign: 'center' }]}
                           keyboardType="number-pad"
                           placeholder='$0'
+                          placeholderTextColor={COLORS.PlaceHolder}
                           value={price > 0 ? `$${rewardPrice}` : ''} // show $ prefix in input
                           onChangeText={text => setRewardPrice(text.replace('$', ''))}
                           onFocus={(e) => scrollRef.current?.scrollToFocusedInput(e.nativeEvent.target)}
@@ -209,6 +215,7 @@ export default function NewRewardItem() {
                       </View>
                     </ShadowBox>
 
+                    {/* plus button */}
                     <ShadowBox
                       contentBorderColor={PAGE.rewards.primary[0]}
                       shadowColor={PAGE.rewards.primary[0]}
@@ -229,23 +236,21 @@ export default function NewRewardItem() {
                           alignItems: 'center',
                           justifyContent: 'center'
                         }}>
-                        <Text style={globalStyles.body}>+</Text>
+                        <Text style={globalStyles.body1}>+</Text>
                       </Pressable>
                     </ShadowBox>
                   </View>
 
                   {price > 0 && (
                     <View style={[globalStyles.bubbleLabel, {
-                      paddingVertical: 10,
+                      paddingHorizontal: 8,
+                      paddingVertical: 3,
+                      borderRadius: 10,
                       width: 200,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 5,
                       alignSelf: 'center',
-                      borderRadius: 15,
-                      borderColor: COLORS.Rewards,
+                      marginTop: -10,
                     }]}>
-                      <Text style={[globalStyles.body, { fontSize: 12, textAlign: 'center' }]}>
+                      <Text style={[globalStyles.body1, { fontSize: 12, textAlign: 'center' }]}>
                         {price}
                       </Text>
                       <Image source={SYSTEM_ICONS.reward} style={{ width: 11, height: 11, tintColor: COLORS.Rewards }} />
@@ -275,7 +280,7 @@ export default function NewRewardItem() {
                           alignItems: 'center',
                           justifyContent: 'center'
                         }}>
-                        <Text style={globalStyles.body}>-</Text>
+                        <Text style={globalStyles.body1}>-</Text>
                       </Pressable>
                     </ShadowBox>
 
@@ -291,10 +296,11 @@ export default function NewRewardItem() {
                         justifyContent: 'center',
                       }}>
                         <TextInput
-                          style={[globalStyles.body, { textAlign: 'center' }]}
+                          style={[globalStyles.body1, { textAlign: 'center' }]}
                           keyboardType="number-pad"
                           value={points > 0 ? `${rewardPoints} pts` : ''} // show pts suffix in input
                           placeholder='0 pts'
+                          placeholderTextColor={COLORS.PlaceHolder}
                           onChangeText={text => {
                             setPointsOverridden(true);
                             setRewardPoints(text.replace('pts', '').trim());
@@ -324,7 +330,7 @@ export default function NewRewardItem() {
                           alignItems: 'center',
                           justifyContent: 'center'
                         }}>
-                        <Text style={globalStyles.body}>+</Text>
+                        <Text style={globalStyles.body1}>+</Text>
                       </Pressable>
                     </ShadowBox>
                   </View>
@@ -338,11 +344,6 @@ export default function NewRewardItem() {
                   <Text style={globalStyles.label}>PHOTO (OPTIONAL)</Text>
                   <Pressable onPress={handlePickPhoto}>
                     <ShadowBox
-                      contentBorderColor={PAGE.rewards.primary[0]}
-                      shadowBorderColor={PAGE.rewards.primary[0]}
-                      shadowColor={PAGE.rewards.primary[0]}
-                      contentBorderRadius={12}
-                      shadowBorderRadius={12}
                     >
                       <View style={{
                         flexDirection: 'row',
@@ -401,7 +402,7 @@ export default function NewRewardItem() {
                             shadowColor={isSelected ? '#000' : color}
                             shadowBorderRadius={18}
                           >
-                            <View style={{ width: 36, height: 36 }} />
+                            <View style={{ width: 25, height: 25 }} />
                           </ShadowBox>
                         </Pressable>
                       );
@@ -440,7 +441,7 @@ export default function NewRewardItem() {
                   <Text style={globalStyles.label}>NOTES (OPTIONAL)</Text>
                   <TextInput
                     style={[uiStyles.inputField, {
-                      borderColor: PAGE.rewards.primary[0],
+                      borderColor: '#000',
                       height: 80,
                       textAlignVertical: 'top',
                     }]}
@@ -542,6 +543,26 @@ export default function NewRewardItem() {
                     </ShadowBox>
                   </View>
                 </View>
+
+                {/* Recurring Toggle */}
+                <View style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: 10,
+                }}>
+                  <Text style={globalStyles.body}>Recurring?</Text>
+                  <Switch
+                    trackColor={{ true: PAGE.rewards.primary[0] }}
+                    value={recurring}
+                    onValueChange={setRecurring}
+                  />
+                </View>
+
+
+
+
+
 
                 {/* CANCEL / SAVE */}
                 <View style={{ flexDirection: 'row', gap: 10, marginTop: 10, justifyContent: 'center' }}>

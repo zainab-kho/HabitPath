@@ -51,9 +51,9 @@ export const globalStyles = StyleSheet.create({
         paddingHorizontal: 8,
         paddingVertical: 2,
         borderWidth: 1,
-        borderColor: '#000',
         borderRadius: 8,
         gap: 4,
-        backgroundColor: COLORS.RewardsAccent,
+        backgroundColor: COLORS.RewardsBackground,
+        borderColor: COLORS.RewardsAccent,
     },
 });

@@ -18,7 +18,8 @@ export const COLORS = {
   Time: '#FFE6FF',
   ReadMore: '#0000EE',
   Frequency: '#92C5FF',
-  TimeOfDay: '#AB98F8'
+  TimeOfDay: '#AB98F8',
+  PlaceHolder: 'rgba(0,0,0,0.4)',
 } as const;
 
 /**

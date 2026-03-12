@@ -7,6 +7,7 @@ export interface Reward {
   photoUri?: string;
   tags?: string[];
   notes?: string;
+  recurring?: boolean;
   dateAdded: string;
   isClaimed: boolean;
   dateClaimed?: string;

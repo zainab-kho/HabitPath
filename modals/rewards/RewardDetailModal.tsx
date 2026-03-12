@@ -1,7 +1,7 @@
 import { globalStyles, buttonStyles } from '@/styles';
 import { BUTTON_COLORS } from '@/constants/colors';
 import React from 'react';
-import { Alert, Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
 import { Reward } from '@/types/Reward';
 import { SYSTEM_ICONS } from '@/constants/icons';
 
@@ -35,8 +35,10 @@ export default function RewardDetailModal({ visible, onClose, reward, onDelete }
 
   return (
     <Modal visible={visible} animationType="fade" transparent>
-      <View style={s.overlay}>
-        <View style={s.modal}>
+      <TouchableWithoutFeedback onPress={onClose}>
+        <View style={s.overlay}>
+          <TouchableWithoutFeedback onPress={() => {}}>
+            <View style={s.modal}>
           {/* Header */}
           <View style={s.header}>
             <Text style={globalStyles.h3}>Reward Details</Text>
@@ -126,8 +128,10 @@ export default function RewardDetailModal({ visible, onClose, reward, onDelete }
               <Text style={globalStyles.body}>Done</Text>
             </TouchableOpacity>
           </View>
+            </View>
+          </TouchableWithoutFeedback>
         </View>
-      </View>
+      </TouchableWithoutFeedback>
     </Modal>
   );
 }

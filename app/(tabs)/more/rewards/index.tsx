@@ -3,9 +3,9 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import ExchangeRateModal from '@/components/rewards/ExchangeRateModal';
-import PointsHistoryModal from '@/components/rewards/PointsHistoryModal';
-import RewardDetailModal from '@/components/rewards/RewardDetailModal';
+import ExchangeRateModal from '@/modals/rewards/ExchangeRateModal';
+import PointsHistoryModal from '@/modals/rewards/PointsHistoryModal';
+import RewardDetailModal from '@/modals/rewards/RewardDetailModal';
 import { COLORS, PAGE } from '@/constants/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import {
@@ -212,6 +212,7 @@ export default function RewardsPage() {
                     redeemedPoints={redeemedPoints}
                     rewards={rewards}
                     recentHabits={habits}
+                    pointsResetDate={pointsResetDate}
                 />
 
                 <ScrollView contentContainerStyle={{ paddingBottom: 40, marginRight: 3, }} showsVerticalScrollIndicator={false}>

@@ -51,6 +51,18 @@ function buildWeek(now: Date, resetHour: number, resetMin: number) {
     });
 }
 
+// ─── skipped pill ─────────────────────────────────────────────────────────────
+
+/* faint gray pill for skipped habits */
+function SkippedPill({ opacity }: { opacity?: { opacity: number } | {} }) {
+    return (
+        <View style={[grid.pill, {
+            backgroundColor: 'rgba(0,0,0,0.06)',
+            borderColor: 'rgba(0,0,0,0.10)',
+        }, opacity]} />
+    );
+}
+
 // ─── week grid ────────────────────────────────────────────────────────────────
 
 interface WeekGridProps {
@@ -83,7 +95,10 @@ function WeekGrid({ pathName, habits, color, week, todayStr, now, resetHour, res
                 const regularDone = regularHabits.filter(h =>
                     h.completionHistory?.includes(str)
                 ).length;
-                const emptyCount = regularHabits.length - regularDone;
+                const regularSkipped = regularHabits.filter(h =>
+                    h.skippedDates?.includes(str)
+                ).length;
+                const emptyCount = regularHabits.length - regularDone - regularSkipped;
                 const total = scheduledHabits.length;
                 const done = scheduledHabits.filter(h => h.completionHistory?.includes(str)).length;
 
@@ -91,7 +106,7 @@ function WeekGrid({ pathName, habits, color, week, todayStr, now, resetHour, res
 
                 return (
                     <View key={str} style={[grid.col, isToday && grid.todayCol]}>
-                        {/* pill stack — renders top→bottom: empty | increment | filled */}
+                        {/* pill stack — renders top→bottom: empty | skipped | increment | filled */}
                         <View style={grid.pills}>
                             {total === 0 ? (
                                 <View style={[
@@ -115,6 +130,11 @@ function WeekGrid({ pathName, habits, color, week, todayStr, now, resetHour, res
                                                 pillOpacity,
                                             ]}
                                         />
+                                    ))}
+
+                                    {/* skipped regular pills */}
+                                    {Array.from({ length: regularSkipped }, (_, i) => (
+                                        <SkippedPill key={`skip-${i}`} opacity={pillOpacity} />
                                     ))}
 
                                     {/* ② increment pills — sits at the boundary */}
@@ -446,11 +466,8 @@ export default function Paths() {
     // today-filtered habits (for DailySummary)
     const habits: Habit[] = allHabitsRaw.map(({ status, ...rest }) => rest);
 
-    // unfiltered habits minus archived (for WeekGrid — so one-time habits show on their original day)
-    const weekHabits: Habit[] = useMemo(
-        () => allHabitsUnfiltered.filter(h => !h.archivedAt),
-        [allHabitsUnfiltered]
-    );
+    // unfiltered habits for WeekGrid — isHabitActiveToday handles archived visibility per-day
+    const weekHabits: Habit[] = allHabitsUnfiltered;
 
     const [paths, setPaths] = useState<Path[]>([]);
     const [loading, setLoading] = useState(true);

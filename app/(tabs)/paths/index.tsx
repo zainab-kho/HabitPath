@@ -22,7 +22,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View, Image
 
 // ─── date helpers ─────────────────────────────────────────────────────────────
 
-// Mon→Sun labels
+// Mon through Sun labels
 const DAY_LABELS_WEEK = ['M', 'T', 'W', 'T', 'F', 'S', 'S'] as const;
 
 /**
@@ -304,10 +304,11 @@ function PathCard({ path, habits, onPress, week, todayStr, now, resetHour, reset
     return (
         <Pressable onPress={onPress}>
             <ShadowBox
+                contentBorderRadius={25}
                 shadowColor={colorHex}
-                shadowBorderRadius={18}
+                shadowBorderRadius={30}
                 shadowOffset={{ x: 0, y: 5 }}
-                style={{ marginBottom: 14 }}
+                style={{ marginBottom: 18 }}
             >
                 <View style={styles.card}>
                     {/* color strip */}
@@ -436,14 +437,20 @@ export default function Paths() {
 
     // stable date reference for the hook
     const today = useMemo(() => new Date(), []);
-    const { habits: allHabitsRaw, loadHabits, resetTime } = useHabits(today);
+    const { habits: allHabitsRaw, allHabits: allHabitsUnfiltered, loadHabits, resetTime } = useHabits(today);
 
     // use the user's actual reset time, falling back to 4am default
     const resetHour = resetTime.hour;
     const resetMin = resetTime.minute;
 
-    // strip computed "completed" field so we match your Habit type usage elsewhere
+    // today-filtered habits (for DailySummary)
     const habits: Habit[] = allHabitsRaw.map(({ status, ...rest }) => rest);
+
+    // unfiltered habits minus archived (for WeekGrid — so one-time habits show on their original day)
+    const weekHabits: Habit[] = useMemo(
+        () => allHabitsUnfiltered.filter(h => !h.archivedAt),
+        [allHabitsUnfiltered]
+    );
 
     const [paths, setPaths] = useState<Path[]>([]);
     const [loading, setLoading] = useState(true);
@@ -525,7 +532,7 @@ export default function Paths() {
                             <PathCard
                                 key={path.id}
                                 path={path}
-                                habits={habits}
+                                habits={weekHabits}
                                 week={week}
                                 todayStr={todayStr}
                                 now={now}
@@ -590,7 +597,7 @@ const styles = StyleSheet.create({
     card: {
         flexDirection: 'row',
         alignItems: 'stretch',
-        borderRadius: 18,
+        borderRadius: 25,
         overflow: 'hidden',
         minHeight: 90,
     },

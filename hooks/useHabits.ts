@@ -45,6 +45,7 @@ export function useHabits(viewingDate: Date = new Date()) {
   const [appStreak, setAppStreak] = useState(0);
   const [totalPoints, setTotalPoints] = useState(0);
   const [earnedPoints, setEarnedPoints] = useState(0);
+  const [allHabits, setAllHabits] = useState<Habit[]>([]);
   const [progressTotal, setProgressTotal] = useState(0);
   const [progressEarned, setProgressEarned] = useState(0);
   const [progressSkipped, setProgressSkipped] = useState(0);
@@ -90,6 +91,7 @@ export function useHabits(viewingDate: Date = new Date()) {
 
       // **TODO: find a way to make everything load at the same time
       unstable_batchedUpdates(() => {
+        setAllHabits(updatedHabits);
         setHabits(withStatus);
         setProgressTotal(progressTotal);
         setProgressEarned(progressEarned);
@@ -330,6 +332,7 @@ export function useHabits(viewingDate: Date = new Date()) {
 
   return {
     habits,
+    allHabits,
     loading,
     error,
 

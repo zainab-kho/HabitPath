@@ -13,6 +13,7 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { getOrCreateEncryptionKey, encryptEntry } from '@/lib/journal-crypto';
 import { JournalEntry } from '@/types/JournalEntry';
 import { COLORS, PAGE } from '@/constants/colors';
 import MoodPickerModal from '@/modals/MoodPickerModal';
@@ -124,6 +125,13 @@ export default function JournalPage() {
 
             console.log('**LOG: Entry saved to AsyncStorage (cache)');
 
+            // encrypt entry text before sending to Supabase
+            let encryptedEntry: string | null = null;
+            if (entry) {
+                const keyHex = await getOrCreateEncryptionKey(user.id);
+                encryptedEntry = encryptEntry(entry, keyHex);
+            }
+
             // save to Supabase WITH LOCK STATUS
             const { data, error } = await supabase
                 .from('journal_entries')
@@ -135,7 +143,7 @@ export default function JournalPage() {
                         time: localTime,
                         mood: selectedMood,
                         location: location || null,
-                        entry: entry || null,
+                        entry: encryptedEntry,
                         is_locked: lock,
                         song: song || null,
                         created_at: now.toISOString(),

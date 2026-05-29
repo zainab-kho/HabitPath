@@ -3,6 +3,7 @@ import { BUTTON_COLORS, COLORS, MOOD_COLORS } from '@/constants/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { getOrCreateEncryptionKey, encryptEntry, safeDecryptEntry } from '@/lib/journal-crypto';
 import MoodPickerModal from '@/modals/MoodPickerModal';
 import SongPickerModal, { SongData } from '@/modals/SongPickerModal';
 import SongCard from '@/components/journal/SongCard';
@@ -76,13 +77,20 @@ export default function EntryDetail() {
                 }
 
                 if (data) {
+                    // decrypt entry text from Supabase
+                    let decryptedEntry = data.entry || undefined;
+                    if (data.entry && user) {
+                        const keyHex = await getOrCreateEncryptionKey(user.id);
+                        decryptedEntry = safeDecryptEntry(data.entry, keyHex);
+                    }
+
                     const freshEntry: JournalEntry = {
                         id: data.id,
                         date: parseLocalDate(data.date),
                         time: data.time,
                         mood: data.mood as keyof typeof MOOD_COLORS | undefined,
                         location: data.location || undefined,
-                        entry: data.entry || undefined,
+                        entry: decryptedEntry,
                         song: data.song || undefined,
                     };
 
@@ -119,11 +127,18 @@ export default function EntryDetail() {
 
             // update Supabase first so it's ready when home page loads
             if (user) {
+                // encrypt entry text before sending to Supabase
+                let encryptedEntry: string | null = null;
+                if (editedEntry) {
+                    const keyHex = await getOrCreateEncryptionKey(user.id);
+                    encryptedEntry = encryptEntry(editedEntry, keyHex);
+                }
+
                 const updateData = {
                     time: editedTime || null,
                     mood: editedMood || null,
                     location: editedLocation || null,
-                    entry: editedEntry || null,
+                    entry: encryptedEntry,
                     song: editedSong || null,
                 };
 

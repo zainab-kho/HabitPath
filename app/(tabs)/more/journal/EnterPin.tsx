@@ -3,7 +3,13 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Keyboard, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { PAGE } from '@/constants/colors';
+import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import {
+  hasEncryptionKey,
+  createPinEncryptedKeyBackup,
+  restoreKeyFromPinBackup,
+} from '@/lib/journal-crypto';
 import { globalStyles } from '@/styles';
 import { AppLinearGradient } from '@/ui/AppLinearGradient';
 import PageContainer from '@/ui/PageContainer';
@@ -15,6 +21,7 @@ const JOURNAL_UNLOCK_KEY = '@journal_pin_unlocked';
 
 export default function EnterPinPage() {
   const router = useRouter();
+  const { user } = useAuth();
   const inputRef = useRef<TextInput>(null);
 
   const [pin, setPin] = useState('');
@@ -45,9 +52,19 @@ export default function EnterPinPage() {
           return;
         }
 
-        // sucess
-        // unlock journal
+        // success — unlock journal
         await AsyncStorage.setItem('@journal_pin_unlocked', '1');
+
+        // encryption key backup/restore
+        if (user) {
+          const hasKey = await hasEncryptionKey(user.id);
+          if (!hasKey) {
+            // new device — try restoring the key from the PIN-encrypted backup
+            await restoreKeyFromPinBackup(user.id, cleaned);
+          }
+          // refresh the backup with the current PIN
+          await createPinEncryptedKeyBackup(user.id, cleaned).catch(console.error);
+        }
 
         router.back();
       } catch (err) {

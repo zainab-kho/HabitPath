@@ -1,5 +1,6 @@
 // @/contexts/AuthContext.tsx
 import { supabase } from '@/lib/supabase'
+import { migrateExistingEntriesToEncrypted } from '@/lib/journal-migration'
 import { CURRENT_CACHE_VERSION, STORAGE_KEYS } from '@/storage/keys'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import type { User } from '@supabase/supabase-js'
@@ -58,6 +59,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         console.log('[**LOG auth] restored session for user:', session?.user?.email ?? 'none')
         setUser(session?.user ?? null)
         setLoading(false)
+
+        // migrate existing journal entries to encrypted (background, one-time)
+        if (session?.user) {
+          migrateExistingEntriesToEncrypted(session.user.id).catch(console.error)
+        }
       })
     })
 

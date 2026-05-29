@@ -17,6 +17,10 @@ export const STORAGE_KEYS = {
   REDEEMED_POINTS: '@redeemed_points',
   EXCHANGE_RATE: '@exchange_rate',
 
+  // journal encryption
+  ENCRYPTION_KEY_PREFIX: '@journal_encryption_key_',   // + user_id → SecureStore key
+  ENCRYPTION_MIGRATED: '@journal_encryption_migrated', // AsyncStorage flag
+
   // bumped when a breaking cache change is made — triggers a one-time wipe on next launch
   CACHE_VERSION: '@cache_version',
 } as const;

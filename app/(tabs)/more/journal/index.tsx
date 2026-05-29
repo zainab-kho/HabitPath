@@ -8,6 +8,7 @@ import MoodPreview from '@/components/journal/MoodPreview';
 import SongCard from '@/components/journal/SongCard';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { getOrCreateEncryptionKey, safeDecryptEntry } from '@/lib/journal-crypto';
 import { JournalEntry } from '@/types/JournalEntry';
 
 import { COLORS, MOOD_COLORS, PAGE } from '@/constants/colors';
@@ -122,6 +123,12 @@ export default function JournalPage() {
         return;
       }
 
+      // decrypt entry text from Supabase
+      let keyHex: string | null = null;
+      if (user) {
+        keyHex = await getOrCreateEncryptionKey(user.id);
+      }
+
       const fresh: JournalEntry[] = (data || []).map(row => ({
         id: row.id,
         date: parseLocalDate(row.date),
@@ -129,10 +136,11 @@ export default function JournalPage() {
         mood: row.mood,
         location: row.location ?? undefined,
         lock: row.is_locked ?? undefined,
-        entry: row.entry ?? undefined,
+        entry: keyHex ? safeDecryptEntry(row.entry, keyHex) : (row.entry ?? undefined),
         song: row.song ?? undefined,
       }));
 
+      // cache stores decrypted plaintext (local-only)
       await AsyncStorage.setItem('@journal_entries', JSON.stringify(fresh));
       groupAndSetEntries(fresh);
     } catch (err) {

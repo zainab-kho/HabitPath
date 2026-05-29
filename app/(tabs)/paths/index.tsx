@@ -104,8 +104,14 @@ function WeekGrid({ pathName, habits, color, week, todayStr, now, resetHour, res
 
                 const pillOpacity = isFuture ? { opacity: 0.35 } : {};
 
+                const allDone = total > 0 && done === total;
+
                 return (
-                    <View key={str} style={[grid.col, isToday && grid.todayCol]}>
+                    <View key={str} style={[
+                        grid.col,
+                        isToday && grid.todayCol,
+                        allDone && !isFuture && { backgroundColor: color + '12', borderRadius: 8 },
+                    ]}>
                         {/* pill stack — renders top→bottom: empty | skipped | increment | filled */}
                         <View style={grid.pills}>
                             {total === 0 ? (
@@ -200,10 +206,6 @@ function WeekGrid({ pathName, habits, color, week, todayStr, now, resetHour, res
                             {label}
                         </Text>
 
-                        {/* ✓ on fully complete days */}
-                        {total > 0 && done === total && (
-                            <Text style={[grid.check, { color }]}>✓</Text>
-                        )}
                     </View>
                 );
             })}

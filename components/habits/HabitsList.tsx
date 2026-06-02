@@ -1,6 +1,6 @@
 // components/habits/HabitsList.tsx
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, { useAnimatedRef } from 'react-native-reanimated';
@@ -43,7 +43,19 @@ interface HabitsListProps {
 
 type TimeOfDay = typeof TIME_OPTIONS[number];
 
+// Union type for items in the flat sortable list
+type ListItem =
+  | { type: 'header'; id: string; timeOfDay: TimeOfDay; count: number }
+  | { type: 'habit'; id: string; habit: HabitWithStatus };
+
 const AnimatedScrollView = Animated.createAnimatedComponent(ScrollView);
+
+function getSection(habit: Pick<Habit, 'selectedTimeOfDay' | 'tempTimeOfDay' | 'tempTimeOfDayDate'>, dateStr: string): TimeOfDay {
+  const tod = (habit.tempTimeOfDay && habit.tempTimeOfDayDate === dateStr)
+    ? habit.tempTimeOfDay
+    : (habit.selectedTimeOfDay ?? 'Anytime');
+  return tod as TimeOfDay;
+}
 
 export default function HabitsList({
   habits,
@@ -62,9 +74,6 @@ export default function HabitsList({
 
   const [showCompleted, setShowCompleted] = useState(true);
   const [orderedHabits, setOrderedHabits] = useState<HabitWithStatus[]>([]);
-
-  // Track which item is currently being dragged (for cross-zone drops)
-  const activeKeyRef = useRef<string | null>(null);
 
   // Modal state
   const [selectedHabit, setSelectedHabit] = useState<HabitWithStatus | null>(null);
@@ -103,79 +112,81 @@ export default function HabitsList({
     })();
   }, [habits, dateStr]);
 
-  const groupByTimeOfDay = useCallback((habitsList: HabitWithStatus[]) => {
+  // Build the flat list: headers interleaved with habits, grouped by section
+  const flatList = useMemo(() => {
+    const visible = showCompleted
+      ? orderedHabits
+      : orderedHabits.filter(h => h.status !== 'completed' && h.status !== 'skipped');
+
     const grouped: Record<TimeOfDay, HabitWithStatus[]> = {
-      'Wake Up': [],
-      'Morning': [],
-      'Anytime': [],
-      'Afternoon': [],
-      'Evening': [],
-      'Bed Time': [],
+      'Wake Up': [], 'Morning': [], 'Anytime': [],
+      'Afternoon': [], 'Evening': [], 'Bed Time': [],
     };
-
-    habitsList.forEach(habit => {
-      const timeOfDay = effectiveTimeOfDay(habit, dateStr) as TimeOfDay;
-      if (grouped[timeOfDay]) {
-        grouped[timeOfDay].push(habit);
-      } else {
-        grouped['Anytime'].push(habit);
-      }
+    visible.forEach(h => {
+      const section = getSection(h, dateStr);
+      (grouped[section] || grouped['Anytime']).push(h);
     });
 
-    return grouped;
-  }, [dateStr]);
-
-  const visibleHabits = showCompleted
-    ? orderedHabits
-    : orderedHabits.filter(h => h.status !== 'completed' && h.status !== 'skipped');
-
-  const groupedHabits = useMemo(() => groupByTimeOfDay(visibleHabits), [visibleHabits, groupByTimeOfDay]);
-
-  const handleSectionDragEnd = useCallback((timeOfDay: TimeOfDay, params: { data: HabitWithStatus[] }) => {
-    const reorderedSection = params.data;
-
-    // rebuild the full ordered list preserving other sections
-    const newOrdered: HabitWithStatus[] = [];
+    const items: ListItem[] = [];
     TIME_OPTIONS.forEach(time => {
-      if (time === timeOfDay) {
-        newOrdered.push(...reorderedSection);
-      } else {
-        const habitsInTime = orderedHabits.filter(
-          h => effectiveTimeOfDay(h, dateStr) === time
-        );
-        newOrdered.push(...habitsInTime);
+      const habitsInTime = grouped[time];
+      if (habitsInTime.length > 0) {
+        items.push({ type: 'header', id: `header-${time}`, timeOfDay: time, count: habitsInTime.length });
+        habitsInTime.forEach(h => items.push({ type: 'habit', id: h.id, habit: h }));
       }
     });
 
-    setOrderedHabits(newOrdered);
-    saveDailyOrder(dateStr, newOrdered.map(h => h.id));
-  }, [orderedHabits, dateStr]);
+    return items;
+  }, [orderedHabits, showCompleted, dateStr]);
 
-  const handleCrossZoneDrop = useCallback(async (
-    habitId: string,
-    targetTimeOfDay: TimeOfDay,
-  ) => {
-    const habit = orderedHabits.find(h => h.id === habitId);
-    if (!habit) return;
+  // The first header's ID — used to apply fixed-order mode
+  const firstHeaderId = flatList.length > 0 && flatList[0]?.type === 'header' ? flatList[0].id : null;
 
-    const currentTimeOfDay = effectiveTimeOfDay(habit, dateStr);
-    if (currentTimeOfDay === targetTimeOfDay) return;
+  const handleDragEnd = useCallback(async (params: { key: string; data: ListItem[] }) => {
+    const { key: draggedKey, data: newOrder } = params;
 
-    // Save temp time-of-day to Supabase (day-only override)
-    try {
-      await saveTempTimeOfDay(habitId, userId, targetTimeOfDay, dateStr);
-    } catch {
-      return;
+    // Derive new sections: walk the list, track current header
+    let currentSection: TimeOfDay = 'Anytime';
+    const newHabitOrder: HabitWithStatus[] = [];
+    const sectionChanges: { habitId: string; newSection: TimeOfDay }[] = [];
+
+    for (const item of newOrder) {
+      if (item.type === 'header') {
+        currentSection = item.timeOfDay;
+      } else {
+        const habit = item.habit;
+        const oldSection = getSection(habit, dateStr);
+
+        if (oldSection !== currentSection) {
+          // This habit moved to a new section
+          sectionChanges.push({ habitId: habit.id, newSection: currentSection });
+          newHabitOrder.push({
+            ...habit,
+            tempTimeOfDay: currentSection,
+            tempTimeOfDayDate: dateStr,
+          });
+        } else {
+          newHabitOrder.push(habit);
+        }
+      }
     }
 
-    // Update local state: move the habit to the new section
-    const updated = orderedHabits.map(h =>
-      h.id === habitId
-        ? { ...h, tempTimeOfDay: targetTimeOfDay, tempTimeOfDayDate: dateStr }
-        : h
-    );
-    setOrderedHabits(updated);
-    saveDailyOrder(dateStr, updated.map(h => h.id));
+    // Save section changes to Supabase
+    for (const change of sectionChanges) {
+      try {
+        await saveTempTimeOfDay(change.habitId, userId, change.newSection, dateStr);
+      } catch {
+        // Continue with other changes
+      }
+    }
+
+    // Rebuild full order including hidden habits
+    const visibleIds = new Set(newHabitOrder.map(h => h.id));
+    const hiddenHabits = orderedHabits.filter(h => !visibleIds.has(h.id));
+    const fullOrder = [...newHabitOrder, ...hiddenHabits];
+
+    setOrderedHabits(fullOrder);
+    saveDailyOrder(dateStr, fullOrder.map(h => h.id));
   }, [orderedHabits, dateStr, userId]);
 
   const handleHabitPress = (habit: HabitWithStatus) => {
@@ -226,55 +237,6 @@ export default function HabitsList({
     );
   }
 
-  const renderSection = (timeOfDay: TimeOfDay) => {
-    const habitsInTime = groupedHabits[timeOfDay];
-    if (habitsInTime.length === 0) return null;
-
-    return (
-      <Sortable.BaseZone
-        key={timeOfDay}
-        onItemDrop={() => {
-          if (activeKeyRef.current) {
-            handleCrossZoneDrop(activeKeyRef.current, timeOfDay);
-          }
-        }}
-      >
-        <HabitSectionHeader title={timeOfDay} count={habitsInTime.length} />
-        <Sortable.Grid
-          data={habitsInTime}
-          columns={1}
-          renderItem={({ item }) => (
-            <HabitItem
-              habit={item}
-              dateStr={dateStr}
-              onToggle={() => onToggleHabit(item.id)}
-              onPress={() => handleHabitPress(item)}
-              onIncrementUpdate={onIncrementUpdate}
-              onSkip={() => onSkipHabit?.(item.id)}
-              onSnooze={() => onSnoozeHabit?.(item.id)}
-            />
-          )}
-          keyExtractor={(item) => item.id}
-          onDragStart={({ key }) => { activeKeyRef.current = key; }}
-          onDragEnd={(params) => {
-            handleSectionDragEnd(timeOfDay, params);
-            activeKeyRef.current = null;
-          }}
-          scrollableRef={scrollableRef}
-          dragActivationDelay={200}
-          activeItemScale={1.02}
-          activeItemShadowOpacity={0.15}
-          activeItemOpacity={1}
-          inactiveItemOpacity={1}
-          inactiveItemScale={1}
-          hapticsEnabled
-          overDrag="vertical"
-          reorderTriggerOrigin="touch"
-        />
-      </Sortable.BaseZone>
-    );
-  };
-
   return (
     <GestureHandlerRootView style={styles.container}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 }}>
@@ -299,15 +261,67 @@ export default function HabitsList({
         </View>
       )}
 
-      <Sortable.MultiZoneProvider>
-        <AnimatedScrollView
-          ref={scrollableRef}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.contentContainer}
-        >
-          {TIME_OPTIONS.map(timeOfDay => renderSection(timeOfDay))}
-        </AnimatedScrollView>
-      </Sortable.MultiZoneProvider>
+      <AnimatedScrollView
+        ref={scrollableRef}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.contentContainer}
+      >
+        <Sortable.Grid
+          data={flatList}
+          columns={1}
+          customHandle
+          renderItem={({ item }) => {
+            if (item.type === 'header') {
+              const isFirstHeader = item.id === firstHeaderId;
+              if (isFirstHeader) {
+                // First header: locked in place, can't be displaced
+                return (
+                  <Sortable.Handle mode="fixed-order">
+                    <HabitSectionHeader
+                      title={item.timeOfDay}
+                      count={item.count}
+                    />
+                  </Sortable.Handle>
+                );
+              }
+              // Other headers: can't be picked up, but slide out of the way
+              return (
+                <HabitSectionHeader
+                  title={item.timeOfDay}
+                  count={item.count}
+                />
+              );
+            }
+
+            // Wrap habit in Sortable.Handle → can be picked up
+            return (
+              <Sortable.Handle>
+                <HabitItem
+                  habit={item.habit}
+                  dateStr={dateStr}
+                  onToggle={() => onToggleHabit(item.habit.id)}
+                  onPress={() => handleHabitPress(item.habit)}
+                  onIncrementUpdate={onIncrementUpdate}
+                  onSkip={() => onSkipHabit?.(item.habit.id)}
+                  onSnooze={() => onSnoozeHabit?.(item.habit.id)}
+                />
+              </Sortable.Handle>
+            );
+          }}
+          keyExtractor={(item) => item.id}
+          onDragEnd={handleDragEnd}
+          scrollableRef={scrollableRef}
+          dragActivationDelay={200}
+          activeItemScale={1.02}
+          activeItemShadowOpacity={0.15}
+          activeItemOpacity={1}
+          inactiveItemOpacity={1}
+          inactiveItemScale={1}
+          hapticsEnabled
+          overDrag="vertical"
+          reorderTriggerOrigin="touch"
+        />
+      </AnimatedScrollView>
 
       <HabitDetailModal
         visible={modalVisible}

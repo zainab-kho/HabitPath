@@ -1,8 +1,10 @@
 // components/habits/HabitsList.tsx
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import Animated, { useAnimatedRef } from 'react-native-reanimated';
+import Sortable from 'react-native-sortables';
 import { useRouter } from 'expo-router';
 
 import HabitItem from '@/components/habits/HabitItem';
@@ -20,11 +22,19 @@ import ShadowBox from '@/ui/ShadowBox';
 import { getHabitDate } from '@/utils/dateUtils';
 
 import { HabitWithStatus } from '@/hooks/useHabits';
+import {
+  applyDailyOrder,
+  effectiveTimeOfDay,
+  loadDailyOrder,
+  saveDailyOrder,
+  saveTempTimeOfDay,
+} from '@/hooks/useDailyHabitOverrides';
 
 interface HabitsListProps {
   habits: HabitWithStatus[];
   viewingDate: Date | null;
   resetTime: { hour: number; minute: number };
+  userId: string;
   onToggleHabit: (habitId: string) => void;
   onIncrementUpdate?: (habitId: string, newAmount: number) => void;
   onSkipHabit?: (habitId: string) => void;
@@ -33,12 +43,13 @@ interface HabitsListProps {
 
 type TimeOfDay = typeof TIME_OPTIONS[number];
 
-const DEBUG = false;
+const AnimatedScrollView = Animated.createAnimatedComponent(ScrollView);
 
 export default function HabitsList({
   habits,
   viewingDate,
   resetTime,
+  userId,
   onToggleHabit,
   onIncrementUpdate,
   onSkipHabit,
@@ -47,15 +58,17 @@ export default function HabitsList({
   const router = useRouter();
   const currentDate = viewingDate || new Date();
   const dateStr = getHabitDate(currentDate, resetTime.hour, resetTime.minute);
+  const scrollableRef = useAnimatedRef<Animated.ScrollView>();
 
   const [showCompleted, setShowCompleted] = useState(true);
   const [orderedHabits, setOrderedHabits] = useState<HabitWithStatus[]>([]);
-  
+
+  // Track which item is currently being dragged (for cross-zone drops)
+  const activeKeyRef = useRef<string | null>(null);
+
   // Modal state
   const [selectedHabit, setSelectedHabit] = useState<HabitWithStatus | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
-
-  const ORDER_STORAGE_KEY = `@habit_order_${dateStr}`;
 
   const activeHabits = habits.filter(habit =>
     isHabitActiveToday(habit, currentDate, resetTime.hour, resetTime.minute)
@@ -73,59 +86,14 @@ export default function HabitsList({
       STORAGE_KEYS.TOGGLE_STATE,
       nextValue ? '1' : '0'
     );
-    console.log(nextValue ? 'showing completed' : 'hiding completed');
   };
 
   useEffect(() => {
-    if (DEBUG) {
-      console.log('\n📋 ========== HABITS LIST DEBUG ==========');
-      console.log('Viewing date:', currentDate.toISOString());
-      console.log('Habit date string:', dateStr);
-      console.log('Reset time:', `${resetTime.hour}:${resetTime.minute}`);
-      console.log('Total habits from hook:', habits.length);
-      console.log('Active habits after filter:', activeHabits.length);
-      console.log('\n🔍 Checking each habit:');
-
-      habits.forEach((habit, index) => {
-        const isActive = isHabitActiveToday(habit, currentDate, resetTime.hour, resetTime.minute);
-
-        console.log(`\n   ${index + 1}. ${habit.name}`);
-        console.log(`      Frequency: ${habit.frequency}`);
-        console.log(`      Start Date: ${habit.startDate}`);
-        console.log(`      Today (habit date): ${dateStr}`);
-        console.log(`      Is Active: ${isActive ? '✅ YES' : '❌ NO'}`);
-
-        if (!isActive) {
-          console.log(`      ❓ Why not active?`);
-
-          if (habit.startDate > dateStr) {
-            console.log(`         - Start date (${habit.startDate}) is AFTER today (${dateStr})`);
-          }
-
-          if (habit.snoozedUntil && dateStr < habit.snoozedUntil) {
-            console.log(`         - Habit is snoozed until ${habit.snoozedUntil}`);
-          }
-
-          if (habit.frequency === 'No Repeat' && habit.startDate !== dateStr) {
-            console.log(`         - No Repeat habit, start (${habit.startDate}) ≠ today (${dateStr})`);
-          }
-
-          if (habit.frequency === 'Weekly' && habit.startDate < dateStr) {
-            console.log(`         - Weekly habit, check selected days:`, habit.selectedDays);
-          }
-        }
-
-        if (habit.status === 'completed') {
-          console.log(`      ✓ Completed: YES`);
-        }
-      });
-
-      console.log('\n========================================\n');
-    }
-  }, [habits, activeHabits, dateStr, currentDate, resetTime]);
-
-  useEffect(() => {
-    loadDailyOrder();
+    (async () => {
+      const savedOrder = await loadDailyOrder(dateStr);
+      const sorted = applyDailyOrder(activeHabits, savedOrder);
+      setOrderedHabits(sorted);
+    })();
 
     (async () => {
       const stored = await AsyncStorage.getItem(STORAGE_KEYS.TOGGLE_STATE);
@@ -135,52 +103,7 @@ export default function HabitsList({
     })();
   }, [habits, dateStr]);
 
-  const loadDailyOrder = async () => {
-    try {
-      const savedOrder = await AsyncStorage.getItem(ORDER_STORAGE_KEY);
-
-      if (savedOrder) {
-        const orderIds = JSON.parse(savedOrder);
-        const sorted = [...activeHabits].sort((a, b) => {
-          const indexA = orderIds.indexOf(a.id);
-          const indexB = orderIds.indexOf(b.id);
-
-          const safeA = indexA === -1 ? Number.MAX_SAFE_INTEGER : indexA;
-          const safeB = indexB === -1 ? Number.MAX_SAFE_INTEGER : indexB;
-
-          if (safeA === Number.MAX_SAFE_INTEGER && safeB === Number.MAX_SAFE_INTEGER) {
-            return (a.startDate ?? '').localeCompare(b.startDate ?? '');
-          }
-
-          return safeA - safeB;
-        });
-        setOrderedHabits(sorted);
-      } else {
-        const defaultSorted = [...activeHabits].sort((a, b) =>
-          (a.startDate ?? '').localeCompare(b.startDate ?? '')
-        );
-        setOrderedHabits(defaultSorted);
-      }
-
-    } catch (error) {
-      console.error('Error loading habit order:', error);
-      const fallbackSorted = [...activeHabits].sort((a, b) =>
-        (a.startDate ?? '').localeCompare(b.startDate ?? '')
-      );
-      setOrderedHabits(fallbackSorted);
-    }
-  };
-
-  const saveDailyOrder = async (newOrder: HabitWithStatus[]) => {
-    try {
-      const orderIds = newOrder.map(h => h.id);
-      await AsyncStorage.setItem(ORDER_STORAGE_KEY, JSON.stringify(orderIds));
-    } catch (error) {
-      console.error('Error saving habit order:', error);
-    }
-  };
-
-  const groupByTimeOfDay = (habitsList: HabitWithStatus[]) => {
+  const groupByTimeOfDay = useCallback((habitsList: HabitWithStatus[]) => {
     const grouped: Record<TimeOfDay, HabitWithStatus[]> = {
       'Wake Up': [],
       'Morning': [],
@@ -191,7 +114,7 @@ export default function HabitsList({
     };
 
     habitsList.forEach(habit => {
-      const timeOfDay = (habit.selectedTimeOfDay || 'Anytime') as TimeOfDay;
+      const timeOfDay = effectiveTimeOfDay(habit, dateStr) as TimeOfDay;
       if (grouped[timeOfDay]) {
         grouped[timeOfDay].push(habit);
       } else {
@@ -200,47 +123,73 @@ export default function HabitsList({
     });
 
     return grouped;
-  };
+  }, [dateStr]);
 
   const visibleHabits = showCompleted
     ? orderedHabits
     : orderedHabits.filter(h => h.status !== 'completed' && h.status !== 'skipped');
 
-  const groupedHabits = groupByTimeOfDay(visibleHabits);
+  const groupedHabits = useMemo(() => groupByTimeOfDay(visibleHabits), [visibleHabits, groupByTimeOfDay]);
 
-  const handleDragEnd = (timeOfDay: TimeOfDay, newOrder: HabitWithStatus[]) => {
-    const otherHabits = orderedHabits.filter(
-      h => (h.selectedTimeOfDay || 'Anytime') !== timeOfDay
-    );
+  const handleSectionDragEnd = useCallback((timeOfDay: TimeOfDay, params: { data: HabitWithStatus[] }) => {
+    const reorderedSection = params.data;
 
-    const updatedOrder = [...otherHabits];
-
+    // rebuild the full ordered list preserving other sections
+    const newOrdered: HabitWithStatus[] = [];
     TIME_OPTIONS.forEach(time => {
       if (time === timeOfDay) {
-        updatedOrder.push(...newOrder);
+        newOrdered.push(...reorderedSection);
       } else {
         const habitsInTime = orderedHabits.filter(
-          h => (h.selectedTimeOfDay || 'Anytime') === time
+          h => effectiveTimeOfDay(h, dateStr) === time
         );
-        updatedOrder.push(...habitsInTime);
+        newOrdered.push(...habitsInTime);
       }
     });
 
-    setOrderedHabits(updatedOrder);
-    saveDailyOrder(updatedOrder);
-  };
+    setOrderedHabits(newOrdered);
+    saveDailyOrder(dateStr, newOrdered.map(h => h.id));
+  }, [orderedHabits, dateStr]);
+
+  const handleCrossZoneDrop = useCallback(async (
+    habitId: string,
+    targetTimeOfDay: TimeOfDay,
+  ) => {
+    const habit = orderedHabits.find(h => h.id === habitId);
+    if (!habit) return;
+
+    const currentTimeOfDay = effectiveTimeOfDay(habit, dateStr);
+    if (currentTimeOfDay === targetTimeOfDay) return;
+
+    // Save temp time-of-day to Supabase (day-only override)
+    try {
+      await saveTempTimeOfDay(habitId, userId, targetTimeOfDay, dateStr);
+    } catch {
+      return;
+    }
+
+    // Update local state: move the habit to the new section
+    const updated = orderedHabits.map(h =>
+      h.id === habitId
+        ? { ...h, tempTimeOfDay: targetTimeOfDay, tempTimeOfDayDate: dateStr }
+        : h
+    );
+    setOrderedHabits(updated);
+    saveDailyOrder(dateStr, updated.map(h => h.id));
+  }, [orderedHabits, dateStr, userId]);
 
   const handleHabitPress = (habit: HabitWithStatus) => {
     setSelectedHabit(habit);
     setModalVisible(true);
   };
 
-  const handleModalUpdate = () => {
-    loadDailyOrder();
+  const handleModalUpdate = async () => {
+    const savedOrder = await loadDailyOrder(dateStr);
+    const sorted = applyDailyOrder(activeHabits, savedOrder);
+    setOrderedHabits(sorted);
   };
 
   if (!habits || habits.length === 0) {
-    if (DEBUG) console.log('📭 No habits found in database');
     return (
       <EmptyStateView
         icon={SYSTEM_ICONS.habit}
@@ -277,8 +226,57 @@ export default function HabitsList({
     );
   }
 
-  const renderHabitsList = () => (
-    <>
+  const renderSection = (timeOfDay: TimeOfDay) => {
+    const habitsInTime = groupedHabits[timeOfDay];
+    if (habitsInTime.length === 0) return null;
+
+    return (
+      <Sortable.BaseZone
+        key={timeOfDay}
+        onItemDrop={() => {
+          if (activeKeyRef.current) {
+            handleCrossZoneDrop(activeKeyRef.current, timeOfDay);
+          }
+        }}
+      >
+        <HabitSectionHeader title={timeOfDay} count={habitsInTime.length} />
+        <Sortable.Grid
+          data={habitsInTime}
+          columns={1}
+          renderItem={({ item }) => (
+            <HabitItem
+              habit={item}
+              dateStr={dateStr}
+              onToggle={() => onToggleHabit(item.id)}
+              onPress={() => handleHabitPress(item)}
+              onIncrementUpdate={onIncrementUpdate}
+              onSkip={() => onSkipHabit?.(item.id)}
+              onSnooze={() => onSnoozeHabit?.(item.id)}
+            />
+          )}
+          keyExtractor={(item) => item.id}
+          onDragStart={({ key }) => { activeKeyRef.current = key; }}
+          onDragEnd={(params) => {
+            handleSectionDragEnd(timeOfDay, params);
+            activeKeyRef.current = null;
+          }}
+          scrollableRef={scrollableRef}
+          dragActivationDelay={200}
+          activeItemScale={1.02}
+          activeItemShadowOpacity={0.15}
+          activeItemOpacity={1}
+          inactiveItemOpacity={1}
+          inactiveItemScale={1}
+          hapticsEnabled
+          overDrag="vertical"
+          reorderTriggerOrigin="touch"
+        />
+      </Sortable.BaseZone>
+    );
+  };
+
+  return (
+    <GestureHandlerRootView style={styles.container}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 }}>
         <View>
           <Text style={globalStyles.body}>You have {incompleteCount} goals left today!</Text>
@@ -301,34 +299,15 @@ export default function HabitsList({
         </View>
       )}
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.contentContainer}>
-        {TIME_OPTIONS.map(timeOfDay => {
-          const habitsInTime = groupedHabits[timeOfDay];
-          if (habitsInTime.length === 0) return null;
-
-          return (
-            <View key={timeOfDay}>
-              <HabitSectionHeader title={timeOfDay} count={habitsInTime.length} />
-              <FlatList
-                data={habitsInTime}
-                renderItem={({ item }) => (
-                  <HabitItem
-                    habit={item}
-                    dateStr={dateStr}
-                    onToggle={() => onToggleHabit(item.id)}
-                    onPress={() => handleHabitPress(item)}
-                    onIncrementUpdate={onIncrementUpdate}
-                    onSkip={() => onSkipHabit?.(item.id)}
-                    onSnooze={() => onSnoozeHabit?.(item.id)}
-                  />
-                )}
-                keyExtractor={(item) => item.id}
-                scrollEnabled={false}
-              />
-            </View>
-          );
-        })}
-      </ScrollView>
+      <Sortable.MultiZoneProvider>
+        <AnimatedScrollView
+          ref={scrollableRef}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.contentContainer}
+        >
+          {TIME_OPTIONS.map(timeOfDay => renderSection(timeOfDay))}
+        </AnimatedScrollView>
+      </Sortable.MultiZoneProvider>
 
       <HabitDetailModal
         visible={modalVisible}
@@ -336,12 +315,6 @@ export default function HabitsList({
         onClose={() => setModalVisible(false)}
         onUpdate={handleModalUpdate}
       />
-    </>
-  );
-
-  return (
-    <GestureHandlerRootView style={styles.container}>
-      {renderHabitsList()}
     </GestureHandlerRootView>
   );
 }
@@ -349,19 +322,6 @@ export default function HabitsList({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    marginTop: 100
-  },
-
-  loadingText: {
-    marginTop: 12,
-    fontSize: 14,
-    fontFamily: 'p2',
-    color: 'rgba(0, 0, 0, 0.6)',
   },
 
   toggleContainer: {

@@ -29,6 +29,8 @@ export async function loadHabitsFromSupabase(
       frequency: row.frequency,
       selectedDays: row.selected_days || [],
       selectedTimeOfDay: row.selected_time_of_day,
+      tempTimeOfDay: row.temp_time_of_day ?? undefined,
+      tempTimeOfDayDate: row.temp_time_of_day_date ?? undefined,
       startDate: row.start_date,
       selectedDate: row.selected_date,
       rewardPoints: row.reward_points || 0,
@@ -98,7 +100,7 @@ export async function toggleHabitCompletion(
 
   if (target) {
     try {
-      const { error } = await supabase
+      await supabase
         .from('habits')
         .update({ completion_history: target.completionHistory })
         .eq('id', habitId)
@@ -197,49 +199,43 @@ export async function skipHabit(
 
   const isOneTime = !target.frequency || target.frequency === 'None';
 
-  console.log(`(**TESTING) skipHabit: id=${habitId}, dateStr=${dateStr}, isOneTime=${isOneTime}`);
-
-  
-
   if (isOneTime) {
-  const archiveIso = new Date().toISOString();
+    const archiveIso = new Date().toISOString();
 
-  const updated = habits.map(h => {
-    if (h.id !== habitId) return h;
+    const updated = habits.map(h => {
+      if (h.id !== habitId) return h;
 
-    const currentSkipped = h.skippedDates || [];
-    const nextSkipped = currentSkipped.includes(dateStr)
-      ? currentSkipped
-      : [...currentSkipped, dateStr];
+      const currentSkipped = h.skippedDates || [];
+      const nextSkipped = currentSkipped.includes(dateStr)
+        ? currentSkipped
+        : [...currentSkipped, dateStr];
 
-    return {
-      ...h,
-      skippedDates: nextSkipped,
-      archivedAt: archiveIso,
-    };
-  });
+      return {
+        ...h,
+        skippedDates: nextSkipped,
+        archivedAt: archiveIso,
+      };
+    });
 
-  const updatedTarget = updated.find(h => h.id === habitId);
+    const updatedTarget = updated.find(h => h.id === habitId);
 
-  await supabase
-    .from('habits')
-    .update({
-      skipped_dates: updatedTarget?.skippedDates ?? [dateStr],
-      archived_at: archiveIso,
-    })
-    .eq('id', habitId)
-    .eq('user_id', userId);
+    await supabase
+      .from('habits')
+      .update({
+        skipped_dates: updatedTarget?.skippedDates ?? [dateStr],
+        archived_at: archiveIso,
+      })
+      .eq('id', habitId)
+      .eq('user_id', userId);
 
-  console.log(`(**TESTING) skipHabit: archived one-time + skipped ${dateStr} for ${habitId}`);
-
-  return updated;
-}
+    return updated;
+  }
 
   // repeating habits: append to skippedDates
   const updated = habits.map(h => {
     if (h.id !== habitId) return h;
     const currentSkipped = h.skippedDates || [];
-    if (currentSkipped.includes(dateStr)) return h; // already skipped
+    if (currentSkipped.includes(dateStr)) return h;
     return { ...h, skippedDates: [...currentSkipped, dateStr] };
   });
 
@@ -252,7 +248,6 @@ export async function skipHabit(
       .eq('user_id', userId);
   }
 
-  console.log(`(**TESTING) skipHabit: added ${dateStr} to skippedDates for ${habitId}`);
   return updated;
 }
 
@@ -269,10 +264,6 @@ export async function deleteHabit(
 
   return habits.filter(h => h.id !== habitId);
 }
-
-/* ============================================================================
-   ARCHIVE
-============================================================================ */
 
 export async function archiveStaleHabits(
   userId: string,

@@ -229,6 +229,7 @@ export default function HabitsPage() {
           habits={habits}
           viewingDate={viewingDate}
           resetTime={resetTime}
+          userId={user?.id ?? ''}
           onToggleHabit={toggleHabit}
           onIncrementUpdate={updateIncrement}
           onSkipHabit={skipHabit}

@@ -31,6 +31,8 @@ export async function loadHabitsFromSupabase(
       selectedTimeOfDay: row.selected_time_of_day,
       tempTimeOfDay: row.temp_time_of_day ?? undefined,
       tempTimeOfDayDate: row.temp_time_of_day_date ?? undefined,
+      tempOrder: row.temp_order ?? undefined,
+      tempOrderDate: row.temp_order_date ?? undefined,
       startDate: row.start_date,
       selectedDate: row.selected_date,
       rewardPoints: row.reward_points || 0,

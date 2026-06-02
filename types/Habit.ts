@@ -28,9 +28,11 @@ export interface Habit {
   lastCompletedDate?: string;
 
 
-  // temporary times of days for one day
+  // temporary overrides for one day
   tempTimeOfDay?: string;
   tempTimeOfDayDate?: string;
+  tempOrder?: number;
+  tempOrderDate?: string;
 
   // exceptions
   snoozedFrom?: string; // YYYY-MM-DD date string when the habit was snoozed

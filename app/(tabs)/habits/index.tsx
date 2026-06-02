@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { Image, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, Text, View } from 'react-native';
 
 import HabitsList from '@/components/habits/HabitsList';
 import { isHabitActiveToday } from '@/utils/habitUtils';
@@ -227,6 +227,7 @@ export default function HabitsPage() {
         {/* habits list */}
         <HabitsList
           habits={habits}
+          loading={loading}
           viewingDate={viewingDate}
           resetTime={resetTime}
           userId={user?.id ?? ''}

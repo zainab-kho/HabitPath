@@ -1,7 +1,7 @@
 // components/habits/HabitsList.tsx
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, { useAnimatedRef } from 'react-native-reanimated';
 import Sortable from 'react-native-sortables';
@@ -24,14 +24,13 @@ import { getHabitDate } from '@/utils/dateUtils';
 import { HabitWithStatus } from '@/hooks/useHabits';
 import {
   applyDailyOrder,
-  effectiveTimeOfDay,
-  loadDailyOrder,
   saveDailyOrder,
   saveTempTimeOfDay,
 } from '@/hooks/useDailyHabitOverrides';
 
 interface HabitsListProps {
   habits: HabitWithStatus[];
+  loading?: boolean;
   viewingDate: Date | null;
   resetTime: { hour: number; minute: number };
   userId: string;
@@ -59,6 +58,7 @@ function getSection(habit: Pick<Habit, 'selectedTimeOfDay' | 'tempTimeOfDay' | '
 
 export default function HabitsList({
   habits,
+  loading,
   viewingDate,
   resetTime,
   userId,
@@ -73,17 +73,33 @@ export default function HabitsList({
   const scrollableRef = useAnimatedRef<Animated.ScrollView>();
 
   const [showCompleted, setShowCompleted] = useState(true);
-  const [orderedHabits, setOrderedHabits] = useState<HabitWithStatus[]>([]);
+
+  // Snapshot habits when loading finishes — only update the displayed data
+  // on a loading=true→false transition, never mid-cycle
+  const [snapshotHabits, setSnapshotHabits] = useState<HabitWithStatus[]>(habits);
+  const wasLoadingRef = useRef(loading);
+
+  useEffect(() => {
+    if (wasLoadingRef.current && !loading && habits.length > 0) {
+      // Loading just finished — snapshot the final data
+      setSnapshotHabits(habits);
+    }
+    // Also snapshot on date change (habits reprocess without loading cycle)
+    if (!loading && habits.length > 0) {
+      setSnapshotHabits(habits);
+    }
+    wasLoadingRef.current = loading;
+  }, [loading, habits, dateStr]);
 
   // Modal state
   const [selectedHabit, setSelectedHabit] = useState<HabitWithStatus | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
 
-  const activeHabits = habits.filter(habit =>
+  const activeHabits = snapshotHabits.filter(habit =>
     isHabitActiveToday(habit, currentDate, resetTime.hour, resetTime.minute)
   );
   const incompleteCount = activeHabits.filter(h => h.status !== 'completed').length;
-  const scheduledHabits = habits.filter(habit =>
+  const scheduledHabits = snapshotHabits.filter(habit =>
     isHabitActiveToday(habit, currentDate, resetTime.hour, resetTime.minute)
   );
   const allDoneToday = scheduledHabits.length > 0 && incompleteCount === 0;
@@ -97,20 +113,21 @@ export default function HabitsList({
     );
   };
 
-  useEffect(() => {
-    (async () => {
-      const savedOrder = await loadDailyOrder(dateStr);
-      const sorted = applyDailyOrder(activeHabits, savedOrder);
-      setOrderedHabits(sorted);
-    })();
+  // Order comes directly from Supabase (tempOrder/tempOrderDate on each habit)
+  // No async loading needed — habits arrive already sortable
+  const orderedHabits = useMemo(
+    () => applyDailyOrder(activeHabits ?? [], dateStr),
+    [activeHabits, dateStr],
+  );
 
+  useEffect(() => {
     (async () => {
       const stored = await AsyncStorage.getItem(STORAGE_KEYS.TOGGLE_STATE);
       if (stored !== null) {
         setShowCompleted(stored === '1');
       }
     })();
-  }, [habits, dateStr]);
+  }, []);
 
   // Build the flat list: headers interleaved with habits, grouped by section
   const flatList = useMemo(() => {
@@ -180,13 +197,13 @@ export default function HabitsList({
       }
     }
 
-    // Rebuild full order including hidden habits
+    // Build full ordered ID list (visible + hidden habits)
     const visibleIds = new Set(newHabitOrder.map(h => h.id));
     const hiddenHabits = orderedHabits.filter(h => !visibleIds.has(h.id));
     const fullOrder = [...newHabitOrder, ...hiddenHabits];
 
-    setOrderedHabits(fullOrder);
-    saveDailyOrder(dateStr, fullOrder.map(h => h.id));
+    // Save order to Supabase (fire and forget — UI updates via habit data)
+    saveDailyOrder(fullOrder.map(h => h.id), userId, dateStr);
   }, [orderedHabits, dateStr, userId]);
 
   const handleHabitPress = (habit: HabitWithStatus) => {
@@ -194,13 +211,19 @@ export default function HabitsList({
     setModalVisible(true);
   };
 
-  const handleModalUpdate = async () => {
-    const savedOrder = await loadDailyOrder(dateStr);
-    const sorted = applyDailyOrder(activeHabits, savedOrder);
-    setOrderedHabits(sorted);
+  const handleModalUpdate = () => {
+    // Order is derived from habits prop (Supabase data) — no manual reload needed
   };
 
-  if (!habits || habits.length === 0) {
+  if (loading && snapshotHabits.length === 0) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', marginTop: 60 }}>
+        <ActivityIndicator size="small" color={COLORS.Primary} />
+      </View>
+    );
+  }
+
+  if (!snapshotHabits || snapshotHabits.length === 0) {
     return (
       <EmptyStateView
         icon={SYSTEM_ICONS.habit}
@@ -320,6 +343,9 @@ export default function HabitsList({
           hapticsEnabled
           overDrag="vertical"
           reorderTriggerOrigin="touch"
+          itemEntering={null}
+          itemExiting={null}
+          itemsLayoutTransitionMode="reorder"
         />
       </AnimatedScrollView>
 

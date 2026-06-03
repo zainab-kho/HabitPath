@@ -31,6 +31,25 @@ export const getHabitDate = (
   return formatLocalDate(d);
 };
 
+export const getDateLabel = (date: Date): string => {
+  const today = new Date();
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
+
+  const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const tomorrowOnly = new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate());
+
+  if (dateOnly.getTime() === todayOnly.getTime()) return 'Today';
+  if (dateOnly.getTime() === tomorrowOnly.getTime()) return 'Tomorrow';
+
+  return date.toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
 
 
 /**

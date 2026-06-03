@@ -316,7 +316,10 @@ export default function NewHabitPage() {
                                         START DATE
                                     </Text>
                                     <Pressable onPress={() => setShowCalendar(!showCalendar)}>
-                                        <ShadowBox contentBackgroundColor="#fff">
+                                        <ShadowBox
+                                            contentBackgroundColor="#fff"
+                                            contentBorderRadius={10}
+                                        >
                                             <View style={{
                                                 flexDirection: 'row',
                                                 alignItems: 'center',
@@ -357,10 +360,12 @@ export default function NewHabitPage() {
                                         REWARD POINTS
                                     </Text>
                                     <Pressable onPress={() => setShowRewardsPicker(!showRewardsPicker)}>
-                                        <ShadowBox contentBackgroundColor={
-                                            rewardPoints === 0 ?
-                                                '#fff' :
-                                                COLORS.RewardsAccent}
+                                        <ShadowBox
+                                            contentBackgroundColor={
+                                                rewardPoints === 0 ?
+                                                    '#fff' :
+                                                    COLORS.RewardsAccent}
+                                            contentBorderRadius={10}
                                         >
                                             <View style={{
                                                 flexDirection: 'row',

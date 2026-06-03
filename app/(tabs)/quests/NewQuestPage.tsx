@@ -1,7 +1,7 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
-import { ActivityIndicator, ScrollView, View, Text, TextInput, Pressable, Switch } from 'react-native';
+import { ActivityIndicator, ScrollView, View, Text, TextInput, Pressable, Switch, Image } from 'react-native';
 
 // ui
 import { AppLinearGradient } from '@/ui/AppLinearGradient';
@@ -16,6 +16,7 @@ import { BUTTON_COLORS, PAGE } from '@/constants/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import ShadowBox from '@/ui/ShadowBox';
+import { getDateLabel } from '@/utils/dateUtils';
 
 export default function Quests() {
     const { user } = useAuth();
@@ -26,6 +27,7 @@ export default function Quests() {
 
     const [name, setName] = useState('');
     const [saving, setSaving] = useState(false);
+    const [endQuestDateToggle, setEndQuestDateToggle] = useState(false);
     const [endQuestDate, setEndQuestDate] = useState<Date>(new Date());
     const [showCalendar, setShowCalendar] = useState(false);
 
@@ -85,25 +87,57 @@ export default function Quests() {
                             <Text style={globalStyles.body}>End date?</Text>
                             <Switch
                                 trackColor={{ true: PAGE.habits.primary[1] }}
-                                value={showCalendar}
-                                onValueChange={setShowCalendar}
+                                value={endQuestDateToggle}
+                                onValueChange={(val) => {
+                                    setEndQuestDateToggle(val);
+                                    setShowCalendar(val);
+                                }}
                             />
                         </View>
+                        {endQuestDateToggle && (
+                            <>
+                                {endQuestDate && (
+                                    <Pressable onPress={() => setShowCalendar(!showCalendar)}>
+                                        <ShadowBox 
+                                        contentBackgroundColor="#fff"
+                                        contentBorderRadius={10}
+                                        >
+                                            <View style={{
+                                                flexDirection: 'row',
+                                                alignItems: 'center',
+                                                gap: 10,
+                                                paddingVertical: 5,
+                                                paddingHorizontal: 15,
+                                            }}>
+                                                <Image
+                                                    source={SYSTEM_ICONS.calendar}
+                                                    style={{ width: 17, height: 17 }}
+                                                />
+                                                <Text style={globalStyles.body1}>
+                                                    {getDateLabel(endQuestDate)}
+                                                </Text>
+                                            </View>
+                                        </ShadowBox>
+                                    </Pressable>
+                                )}
 
-                            { showCalendar && (
-                                <View style={{ marginVertical: 5 }}>
-                                    <ShadowBox>
-                                        <SimpleCalendar
-                                            selectedDate={endQuestDate}
-                                            onSelectDate={(date) => {
-                                                setEndQuestDate(date);
-                                                setShowCalendar(false);
-                                            }}
-                                            selectedDateColor={PAGE.quest.primary[0]}
-                                        />
-                                    </ShadowBox>
-                                </View>
-                            )}
+                                {showCalendar && (
+                                    <View style={{ marginVertical: 5 }}>
+                                        <ShadowBox>
+                                            <SimpleCalendar
+                                                selectedDate={endQuestDate}
+                                                onSelectDate={(date) => {
+                                                    setEndQuestDate(date);
+                                                    setShowCalendar(false);
+                                                }}
+                                                selectedDateColor={PAGE.quest.primary[0]}
+                                            />
+                                        </ShadowBox>
+                                    </View>
+                                )}
+
+                            </>
+                        )}
 
                     </View>
 

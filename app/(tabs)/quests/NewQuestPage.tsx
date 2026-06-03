@@ -30,7 +30,32 @@ export default function Quests() {
     const [endQuestDateToggle, setEndQuestDateToggle] = useState(false);
     const [endQuestDate, setEndQuestDate] = useState<Date>(new Date());
     const [showCalendar, setShowCalendar] = useState(false);
+    const [phaseCountToggle, setPhaseCountToggle] = useState(false);
+    const [phaseCount, setPhaseCount] = useState(1);
+    const [phases, setPhases] = useState<{ name: string }[]>([{ name: 'Phase 1' }]);
+    const [currentPhaseIndex, setCurrentPhaseIndex] = useState(0);
 
+
+    const updatePhaseCount = (newCount: number) => {
+        if (newCount < 1) return;
+        setPhaseCount(newCount);
+        setPhases(prev => {
+            if (newCount > prev.length) {
+                const additions = Array.from({ length: newCount - prev.length }, (_, i) =>
+                    ({ name: `Phase ${prev.length + i + 1}` })
+                );
+                return [...prev, ...additions];
+            }
+            return prev.slice(0, newCount);
+        });
+        if (currentPhaseIndex >= newCount) {
+            setCurrentPhaseIndex(newCount - 1);
+        }
+    };
+
+    const updatePhaseName = (index: number, name: string) => {
+        setPhases(prev => prev.map((p, i) => i === index ? { ...p, name } : p));
+    };
 
     // loading state
     if (loading) {
@@ -94,13 +119,16 @@ export default function Quests() {
                                 }}
                             />
                         </View>
+
                         {endQuestDateToggle && (
-                            <>
+                            <View style={{
+                                marginBottom: 15
+                            }}>
                                 {endQuestDate && (
                                     <Pressable onPress={() => setShowCalendar(!showCalendar)}>
-                                        <ShadowBox 
-                                        contentBackgroundColor="#fff"
-                                        contentBorderRadius={10}
+                                        <ShadowBox
+                                            contentBackgroundColor="#fff"
+                                            contentBorderRadius={10}
                                         >
                                             <View style={{
                                                 flexDirection: 'row',
@@ -136,7 +164,135 @@ export default function Quests() {
                                     </View>
                                 )}
 
-                            </>
+                            </View>
+                        )}
+
+                        <View style={{
+                            flexDirection: 'row',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginBottom: 10,
+                        }}>
+                            <Text style={globalStyles.body}>Phases?</Text>
+                            <Switch
+                                trackColor={{ true: PAGE.habits.primary[1] }}
+                                value={phaseCountToggle}
+                                onValueChange={(val) => {
+                                    setPhaseCountToggle(val);
+                                    if (val) {
+                                        setPhaseCount(1);
+                                        setPhases([{ name: 'Phase 1' }]);
+                                        setCurrentPhaseIndex(0);
+                                    }
+                                }}
+                            />
+                        </View>
+
+                        {phaseCountToggle && (
+                            <View style={{ gap: 20 }}>
+                                {/* increment controls */}
+                                <View style={{ flexDirection: 'row', alignSelf: 'center', gap: 10 }}>
+                                    <ShadowBox shadowColor={PAGE.quest.primary[0]}>
+                                        <Pressable
+                                            onPress={() => updatePhaseCount(phaseCount - 1)}
+                                            style={{
+                                                paddingVertical: 3,
+                                                paddingHorizontal: 8,
+                                                alignItems: 'center',
+                                                justifyContent: 'center'
+                                            }}>
+                                            <Text style={globalStyles.body}>-</Text>
+                                        </Pressable>
+                                    </ShadowBox>
+
+                                    <ShadowBox shadowColor={PAGE.quest.primary[0]}>
+                                        <View style={{
+                                            paddingVertical: 2,
+                                            borderColor: PAGE.quest.primary[0],
+                                            width: 100,
+                                            borderRadius: 20,
+                                            justifyContent: 'center'
+                                        }}>
+                                            <TextInput
+                                                style={[globalStyles.body, { textAlign: 'center' }]}
+                                                keyboardType="numeric"
+                                                value={phaseCount.toString()}
+                                                onChangeText={text => {
+                                                    const num = parseInt(text) || 1;
+                                                    updatePhaseCount(Math.max(1, num));
+                                                }}
+                                            />
+                                        </View>
+                                    </ShadowBox>
+
+                                    <ShadowBox shadowColor={PAGE.quest.primary[0]}>
+                                        <Pressable
+                                            onPress={() => updatePhaseCount(phaseCount + 1)}
+                                            style={{
+                                                paddingVertical: 3,
+                                                paddingHorizontal: 8,
+                                                alignItems: 'center',
+                                                justifyContent: 'center'
+                                            }}>
+                                            <Text style={globalStyles.body}>+</Text>
+                                        </Pressable>
+                                    </ShadowBox>
+                                </View>
+
+                                {/* phase navigation + editor */}
+                                <View style={{
+                                    flexDirection: 'row',
+                                    alignItems: 'stretch',
+                                }}>
+                                    {/* left arrow space (always reserved) */}
+                                    <View style={{ width: 36, justifyContent: 'center', alignItems: 'center' }}>
+                                        {currentPhaseIndex > 0 && (
+                                            <Pressable onPress={() => setCurrentPhaseIndex(prev => prev - 1)}>
+                                                <Image
+                                                    source={SYSTEM_ICONS.sortLeft}
+                                                    style={{ width: 22, height: 22 }}
+                                                />
+                                            </Pressable>
+                                        )}
+                                    </View>
+
+                                    {/* phase card */}
+                                    <View style={{
+                                        flex: 1,
+                                        borderWidth: 1,
+                                        borderRadius: 20,
+                                        backgroundColor: '#fff',
+                                        padding: 20,
+                                    }}>
+                                        <Text style={[globalStyles.label, { marginBottom: 5, textAlign: 'center' }]}>
+                                            PHASE {currentPhaseIndex + 1} OF {phaseCount}
+                                        </Text>
+                                        <TextInput
+                                            style={[uiStyles.inputField, {
+                                                borderColor: PAGE.quest.primary[0],
+                                            }]}
+                                            placeholder={`Phase ${currentPhaseIndex + 1} name`}
+                                            returnKeyType="next"
+                                            value={phases[currentPhaseIndex]?.name ?? ''}
+                                            onChangeText={(text) => updatePhaseName(currentPhaseIndex, text)}
+                                            cursorColor={PAGE.quest.primary[0]}
+                                            selectionColor={PAGE.quest.primary[0]}
+                                        />
+                                    </View>
+
+                                    {/* right arrow space (always reserved) */}
+                                    <View style={{ width: 36, justifyContent: 'center', alignItems: 'center' }}>
+                                        {currentPhaseIndex < phaseCount - 1 && (
+                                            <Pressable onPress={() => setCurrentPhaseIndex(prev => prev + 1)}>
+                                                <Image
+                                                    source={SYSTEM_ICONS.sortRight}
+                                                    style={{ width: 22, height: 22 }}
+                                                />
+                                            </Pressable>
+                                        )}
+                                    </View>
+                                </View>
+                            </View>
                         )}
 
                     </View>
@@ -190,6 +346,6 @@ export default function Quests() {
 
 
             </PageContainer>
-        </AppLinearGradient>
+        </AppLinearGradient >
     );
 }

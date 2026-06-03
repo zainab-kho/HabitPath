@@ -1,7 +1,7 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
-import { ActivityIndicator, Modal, ScrollView, StyleSheet, View, Text, TextInput, Pressable, Switch, Image } from 'react-native';
+import { ActivityIndicator, ScrollView, View, Text, TextInput, Pressable, Switch, Image } from 'react-native';
 
 // ui
 import { AppLinearGradient } from '@/ui/AppLinearGradient';
@@ -18,11 +18,11 @@ import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view
 import ShadowBox from '@/ui/ShadowBox';
 import { getDateLabel } from '@/utils/dateUtils';
 
-export default function Quests() {
+import { useQuestCreation } from '@/contexts/QuestCreationContext';
+
+export default function NewQuestPage() {
     const { user } = useAuth();
     const router = useRouter();
-    const inputRef = useRef<TextInput>(null);
-    const scrollViewRef = useRef<ScrollView>(null);
     const [loading, setLoading] = useState(false);
 
     const [name, setName] = useState('');
@@ -31,38 +31,9 @@ export default function Quests() {
     const [endQuestDate, setEndQuestDate] = useState<Date>(new Date());
     const [showCalendar, setShowCalendar] = useState(false);
     const [phaseCountToggle, setPhaseCountToggle] = useState(false);
-    const [phaseCount, setPhaseCount] = useState(1);
-    const [phases, setPhases] = useState<{ name: string; endDate: Date | null }[]>([{ name: 'Phase 1', endDate: null }]);
-    const [currentPhaseIndex, setCurrentPhaseIndex] = useState(0);
-    const [endDateModalIndex, setEndDateModalIndex] = useState<number | null>(null);
 
+    const { phaseCount, phases, weekEndDay, setWeekEndDay, resetPhases } = useQuestCreation();
 
-    const updatePhaseCount = (newCount: number) => {
-        if (newCount < 1) return;
-        setPhaseCount(newCount);
-        setPhases(prev => {
-            if (newCount > prev.length) {
-                const additions = Array.from({ length: newCount - prev.length }, (_, i) =>
-                    ({ name: `Phase ${prev.length + i + 1}`, endDate: null })
-                );
-                return [...prev, ...additions];
-            }
-            return prev.slice(0, newCount);
-        });
-        if (currentPhaseIndex >= newCount) {
-            setCurrentPhaseIndex(newCount - 1);
-        }
-    };
-
-    const updatePhaseName = (index: number, name: string) => {
-        setPhases(prev => prev.map((p, i) => i === index ? { ...p, name } : p));
-    };
-
-    const updatePhaseEndDate = (index: number, date: Date | null) => {
-        setPhases(prev => prev.map((p, i) => i === index ? { ...p, endDate: date } : p));
-    };
-
-    // loading state
     if (loading) {
         return (
             <AppLinearGradient variant="quest.background">
@@ -75,6 +46,11 @@ export default function Quests() {
             </AppLinearGradient>
         );
     }
+
+    const totalGoals = phases.reduce(
+        (sum, p) => sum + p.goals.length + p.weeks.reduce((ws, w) => ws + w.goals.length, 0),
+        0
+    );
 
     return (
         <AppLinearGradient variant="quest.background">
@@ -89,12 +65,9 @@ export default function Quests() {
                         backgroundColor: '#fff'
                     }}
                 >
-
-                    {/* main Create Quest section */}
                     <View style={{ padding: 20 }}>
                         {/* title */}
                         <Text style={[globalStyles.label, { marginBottom: 10 }]}>TITLE</Text>
-
                         <TextInput
                             style={[uiStyles.inputField, {
                                 borderColor: PAGE.quest.primary[0],
@@ -108,6 +81,7 @@ export default function Quests() {
                             selectionColor={PAGE.quest.primary[0]}
                         />
 
+                        {/* end date toggle */}
                         <View style={{
                             flexDirection: 'row',
                             justifyContent: 'space-between',
@@ -126,15 +100,10 @@ export default function Quests() {
                         </View>
 
                         {endQuestDateToggle && (
-                            <View style={{
-                                marginBottom: 15
-                            }}>
+                            <View style={{ marginBottom: 15, gap: 10, }}>
                                 {endQuestDate && (
                                     <Pressable onPress={() => setShowCalendar(!showCalendar)}>
-                                        <ShadowBox
-                                            contentBackgroundColor="#fff"
-                                            contentBorderRadius={10}
-                                        >
+                                        <ShadowBox contentBackgroundColor="#fff" contentBorderRadius={10}>
                                             <View style={{
                                                 flexDirection: 'row',
                                                 alignItems: 'center',
@@ -142,13 +111,8 @@ export default function Quests() {
                                                 paddingVertical: 5,
                                                 paddingHorizontal: 15,
                                             }}>
-                                                <Image
-                                                    source={SYSTEM_ICONS.calendar}
-                                                    style={{ width: 17, height: 17 }}
-                                                />
-                                                <Text style={globalStyles.body1}>
-                                                    {getDateLabel(endQuestDate)}
-                                                </Text>
+                                                <Image source={SYSTEM_ICONS.calendar} style={{ width: 17, height: 17 }} />
+                                                <Text style={globalStyles.body1}>{getDateLabel(endQuestDate)}</Text>
                                             </View>
                                         </ShadowBox>
                                     </Pressable>
@@ -168,10 +132,10 @@ export default function Quests() {
                                         </ShadowBox>
                                     </View>
                                 )}
-
                             </View>
                         )}
 
+                        {/* phases toggle */}
                         <View style={{
                             flexDirection: 'row',
                             justifyContent: 'space-between',
@@ -184,271 +148,78 @@ export default function Quests() {
                                 value={phaseCountToggle}
                                 onValueChange={(val) => {
                                     setPhaseCountToggle(val);
-                                    if (val) {
-                                        setPhaseCount(1);
-                                        setPhases([{ name: 'Phase 1', endDate: null }]);
-                                        setCurrentPhaseIndex(0);
-                                    }
+                                    if (val) resetPhases();
                                 }}
                             />
                         </View>
 
                         {phaseCountToggle && (
-                            <View style={{ gap: 20 }}>
-                                {/* increment controls */}
-                                <View style={{ flexDirection: 'row', alignSelf: 'center', gap: 10 }}>
-                                    <ShadowBox shadowColor={PAGE.quest.primary[0]}>
-                                        <Pressable
-                                            onPress={() => updatePhaseCount(phaseCount - 1)}
-                                            style={{
-                                                paddingVertical: 3,
-                                                paddingHorizontal: 8,
-                                                alignItems: 'center',
-                                                justifyContent: 'center'
-                                            }}>
-                                            <Text style={globalStyles.body}>-</Text>
-                                        </Pressable>
-                                    </ShadowBox>
+                            <View style={{ gap: 15 }}>
+                                {/* week ends on */}
+                                <View>
+                                    <Text style={globalStyles.label}>WEEK ENDS ON</Text>
+                                    <View style={{
+                                        flexDirection: 'row',
+                                        justifyContent: 'space-between',
+                                        marginTop: 8,
+                                    }}>
+                                        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day, i) => (
+                                            <Pressable key={i} onPress={() => setWeekEndDay(i)}>
+                                                <ShadowBox
+                                                    contentBackgroundColor={weekEndDay === i ? PAGE.quest.primary[0] : '#fff'}
+                                                    shadowColor={PAGE.quest.primary[0]}
+                                                >
+                                                    <View style={{ width: 38, height: 25, justifyContent: 'center', alignItems: 'center' }}>
+                                                        <Text style={[globalStyles.body2, { fontSize: 12 }]}>{day}</Text>
+                                                    </View>
+                                                </ShadowBox>
+                                            </Pressable>
+                                        ))}
+                                    </View>
+                                </View>
 
-                                    <ShadowBox shadowColor={PAGE.quest.primary[0]}>
-                                        <View style={{
-                                            paddingVertical: 2,
-                                            borderColor: PAGE.quest.primary[0],
-                                            width: 100,
-                                            borderRadius: 20,
-                                            justifyContent: 'center'
-                                        }}>
-                                            <TextInput
-                                                style={[globalStyles.body, { textAlign: 'center' }]}
-                                                keyboardType="numeric"
-                                                value={phaseCount.toString()}
-                                                onChangeText={text => {
-                                                    const num = parseInt(text) || 1;
-                                                    updatePhaseCount(Math.max(1, num));
-                                                }}
-                                            />
+                                {/* edit phases button */}
+                                <Pressable onPress={() => router.push('/(tabs)/quests/EditPhases')}>
+                                    <ShadowBox
+                                        shadowColor={PAGE.quest.primary[0]}
+                                        contentBackgroundColor="#fff"
+                                    >
+                                        <View style={{ paddingVertical: 10, paddingHorizontal: 15 }}>
+                                            <Text style={[globalStyles.body, { textAlign: 'center' }]}>
+                                                Edit Phases
+                                            </Text>
+                                            <Text style={[globalStyles.body2, { textAlign: 'center', opacity: 0.5, marginTop: 2 }]}>
+                                                {phaseCount} {phaseCount === 1 ? 'phase' : 'phases'} · {totalGoals} {totalGoals === 1 ? 'goal' : 'goals'}
+                                            </Text>
                                         </View>
                                     </ShadowBox>
-
-                                    <ShadowBox shadowColor={PAGE.quest.primary[0]}>
-                                        <Pressable
-                                            onPress={() => updatePhaseCount(phaseCount + 1)}
-                                            style={{
-                                                paddingVertical: 3,
-                                                paddingHorizontal: 8,
-                                                alignItems: 'center',
-                                                justifyContent: 'center'
-                                            }}>
-                                            <Text style={globalStyles.body}>+</Text>
-                                        </Pressable>
-                                    </ShadowBox>
-                                </View>
-
-                                {/* phase navigation + editor */}
-                                <View style={{
-                                    flexDirection: 'row',
-                                    alignItems: 'stretch',
-                                }}>
-                                    {/* left arrow space (always reserved) */}
-                                    <View style={{ width: 36, justifyContent: 'center', alignItems: 'center' }}>
-                                        {currentPhaseIndex > 0 && (
-                                            <Pressable onPress={() => setCurrentPhaseIndex(prev => prev - 1)}>
-                                                <Image
-                                                    source={SYSTEM_ICONS.sortLeft}
-                                                    style={{ width: 22, height: 22 }}
-                                                />
-                                            </Pressable>
-                                        )}
-                                    </View>
-
-                                    {/* phase card */}
-                                    <View style={{
-                                        flex: 1,
-                                        borderWidth: 1,
-                                        borderRadius: 20,
-                                        backgroundColor: '#fff',
-                                        padding: 20,
-                                    }}>
-                                        <Text style={[globalStyles.label, { marginBottom: 5, textAlign: 'center' }]}>
-                                            PHASE {currentPhaseIndex + 1} OF {phaseCount}
-                                        </Text>
-                                        <TextInput
-                                            style={[uiStyles.inputField, {
-                                                borderColor: PAGE.quest.primary[0],
-                                                marginBottom: 15,
-                                            }]}
-                                            placeholder={`Phase ${currentPhaseIndex + 1} name`}
-                                            returnKeyType="next"
-                                            value={phases[currentPhaseIndex]?.name ?? ''}
-                                            onChangeText={(text) => updatePhaseName(currentPhaseIndex, text)}
-                                            cursorColor={PAGE.quest.primary[0]}
-                                            selectionColor={PAGE.quest.primary[0]}
-                                        />
-
-                                        <Text style={[globalStyles.label, { marginBottom: 5 }]}>END DATE</Text>
-                                        <Pressable onPress={() => setEndDateModalIndex(currentPhaseIndex)}>
-                                            <ShadowBox
-                                                contentBackgroundColor="#fff"
-                                                contentBorderRadius={15}
-                                                contentBorderColor={PAGE.quest.primary[0]}
-                                                shadowColor={PAGE.quest.primary[0]}
-                                                shadowBorderColor={PAGE.quest.primary[0]}
-                                            >
-                                                <View style={{
-                                                    flexDirection: 'row',
-                                                    alignItems: 'center',
-                                                    gap: 10,
-                                                    paddingVertical: 8,
-                                                    paddingHorizontal: 15,
-                                                }}>
-                                                    <Image
-                                                        source={SYSTEM_ICONS.calendar}
-                                                        tintColor={PAGE.quest.primary[0]}
-                                                        style={{ width: 15, height: 15 }}
-                                                    />
-                                                    <Text style={[globalStyles.body1, { fontSize: 12 }]}>
-                                                        {phases[currentPhaseIndex]?.endDate
-                                                            ? getDateLabel(phases[currentPhaseIndex].endDate!)
-                                                            : 'No End Date'}
-                                                    </Text>
-                                                </View>
-                                            </ShadowBox>
-                                        </Pressable>
-                                    </View>
-
-                                    {/* right arrow space (always reserved) */}
-                                    <View style={{ width: 36, justifyContent: 'center', alignItems: 'center' }}>
-                                        {currentPhaseIndex < phaseCount - 1 && (
-                                            <Pressable onPress={() => setCurrentPhaseIndex(prev => prev + 1)}>
-                                                <Image
-                                                    source={SYSTEM_ICONS.sortRight}
-                                                    style={{ width: 22, height: 22 }}
-                                                />
-                                            </Pressable>
-                                        )}
-                                    </View>
-                                </View>
+                                </Pressable>
                             </View>
                         )}
-
                     </View>
 
                     {/* action buttons */}
                     <View style={{ flexDirection: 'row', borderTopWidth: 1, padding: 10, gap: 10 }}>
                         <Pressable style={{ flex: 1 }}>
-                            <ShadowBox
-                                contentBackgroundColor={PAGE.assignments.background[1]}
-                                shadowBorderRadius={15}
-                            >
+                            <ShadowBox contentBackgroundColor={PAGE.assignments.background[1]} shadowBorderRadius={15}>
                                 <View style={{ paddingVertical: 6 }}>
-                                    <Text style={[globalStyles.body, { textAlign: 'center' }]}>
-                                        Cancel
-                                    </Text>
+                                    <Text style={[globalStyles.body, { textAlign: 'center' }]}>Cancel</Text>
                                 </View>
                             </ShadowBox>
                         </Pressable>
 
-                        <Pressable
-                            // onPress={handleSave}
-                            style={{ flex: 1 }}
-                        // **TODO:
-                        // disabled={ .length === 0 || saving}
-                        >
-                            <ShadowBox
-                                contentBackgroundColor={
-                                    BUTTON_COLORS.Save
-                                }
-                                shadowBorderRadius={15}
-                            >
+                        <Pressable style={{ flex: 1 }}>
+                            <ShadowBox contentBackgroundColor={BUTTON_COLORS.Save} shadowBorderRadius={15}>
                                 <View style={{ paddingVertical: 6 }}>
                                     <Text style={[globalStyles.body, { textAlign: 'center' }]}>
-                                        {saving
-                                            ? 'Saving...'
-                                            : 'Save'}
+                                        {saving ? 'Saving...' : 'Save'}
                                     </Text>
                                 </View>
                             </ShadowBox>
                         </Pressable>
                     </View>
-
-
-
-
-
                 </KeyboardAwareScrollView>
-
-
-
-
-
             </PageContainer>
-
-            {/* end date picker modal */}
-            <Modal
-                visible={endDateModalIndex !== null}
-                transparent
-                animationType="none"
-                onRequestClose={() => setEndDateModalIndex(null)}
-            >
-                <Pressable style={styles.overlay} onPress={() => setEndDateModalIndex(null)}>
-                    <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
-                        <View style={{ padding: 20 }}>
-                            <Text style={[globalStyles.h3, { textAlign: 'center', marginBottom: 15 }]}>
-                                End Date
-                            </Text>
-
-                            <SimpleCalendar
-                                selectedDate={endDateModalIndex !== null ? phases[endDateModalIndex]?.endDate ?? undefined : undefined}
-                                onSelectDate={(date) => {
-                                    if (endDateModalIndex !== null) {
-                                        updatePhaseEndDate(endDateModalIndex, date);
-                                        setEndDateModalIndex(null);
-                                    }
-                                }}
-                                selectedDateColor={PAGE.quest.primary[0]}
-                            />
-
-                            <Pressable
-                                onPress={() => {
-                                    if (endDateModalIndex !== null) {
-                                        updatePhaseEndDate(endDateModalIndex, null);
-                                        setEndDateModalIndex(null);
-                                    }
-                                }}
-                                style={{ marginTop: 15 }}
-                            >
-                                <ShadowBox
-                                    contentBackgroundColor="#fff"                                >
-                                    <View style={{ paddingVertical: 5 }}>
-                                        <Text style={[globalStyles.body, { textAlign: 'center' }]}>
-                                            No End Date
-                                        </Text>
-                                    </View>
-                                </ShadowBox>
-                            </Pressable>
-                        </View>
-                    </Pressable>
-                </Pressable>
-            </Modal>
-
-        </AppLinearGradient >
+        </AppLinearGradient>
     );
 }
-
-const styles = StyleSheet.create({
-    overlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.45)',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    modalCard: {
-        backgroundColor: '#fff',
-        borderRadius: 20,
-        borderWidth: 3,
-        borderColor: PAGE.quest.primary[0],
-        maxHeight: '75%',
-        width: '90%',
-        alignSelf: 'center',
-    },
-});

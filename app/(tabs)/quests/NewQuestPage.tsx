@@ -1,7 +1,7 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
-import { ActivityIndicator, ScrollView, View, Text, TextInput, Pressable, Switch, Image } from 'react-native';
+import { ActivityIndicator, Modal, ScrollView, StyleSheet, View, Text, TextInput, Pressable, Switch, Image } from 'react-native';
 
 // ui
 import { AppLinearGradient } from '@/ui/AppLinearGradient';
@@ -32,8 +32,9 @@ export default function Quests() {
     const [showCalendar, setShowCalendar] = useState(false);
     const [phaseCountToggle, setPhaseCountToggle] = useState(false);
     const [phaseCount, setPhaseCount] = useState(1);
-    const [phases, setPhases] = useState<{ name: string }[]>([{ name: 'Phase 1' }]);
+    const [phases, setPhases] = useState<{ name: string; endDate: Date | null }[]>([{ name: 'Phase 1', endDate: null }]);
     const [currentPhaseIndex, setCurrentPhaseIndex] = useState(0);
+    const [endDateModalIndex, setEndDateModalIndex] = useState<number | null>(null);
 
 
     const updatePhaseCount = (newCount: number) => {
@@ -42,7 +43,7 @@ export default function Quests() {
         setPhases(prev => {
             if (newCount > prev.length) {
                 const additions = Array.from({ length: newCount - prev.length }, (_, i) =>
-                    ({ name: `Phase ${prev.length + i + 1}` })
+                    ({ name: `Phase ${prev.length + i + 1}`, endDate: null })
                 );
                 return [...prev, ...additions];
             }
@@ -55,6 +56,10 @@ export default function Quests() {
 
     const updatePhaseName = (index: number, name: string) => {
         setPhases(prev => prev.map((p, i) => i === index ? { ...p, name } : p));
+    };
+
+    const updatePhaseEndDate = (index: number, date: Date | null) => {
+        setPhases(prev => prev.map((p, i) => i === index ? { ...p, endDate: date } : p));
     };
 
     // loading state
@@ -181,7 +186,7 @@ export default function Quests() {
                                     setPhaseCountToggle(val);
                                     if (val) {
                                         setPhaseCount(1);
-                                        setPhases([{ name: 'Phase 1' }]);
+                                        setPhases([{ name: 'Phase 1', endDate: null }]);
                                         setCurrentPhaseIndex(0);
                                     }
                                 }}
@@ -270,6 +275,7 @@ export default function Quests() {
                                         <TextInput
                                             style={[uiStyles.inputField, {
                                                 borderColor: PAGE.quest.primary[0],
+                                                marginBottom: 15,
                                             }]}
                                             placeholder={`Phase ${currentPhaseIndex + 1} name`}
                                             returnKeyType="next"
@@ -278,6 +284,36 @@ export default function Quests() {
                                             cursorColor={PAGE.quest.primary[0]}
                                             selectionColor={PAGE.quest.primary[0]}
                                         />
+
+                                        <Text style={[globalStyles.label, { marginBottom: 5 }]}>END DATE</Text>
+                                        <Pressable onPress={() => setEndDateModalIndex(currentPhaseIndex)}>
+                                            <ShadowBox
+                                                contentBackgroundColor="#fff"
+                                                contentBorderRadius={15}
+                                                contentBorderColor={PAGE.quest.primary[0]}
+                                                shadowColor={PAGE.quest.primary[0]}
+                                                shadowBorderColor={PAGE.quest.primary[0]}
+                                            >
+                                                <View style={{
+                                                    flexDirection: 'row',
+                                                    alignItems: 'center',
+                                                    gap: 10,
+                                                    paddingVertical: 8,
+                                                    paddingHorizontal: 15,
+                                                }}>
+                                                    <Image
+                                                        source={SYSTEM_ICONS.calendar}
+                                                        tintColor={PAGE.quest.primary[0]}
+                                                        style={{ width: 15, height: 15 }}
+                                                    />
+                                                    <Text style={[globalStyles.body1, { fontSize: 12 }]}>
+                                                        {phases[currentPhaseIndex]?.endDate
+                                                            ? getDateLabel(phases[currentPhaseIndex].endDate!)
+                                                            : 'No End Date'}
+                                                    </Text>
+                                                </View>
+                                            </ShadowBox>
+                                        </Pressable>
                                     </View>
 
                                     {/* right arrow space (always reserved) */}
@@ -346,6 +382,73 @@ export default function Quests() {
 
 
             </PageContainer>
+
+            {/* end date picker modal */}
+            <Modal
+                visible={endDateModalIndex !== null}
+                transparent
+                animationType="none"
+                onRequestClose={() => setEndDateModalIndex(null)}
+            >
+                <Pressable style={styles.overlay} onPress={() => setEndDateModalIndex(null)}>
+                    <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
+                        <View style={{ padding: 20 }}>
+                            <Text style={[globalStyles.h3, { textAlign: 'center', marginBottom: 15 }]}>
+                                End Date
+                            </Text>
+
+                            <SimpleCalendar
+                                selectedDate={endDateModalIndex !== null ? phases[endDateModalIndex]?.endDate ?? undefined : undefined}
+                                onSelectDate={(date) => {
+                                    if (endDateModalIndex !== null) {
+                                        updatePhaseEndDate(endDateModalIndex, date);
+                                        setEndDateModalIndex(null);
+                                    }
+                                }}
+                                selectedDateColor={PAGE.quest.primary[0]}
+                            />
+
+                            <Pressable
+                                onPress={() => {
+                                    if (endDateModalIndex !== null) {
+                                        updatePhaseEndDate(endDateModalIndex, null);
+                                        setEndDateModalIndex(null);
+                                    }
+                                }}
+                                style={{ marginTop: 15 }}
+                            >
+                                <ShadowBox
+                                    contentBackgroundColor="#fff"                                >
+                                    <View style={{ paddingVertical: 5 }}>
+                                        <Text style={[globalStyles.body, { textAlign: 'center' }]}>
+                                            No End Date
+                                        </Text>
+                                    </View>
+                                </ShadowBox>
+                            </Pressable>
+                        </View>
+                    </Pressable>
+                </Pressable>
+            </Modal>
+
         </AppLinearGradient >
     );
 }
+
+const styles = StyleSheet.create({
+    overlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.45)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    modalCard: {
+        backgroundColor: '#fff',
+        borderRadius: 20,
+        borderWidth: 3,
+        borderColor: PAGE.quest.primary[0],
+        maxHeight: '75%',
+        width: '90%',
+        alignSelf: 'center',
+    },
+});

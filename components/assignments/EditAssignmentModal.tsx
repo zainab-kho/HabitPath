@@ -305,6 +305,7 @@ export default function EditAssignmentModal({ visible, assignment, courses, onCl
                                         setDueDate(date);
                                         setShowDatePicker(false);
                                     }}
+                                    selectedDateColor={PAGE.assignments.primary[0]}
                                 />
                             )}
                         </View>

@@ -9,9 +9,10 @@ import { Image, Pressable, Text, View } from 'react-native';
 interface SimpleCalendarProps {
     selectedDate: Date;
     onSelectDate: (date: Date) => void;
+    selectedDateColor: string;
 }
 
-export default function SimpleCalendar({ selectedDate, onSelectDate }: SimpleCalendarProps) {
+export default function SimpleCalendar({ selectedDate, onSelectDate, selectedDateColor }: SimpleCalendarProps) {
     const [currentMonth, setCurrentMonth] = useState(new Date(selectedDate));
 
     const getDaysInMonth = (date: Date) => {
@@ -108,7 +109,7 @@ export default function SimpleCalendar({ selectedDate, onSelectDate }: SimpleCal
                                     borderRadius: 16,
                                     justifyContent: 'center',
                                     alignItems: 'center',
-                                    backgroundColor: selected ? PAGE.assignments.primary[0] : 'transparent',
+                                    backgroundColor: selected ? selectedDateColor : 'transparent',
                                 }}
                             >
                                 <Text

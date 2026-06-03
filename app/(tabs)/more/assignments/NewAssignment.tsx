@@ -352,6 +352,7 @@ export default function NewAssignment() {
                                         setDueDate(dateString);
                                         setShowCalendar(false);
                                     }}
+                                    selectedDateColor={PAGE.assignments.primary[0]}
                                 />
                             </ShadowBox>
                         </View>

@@ -344,6 +344,7 @@ export default function NewHabitPage() {
                                                         setStartDate(date);
                                                         setShowCalendar(false);
                                                     }}
+                                                    selectedDateColor={PAGE.habits.primary[0]}
                                                 />
                                             </ShadowBox>
                                         </View>

@@ -1,7 +1,7 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
-import { ActivityIndicator, ScrollView, View, Text, TextInput, Pressable } from 'react-native';
+import { ActivityIndicator, ScrollView, View, Text, TextInput, Pressable, Switch } from 'react-native';
 
 // ui
 import { AppLinearGradient } from '@/ui/AppLinearGradient';
@@ -9,6 +9,7 @@ import EmptyStateView from '@/ui/EmptyStateView';
 import PageContainer from '@/ui/PageContainer';
 import PageHeader from '@/ui/PageHeader';
 import { globalStyles, uiStyles } from '@/styles';
+import SimpleCalendar from '@/ui/SimpleCalendar';
 
 // constants
 import { BUTTON_COLORS, PAGE } from '@/constants/colors';
@@ -25,6 +26,8 @@ export default function Quests() {
 
     const [name, setName] = useState('');
     const [saving, setSaving] = useState(false);
+    const [endQuestDate, setEndQuestDate] = useState<Date>(new Date());
+    const [showCalendar, setShowCalendar] = useState(false);
 
 
     // loading state
@@ -55,6 +58,7 @@ export default function Quests() {
                     }}
                 >
 
+                    {/* main Create Quest section */}
                     <View style={{ padding: 20 }}>
                         {/* title */}
                         <Text style={[globalStyles.label, { marginBottom: 10 }]}>TITLE</Text>
@@ -71,6 +75,36 @@ export default function Quests() {
                             cursorColor={PAGE.quest.primary[0]}
                             selectionColor={PAGE.quest.primary[0]}
                         />
+
+                        <View style={{
+                            flexDirection: 'row',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginBottom: 10,
+                        }}>
+                            <Text style={globalStyles.body}>End date?</Text>
+                            <Switch
+                                trackColor={{ true: PAGE.habits.primary[1] }}
+                                value={showCalendar}
+                                onValueChange={setShowCalendar}
+                            />
+                        </View>
+
+                            { showCalendar && (
+                                <View style={{ marginVertical: 5 }}>
+                                    <ShadowBox>
+                                        <SimpleCalendar
+                                            selectedDate={endQuestDate}
+                                            onSelectDate={(date) => {
+                                                setEndQuestDate(date);
+                                                setShowCalendar(false);
+                                            }}
+                                            selectedDateColor={PAGE.quest.primary[0]}
+                                        />
+                                    </ShadowBox>
+                                </View>
+                            )}
+
                     </View>
 
                     {/* action buttons */}
@@ -91,8 +125,8 @@ export default function Quests() {
                         <Pressable
                             // onPress={handleSave}
                             style={{ flex: 1 }}
-                            // **TODO:
-                            // disabled={ .length === 0 || saving}
+                        // **TODO:
+                        // disabled={ .length === 0 || saving}
                         >
                             <ShadowBox
                                 contentBackgroundColor={

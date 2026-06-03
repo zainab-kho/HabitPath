@@ -40,16 +40,16 @@ export default function Quests() {
     // empty state
     // if (quests.length === 0) {
     //     return (
-    //         <AppLinearGradient variant="assignments.background">
+    //         <AppLinearGradient variant="quest.background">
     //             <PageContainer showBottomNav>
-    //                 <PageHeader title="Assignments" />
+    //                 <PageHeader title="Quests" />
     //                 <EmptyStateView
-    //                     icon={SYSTEM_ICONS.tag}
-    //                     title="No courses yet"
-    //                     description="Add a course? You can add assignments to your course also!"
-    //                     buttonText="New Course"
-    //                     buttonAction={() => router.push('/assignments/NewCourse')}
-    //                     buttonColor={PAGE.assignments.primary[0]}
+    //                     icon={SYSTEM_ICONS.quest}
+    //                     title="No quests yet"
+    //                     description="Quests help you work toward bigger goals using habits, tasks, and milestones, while earning points and tracking real progress."
+    //                     buttonText="Start a quest"
+    //                     buttonAction={() => router.push('/(tabs)/quests/NewQuestPage')}
+    //                     buttonColor={PAGE.quest.primary[0]}
     //                 />
     //             </PageContainer>
     //         </AppLinearGradient>

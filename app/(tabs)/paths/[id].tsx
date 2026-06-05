@@ -418,6 +418,41 @@ export default function PathDetail() {
     }
   };
 
+  const handleTogglePause = async () => {
+    if (!path || !user) return;
+    const isPaused = !!path.paused;
+    try {
+      await supabase
+        .from('paths')
+        .update({ paused: !isPaused, paused_at: isPaused ? null : new Date().toISOString() })
+        .eq('id', id)
+        .eq('user_id', user.id);
+      setPath({ ...path, paused: !isPaused, paused_at: isPaused ? undefined : new Date().toISOString() });
+    } catch (err) {
+      console.error('Error toggling pause:', err);
+    }
+  };
+
+  const handleToggleArchive = async () => {
+    if (!path || !user) return;
+    const isArchived = !!path.archived_at;
+    try {
+      await supabase
+        .from('paths')
+        .update({ archived_at: isArchived ? null : new Date().toISOString() })
+        .eq('id', id)
+        .eq('user_id', user.id);
+      if (!isArchived) {
+        // navigating back after archiving
+        router.back();
+      } else {
+        setPath({ ...path, archived_at: isArchived ? undefined : new Date().toISOString() });
+      }
+    } catch (err) {
+      console.error('Error toggling archive:', err);
+    }
+  };
+
   const handleDeletePath = () => {
     Alert.alert(
       'Delete Path',
@@ -639,15 +674,41 @@ export default function PathDetail() {
             </View>
           )}
 
-          <Pressable onPress={handleDeletePath} style={{ width: 100, alignSelf: 'center', marginTop: 20 }}>
-            <ShadowBox contentBackgroundColor={BUTTON_COLORS.Delete} shadowBorderRadius={15}>
-              <View style={{ paddingVertical: 6 }}>
-                <Text style={[globalStyles.body, { textAlign: 'center' }]}>
-                  Delete
-                </Text>
-              </View>
-            </ShadowBox>
-          </Pressable>
+          {/* action buttons */}
+          <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 10, marginTop: 20 }}>
+            <Pressable onPress={handleTogglePause}>
+              <ShadowBox
+                contentBackgroundColor={path.paused ? colorHex : '#f0f0f0'}
+                shadowBorderRadius={15}
+              >
+                <View style={{ paddingVertical: 6, paddingHorizontal: 14 }}>
+                  <Text style={[globalStyles.body, { textAlign: 'center', fontSize: 13 }]}>
+                    {path.paused ? 'Unpause' : 'Pause'}
+                  </Text>
+                </View>
+              </ShadowBox>
+            </Pressable>
+
+            <Pressable onPress={handleToggleArchive}>
+              <ShadowBox contentBackgroundColor="#f0f0f0" shadowBorderRadius={15}>
+                <View style={{ paddingVertical: 6, paddingHorizontal: 14 }}>
+                  <Text style={[globalStyles.body, { textAlign: 'center', fontSize: 13 }]}>
+                    {path.archived_at ? 'Unarchive' : 'Archive'}
+                  </Text>
+                </View>
+              </ShadowBox>
+            </Pressable>
+
+            <Pressable onPress={handleDeletePath}>
+              <ShadowBox contentBackgroundColor={BUTTON_COLORS.Delete} shadowBorderRadius={15}>
+                <View style={{ paddingVertical: 6, paddingHorizontal: 14 }}>
+                  <Text style={[globalStyles.body, { textAlign: 'center', fontSize: 13 }]}>
+                    Delete
+                  </Text>
+                </View>
+              </ShadowBox>
+            </Pressable>
+          </View>
         </ScrollView>
 
         <AddHabitsToPathModal

@@ -62,7 +62,7 @@ export const PAGE = {
   },
   path: {
     background: ['#faf3dd', '#c8d5b9', '#8fc0a9'],
-    primary: ['#EC9064', '#899FFF'],
+    primary: ['#EC9064', '#8fc0a9'],
   },
   quest: {
     background: ['#FE9494', '#FFE4E2', '#ABB967'],

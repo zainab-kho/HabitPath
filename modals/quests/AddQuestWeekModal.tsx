@@ -23,8 +23,8 @@ const getWeekStartForDay = (date: Date, weekStartDay: number) => {
 };
 
 const formatWeekLabel = (start: Date, end: Date) => {
-    const s = `${start.getMonth() + 1}/${start.getDate()}`;
-    const e = `${end.getMonth() + 1}/${end.getDate()}`;
+    const s = start.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
+    const e = end.toLocaleDateString('en-US', { month: 'long', day: 'numeric' });
     return `${s} - ${e}`;
 };
 

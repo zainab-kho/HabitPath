@@ -14,9 +14,8 @@ import { WEEK_DAYS } from '@/constants/habits';
 import { getIconFile } from '@/components/habits/iconUtils';
 import IconPickerModal from '@/modals/IconPickerModal';
 import { useQuestCreation, genId, QuestGoal, QuestGoalSchedule } from '@/contexts/QuestCreationContext';
+import { supabase } from '@/lib/supabase';
 
-const INCREMENT_TYPES = ['None', 'Minutes', 'Miles', 'Sips'] as const;
-type IncrementType = typeof INCREMENT_TYPES[number];
 
 export default function AddGoal() {
     const router = useRouter();
@@ -28,7 +27,15 @@ export default function AddGoal() {
         editingGoal,
         setEditingGoal,
         updateGoalInPhase,
+        detailPhaseId,
+        setDetailPhaseId,
+        detailWeekId,
+        setDetailWeekId,
+        onDetailGoalSaved,
+        setOnDetailGoalSaved,
     } = useQuestCreation();
+
+    const isDetailMode = !!detailPhaseId;
 
     const isEditing = !!editingGoal;
 
@@ -37,10 +44,8 @@ export default function AddGoal() {
     const [selectedIcon, setSelectedIcon] = useState(editingGoal?.icon ?? 'goal');
     const [showIconPicker, setShowIconPicker] = useState(false);
 
-    // increment
+    // weekly goal
     const [increment, setIncrement] = useState(editingGoal?.type === 'increment');
-    const [incrementType, setIncrementType] = useState<IncrementType>('None');
-    const [incrementStep, setIncrementStep] = useState(1);
     const [incrementGoal, setIncrementGoal] = useState(editingGoal?.targetCount ?? 0);
 
     // subtasks
@@ -80,9 +85,66 @@ export default function AddGoal() {
         }
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!goalName.trim()) return;
 
+        if (isDetailMode) {
+            // save directly to Supabase for existing quests
+            try {
+                const { data: goalRow, error } = await supabase
+                    .from('quest_goals')
+                    .insert({
+                        phase_id: detailPhaseId,
+                        week_id: detailWeekId,
+                        name: goalName.trim(),
+                        icon: selectedIcon,
+                        type: increment ? 'increment' : 'checkbox',
+                        target_count: increment && incrementGoal > 0 ? incrementGoal : null,
+                        show_on_habits_page: showOnHabitsPage,
+                        active_days: showOnHabitsPage ? activeDays : [],
+                        sort_order: 0,
+                    })
+                    .select('id')
+                    .single();
+
+                if (error || !goalRow) throw error;
+
+                // save day schedules
+                if (increment && showOnHabitsPage) {
+                    const schedules = activeDays.map(day => ({
+                        goal_id: goalRow.id,
+                        day,
+                        max_count: parseInt(daySchedule[day]) || 0,
+                    }));
+                    await supabase.from('quest_goal_schedules').insert(schedules);
+                }
+
+                // save subtasks
+                if (subtasks.length > 0) {
+                    const rows = subtasks.map((s, i) => ({
+                        goal_id: goalRow.id,
+                        name: s,
+                        sort_order: i,
+                    }));
+                    await supabase.from('quest_subtasks').insert(rows);
+                }
+
+                // cleanup & callback
+                setDetailPhaseId(null);
+                setDetailWeekId(null);
+                if (onDetailGoalSaved) {
+                    onDetailGoalSaved();
+                    setOnDetailGoalSaved(null);
+                }
+            } catch (err) {
+                console.error('Error saving goal to Supabase:', err);
+            }
+
+            router.back();
+            return;
+        }
+
+        // creation mode: save to context
         const schedule: QuestGoalSchedule[] = increment && showOnHabitsPage
             ? activeDays.map(day => ({
                 day,
@@ -168,13 +230,13 @@ export default function AddGoal() {
                                 />
                             </View>
 
-                            {/* increment toggle */}
+                            {/* weekly goal toggle */}
                             <View style={{
                                 flexDirection: 'row',
                                 justifyContent: 'space-between',
                                 alignItems: 'center',
                             }}>
-                                <Text style={globalStyles.body}>Track in increments?</Text>
+                                <Text style={globalStyles.body}>Goal per week?</Text>
                                 <Switch
                                     trackColor={{ true: PAGE.habits.primary[1] }}
                                     value={increment}
@@ -182,110 +244,45 @@ export default function AddGoal() {
                                 />
                             </View>
 
-                            {/* increment options */}
+                            {/* weekly goal amount */}
                             {increment && (
-                                <View style={{ gap: 20 }}>
-                                    {/* increment type */}
-                                    <View style={{ gap: 8 }}>
-                                        <Text style={globalStyles.label}>INCREMENT TYPE</Text>
-                                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                                            {INCREMENT_TYPES.map((type) => (
-                                                <Pressable key={type} onPress={() => setIncrementType(type)}>
-                                                    <ShadowBox
-                                                        contentBackgroundColor={incrementType === type ? PAGE.quest.primary[0] : '#fff'}
-                                                        contentBorderColor={incrementType === type ? '#000' : PAGE.quest.primary[0]}
-                                                        shadowBorderColor={incrementType === type ? '#000' : PAGE.quest.primary[0]}
-                                                        shadowColor={incrementType === type ? '#000' : PAGE.quest.primary[0]}
-                                                    >
-                                                        <View style={{ paddingVertical: 6, paddingHorizontal: 10 }}>
-                                                            <Text style={globalStyles.body1}>{type}</Text>
-                                                        </View>
-                                                    </ShadowBox>
-                                                </Pressable>
-                                            ))}
-                                        </View>
-                                    </View>
+                                <View style={{ gap: 8 }}>
+                                    <Text style={globalStyles.label}>WEEKLY GOAL</Text>
+                                    <View style={{ flexDirection: 'row', alignSelf: 'center', gap: 10 }}>
+                                        <ShadowBox shadowColor={PAGE.quest.primary[0]}>
+                                            <Pressable
+                                                onPress={() => setIncrementGoal(prev => Math.max(0, prev - 1))}
+                                                style={{ paddingVertical: 3, paddingHorizontal: 8, alignItems: 'center', justifyContent: 'center' }}
+                                            >
+                                                <Text style={globalStyles.body}>-</Text>
+                                            </Pressable>
+                                        </ShadowBox>
 
-                                    {/* increment amount */}
-                                    <View style={{ gap: 8 }}>
-                                        <Text style={globalStyles.label}>INCREMENT AMOUNT</Text>
-                                        <View style={{ flexDirection: 'row', alignSelf: 'center', gap: 10 }}>
-                                            <ShadowBox shadowColor={PAGE.quest.primary[0]}>
-                                                <Pressable
-                                                    onPress={() => setIncrementStep(prev => Math.max(0, prev - 1))}
-                                                    style={{ paddingVertical: 3, paddingHorizontal: 8, alignItems: 'center', justifyContent: 'center' }}
-                                                >
-                                                    <Text style={globalStyles.body}>-</Text>
-                                                </Pressable>
-                                            </ShadowBox>
+                                        <ShadowBox shadowColor={PAGE.quest.primary[0]}>
+                                            <View style={{
+                                                borderWidth: 2,
+                                                borderColor: PAGE.quest.primary[0],
+                                                width: 100,
+                                                borderRadius: 20,
+                                                justifyContent: 'center',
+                                            }}>
+                                                <TextInput
+                                                    style={[globalStyles.body, { textAlign: 'center' }]}
+                                                    keyboardType="numeric"
+                                                    value={incrementGoal.toString()}
+                                                    onChangeText={text => setIncrementGoal(Number(text) || 0)}
+                                                />
+                                            </View>
+                                        </ShadowBox>
 
-                                            <ShadowBox shadowColor={PAGE.quest.primary[0]}>
-                                                <View style={{
-                                                    borderWidth: 2,
-                                                    borderColor: PAGE.quest.primary[0],
-                                                    width: 100,
-                                                    borderRadius: 20,
-                                                    justifyContent: 'center',
-                                                }}>
-                                                    <TextInput
-                                                        style={[globalStyles.body, { textAlign: 'center' }]}
-                                                        keyboardType="numeric"
-                                                        value={incrementStep.toString()}
-                                                        onChangeText={text => setIncrementStep(Number(text) || 0)}
-                                                    />
-                                                </View>
-                                            </ShadowBox>
-
-                                            <ShadowBox shadowColor={PAGE.quest.primary[0]}>
-                                                <Pressable
-                                                    onPress={() => setIncrementStep(prev => prev + 1)}
-                                                    style={{ paddingVertical: 3, paddingHorizontal: 8, alignItems: 'center', justifyContent: 'center' }}
-                                                >
-                                                    <Text style={globalStyles.body}>+</Text>
-                                                </Pressable>
-                                            </ShadowBox>
-                                        </View>
-                                    </View>
-
-                                    {/* increment goal */}
-                                    <View style={{ gap: 8 }}>
-                                        <Text style={globalStyles.label}>INCREMENT GOAL (OPTIONAL)</Text>
-                                        <View style={{ flexDirection: 'row', alignSelf: 'center', gap: 10 }}>
-                                            <ShadowBox shadowColor={PAGE.quest.primary[0]}>
-                                                <Pressable
-                                                    onPress={() => setIncrementGoal(prev => Math.max(0, prev - 1))}
-                                                    style={{ paddingVertical: 3, paddingHorizontal: 8, alignItems: 'center', justifyContent: 'center' }}
-                                                >
-                                                    <Text style={globalStyles.body}>-</Text>
-                                                </Pressable>
-                                            </ShadowBox>
-
-                                            <ShadowBox shadowColor={PAGE.quest.primary[0]}>
-                                                <View style={{
-                                                    borderWidth: 2,
-                                                    borderColor: PAGE.quest.primary[0],
-                                                    width: 100,
-                                                    borderRadius: 20,
-                                                    justifyContent: 'center',
-                                                }}>
-                                                    <TextInput
-                                                        style={[globalStyles.body, { textAlign: 'center' }]}
-                                                        keyboardType="numeric"
-                                                        value={incrementGoal.toString()}
-                                                        onChangeText={text => setIncrementGoal(Number(text) || 0)}
-                                                    />
-                                                </View>
-                                            </ShadowBox>
-
-                                            <ShadowBox shadowColor={PAGE.quest.primary[0]}>
-                                                <Pressable
-                                                    onPress={() => setIncrementGoal(prev => prev + 1)}
-                                                    style={{ paddingVertical: 3, paddingHorizontal: 8, alignItems: 'center', justifyContent: 'center' }}
-                                                >
-                                                    <Text style={globalStyles.body}>+</Text>
-                                                </Pressable>
-                                            </ShadowBox>
-                                        </View>
+                                        <ShadowBox shadowColor={PAGE.quest.primary[0]}>
+                                            <Pressable
+                                                onPress={() => setIncrementGoal(prev => prev + 1)}
+                                                style={{ paddingVertical: 3, paddingHorizontal: 8, alignItems: 'center', justifyContent: 'center' }}
+                                            >
+                                                <Text style={globalStyles.body}>+</Text>
+                                            </Pressable>
+                                        </ShadowBox>
                                     </View>
                                 </View>
                             )}
@@ -344,7 +341,7 @@ export default function AddGoal() {
                                     <Pressable
                                         onPress={handleAddSubtask}
                                         style={{
-                                            backgroundColor: BUTTON_COLORS.Edit,
+                                            backgroundColor: PAGE.quest.primary[1],
                                             borderWidth: 1,
                                             borderRadius: 12,
                                             width: 25,
@@ -380,6 +377,29 @@ export default function AddGoal() {
                                 <View style={{ gap: 12 }}>
                                     <Text style={globalStyles.label}>ACTIVE DAYS</Text>
 
+                                    {/* compact row when no increment, column with max inputs when increment */}
+                                    {!increment ? (
+                                        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                                            {WEEK_DAYS.map((day) => {
+                                                const isActive = activeDays.includes(day);
+                                                return (
+                                                    <Pressable key={day} onPress={() => toggleDay(day)}>
+                                                        <ShadowBox
+                                                            contentBackgroundColor={isActive ? PAGE.quest.primary[0] : '#fff'}
+                                                            shadowColor={PAGE.quest.primary[0]}
+                                                        >
+                                                            <View style={{ width: 38, height: 25, justifyContent: 'center', alignItems: 'center' }}>
+                                                                <Text style={[globalStyles.body2, { fontSize: 12 }]}>
+                                                                    {day.substring(0, 3)}
+                                                                </Text>
+                                                            </View>
+                                                        </ShadowBox>
+                                                    </Pressable>
+                                                );
+                                            })}
+                                        </View>
+                                    ) : (
+                                        <>
                                     {/* select all */}
                                     <Pressable onPress={toggleAllDays}>
                                         <ShadowBox
@@ -394,7 +414,7 @@ export default function AddGoal() {
                                         </ShadowBox>
                                     </Pressable>
 
-                                    {/* day rows */}
+                                    {/* day rows with max */}
                                     {WEEK_DAYS.map((day) => {
                                         const isActive = activeDays.includes(day);
                                         return (
@@ -463,16 +483,14 @@ export default function AddGoal() {
                                                     </View>
                                                 )}
 
-                                                {isActive && !increment && (
-                                                    <Text style={[globalStyles.body2, { opacity: 0.4, fontSize: 12 }]}>Active</Text>
-                                                )}
-
                                                 {!isActive && (
                                                     <Text style={[globalStyles.body2, { opacity: 0.3, fontSize: 12 }]}>Off</Text>
                                                 )}
                                             </View>
                                         );
                                     })}
+                                    </>
+                                    )}
                                 </View>
                             )}
                         </View>

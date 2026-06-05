@@ -47,20 +47,29 @@ interface QuestCreationState {
     setPhaseCount: React.Dispatch<React.SetStateAction<number>>;
     currentPhaseIndex: number;
     setCurrentPhaseIndex: React.Dispatch<React.SetStateAction<number>>;
-    weekEndDay: number;
-    setWeekEndDay: React.Dispatch<React.SetStateAction<number>>;
+    weekStartDay: number;
+    setWeekStartDay: React.Dispatch<React.SetStateAction<number>>;
     updatePhaseCount: (newCount: number) => void;
     updatePhaseName: (index: number, name: string) => void;
     updatePhaseEndDate: (index: number, date: Date | null) => void;
     addGoalToPhase: (phaseIndex: number, goal: QuestGoal, weekId: string | null) => void;
     addWeekToPhase: (phaseIndex: number, week: QuestWeek) => void;
-    getWeekStartDay: () => number;
+    getWeekStartDay: () => number; // returns weekStartDay directly
     resetPhases: () => void;
     addGoalTargetWeekId: string | null;
     setAddGoalTargetWeekId: React.Dispatch<React.SetStateAction<string | null>>;
     editingGoal: QuestGoal | null;
     setEditingGoal: React.Dispatch<React.SetStateAction<QuestGoal | null>>;
     updateGoalInPhase: (phaseIndex: number, updatedGoal: QuestGoal, weekId: string | null) => void;
+    removeGoalFromPhase: (phaseIndex: number, goalId: string, weekId: string | null) => void;
+    removeWeekFromPhase: (phaseIndex: number, weekId: string) => void;
+    // detail mode: saving directly to Supabase for existing quests
+    detailPhaseId: string | null;
+    setDetailPhaseId: React.Dispatch<React.SetStateAction<string | null>>;
+    detailWeekId: string | null;
+    setDetailWeekId: React.Dispatch<React.SetStateAction<string | null>>;
+    onDetailGoalSaved: (() => void) | null;
+    setOnDetailGoalSaved: React.Dispatch<React.SetStateAction<(() => void) | null>>;
 }
 
 const QuestCreationContext = createContext<QuestCreationState | null>(null);
@@ -71,9 +80,12 @@ export function QuestCreationProvider({ children }: { children: React.ReactNode 
         { name: 'Phase 1', endDate: null, goals: [], weeks: [] },
     ]);
     const [currentPhaseIndex, setCurrentPhaseIndex] = useState(0);
-    const [weekEndDay, setWeekEndDay] = useState(0);
+    const [weekStartDay, setWeekStartDay] = useState(0);
     const [addGoalTargetWeekId, setAddGoalTargetWeekId] = useState<string | null>(null);
     const [editingGoal, setEditingGoal] = useState<QuestGoal | null>(null);
+    const [detailPhaseId, setDetailPhaseId] = useState<string | null>(null);
+    const [detailWeekId, setDetailWeekId] = useState<string | null>(null);
+    const [onDetailGoalSaved, setOnDetailGoalSaved] = useState<(() => void) | null>(null);
 
     const updatePhaseCount = (newCount: number) => {
         if (newCount < 1) return;
@@ -143,7 +155,30 @@ export function QuestCreationProvider({ children }: { children: React.ReactNode 
         );
     };
 
-    const getWeekStartDay = () => (weekEndDay + 1) % 7;
+    const removeGoalFromPhase = (phaseIndex: number, goalId: string, weekId: string | null) => {
+        setPhases(prev =>
+            prev.map((p, i) => {
+                if (i !== phaseIndex) return p;
+                if (weekId) {
+                    return {
+                        ...p,
+                        weeks: p.weeks.map(w =>
+                            w.id === weekId ? { ...w, goals: w.goals.filter(g => g.id !== goalId) } : w
+                        ),
+                    };
+                }
+                return { ...p, goals: p.goals.filter(g => g.id !== goalId) };
+            })
+        );
+    };
+
+    const removeWeekFromPhase = (phaseIndex: number, weekId: string) => {
+        setPhases(prev =>
+            prev.map((p, i) => (i === phaseIndex ? { ...p, weeks: p.weeks.filter(w => w.id !== weekId) } : p))
+        );
+    };
+
+    const getWeekStartDay = () => weekStartDay;
 
     const resetPhases = () => {
         setPhaseCount(1);
@@ -160,8 +195,8 @@ export function QuestCreationProvider({ children }: { children: React.ReactNode 
                 setPhaseCount,
                 currentPhaseIndex,
                 setCurrentPhaseIndex,
-                weekEndDay,
-                setWeekEndDay,
+                weekStartDay,
+                setWeekStartDay,
                 updatePhaseCount,
                 updatePhaseName,
                 updatePhaseEndDate,
@@ -174,6 +209,14 @@ export function QuestCreationProvider({ children }: { children: React.ReactNode 
                 editingGoal,
                 setEditingGoal,
                 updateGoalInPhase,
+                removeGoalFromPhase,
+                removeWeekFromPhase,
+                detailPhaseId,
+                setDetailPhaseId,
+                detailWeekId,
+                setDetailWeekId,
+                onDetailGoalSaved,
+                setOnDetailGoalSaved,
             }}
         >
             {children}

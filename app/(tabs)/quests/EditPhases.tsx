@@ -27,11 +27,13 @@ export default function EditPhases() {
         updatePhaseName,
         updatePhaseEndDate,
         addWeekToPhase,
-        weekEndDay,
-        setWeekEndDay,
+        weekStartDay,
+        setWeekStartDay,
         getWeekStartDay,
         setAddGoalTargetWeekId,
         setEditingGoal,
+        removeGoalFromPhase,
+        removeWeekFromPhase,
     } = useQuestCreation();
 
     const navigateToEditGoal = (goal: QuestGoal, weekId: string | null) => {
@@ -43,6 +45,7 @@ export default function EditPhases() {
     const [endDateModalIndex, setEndDateModalIndex] = useState<number | null>(null);
     const [showAddWeekModal, setShowAddWeekModal] = useState(false);
     const [expandedGoals, setExpandedGoals] = useState<Set<string>>(new Set());
+    const [editMode, setEditMode] = useState(false);
 
     const toggleGoalExpanded = (goalId: string) => {
         setExpandedGoals(prev => {
@@ -161,6 +164,26 @@ export default function EditPhases() {
                             </ShadowBox>
                         </Pressable>
 
+                        {/* edit mode toggle */}
+                        {((phase?.goals ?? []).length > 0 || (phase?.weeks ?? []).length > 0) && (
+                            <Pressable
+                                onPress={() => setEditMode(!editMode)}
+                                style={{ alignSelf: 'flex-end', marginBottom: 10 }}
+                            >
+                                <ShadowBox
+                                    contentBackgroundColor={editMode ? BUTTON_COLORS.Delete : '#f0f0f0'}
+                                    shadowBorderRadius={12}
+                                    shadowOffset={{ x: 1, y: 1 }}
+                                >
+                                    <View style={{ paddingVertical: 4, paddingHorizontal: 12 }}>
+                                        <Text style={[globalStyles.label, { opacity: 1, fontSize: 11 }]}>
+                                            {editMode ? 'Done' : 'Edit'}
+                                        </Text>
+                                    </View>
+                                </ShadowBox>
+                            </Pressable>
+                        )}
+
                         {/* phase-level goals */}
                         {(phase?.goals ?? []).length > 0 && (
                             <View style={{ marginBottom: 15 }}>
@@ -183,7 +206,7 @@ export default function EditPhases() {
                                                     <View style={{ flex: 1 }}>
                                                         <Text style={[globalStyles.body, { fontSize: 15 }]}>{goal.name}</Text>
                                                     </View>
-                                                    {goal.subtasks.length > 0 && (
+                                                    {goal.subtasks.length > 0 && !editMode && (
                                                         <Pressable onPress={(e) => { e.stopPropagation(); toggleGoalExpanded(goal.id); }}>
                                                             <Image
                                                                 source={expandedGoals.has(goal.id) ? SYSTEM_ICONS.sortLeft : SYSTEM_ICONS.sortRight}
@@ -191,8 +214,23 @@ export default function EditPhases() {
                                                             />
                                                         </Pressable>
                                                     )}
+                                                    {editMode && (
+                                                        <Pressable onPress={(e) => { e.stopPropagation(); removeGoalFromPhase(currentPhaseIndex, goal.id, null); }}>
+                                                            <View style={{
+                                                                backgroundColor: BUTTON_COLORS.Delete,
+                                                                borderWidth: 1,
+                                                                borderRadius: 12,
+                                                                width: 25,
+                                                                height: 25,
+                                                                justifyContent: 'center',
+                                                                alignItems: 'center',
+                                                            }}>
+                                                                <Image source={SYSTEM_ICONS.delete} style={{ width: 12, height: 12 }} />
+                                                            </View>
+                                                        </Pressable>
+                                                    )}
                                                 </View>
-                                                {goal.subtasks.length > 0 && expandedGoals.has(goal.id) && (
+                                                {goal.subtasks.length > 0 && expandedGoals.has(goal.id) && !editMode && (
                                                     <View style={{ marginBottom: 10, paddingLeft: 55, gap: 6 }}>
                                                         {goal.subtasks.map((st) => (
                                                             <View key={st.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -219,12 +257,28 @@ export default function EditPhases() {
                         {/* weeks */}
                         {(phase?.weeks ?? []).length > 0 && (
                             <View style={{ marginBottom: 15 }}>
-                                <Text style={[globalStyles.label, { marginBottom: 5 }]}>WEEKS</Text>
+                                <Text style={[globalStyles.label, { marginBottom: 10 }]}>WEEKS</Text>
                                 {phase.weeks.map((week) => (
                                     <View key={week.id} style={{ marginBottom: 10 }}>
-                                        <ShadowBox shadowColor={PAGE.quest.primary[0]}>
-                                            <View style={{ paddingVertical: 8, paddingHorizontal: 12 }}>
-                                                <Text style={[globalStyles.body, { marginBottom: 4 }]}>{week.label}</Text>
+                                            <View>
+                                                <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                                                    <Text style={globalStyles.body}>{week.label}</Text>
+                                                    {editMode && (
+                                                        <Pressable onPress={() => removeWeekFromPhase(currentPhaseIndex, week.id)}>
+                                                            <View style={{
+                                                                backgroundColor: BUTTON_COLORS.Delete,
+                                                                borderWidth: 1,
+                                                                borderRadius: 12,
+                                                                width: 25,
+                                                                height: 25,
+                                                                justifyContent: 'center',
+                                                                alignItems: 'center',
+                                                            }}>
+                                                                <Image source={SYSTEM_ICONS.delete} style={{ width: 12, height: 12 }} />
+                                                            </View>
+                                                        </Pressable>
+                                                    )}
+                                                </View>
                                                 {week.goals.map((goal) => (
                                                     <View key={goal.id} style={{ marginBottom: 8 }}>
                                                         <ShadowBox
@@ -243,7 +297,7 @@ export default function EditPhases() {
                                                                     <View style={{ flex: 1 }}>
                                                                         <Text style={[globalStyles.body, { fontSize: 14 }]}>{goal.name}</Text>
                                                                     </View>
-                                                                    {goal.subtasks.length > 0 && (
+                                                                    {goal.subtasks.length > 0 && !editMode && (
                                                                         <Pressable onPress={(e) => { e.stopPropagation(); toggleGoalExpanded(goal.id); }}>
                                                                             <Image
                                                                                 source={expandedGoals.has(goal.id) ? SYSTEM_ICONS.sortLeft : SYSTEM_ICONS.sortRight}
@@ -251,8 +305,23 @@ export default function EditPhases() {
                                                                             />
                                                                         </Pressable>
                                                                     )}
+                                                                    {editMode && (
+                                                                        <Pressable onPress={(e) => { e.stopPropagation(); removeGoalFromPhase(currentPhaseIndex, goal.id, week.id); }}>
+                                                                            <View style={{
+                                                                                backgroundColor: BUTTON_COLORS.Delete,
+                                                                                borderWidth: 1,
+                                                                                borderRadius: 12,
+                                                                                width: 25,
+                                                                                height: 25,
+                                                                                justifyContent: 'center',
+                                                                                alignItems: 'center',
+                                                                            }}>
+                                                                                <Image source={SYSTEM_ICONS.delete} style={{ width: 12, height: 12 }} />
+                                                                            </View>
+                                                                        </Pressable>
+                                                                    )}
                                                                 </View>
-                                                                {goal.subtasks.length > 0 && expandedGoals.has(goal.id) && (
+                                                                {goal.subtasks.length > 0 && expandedGoals.has(goal.id) && !editMode && (
                                                                     <View style={{ marginTop: 8, paddingLeft: 46, gap: 5 }}>
                                                                         {goal.subtasks.map((st) => (
                                                                             <View key={st.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -281,10 +350,18 @@ export default function EditPhases() {
                                                     }}
                                                     style={{ marginTop: 4 }}
                                                 >
-                                                    <Text style={[globalStyles.body, { color: PAGE.quest.primary[0] }]}>Add Goal</Text>
+                                                    <ShadowBox
+                                                        contentBackgroundColor={'#fff'}
+                                                        // shadowColor={PAGE.quest.primary[1]}
+                                                        shadowBorderRadius={20}
+                                                        style={{ width: '100%' }}
+                                                    >
+                                                        <View style={{ justifyContent: 'center', alignItems: 'center', paddingVertical: 5 }}>
+                                                            <Text style={globalStyles.body}>+</Text>
+                                                        </View>
+                                                    </ShadowBox>
                                                 </Pressable>
                                             </View>
-                                        </ShadowBox>
                                     </View>
                                 ))}
                             </View>

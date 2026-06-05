@@ -5,9 +5,20 @@ export interface QuestSubtask {
     name: string;
 }
 
+export interface QuestGoalSchedule {
+    day: string;
+    maxCount: number;
+}
+
 export interface QuestGoal {
     id: string;
     name: string;
+    icon: string;
+    type: 'checkbox' | 'increment';
+    targetCount: number | null;
+    showOnHabitsPage: boolean;
+    activeDays: string[];
+    daySchedule: QuestGoalSchedule[];
     subtasks: QuestSubtask[];
 }
 
@@ -45,6 +56,11 @@ interface QuestCreationState {
     addWeekToPhase: (phaseIndex: number, week: QuestWeek) => void;
     getWeekStartDay: () => number;
     resetPhases: () => void;
+    addGoalTargetWeekId: string | null;
+    setAddGoalTargetWeekId: React.Dispatch<React.SetStateAction<string | null>>;
+    editingGoal: QuestGoal | null;
+    setEditingGoal: React.Dispatch<React.SetStateAction<QuestGoal | null>>;
+    updateGoalInPhase: (phaseIndex: number, updatedGoal: QuestGoal, weekId: string | null) => void;
 }
 
 const QuestCreationContext = createContext<QuestCreationState | null>(null);
@@ -56,6 +72,8 @@ export function QuestCreationProvider({ children }: { children: React.ReactNode 
     ]);
     const [currentPhaseIndex, setCurrentPhaseIndex] = useState(0);
     const [weekEndDay, setWeekEndDay] = useState(0);
+    const [addGoalTargetWeekId, setAddGoalTargetWeekId] = useState<string | null>(null);
+    const [editingGoal, setEditingGoal] = useState<QuestGoal | null>(null);
 
     const updatePhaseCount = (newCount: number) => {
         if (newCount < 1) return;
@@ -106,6 +124,25 @@ export function QuestCreationProvider({ children }: { children: React.ReactNode 
         );
     };
 
+    const updateGoalInPhase = (phaseIndex: number, updatedGoal: QuestGoal, weekId: string | null) => {
+        setPhases(prev =>
+            prev.map((p, i) => {
+                if (i !== phaseIndex) return p;
+                if (weekId) {
+                    return {
+                        ...p,
+                        weeks: p.weeks.map(w =>
+                            w.id === weekId
+                                ? { ...w, goals: w.goals.map(g => g.id === updatedGoal.id ? updatedGoal : g) }
+                                : w
+                        ),
+                    };
+                }
+                return { ...p, goals: p.goals.map(g => g.id === updatedGoal.id ? updatedGoal : g) };
+            })
+        );
+    };
+
     const getWeekStartDay = () => (weekEndDay + 1) % 7;
 
     const resetPhases = () => {
@@ -132,6 +169,11 @@ export function QuestCreationProvider({ children }: { children: React.ReactNode 
                 addWeekToPhase,
                 getWeekStartDay,
                 resetPhases,
+                addGoalTargetWeekId,
+                setAddGoalTargetWeekId,
+                editingGoal,
+                setEditingGoal,
+                updateGoalInPhase,
             }}
         >
             {children}

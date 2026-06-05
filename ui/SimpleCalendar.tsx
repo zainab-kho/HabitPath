@@ -54,6 +54,13 @@ export default function SimpleCalendar({ selectedDate, onSelectDate, selectedDat
         return formatLocalDate(date) < formatLocalDate(minDate);
     };
 
+    const todayStr = formatLocalDate(new Date());
+
+    const isTodayDate = (day: number) => {
+        const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+        return formatLocalDate(date) === todayStr;
+    };
+
     const monthName = currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
     return (
@@ -103,6 +110,7 @@ export default function SimpleCalendar({ selectedDate, onSelectDate, selectedDat
                     const day = i + 1;
                     const selected = isSelectedDate(day);
                     const disabled = isDisabledDate(day);
+                    const today = isTodayDate(day);
                     return (
                         <Pressable
                             key={day}
@@ -118,6 +126,8 @@ export default function SimpleCalendar({ selectedDate, onSelectDate, selectedDat
                                     justifyContent: 'center',
                                     alignItems: 'center',
                                     backgroundColor: selected ? selectedDateColor : 'transparent',
+                                    borderWidth: today && !selected ? 1.5 : 0,
+                                    borderColor: today && !selected ? selectedDateColor : 'transparent',
                                 }}
                             >
                                 <Text

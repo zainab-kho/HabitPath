@@ -45,7 +45,7 @@ export default function IconPickerModal({
     };
 
     return (
-        <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+        <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
             <Pressable style={styles.overlay} onPress={onClose}>
                 <Pressable style={styles.modalContainer} onPress={(e) => e.stopPropagation()}>
                     {/* Header */}

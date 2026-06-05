@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Image, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useRouter } from 'expo-router';
 
 import { AppLinearGradient } from '@/ui/AppLinearGradient';
 import PageContainer from '@/ui/PageContainer';
@@ -12,10 +13,11 @@ import { SYSTEM_ICONS } from '@/constants/icons';
 import { getDateLabel } from '@/utils/dateUtils';
 
 import { useQuestCreation, genId, QuestGoal } from '@/contexts/QuestCreationContext';
-import AddQuestGoalModal from '@/modals/quests/AddQuestGoalModal';
+import { getIconFile } from '@/components/habits/iconUtils';
 import AddQuestWeekModal from '@/modals/quests/AddQuestWeekModal';
 
 export default function EditPhases() {
+    const router = useRouter();
     const {
         phases,
         phaseCount,
@@ -24,17 +26,32 @@ export default function EditPhases() {
         updatePhaseCount,
         updatePhaseName,
         updatePhaseEndDate,
-        addGoalToPhase,
         addWeekToPhase,
         weekEndDay,
         setWeekEndDay,
         getWeekStartDay,
+        setAddGoalTargetWeekId,
+        setEditingGoal,
     } = useQuestCreation();
 
+    const navigateToEditGoal = (goal: QuestGoal, weekId: string | null) => {
+        setEditingGoal(goal);
+        setAddGoalTargetWeekId(weekId);
+        router.push('/(tabs)/quests/AddGoal');
+    };
+
     const [endDateModalIndex, setEndDateModalIndex] = useState<number | null>(null);
-    const [showAddGoalModal, setShowAddGoalModal] = useState(false);
     const [showAddWeekModal, setShowAddWeekModal] = useState(false);
-    const [addGoalTargetWeekId, setAddGoalTargetWeekId] = useState<string | null>(null);
+    const [expandedGoals, setExpandedGoals] = useState<Set<string>>(new Set());
+
+    const toggleGoalExpanded = (goalId: string) => {
+        setExpandedGoals(prev => {
+            const next = new Set(prev);
+            if (next.has(goalId)) next.delete(goalId);
+            else next.add(goalId);
+            return next;
+        });
+    };
 
     const phase = phases[currentPhaseIndex];
 
@@ -147,22 +164,52 @@ export default function EditPhases() {
                         {/* phase-level goals */}
                         {(phase?.goals ?? []).length > 0 && (
                             <View style={{ marginBottom: 15 }}>
-                                <Text style={[globalStyles.label, { marginBottom: 5 }]}>GOALS</Text>
+                                <Text style={[globalStyles.label, { marginBottom: 8 }]}>GOALS</Text>
                                 {phase.goals.map((goal) => (
-                                    <View key={goal.id} style={{ marginBottom: 8 }}>
-                                        <ShadowBox>
-                                            <View style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
-                                                <Text style={globalStyles.body2}>{goal.name}</Text>
-                                                {goal.subtasks.length > 0 && (
-                                                    <View style={{ marginTop: 4, paddingLeft: 10 }}>
+                                    <View key={goal.id} style={{ marginBottom: 12 }}>
+                                        <ShadowBox
+                                            contentBackgroundColor="#fff"
+                                            contentBorderColor="#000"
+                                            contentBorderWidth={1}
+                                            shadowBorderRadius={15}
+                                            shadowOffset={{ x: 0, y: 5 }}
+                                            shadowColor={PAGE.quest.primary[0]}
+                                        >
+                                            <Pressable onPress={() => navigateToEditGoal(goal, null)} style={{ paddingHorizontal: 12, paddingVertical: 7 }}>
+                                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 15 }}>
+                                                    <View style={{ width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center' }}>
+                                                        <Image source={getIconFile(goal.icon)} style={{ width: 40, height: 40, resizeMode: 'contain' }} />
+                                                    </View>
+                                                    <View style={{ flex: 1 }}>
+                                                        <Text style={[globalStyles.body, { fontSize: 15 }]}>{goal.name}</Text>
+                                                    </View>
+                                                    {goal.subtasks.length > 0 && (
+                                                        <Pressable onPress={(e) => { e.stopPropagation(); toggleGoalExpanded(goal.id); }}>
+                                                            <Image
+                                                                source={expandedGoals.has(goal.id) ? SYSTEM_ICONS.sortLeft : SYSTEM_ICONS.sortRight}
+                                                                style={{ width: 16, height: 16, opacity: 0.4 }}
+                                                            />
+                                                        </Pressable>
+                                                    )}
+                                                </View>
+                                                {goal.subtasks.length > 0 && expandedGoals.has(goal.id) && (
+                                                    <View style={{ marginBottom: 10, paddingLeft: 55, gap: 6 }}>
                                                         {goal.subtasks.map((st) => (
-                                                            <Text key={st.id} style={[globalStyles.body2, { fontSize: 11, opacity: 0.6 }]}>
-                                                                • {st.name}
-                                                            </Text>
+                                                            <View key={st.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                                                <ShadowBox
+                                                                    contentBorderRadius={0}
+                                                                    shadowBorderRadius={0}
+                                                                    shadowColor={PAGE.quest.primary[1]}
+                                                                    shadowOffset={{ x: 2, y: 2 }}
+                                                                >
+                                                                    <View style={{ height: 10, width: 10 }} />
+                                                                </ShadowBox>
+                                                                <Text style={[globalStyles.body2, { fontSize: 12 }]}>{st.name}</Text>
+                                                            </View>
                                                         ))}
                                                     </View>
                                                 )}
-                                            </View>
+                                            </Pressable>
                                         </ShadowBox>
                                     </View>
                                 ))}
@@ -179,27 +226,62 @@ export default function EditPhases() {
                                             <View style={{ paddingVertical: 8, paddingHorizontal: 12 }}>
                                                 <Text style={[globalStyles.body, { marginBottom: 4 }]}>{week.label}</Text>
                                                 {week.goals.map((goal) => (
-                                                    <View key={goal.id} style={{ marginBottom: 4, paddingLeft: 8 }}>
-                                                        <Text style={globalStyles.body2}>{goal.name}</Text>
-                                                        {goal.subtasks.length > 0 && (
-                                                            <View style={{ paddingLeft: 10 }}>
-                                                                {goal.subtasks.map((st) => (
-                                                                    <Text key={st.id} style={[globalStyles.body2, { fontSize: 11, opacity: 0.6 }]}>
-                                                                        • {st.name}
-                                                                    </Text>
-                                                                ))}
-                                                            </View>
-                                                        )}
+                                                    <View key={goal.id} style={{ marginBottom: 8 }}>
+                                                        <ShadowBox
+                                                            contentBackgroundColor="#fff"
+                                                            contentBorderColor="#000"
+                                                            contentBorderWidth={1}
+                                                            shadowBorderRadius={15}
+                                                            shadowOffset={{ x: 0, y: 5 }}
+                                                            shadowColor={PAGE.quest.primary[0]}
+                                                        >
+                                                            <Pressable onPress={() => navigateToEditGoal(goal, week.id)} style={{ padding: 10 }}>
+                                                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                                                                    <View style={{ width: 34, height: 34, borderRadius: 17, justifyContent: 'center', alignItems: 'center' }}>
+                                                                        <Image source={getIconFile(goal.icon)} style={{ width: 34, height: 34, resizeMode: 'contain' }} />
+                                                                    </View>
+                                                                    <View style={{ flex: 1 }}>
+                                                                        <Text style={[globalStyles.body, { fontSize: 14 }]}>{goal.name}</Text>
+                                                                    </View>
+                                                                    {goal.subtasks.length > 0 && (
+                                                                        <Pressable onPress={(e) => { e.stopPropagation(); toggleGoalExpanded(goal.id); }}>
+                                                                            <Image
+                                                                                source={expandedGoals.has(goal.id) ? SYSTEM_ICONS.sortLeft : SYSTEM_ICONS.sortRight}
+                                                                                style={{ width: 14, height: 14, opacity: 0.4 }}
+                                                                            />
+                                                                        </Pressable>
+                                                                    )}
+                                                                </View>
+                                                                {goal.subtasks.length > 0 && expandedGoals.has(goal.id) && (
+                                                                    <View style={{ marginTop: 8, paddingLeft: 46, gap: 5 }}>
+                                                                        {goal.subtasks.map((st) => (
+                                                                            <View key={st.id} style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                                                                <ShadowBox
+                                                                                    contentBorderRadius={0}
+                                                                                    shadowBorderRadius={0}
+                                                                                    shadowColor={PAGE.quest.primary[1]}
+                                                                                    shadowOffset={{ x: 2, y: 2 }}
+                                                                                >
+                                                                                    <View style={{ height: 10, width: 10 }} />
+                                                                                </ShadowBox>
+                                                                                <Text style={[globalStyles.body2, { fontSize: 12 }]}>{st.name}</Text>
+                                                                            </View>
+                                                                        ))}
+                                                                    </View>
+                                                                )}
+                                                            </Pressable>
+                                                        </ShadowBox>
                                                     </View>
                                                 ))}
                                                 <Pressable
                                                     onPress={() => {
+                                                        setEditingGoal(null);
                                                         setAddGoalTargetWeekId(week.id);
-                                                        setShowAddGoalModal(true);
+                                                        router.push('/(tabs)/quests/AddGoal');
                                                     }}
                                                     style={{ marginTop: 4 }}
                                                 >
-                                                    <Text style={[globalStyles.body2, { color: PAGE.quest.primary[0] }]}>+ Add Goal</Text>
+                                                    <Text style={[globalStyles.body, { color: PAGE.quest.primary[0] }]}>Add Goal</Text>
                                                 </Pressable>
                                             </View>
                                         </ShadowBox>
@@ -212,14 +294,15 @@ export default function EditPhases() {
                         <View style={{ flexDirection: 'row', gap: 10 }}>
                             <Pressable
                                 onPress={() => {
+                                    setEditingGoal(null);
                                     setAddGoalTargetWeekId(null);
-                                    setShowAddGoalModal(true);
+                                    router.push('/(tabs)/quests/AddGoal');
                                 }}
                                 style={{ flex: 1 }}
                             >
                                 <ShadowBox shadowColor={PAGE.quest.primary[0]}>
                                     <View style={{ paddingVertical: 6 }}>
-                                        <Text style={[globalStyles.body2, { textAlign: 'center' }]}>+ Add Goal</Text>
+                                        <Text style={[globalStyles.body, { textAlign: 'center' }]}>Add Goal</Text>
                                     </View>
                                 </ShadowBox>
                             </Pressable>
@@ -227,7 +310,7 @@ export default function EditPhases() {
                             <Pressable onPress={() => setShowAddWeekModal(true)} style={{ flex: 1 }}>
                                 <ShadowBox shadowColor={PAGE.quest.primary[0]}>
                                     <View style={{ paddingVertical: 6 }}>
-                                        <Text style={[globalStyles.body2, { textAlign: 'center' }]}>+ Add Week</Text>
+                                        <Text style={[globalStyles.body, { textAlign: 'center' }]}>Add Week</Text>
                                     </View>
                                 </ShadowBox>
                             </Pressable>
@@ -281,19 +364,6 @@ export default function EditPhases() {
                     </Pressable>
                 </Pressable>
             </Modal>
-
-            <AddQuestGoalModal
-                visible={showAddGoalModal}
-                onClose={() => setShowAddGoalModal(false)}
-                onSave={({ name: goalName, subtasks }) => {
-                    const goal: QuestGoal = {
-                        id: genId(),
-                        name: goalName,
-                        subtasks: subtasks.map(s => ({ id: genId(), name: s })),
-                    };
-                    addGoalToPhase(currentPhaseIndex, goal, addGoalTargetWeekId);
-                }}
-            />
 
             <AddQuestWeekModal
                 visible={showAddWeekModal}

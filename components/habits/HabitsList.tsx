@@ -9,6 +9,7 @@ import HabitItem from '@/components/habits/HabitItem';
 import HabitSectionHeader from '@/components/habits/HabitSectionHeader';
 import { isHabitActiveToday } from '@/utils/habitUtils';
 import HabitDetailModal from '@/modals/HabitDetailModal';
+import { toggleQuestSubtaskCompletion } from '@/lib/supabase/queries/questGoalHabits';
 import { COLORS, PAGE } from '@/constants/colors';
 import { TIME_OPTIONS } from '@/constants/habits';
 import { SYSTEM_ICONS } from '@/constants/icons';
@@ -50,20 +51,47 @@ export default function HabitsList({
 
   const [showCompleted, setShowCompleted] = useState(true);
   const [orderedHabits, setOrderedHabits] = useState<HabitWithStatus[]>([]);
-  
+  const [expandedQuestGoals, setExpandedQuestGoals] = useState<Set<string>>(new Set());
+
   // Modal state
   const [selectedHabit, setSelectedHabit] = useState<HabitWithStatus | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+
+  const toggleQuestGoalExpanded = (habitId: string) => {
+    setExpandedQuestGoals(prev => {
+      const next = new Set(prev);
+      if (next.has(habitId)) next.delete(habitId);
+      else next.add(habitId);
+      return next;
+    });
+  };
+
+  const handleToggleSubtask = async (subtaskId: string, completed: boolean) => {
+    try {
+      await toggleQuestSubtaskCompletion(subtaskId, completed);
+      // Optimistically update local state
+      setOrderedHabits(prev => prev.map(h => {
+        if (!h.isQuestGoal || !h.questSubtasks) return h;
+        return {
+          ...h,
+          questSubtasks: h.questSubtasks.map(s =>
+            s.id === subtaskId ? { ...s, completed } : s
+          ),
+        };
+      }));
+    } catch (err) {
+      console.error('Error toggling quest subtask:', err);
+    }
+  };
 
   const ORDER_STORAGE_KEY = `@habit_order_${dateStr}`;
 
   const activeHabits = habits.filter(habit =>
     isHabitActiveToday(habit, currentDate, resetTime.hour, resetTime.minute)
   );
-  const incompleteCount = activeHabits.filter(h => h.status !== 'completed').length;
-  const scheduledHabits = habits.filter(habit =>
-    isHabitActiveToday(habit, currentDate, resetTime.hour, resetTime.minute)
-  );
+  const regularActiveHabits = activeHabits.filter(h => !h.isQuestGoal);
+  const incompleteCount = regularActiveHabits.filter(h => h.status !== 'completed').length;
+  const scheduledHabits = regularActiveHabits;
   const allDoneToday = scheduledHabits.length > 0 && incompleteCount === 0;
 
   const saveToggleState = async () => {
@@ -254,7 +282,8 @@ export default function HabitsList({
     );
   }
 
-  if (scheduledHabits.length === 0) {
+  const questGoalsActive = activeHabits.filter(h => h.isQuestGoal);
+  if (scheduledHabits.length === 0 && questGoalsActive.length === 0) {
     return (
       <View style={{ marginTop: 20, alignItems: 'center', gap: 20 }}>
         <Text style={[globalStyles.body, { opacity: 0.7 }]}>You have no habits today! Add a habit?</Text>
@@ -320,6 +349,10 @@ export default function HabitsList({
                     onIncrementUpdate={onIncrementUpdate}
                     onSkip={() => onSkipHabit?.(item.id)}
                     onSnooze={() => onSnoozeHabit?.(item.id)}
+                    onToggleSubtask={handleToggleSubtask}
+                    questExpanded={expandedQuestGoals.has(item.id)}
+                    onToggleQuestExpand={() => toggleQuestGoalExpanded(item.id)}
+                    onNavigateToQuest={(questId) => router.push(`/(tabs)/quests/${questId}`)}
                   />
                 )}
                 keyExtractor={(item) => item.id}

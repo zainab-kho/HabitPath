@@ -56,12 +56,12 @@ export default function Quests() {
                 .select(`
                     id, name, type, end_date, has_phases, week_start_day, created_at,
                     quest_phases ( id,
-                        quest_goals ( id, name, icon,
-                            quest_subtasks ( id )
+                        quest_goals ( id, name, icon, completed,
+                            quest_subtasks ( id, completed )
                         ),
                         quest_weeks ( id,
-                            quest_goals:quest_goals ( id, name, icon,
-                                quest_subtasks:quest_subtasks ( id )
+                            quest_goals:quest_goals ( id, name, icon, completed,
+                                quest_subtasks:quest_subtasks ( id, completed )
                             )
                         )
                     )
@@ -75,20 +75,32 @@ export default function Quests() {
                 const phases = q.quest_phases ?? [];
                 let goalCount = 0;
                 let subtaskCount = 0;
+                let completedGoalCount = 0;
+                let completedSubtaskCount = 0;
                 const allGoals: GoalPreview[] = [];
 
                 for (const phase of phases) {
                     const phaseGoals = phase.quest_goals ?? [];
                     goalCount += phaseGoals.length;
                     for (const g of phaseGoals) {
-                        subtaskCount += (g.quest_subtasks ?? []).length;
+                        if (g.completed) completedGoalCount++;
+                        const subs = g.quest_subtasks ?? [];
+                        subtaskCount += subs.length;
+                        for (const s of subs) {
+                            if (s.completed) completedSubtaskCount++;
+                        }
                         allGoals.push({ name: g.name, icon: g.icon });
                     }
                     for (const week of (phase.quest_weeks ?? [])) {
                         const weekGoals = week.quest_goals ?? [];
                         goalCount += weekGoals.length;
                         for (const g of weekGoals) {
-                            subtaskCount += (g.quest_subtasks ?? []).length;
+                            if (g.completed) completedGoalCount++;
+                            const subs = g.quest_subtasks ?? [];
+                            subtaskCount += subs.length;
+                            for (const s of subs) {
+                                if (s.completed) completedSubtaskCount++;
+                            }
                             allGoals.push({ name: g.name, icon: g.icon });
                         }
                     }
@@ -105,8 +117,8 @@ export default function Quests() {
                     phase_count: phases.length,
                     goal_count: goalCount,
                     subtask_count: subtaskCount,
-                    completed_goal_count: 0,
-                    completed_subtask_count: 0,
+                    completed_goal_count: completedGoalCount,
+                    completed_subtask_count: completedSubtaskCount,
                     goals: allGoals,
                 };
             });
@@ -262,7 +274,7 @@ function QuestCard({ quest, onPress }: { quest: QuestRow; onPress: () => void })
                     {/* progress bar */}
                     <View style={{ borderRadius: 20, backgroundColor: '#fff', borderWidth: 1 }}>
                         <View style={{
-                            height: 26,
+                            height: 30,
                             borderRadius: 20,
                             overflow: 'hidden',
                             backgroundColor: '#fff',
@@ -285,9 +297,8 @@ function QuestCard({ quest, onPress }: { quest: QuestRow; onPress: () => void })
                                 zIndex: 3,
                             }}>
                                 <Text style={{
-                                    fontSize: 11,
+                                    fontSize: 12,
                                     fontFamily: 'label',
-                                    color: '#000',
                                     fontWeight: '600',
                                 }}>
                                     {progressPercent}%  ·  {completedItems}/{totalItems} tasks

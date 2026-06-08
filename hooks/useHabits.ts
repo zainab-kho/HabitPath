@@ -22,6 +22,12 @@ import {
   updateHabitIncrement,
 } from '@/lib/supabase/queries/habit';
 import {
+  loadQuestGoalsAsHabits,
+  toggleQuestGoalWorkedOn,
+  snoozeQuestGoal,
+  skipQuestGoal,
+} from '@/lib/supabase/queries/questGoalHabits';
+import {
   isInCacheWindow,
   loadFromCache,
   saveToCache,
@@ -132,13 +138,21 @@ export function useHabits(viewingDate: Date = new Date()) {
         }
 
         // always fetch fresh in background, passing cache for completion history merge
-        const fresh = await loadHabitsFromSupabase(user.id, cached ?? []);
-        await saveToCache(fresh, reset);
-        applyHabitsUpdate(fresh, reset);
+        const [fresh, questGoals] = await Promise.all([
+          loadHabitsFromSupabase(user.id, cached ?? []),
+          loadQuestGoalsAsHabits(user.id),
+        ]);
+        const merged = [...fresh, ...questGoals];
+        await saveToCache(fresh, reset); // only cache real habits, not quest goals
+        applyHabitsUpdate(merged, reset);
       } else {
         setLoading(true);
-        const fresh = await loadHabitsFromSupabase(user.id, cached ?? []);
-        applyHabitsUpdate(fresh, reset);
+        const [fresh, questGoals] = await Promise.all([
+          loadHabitsFromSupabase(user.id, cached ?? []),
+          loadQuestGoalsAsHabits(user.id),
+        ]);
+        const merged = [...fresh, ...questGoals];
+        applyHabitsUpdate(merged, reset);
       }
 
       const [streak, total] = await Promise.all([
@@ -179,12 +193,29 @@ export function useHabits(viewingDate: Date = new Date()) {
       setEarnedPoints(prev => prev + (isCurrentlyCompleted ? -(target.rewardPoints || 0) : (target.rewardPoints || 0)));
 
       try {
+        // Quest goals: "worked on it today" visual toggle (not actual completion)
+        if (target.isQuestGoal && target.questGoalId) {
+          await toggleQuestGoalWorkedOn(target.questGoalId, ds, isCurrentlyCompleted);
+          const updatedHabits = currentHabits.map(h => {
+            if (h.id !== habitId) return h;
+            const history = h.completionHistory || [];
+            return {
+              ...h,
+              completionHistory: isCurrentlyCompleted
+                ? history.filter(d => d !== ds)
+                : [...history, ds],
+            };
+          });
+          applyHabitsUpdate(updatedHabits, resetTime);
+          return;
+        }
+
         const updatedHabits = await toggleHabitCompletion(habitId, currentHabits, ds, resetTime.hour, resetTime.minute, user.id);
-        await saveToCache(updatedHabits, resetTime);
+        await saveToCache(updatedHabits.filter(h => !h.isQuestGoal), resetTime);
         applyHabitsUpdate(updatedHabits, resetTime);
 
         const [streak, total] = await Promise.all([
-          updateAppStreak(updatedHabits, resetTime.hour, resetTime.minute),
+          updateAppStreak(updatedHabits.filter(h => !h.isQuestGoal), resetTime.hour, resetTime.minute),
           getTotalPoints(),
         ]);
         setAppStreak(streak);
@@ -203,6 +234,7 @@ export function useHabits(viewingDate: Date = new Date()) {
 
       const ds = getHabitDate(viewingDate, resetTime.hour, resetTime.minute);
       const currentHabits = stripStatus(habits);
+      const target = currentHabits.find(h => h.id === habitId);
 
       // optimistic
       setHabits(prev => prev.map(h =>
@@ -214,8 +246,11 @@ export function useHabits(viewingDate: Date = new Date()) {
       ));
 
       try {
+        // Quest goals don't support increment from habits page
+        if (target?.isQuestGoal) return;
+
         const updatedHabits = await updateHabitIncrement(habitId, currentHabits, ds, newAmount, user.id);
-        await saveToCache(updatedHabits, resetTime);
+        await saveToCache(updatedHabits.filter(h => !h.isQuestGoal), resetTime);
         applyHabitsUpdate(updatedHabits, resetTime);
       } catch (err) {
         console.error('Error updating increment:', err);
@@ -256,14 +291,29 @@ export function useHabits(viewingDate: Date = new Date()) {
 
       try {
         const ds = getHabitDate(viewingDate, resetTime.hour, resetTime.minute);
+        const currentHabits = stripStatus(habits);
+        const target = currentHabits.find(h => h.id === habitId);
+
+        // Quest goals: update quest_goals table
+        if (target?.isQuestGoal && target.questGoalId) {
+          await snoozeQuestGoal(target.questGoalId, targetDate, ds);
+          const updatedHabits = currentHabits.map(h =>
+            h.id === habitId
+              ? { ...h, snoozedUntil: targetDate ?? undefined, snoozedFrom: ds }
+              : h
+          );
+          applyHabitsUpdate(updatedHabits, resetTime);
+          return;
+        }
+
         const updatedHabits = await snoozeHabitService(
           habitId,
-          stripStatus(habits),
+          currentHabits,
           targetDate,
           user.id,
           ds
         );
-        await saveToCache(updatedHabits, resetTime);
+        await saveToCache(updatedHabits.filter(h => !h.isQuestGoal), resetTime);
         applyHabitsUpdate(updatedHabits, resetTime);
       } catch (err) {
         console.error('Error snoozing habit:', err);
@@ -286,8 +336,23 @@ export function useHabits(viewingDate: Date = new Date()) {
       console.log(`(**TESTING) useHabits.skipHabit: habitId=${habitId}, dateStr=${ds}`);
 
       try {
-        const updatedHabits = await skipHabitService(habitId, stripStatus(habits), ds, user.id);
-        await saveToCache(updatedHabits, resetTime);
+        const currentHabits = stripStatus(habits);
+        const target = currentHabits.find(h => h.id === habitId);
+
+        // Quest goals: update quest_goals table
+        if (target?.isQuestGoal && target.questGoalId) {
+          await skipQuestGoal(target.questGoalId, ds);
+          const updatedHabits = currentHabits.map(h =>
+            h.id === habitId
+              ? { ...h, skippedDates: [...(h.skippedDates || []), ds] }
+              : h
+          );
+          applyHabitsUpdate(updatedHabits, resetTime);
+          return;
+        }
+
+        const updatedHabits = await skipHabitService(habitId, currentHabits, ds, user.id);
+        await saveToCache(updatedHabits.filter(h => !h.isQuestGoal), resetTime);
         applyHabitsUpdate(updatedHabits, resetTime);
       } catch (err) {
         console.error('Error skipping habit:', err);

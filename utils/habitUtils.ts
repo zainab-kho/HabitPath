@@ -231,13 +231,11 @@ export function isHabitActiveToday(
   const snoozeFrom = habit.snoozedFrom?.slice(0, 10);
 
   if (snoozeDay && snoozeFrom) {
-    // Hide it on the day it was snoozed FROM
-    if (todayStr === snoozeFrom) return false;
+    // Hide for the entire snooze window (from snoozeFrom up to but not including snoozeDay)
+    if (todayStr >= snoozeFrom && todayStr < snoozeDay) return false;
 
     // Force show it on the day it was snoozed TO
     if (todayStr === snoozeDay) return true;
-
-    // Otherwise snooze doesn't affect other browsing days
   }
 
   // Show history days even for archived habits

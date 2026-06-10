@@ -9,8 +9,10 @@ import { useRouter } from 'expo-router';
 
 import HabitItem from '@/components/habits/HabitItem';
 import HabitSectionHeader from '@/components/habits/HabitSectionHeader';
-import { isHabitActiveToday } from '@/utils/habitUtils';
+import { isHabitActiveToday, getWeeklyTimeTotal } from '@/utils/habitUtils';
 import HabitDetailModal from '@/modals/HabitDetailModal';
+import TimeLogModal from '@/modals/habits/TimeLogModal';
+import { toggleQuestSubtaskCompletion } from '@/lib/supabase/queries/questGoalHabits';
 import { COLORS, PAGE } from '@/constants/colors';
 import { TIME_OPTIONS } from '@/constants/habits';
 import { SYSTEM_ICONS } from '@/constants/icons';
@@ -73,6 +75,7 @@ export default function HabitsList({
   const scrollableRef = useAnimatedRef<Animated.ScrollView>();
 
   const [showCompleted, setShowCompleted] = useState(true);
+  const [expandedQuestGoals, setExpandedQuestGoals] = useState<Set<string>>(new Set());
 
   // Snapshot habits when loading finishes — only update the displayed data
   // on a loading=true→false transition, never mid-cycle
@@ -81,10 +84,8 @@ export default function HabitsList({
 
   useEffect(() => {
     if (wasLoadingRef.current && !loading && habits.length > 0) {
-      // Loading just finished — snapshot the final data
       setSnapshotHabits(habits);
     }
-    // Also snapshot on date change (habits reprocess without loading cycle)
     if (!loading && habits.length > 0) {
       setSnapshotHabits(habits);
     }
@@ -95,13 +96,53 @@ export default function HabitsList({
   const [selectedHabit, setSelectedHabit] = useState<HabitWithStatus | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
 
+  // Time log modal state
+  const [timeLogHabit, setTimeLogHabit] = useState<HabitWithStatus | null>(null);
+  const [timeLogVisible, setTimeLogVisible] = useState(false);
+
+  const handleOpenTimeLog = (habit: HabitWithStatus) => {
+    setTimeLogHabit(habit);
+    setTimeLogVisible(true);
+  };
+
+  const handleLogTime = (minutes: number) => {
+    if (!timeLogHabit || !onIncrementUpdate) return;
+    const todayAmount = timeLogHabit.incrementHistory?.[dateStr] ?? 0;
+    onIncrementUpdate(timeLogHabit.id, todayAmount + minutes);
+  };
+
+  const toggleQuestGoalExpanded = (habitId: string) => {
+    setExpandedQuestGoals(prev => {
+      const next = new Set(prev);
+      if (next.has(habitId)) next.delete(habitId);
+      else next.add(habitId);
+      return next;
+    });
+  };
+
+  const handleToggleSubtask = async (subtaskId: string, completed: boolean) => {
+    try {
+      await toggleQuestSubtaskCompletion(subtaskId, completed);
+      setSnapshotHabits(prev => prev.map(h => {
+        if (!h.isQuestGoal || !h.questSubtasks) return h;
+        return {
+          ...h,
+          questSubtasks: h.questSubtasks.map(s =>
+            s.id === subtaskId ? { ...s, completed } : s
+          ),
+        };
+      }));
+    } catch (err) {
+      console.error('Error toggling quest subtask:', err);
+    }
+  };
+
   const activeHabits = snapshotHabits.filter(habit =>
     isHabitActiveToday(habit, currentDate, resetTime.hour, resetTime.minute)
   );
-  const incompleteCount = activeHabits.filter(h => h.status !== 'completed').length;
-  const scheduledHabits = snapshotHabits.filter(habit =>
-    isHabitActiveToday(habit, currentDate, resetTime.hour, resetTime.minute)
-  );
+  const regularActiveHabits = activeHabits.filter(h => !h.isQuestGoal);
+  const incompleteCount = regularActiveHabits.filter(h => h.status !== 'completed').length;
+  const scheduledHabits = regularActiveHabits;
   const allDoneToday = scheduledHabits.length > 0 && incompleteCount === 0;
 
   const saveToggleState = async () => {
@@ -114,7 +155,6 @@ export default function HabitsList({
   };
 
   // Order comes directly from Supabase (tempOrder/tempOrderDate on each habit)
-  // No async loading needed — habits arrive already sortable
   const orderedHabits = useMemo(
     () => applyDailyOrder(activeHabits ?? [], dateStr),
     [activeHabits, dateStr],
@@ -156,13 +196,11 @@ export default function HabitsList({
     return items;
   }, [orderedHabits, showCompleted, dateStr]);
 
-  // The first header's ID — used to apply fixed-order mode
   const firstHeaderId = flatList.length > 0 && flatList[0]?.type === 'header' ? flatList[0].id : null;
 
   const handleDragEnd = useCallback(async (params: { key: string; data: ListItem[] }) => {
     const { key: draggedKey, data: newOrder } = params;
 
-    // Derive new sections: walk the list, track current header
     let currentSection: TimeOfDay = 'Anytime';
     const newHabitOrder: HabitWithStatus[] = [];
     const sectionChanges: { habitId: string; newSection: TimeOfDay }[] = [];
@@ -175,7 +213,6 @@ export default function HabitsList({
         const oldSection = getSection(habit, dateStr);
 
         if (oldSection !== currentSection) {
-          // This habit moved to a new section
           sectionChanges.push({ habitId: habit.id, newSection: currentSection });
           newHabitOrder.push({
             ...habit,
@@ -188,7 +225,6 @@ export default function HabitsList({
       }
     }
 
-    // Save section changes to Supabase
     for (const change of sectionChanges) {
       try {
         await saveTempTimeOfDay(change.habitId, userId, change.newSection, dateStr);
@@ -197,12 +233,10 @@ export default function HabitsList({
       }
     }
 
-    // Build full ordered ID list (visible + hidden habits)
     const visibleIds = new Set(newHabitOrder.map(h => h.id));
     const hiddenHabits = orderedHabits.filter(h => !visibleIds.has(h.id));
     const fullOrder = [...newHabitOrder, ...hiddenHabits];
 
-    // Save order to Supabase (fire and forget — UI updates via habit data)
     saveDailyOrder(fullOrder.map(h => h.id), userId, dateStr);
   }, [orderedHabits, dateStr, userId]);
 
@@ -237,7 +271,8 @@ export default function HabitsList({
     );
   }
 
-  if (scheduledHabits.length === 0) {
+  const questGoalsActive = activeHabits.filter(h => h.isQuestGoal);
+  if (scheduledHabits.length === 0 && questGoalsActive.length === 0) {
     return (
       <View style={{ marginTop: 20, alignItems: 'center', gap: 20 }}>
         <Text style={[globalStyles.body, { opacity: 0.7 }]}>You have no habits today! Add a habit?</Text>
@@ -297,7 +332,6 @@ export default function HabitsList({
             if (item.type === 'header') {
               const isFirstHeader = item.id === firstHeaderId;
               if (isFirstHeader) {
-                // First header: locked in place, can't be displaced
                 return (
                   <Sortable.Handle mode="fixed-order">
                     <HabitSectionHeader
@@ -307,7 +341,6 @@ export default function HabitsList({
                   </Sortable.Handle>
                 );
               }
-              // Other headers: can't be picked up, but slide out of the way
               return (
                 <HabitSectionHeader
                   title={item.timeOfDay}
@@ -316,7 +349,6 @@ export default function HabitsList({
               );
             }
 
-            // Wrap habit in Sortable.Handle → can be picked up
             return (
               <Sortable.Handle>
                 <HabitItem
@@ -327,6 +359,11 @@ export default function HabitsList({
                   onIncrementUpdate={onIncrementUpdate}
                   onSkip={() => onSkipHabit?.(item.habit.id)}
                   onSnooze={() => onSnoozeHabit?.(item.habit.id)}
+                  onToggleSubtask={handleToggleSubtask}
+                  questExpanded={expandedQuestGoals.has(item.habit.id)}
+                  onToggleQuestExpand={() => toggleQuestGoalExpanded(item.habit.id)}
+                  onNavigateToQuest={(questId) => router.push(`/(tabs)/quests/${questId}`)}
+                  onOpenTimeLog={handleOpenTimeLog}
                 />
               </Sortable.Handle>
             );
@@ -354,6 +391,16 @@ export default function HabitsList({
         habit={selectedHabit}
         onClose={() => setModalVisible(false)}
         onUpdate={handleModalUpdate}
+      />
+
+      <TimeLogModal
+        visible={timeLogVisible}
+        onClose={() => setTimeLogVisible(false)}
+        habitName={timeLogHabit?.name ?? ''}
+        weeklyTotal={timeLogHabit ? getWeeklyTimeTotal(timeLogHabit.incrementHistory, dateStr) : 0}
+        weeklyGoal={timeLogHabit?.incrementGoal ?? 0}
+        habitColor={timeLogHabit?.pathColor ?? undefined}
+        onLogTime={handleLogTime}
       />
     </GestureHandlerRootView>
   );

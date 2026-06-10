@@ -31,6 +31,25 @@ export const getHabitDate = (
   return formatLocalDate(d);
 };
 
+export const getDateLabel = (date: Date): string => {
+  const today = new Date();
+  const tomorrow = new Date(today);
+  tomorrow.setDate(today.getDate() + 1);
+
+  const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const tomorrowOnly = new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate());
+
+  if (dateOnly.getTime() === todayOnly.getTime()) return 'Today';
+  if (dateOnly.getTime() === tomorrowOnly.getTime()) return 'Tomorrow';
+
+  return date.toLocaleDateString('en-US', {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
 
 
 /**
@@ -380,6 +399,41 @@ export const compareDateStrings = (date1: string, date2: string): number => {
   if (date1 < date2) return -1;
   if (date1 > date2) return 1;
   return 0;
+};
+
+/**
+ * Returns all YYYY-MM-DD date strings for the week containing `dateStr`.
+ * Week runs Monday–Sunday.
+ */
+export const getWeekDatesForDate = (dateStr: string): string[] => {
+  const date = parseLocalDate(dateStr);
+  // getDay(): 0=Sun,1=Mon,...,6=Sat  →  offset to Monday-based
+  const dayOfWeek = date.getDay();
+  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+
+  const monday = new Date(date);
+  monday.setDate(date.getDate() + mondayOffset);
+
+  const dates: string[] = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    dates.push(formatLocalDate(d));
+  }
+  return dates;
+};
+
+/**
+ * Formats a number of minutes into a human-readable time string.
+ * e.g. 90 → "1h 30m", 600 → "10h", 45 → "45m", 0 → "0m"
+ */
+export const formatMinutesAsTime = (totalMinutes: number): string => {
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = Math.round(totalMinutes % 60);
+
+  if (hours === 0) return `${minutes}m`;
+  if (minutes === 0) return `${hours}h`;
+  return `${hours}h ${minutes}m`;
 };
 
 /**

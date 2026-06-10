@@ -6,18 +6,22 @@ import React, { useMemo, useState } from 'react';
 import { Image, Pressable, Text, View } from 'react-native';
 
 interface WeekCalendarProps {
-    selectedWeekStart: Date; // Monday
+    selectedWeekStart: Date;
     onSelectWeek: (weekStart: Date) => void;
+    weekStartDay?: number;
+    highlightColor?: string;
 }
 
-const getWeekStart = (date: Date) => {
-    const day = date.getDay(); // 0 = Sun
-    const diff = day === 0 ? -6 : 1 - day;
-    const monday = new Date(date);
-    monday.setDate(date.getDate() + diff);
-    monday.setHours(0, 0, 0, 0); // reset time for accurate comparison
-    return monday;
+const getWeekStartForDay = (date: Date, weekStartDay: number) => {
+    const day = date.getDay();
+    const diff = ((day - weekStartDay) % 7 + 7) % 7;
+    const start = new Date(date);
+    start.setDate(date.getDate() - diff);
+    start.setHours(0, 0, 0, 0);
+    return start;
 };
+
+const getWeekStart = (date: Date) => getWeekStartForDay(date, 1);
 
 const isSameDay = (a: Date, b: Date) =>
     a.getFullYear() === b.getFullYear() &&
@@ -27,7 +31,10 @@ const isSameDay = (a: Date, b: Date) =>
 export default function WeekCalendar({
     selectedWeekStart,
     onSelectWeek,
+    weekStartDay = 1,
+    highlightColor,
 }: WeekCalendarProps) {
+    const effectiveGetWeekStart = (date: Date) => getWeekStartForDay(date, weekStartDay);
     const [currentMonth, setCurrentMonth] = useState(new Date(selectedWeekStart));
 
     const year = currentMonth.getFullYear();
@@ -45,8 +52,8 @@ export default function WeekCalendar({
         const firstOfMonth = new Date(year, month, 1);
         const lastOfMonth = new Date(year, month + 1, 0);
 
-        const start = getWeekStart(firstOfMonth);
-        const end = new Date(getWeekStart(lastOfMonth));
+        const start = effectiveGetWeekStart(firstOfMonth);
+        const end = new Date(effectiveGetWeekStart(lastOfMonth));
         end.setDate(end.getDate() + 6);
 
         const days = [];
@@ -58,7 +65,7 @@ export default function WeekCalendar({
         }
 
         return days;
-    }, [year, month]);
+    }, [year, month, weekStartDay]);
 
     const selectedWeekDays = useMemo(() => {
         return Array.from({ length: 7 }).map((_, i) => {
@@ -79,7 +86,7 @@ export default function WeekCalendar({
 
     // check if a week is in the past (entire week has ended)
     const isWeekInPast = (date: Date) => {
-        const weekStart = getWeekStart(date);
+        const weekStart = effectiveGetWeekStart(date);
         const weekEnd = new Date(weekStart);
         weekEnd.setDate(weekStart.getDate() + 6);
         weekEnd.setHours(23, 59, 59, 999);
@@ -115,7 +122,9 @@ export default function WeekCalendar({
 
             {/* weekday headers */}
             <View style={{ flexDirection: 'row', marginBottom: 8 }}>
-                {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((day, i) => (
+                {Array.from({ length: 7 }, (_, i) =>
+                    ['S', 'M', 'T', 'W', 'T', 'F', 'S'][(weekStartDay + i) % 7]
+                ).map((day, i) => (
                     <View key={i} style={{ flex: 1, alignItems: 'center' }}>
                         <Text style={[globalStyles.label, { fontSize: 11, opacity: 0.6 }]}>
                             {day}
@@ -140,7 +149,7 @@ export default function WeekCalendar({
                                 justifyContent: 'center',
                                 alignItems: 'center',
                             }}
-                            onPress={() => onSelectWeek(getWeekStart(date))}
+                            onPress={() => onSelectWeek(effectiveGetWeekStart(date))}
                             disabled={isPast} // disable selecting past weeks
                         >
                             {/* week-wide background strip */}
@@ -152,7 +161,7 @@ export default function WeekCalendar({
                                         right: isWeekEnd(date) ? '12%' : 0,
                                         top: 5,
                                         height: 30,
-                                        backgroundColor: PAGE.assignments.primary[0],
+                                        backgroundColor: highlightColor ?? PAGE.assignments.primary[0],
                                         borderTopLeftRadius: isWeekStart(date) ? 16 : 0,
                                         borderBottomLeftRadius: isWeekStart(date) ? 16 : 0,
                                         borderTopRightRadius: isWeekEnd(date) ? 16 : 0,

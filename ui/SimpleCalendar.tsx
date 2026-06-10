@@ -7,12 +7,14 @@ import React, { useState } from 'react';
 import { Image, Pressable, Text, View } from 'react-native';
 
 interface SimpleCalendarProps {
-    selectedDate: Date;
+    selectedDate?: Date;
     onSelectDate: (date: Date) => void;
+    selectedDateColor: string;
+    minDate?: Date;
 }
 
-export default function SimpleCalendar({ selectedDate, onSelectDate }: SimpleCalendarProps) {
-    const [currentMonth, setCurrentMonth] = useState(new Date(selectedDate));
+export default function SimpleCalendar({ selectedDate, onSelectDate, selectedDateColor, minDate }: SimpleCalendarProps) {
+    const [currentMonth, setCurrentMonth] = useState(new Date(selectedDate ?? new Date()));
 
     const getDaysInMonth = (date: Date) => {
         const year = date.getFullYear();
@@ -36,15 +38,27 @@ export default function SimpleCalendar({ selectedDate, onSelectDate }: SimpleCal
     };
 
     const selectDate = (day: number) => {
-        // use local date construction to avoid timezone issues
         const newDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+        if (minDate && formatLocalDate(newDate) < formatLocalDate(minDate)) return;
         onSelectDate(newDate);
     };
 
     const isSelectedDate = (day: number) => {
         const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
-        // compare using formatLocalDate to avoid timezone issues
-        return formatLocalDate(date) === formatLocalDate(selectedDate);
+        return selectedDate ? formatLocalDate(date) === formatLocalDate(selectedDate) : false;
+    };
+
+    const isDisabledDate = (day: number) => {
+        if (!minDate) return false;
+        const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+        return formatLocalDate(date) < formatLocalDate(minDate);
+    };
+
+    const todayStr = formatLocalDate(new Date());
+
+    const isTodayDate = (day: number) => {
+        const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+        return formatLocalDate(date) === todayStr;
     };
 
     const monthName = currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
@@ -95,11 +109,14 @@ export default function SimpleCalendar({ selectedDate, onSelectDate }: SimpleCal
                 {Array.from({ length: daysInMonth }).map((_, i) => {
                     const day = i + 1;
                     const selected = isSelectedDate(day);
+                    const disabled = isDisabledDate(day);
+                    const today = isTodayDate(day);
                     return (
                         <Pressable
                             key={day}
                             style={{ width: '14.28%', aspectRatio: 1, justifyContent: 'center', alignItems: 'center' }}
                             onPress={() => selectDate(day)}
+                            disabled={disabled}
                         >
                             <View
                                 style={{
@@ -108,14 +125,17 @@ export default function SimpleCalendar({ selectedDate, onSelectDate }: SimpleCal
                                     borderRadius: 16,
                                     justifyContent: 'center',
                                     alignItems: 'center',
-                                    backgroundColor: selected ? PAGE.assignments.primary[0] : 'transparent',
+                                    backgroundColor: selected ? selectedDateColor : 'transparent',
+                                    borderWidth: today && !selected ? 1.5 : 0,
+                                    borderColor: today && !selected ? selectedDateColor : 'transparent',
                                 }}
                             >
                                 <Text
                                     style={[
                                         globalStyles.body2,
                                         { fontSize: 13 },
-                                        selected && { fontWeight: 'bold' }
+                                        selected && { fontWeight: 'bold' },
+                                        disabled && { opacity: 0.25 },
                                     ]}
                                 >
                                     {day}

@@ -102,7 +102,7 @@ function WeekGrid({ pathName, habits, color, week, todayStr, now, resetHour, res
                 const total = scheduledHabits.length;
                 const done = scheduledHabits.filter(h => h.completionHistory?.includes(str)).length;
 
-                const pillOpacity = isFuture ? { opacity: 0.35 } : {};
+                const pillOpacity = isFuture ? { opacity: .75 } : {};
 
                 const allDone = total > 0 && done === total;
 
@@ -474,6 +474,7 @@ export default function Paths() {
     const [paths, setPaths] = useState<Path[]>([]);
     const [loading, setLoading] = useState(true);
     const [showNewPath, setShowNewPath] = useState(false);
+    const [showInactive, setShowInactive] = useState(false);
 
     // prevents the flash → spinner → reload when swiping back from [id].tsx
     const hasLoadedOnce = useRef(false);
@@ -547,7 +548,7 @@ export default function Paths() {
                             resetHour={resetHour}
                             resetMin={resetMin}
                         />
-                        {paths.map(path => (
+                        {paths.filter(p => !p.paused && !p.archived_at).map(path => (
                             <PathCard
                                 key={path.id}
                                 path={path}
@@ -560,6 +561,35 @@ export default function Paths() {
                                 onPress={() => router.push(`/(tabs)/paths/${path.id}`)}
                             />
                         ))}
+
+                        {/* paused & archived section */}
+                        {paths.some(p => p.paused || p.archived_at) && (
+                            <View style={{ marginTop: 20 }}>
+                                <Pressable onPress={() => setShowInactive(!showInactive)}>
+                                    <Text style={[globalStyles.label, { textAlign: 'center', opacity: 0.4, fontSize: 12 }]}>
+                                        {showInactive ? 'Hide' : 'Show'} Paused & Archived ({paths.filter(p => p.paused || p.archived_at).length})
+                                    </Text>
+                                </Pressable>
+
+                                {showInactive && (
+                                    <View style={{ marginTop: 12, opacity: 0.6 }}>
+                                        {paths.filter(p => p.paused || p.archived_at).map(path => (
+                                            <PathCard
+                                                key={path.id}
+                                                path={path}
+                                                habits={weekHabits}
+                                                week={week}
+                                                todayStr={todayStr}
+                                                now={now}
+                                                resetHour={resetHour}
+                                                resetMin={resetMin}
+                                                onPress={() => router.push(`/(tabs)/paths/${path.id}`)}
+                                            />
+                                        ))}
+                                    </View>
+                                )}
+                            </View>
+                        )}
                     </ScrollView>
                 )}
 

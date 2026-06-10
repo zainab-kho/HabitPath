@@ -16,8 +16,8 @@ export const uiStyles = StyleSheet.create({
         alignItems: 'center',
         gap: 5,
         paddingHorizontal: 8,
-        paddingVertical: 3,
-        borderRadius: 8,
+        paddingVertical: 4,
+        borderRadius: 12,
         borderWidth: 1,
     },
     badgeIcon: {

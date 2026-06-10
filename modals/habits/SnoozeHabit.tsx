@@ -7,7 +7,7 @@ import { HabitWithStatus } from '@/hooks/useHabits';
 import { formatLocalDate } from '@/utils/dateUtils';
 
 // styles and constants
-import { BUTTON_COLORS, PAGE } from '@/constants/colors';
+import { BUTTON_COLORS, COLORS, PAGE } from '@/constants/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import { globalStyles } from '@/styles';
 import SimpleCalendar from '@/ui/SimpleCalendar';
@@ -156,6 +156,7 @@ export default function SnoozeHabitModal({
                 <SimpleCalendar
                   selectedDate={calendarDate}
                   onSelectDate={handleCalendarSelect}
+                  selectedDateColor={COLORS.Primary}
                 />
               </ShadowBox>
             </View>

@@ -8,4 +8,7 @@ export interface Path {
   endDate?: string;
   createdDate: string;
   archived?: { archivedDate: string };
+  paused?: boolean;
+  paused_at?: string;
+  archived_at?: string;
 }

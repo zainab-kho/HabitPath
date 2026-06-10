@@ -341,6 +341,7 @@ export const SYSTEM_ICONS = {
     stopwatch: require('@/assets/icons/system/stopwatch.png'),
     tag: require('@/assets/icons/system/tag.png'),
     settings: require('@/assets/icons/system/settings-icon.png'),
+    plus: require('@/assets/icons/system/plus.png'),
     delete: require('@/assets/icons/system/delete.png'),
     lock: require('@/assets/icons/system/lock.png'),
     padlock: require('@/assets/icons/system/padlock.png'),

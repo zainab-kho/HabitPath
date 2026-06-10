@@ -3,12 +3,14 @@ import React, { useMemo, useRef } from 'react';
 import { Animated, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 
-import { COLORS } from '@/constants/colors';
+import { COLORS, PAGE } from '@/constants/colors';
 import { HABIT_ICONS, SYSTEM_ICONS } from '@/constants/icons';
 import { globalStyles } from '@/styles';
 import { Habit } from '@/types/Habit';
 import ShadowBox from '@/ui/ShadowBox';
 import { HabitWithStatus } from '@/hooks/useHabits';
+import { formatMinutesAsTime } from '@/utils/dateUtils';
+import { isTimeTrackingHabit, getWeeklyTimeTotal } from '@/utils/habitUtils';
 
 interface HabitItemProps {
   habit: HabitWithStatus;
@@ -18,6 +20,11 @@ interface HabitItemProps {
   onIncrementUpdate?: (habitId: string, newAmount: number) => void;
   onSkip?: () => void;
   onSnooze?: () => void;
+  onToggleSubtask?: (subtaskId: string, completed: boolean) => void;
+  questExpanded?: boolean;
+  onToggleQuestExpand?: () => void;
+  onNavigateToQuest?: (questId: string) => void;
+  onOpenTimeLog?: (habit: HabitWithStatus) => void;
 }
 
 const AUTO_COMPLETE_ON_GOAL = false;
@@ -30,19 +37,30 @@ export default function HabitItem({
   onIncrementUpdate,
   onSkip,
   onSnooze,
+  onToggleSubtask,
+  questExpanded,
+  onToggleQuestExpand,
+  onNavigateToQuest,
+  onOpenTimeLog,
 }: HabitItemProps) {
   const swipeableRef = useRef<Swipeable>(null);
   const habitIconFile = HABIT_ICONS[habit.icon];
-  const habitColor = habit.pathColor || COLORS.Primary;
+  const habitColor = habit.isQuestGoal ? PAGE.quest.primary[0] : (habit.pathColor || COLORS.Primary);
 
   const isCompleted = habit.status === 'completed';
   const isSkipped = habit.status === 'skipped';
   const showStreak = (habit.streak ?? 0) >= 3;
 
   const isIncrement = !!habit.increment;
+  const isTimeTracking = isTimeTrackingHabit(habit);
 
   // source of truth for today's increment progress
   const currentAmount = habit.incrementHistory?.[dateStr] ?? 0;
+
+  // weekly total for time-tracking habits
+  const weeklyTimeTotal = isTimeTracking
+    ? getWeeklyTimeTotal(habit.incrementHistory, dateStr)
+    : 0;
 
   // step size from increment_step
   const step = habit.incrementStep && habit.incrementStep > 0 ? habit.incrementStep : 1;
@@ -63,13 +81,15 @@ export default function HabitItem({
   const hasGoal = goalAmount > 0;
   const incrementType = habit.incrementType;
 
-  const isGoalReached = isIncrement && hasGoal && currentAmount >= goalAmount;
+  // For time-tracking habits, use weekly total for goal comparison
+  const effectiveAmount = isTimeTracking ? weeklyTimeTotal : currentAmount;
+  const isGoalReached = isIncrement && hasGoal && effectiveAmount >= goalAmount;
   const effectivelyCompleted = isCompleted || isGoalReached;
 
   const progressPercentage = useMemo(() => {
     if (!isIncrement || !hasGoal || goalAmount <= 0) return 0;
-    return Math.min((currentAmount / goalAmount) * 100, 100);
-  }, [isIncrement, hasGoal, goalAmount, currentAmount]);
+    return Math.min((effectiveAmount / goalAmount) * 100, 100);
+  }, [isIncrement, hasGoal, goalAmount, effectiveAmount]);
 
   /**
    * right-side label behavior:
@@ -82,9 +102,10 @@ export default function HabitItem({
   const rightLabel = useMemo(() => {
     if (!isIncrement) return effectivelyCompleted ? '✓' : '';
     if (isGoalReached) return '✓';
+    if (isTimeTracking) return '+';  // always show + for time tracking (opens modal)
     if (currentAmount > 0) return String(currentAmount);
     return '+';
-  }, [isIncrement, effectivelyCompleted, isGoalReached, currentAmount]);
+  }, [isIncrement, effectivelyCompleted, isGoalReached, isTimeTracking, currentAmount]);
 
   const handleRightAction = (e: any) => {
     e.stopPropagation();
@@ -92,6 +113,12 @@ export default function HabitItem({
     // normal habits behave like checkbox toggle
     if (!isIncrement) {
       onToggle();
+      return;
+    }
+
+    // time-tracking habits: open the time log modal
+    if (isTimeTracking) {
+      onOpenTimeLog?.(habit);
       return;
     }
 
@@ -209,6 +236,231 @@ export default function HabitItem({
     );
   }
 
+  // Quest goals: swipeable for snooze/skip, "worked on it" checkbox,
+  // tapping navigates to quest page. Subtasks expandable.
+  if (habit.isQuestGoal) {
+    const subtasks = habit.questSubtasks ?? [];
+    const hasSubtasks = subtasks.length > 0;
+    const completedSubtasks = subtasks.filter(s => s.completed).length;
+    const subtaskProgress = hasSubtasks ? Math.round((completedSubtasks / subtasks.length) * 100) : 0;
+    const workedOnToday = habit.completionHistory?.includes(dateStr) ?? false;
+
+    // Skipped quest goal: muted style
+    if (isSkipped) {
+      return (
+        <View style={{ opacity: 0.45 }}>
+          <ShadowBox
+            style={styles.container}
+            contentBackgroundColor="#f0f0f0"
+            contentBorderColor="#ccc"
+            contentBorderWidth={1}
+            shadowBorderRadius={15}
+            shadowOffset={{ x: 0, y: 0 }}
+            shadowColor="#ccc"
+          >
+            <Pressable onPress={() => habit.questId && onNavigateToQuest?.(habit.questId)} style={styles.content}>
+              <View style={styles.mainRow}>
+                <View style={styles.leftSection}>
+                  <View style={styles.iconContainer}>
+                    {habitIconFile ? (
+                      <Image source={habitIconFile} style={styles.iconImage} />
+                    ) : (
+                      <Text style={styles.icon} />
+                    )}
+                  </View>
+                  <View style={styles.textSection}>
+                    <Text style={[globalStyles.body, styles.habitName, { textDecorationLine: 'line-through' }]}>
+                      {habit.name}
+                    </Text>
+                    <View style={styles.badgesRow}>
+                      <View style={[styles.badge, {
+                        backgroundColor: PAGE.quest.primary[1],
+                        borderColor: PAGE.quest.primary[0],
+                      }]}>
+                        <Image source={SYSTEM_ICONS.quest} style={[styles.badgeIcon, { tintColor: PAGE.quest.primary[0] }]} />
+                        <Text style={[styles.badgeText]} numberOfLines={1}>{habit.questName}</Text>
+                      </View>
+                      <Text style={[globalStyles.label, { fontSize: 11, opacity: 0.6 }]}>Skipped</Text>
+                    </View>
+                  </View>
+                </View>
+              </View>
+            </Pressable>
+          </ShadowBox>
+        </View>
+      );
+    }
+
+    return (
+      <Swipeable
+        ref={swipeableRef}
+        renderRightActions={renderRightActions}
+        overshootRight={false}
+        friction={2}
+      >
+        <ShadowBox
+          style={styles.container}
+          contentBackgroundColor={workedOnToday ? PAGE.quest.primary[0] : '#fff'}
+          contentBorderColor="#000"
+          contentBorderWidth={1}
+          shadowBorderRadius={15}
+          shadowOffset={workedOnToday ? { x: 0, y: 0 } : { x: 0, y: 5 }}
+          shadowColor={workedOnToday ? '#000' : PAGE.quest.primary[0]}
+        >
+          <View style={styles.content}>
+            <Pressable
+              onPress={() => habit.questId && onNavigateToQuest?.(habit.questId)}
+              style={styles.mainRow}
+            >
+              <View style={styles.leftSection}>
+                <View style={styles.iconContainer}>
+                  {habitIconFile ? (
+                    <Image source={habitIconFile} style={styles.iconImage} />
+                  ) : (
+                    <Text style={styles.icon} />
+                  )}
+                </View>
+                <View style={styles.textSection}>
+                  <Text style={[globalStyles.body, styles.habitName]}>
+                    {habit.name}
+                  </Text>
+                  <View style={styles.badgesRow}>
+                    <View style={[styles.badge, {
+                      backgroundColor: PAGE.quest.primary[1],
+                      borderColor: PAGE.quest.primary[0],
+                    }]}>
+                      <Image source={SYSTEM_ICONS.quest} style={[styles.badgeIcon, { tintColor: PAGE.quest.primary[0] }]} />
+                      <Text style={[styles.badgeText]} numberOfLines={1}>
+                        {habit.questName}
+                      </Text>
+                    </View>
+                    {hasSubtasks && (
+                      <Text style={[styles.badgeText, { opacity: 0.5 }]}>
+                        {completedSubtasks}/{subtasks.length} subtasks
+                      </Text>
+                    )}
+                  </View>
+                </View>
+              </View>
+
+              {/* expand arrow for subtasks */}
+              {hasSubtasks && (
+                <Pressable
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    onToggleQuestExpand?.();
+                  }}
+                  style={{ padding: 4 }}
+                >
+                  <Image
+                    source={questExpanded ? SYSTEM_ICONS.sort : SYSTEM_ICONS.sortRight}
+                    style={{ width: 16, height: 16, opacity: 0.4 }}
+                  />
+                </Pressable>
+              )}
+
+              {/* "worked on it today" checkbox */}
+              <Pressable
+                onPress={(e) => {
+                  e.stopPropagation();
+                  onToggle();
+                }}
+              >
+                <ShadowBox
+                  shadowBorderRadius={8}
+                  contentBorderRadius={8}
+                  contentBorderColor="#000"
+                  shadowColor={workedOnToday ? '#000' : PAGE.quest.primary[0]}
+                  shadowOffset={{ x: 2, y: 2 }}
+                  contentBackgroundColor={workedOnToday ? PAGE.quest.primary[0] : '#fff'}
+                >
+                  <View style={{ width: 28, height: 28, justifyContent: 'center', alignItems: 'center' }}>
+                    {workedOnToday && (
+                      <Text style={{ fontSize: 14, fontWeight: 'bold' }}>✓</Text>
+                    )}
+                  </View>
+                </ShadowBox>
+              </Pressable>
+            </Pressable>
+
+            {/* subtask progress bar */}
+            {hasSubtasks && (
+              <View style={{ marginTop: 8, borderRadius: 20, backgroundColor: '#fff', borderWidth: 1 }}>
+                <View style={{
+                  height: 20,
+                  borderRadius: 20,
+                  overflow: 'hidden',
+                  backgroundColor: '#fff',
+                  position: 'relative',
+                }}>
+                  {subtaskProgress > 0 && (
+                    <View style={{
+                      position: 'absolute',
+                      top: 0, left: 0, bottom: 0,
+                      width: `${subtaskProgress}%`,
+                      backgroundColor: subtaskProgress >= 100 ? '#54d697' : PAGE.quest.primary[0],
+                      zIndex: 2,
+                    }} />
+                  )}
+                  <View style={{
+                    position: 'absolute',
+                    top: 0, left: 0, right: 0, bottom: 0,
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    zIndex: 3,
+                  }}>
+                    <Text style={{ fontSize: 10, fontFamily: 'label', fontWeight: '600' }}>
+                      {completedSubtasks}/{subtasks.length} subtasks
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            )}
+
+            {/* expanded subtasks */}
+            {hasSubtasks && questExpanded && (
+              <View style={{ marginTop: 10, paddingLeft: 55, gap: 8 }}>
+                {subtasks.map(st => (
+                  <Pressable
+                    key={st.id}
+                    onPress={() => onToggleSubtask?.(st.id, !st.completed)}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                      <ShadowBox
+                        contentBorderRadius={0}
+                        shadowBorderRadius={0}
+                        shadowColor={st.completed ? '#000' : PAGE.quest.primary[1]}
+                        shadowOffset={{ x: 2, y: 2 }}
+                        contentBackgroundColor={st.completed ? PAGE.quest.primary[0] : '#fff'}
+                        contentBorderColor="#000"
+                        contentBorderWidth={1}
+                      >
+                        <View style={{ height: 14, width: 14, justifyContent: 'center', alignItems: 'center' }}>
+                          {st.completed && (
+                            <Text style={{ fontSize: 9, fontWeight: 'bold' }}>✓</Text>
+                          )}
+                        </View>
+                      </ShadowBox>
+                      <Text
+                        style={[
+                          globalStyles.body2,
+                          { fontSize: 13 },
+                          st.completed && { textDecorationLine: 'line-through', opacity: 0.5 },
+                        ]}
+                      >
+                        {st.name}
+                      </Text>
+                    </View>
+                  </Pressable>
+                ))}
+              </View>
+            )}
+          </View>
+        </ShadowBox>
+      </Swipeable>
+    );
+  }
+
   return (
     <Swipeable
       ref={swipeableRef}
@@ -265,6 +517,7 @@ export default function HabitItem({
                     </View>
                   )}
 
+
                   {/* increment badge (no goal) */}
                   {isIncrement && !hasGoal && (
                     <View style={[styles.badge, styles.incrementBadge]}>
@@ -295,9 +548,11 @@ export default function HabitItem({
                         />
 
                         <Text style={styles.incrementBadgeText}>
-                          {incrementType && incrementType !== 'None'
-                            ? `${goalAmount - currentAmount} ${incrementType.toLowerCase()} left`
-                            : `${currentAmount} / ${goalAmount}`}
+                          {isTimeTracking
+                            ? `${formatMinutesAsTime(effectiveAmount)} / ${formatMinutesAsTime(goalAmount)}`
+                            : incrementType && incrementType !== 'None'
+                              ? `${goalAmount - currentAmount} ${incrementType.toLowerCase()} left`
+                              : `${currentAmount} / ${goalAmount}`}
                         </Text>
                       </View>
                     </View>

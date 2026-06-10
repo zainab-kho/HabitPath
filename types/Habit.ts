@@ -57,4 +57,11 @@ export interface Habit {
 
   completed?: boolean; // **TODO: instead of completed, compute a "status" that can be "completed", "skipped", "snoozed", "active", "missed"
 
+  // quest goal integration
+  isQuestGoal?: boolean;
+  questGoalId?: string;   // the actual quest_goals.id in Supabase
+  questName?: string;     // name of the parent quest (for badge display)
+  questId?: string;       // parent quest id (for navigation)
+  questSubtasks?: { id: string; name: string; completed: boolean }[];
+
 }

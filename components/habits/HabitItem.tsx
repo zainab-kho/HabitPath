@@ -9,6 +9,8 @@ import { globalStyles } from '@/styles';
 import { Habit } from '@/types/Habit';
 import ShadowBox from '@/ui/ShadowBox';
 import { HabitWithStatus } from '@/hooks/useHabits';
+import { formatMinutesAsTime } from '@/utils/dateUtils';
+import { isTimeTrackingHabit, getWeeklyTimeTotal } from '@/utils/habitUtils';
 
 interface HabitItemProps {
   habit: HabitWithStatus;
@@ -22,6 +24,7 @@ interface HabitItemProps {
   questExpanded?: boolean;
   onToggleQuestExpand?: () => void;
   onNavigateToQuest?: (questId: string) => void;
+  onOpenTimeLog?: (habit: HabitWithStatus) => void;
 }
 
 const AUTO_COMPLETE_ON_GOAL = false;
@@ -38,6 +41,7 @@ export default function HabitItem({
   questExpanded,
   onToggleQuestExpand,
   onNavigateToQuest,
+  onOpenTimeLog,
 }: HabitItemProps) {
   const swipeableRef = useRef<Swipeable>(null);
   const habitIconFile = HABIT_ICONS[habit.icon];
@@ -48,9 +52,15 @@ export default function HabitItem({
   const showStreak = (habit.streak ?? 0) >= 3;
 
   const isIncrement = !!habit.increment;
+  const isTimeTracking = isTimeTrackingHabit(habit);
 
   // source of truth for today's increment progress
   const currentAmount = habit.incrementHistory?.[dateStr] ?? 0;
+
+  // weekly total for time-tracking habits
+  const weeklyTimeTotal = isTimeTracking
+    ? getWeeklyTimeTotal(habit.incrementHistory, dateStr)
+    : 0;
 
   // step size from increment_step
   const step = habit.incrementStep && habit.incrementStep > 0 ? habit.incrementStep : 1;
@@ -71,13 +81,15 @@ export default function HabitItem({
   const hasGoal = goalAmount > 0;
   const incrementType = habit.incrementType;
 
-  const isGoalReached = isIncrement && hasGoal && currentAmount >= goalAmount;
+  // For time-tracking habits, use weekly total for goal comparison
+  const effectiveAmount = isTimeTracking ? weeklyTimeTotal : currentAmount;
+  const isGoalReached = isIncrement && hasGoal && effectiveAmount >= goalAmount;
   const effectivelyCompleted = isCompleted || isGoalReached;
 
   const progressPercentage = useMemo(() => {
     if (!isIncrement || !hasGoal || goalAmount <= 0) return 0;
-    return Math.min((currentAmount / goalAmount) * 100, 100);
-  }, [isIncrement, hasGoal, goalAmount, currentAmount]);
+    return Math.min((effectiveAmount / goalAmount) * 100, 100);
+  }, [isIncrement, hasGoal, goalAmount, effectiveAmount]);
 
   /**
    * right-side label behavior:
@@ -90,9 +102,10 @@ export default function HabitItem({
   const rightLabel = useMemo(() => {
     if (!isIncrement) return effectivelyCompleted ? '✓' : '';
     if (isGoalReached) return '✓';
+    if (isTimeTracking) return '+';  // always show + for time tracking (opens modal)
     if (currentAmount > 0) return String(currentAmount);
     return '+';
-  }, [isIncrement, effectivelyCompleted, isGoalReached, currentAmount]);
+  }, [isIncrement, effectivelyCompleted, isGoalReached, isTimeTracking, currentAmount]);
 
   const handleRightAction = (e: any) => {
     e.stopPropagation();
@@ -100,6 +113,12 @@ export default function HabitItem({
     // normal habits behave like checkbox toggle
     if (!isIncrement) {
       onToggle();
+      return;
+    }
+
+    // time-tracking habits: open the time log modal
+    if (isTimeTracking) {
+      onOpenTimeLog?.(habit);
       return;
     }
 
@@ -529,9 +548,11 @@ export default function HabitItem({
                         />
 
                         <Text style={styles.incrementBadgeText}>
-                          {incrementType && incrementType !== 'None'
-                            ? `${goalAmount - currentAmount} ${incrementType.toLowerCase()} left`
-                            : `${currentAmount} / ${goalAmount}`}
+                          {isTimeTracking
+                            ? `${formatMinutesAsTime(effectiveAmount)} / ${formatMinutesAsTime(goalAmount)}`
+                            : incrementType && incrementType !== 'None'
+                              ? `${goalAmount - currentAmount} ${incrementType.toLowerCase()} left`
+                              : `${currentAmount} / ${goalAmount}`}
                         </Text>
                       </View>
                     </View>

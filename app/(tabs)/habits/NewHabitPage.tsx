@@ -72,6 +72,8 @@ export default function NewHabitPage() {
     const [incrementStep, setincrementStep] = useState(1);
     const [incrementGoal, setIncrementGoal] = useState(0);
     const [incrementType, setIncrementType] = useState<Habit['incrementType']>('None');
+    const [timeGoalHours, setTimeGoalHours] = useState(10);
+    const [timeGoalMinutes, setTimeGoalMinutes] = useState(0);
 
     // paths
     interface PathOption { id: string; name: string; color: string; }
@@ -165,22 +167,30 @@ export default function NewHabitPage() {
                 return formatDisplayDate(startDate);
             })();
 
+            // For time-tracking habits, convert hours+minutes to total minutes for the goal
+            const finalIncrementGoal = incrementType === 'Time'
+                ? (timeGoalHours * 60 + timeGoalMinutes)
+                : incrementGoal;
+
+            // Time-tracking habits should be Daily frequency so they show every day
+            const finalFrequency = incrementType === 'Time' ? 'Daily' : selectedFrequency;
+            const finalSelectedDays = incrementType === 'Time' ? [] : (selectedFrequency === 'Weekly' ? selectedDays : []);
+
             const newHabit: Habit = {
                 id: String(uuid.v4()),
                 name: habitName.trim(),
                 icon: selectedIcon,
-                frequency: selectedFrequency,
-                selectedDays: selectedFrequency === 'Weekly' ? selectedDays : [],
+                frequency: finalFrequency,
+                selectedDays: finalSelectedDays,
                 selectedTimeOfDay,
                 startDate: habitStartDate,     // pure calendar date
                 selectedDate: selectedDateLabel, // display label
                 rewardPoints,
                 keepUntil,
                 increment,
-                incrementStep,
+                incrementStep: incrementType === 'Time' ? 1 : incrementStep,
                 incrementType,
-                incrementGoal
-                // incrementGoal **TODO: add to supabase
+                incrementGoal: finalIncrementGoal,
             };
 
             // Resolve the selected path's name + hex color so the habit
@@ -196,8 +206,8 @@ export default function NewHabitPage() {
                 user_id: user.id,
                 name: newHabit.name,
                 icon: newHabit.icon,
-                frequency: newHabit.frequency,
-                selected_days: newHabit.selectedDays,
+                frequency: finalFrequency,
+                selected_days: finalSelectedDays,
                 selected_time_of_day: newHabit.selectedTimeOfDay,
                 start_date: newHabit.startDate,
                 selected_date: newHabit.selectedDate,
@@ -688,7 +698,7 @@ export default function NewHabitPage() {
 
                                                             <Text style={globalStyles.label}>INCREMENT TYPE</Text>
                                                             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                                                                {['None', 'Minutes', 'Miles', 'Sips'].map((type) => (
+                                                                {['None', 'Time', 'Minutes', 'Miles', 'Sips'].map((type) => (
                                                                     <Pressable key={type} onPress={() => setIncrementType(type as Habit['incrementType'])}>
                                                                         <ShadowBox
                                                                             contentBackgroundColor={incrementType === type ? PAGE.habits.primary[1] : '#fff'}
@@ -705,124 +715,216 @@ export default function NewHabitPage() {
                                                             </View>
                                                         </View>
 
-                                                        <View style={{ gap: 30 }}>
-                                                            <Text style={globalStyles.label}>INCREMENT AMOUNT</Text>
+                                                        {/* Weekly time goal (only for Time type) */}
+                                                        {incrementType === 'Time' && (
+                                                            <View style={{ gap: 10 }}>
+                                                                <Text style={globalStyles.label}>WEEKLY TIME GOAL</Text>
+                                                                <Text style={[globalStyles.label, { opacity: 0.5, fontSize: 11 }]}>
+                                                                    Set the total hours and minutes you want to log each week.
+                                                                </Text>
 
-                                                            <View style={{ flexDirection: 'row', alignSelf: 'center', gap: 10 }}>
-                                                                <ShadowBox
-                                                                    shadowColor={PAGE.habits.primary[1]}
-                                                                    style={{
+                                                                <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 12, marginTop: 5 }}>
+                                                                    {/* hours */}
+                                                                    <View style={{ alignItems: 'center', gap: 6 }}>
+                                                                        <Text style={[globalStyles.label, { fontSize: 10 }]}>HOURS</Text>
+                                                                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                                                            <ShadowBox shadowColor={PAGE.habits.primary[1]}>
+                                                                                <Pressable
+                                                                                    onPress={() => setTimeGoalHours(prev => Math.max(0, prev - 1))}
+                                                                                    style={{ paddingVertical: 4, paddingHorizontal: 10 }}
+                                                                                >
+                                                                                    <Text style={globalStyles.body}>-</Text>
+                                                                                </Pressable>
+                                                                            </ShadowBox>
 
-                                                                    }}>
-                                                                    <Pressable
-                                                                        onPress={() => setincrementStep(prev => Math.max(0, prev - 1))}
-                                                                        style={{
-                                                                            paddingVertical: 3,
-                                                                            paddingHorizontal: 8,
-                                                                            alignItems: 'center',
-                                                                            justifyContent: 'center'
-                                                                        }}>
-                                                                        <Text style={globalStyles.body}>-</Text>
-                                                                    </Pressable>
-                                                                </ShadowBox>
+                                                                            <ShadowBox shadowColor={PAGE.habits.primary[1]}>
+                                                                                <View style={{
+                                                                                    borderWidth: 2,
+                                                                                    borderColor: PAGE.habits.primary[0],
+                                                                                    width: 60,
+                                                                                    borderRadius: 20,
+                                                                                    justifyContent: 'center',
+                                                                                }}>
+                                                                                    <TextInput
+                                                                                        style={[globalStyles.body, { textAlign: 'center' }]}
+                                                                                        keyboardType="numeric"
+                                                                                        value={timeGoalHours.toString()}
+                                                                                        onChangeText={text => setTimeGoalHours(Number(text) || 0)}
+                                                                                        onFocus={(e) => scrollRef.current?.scrollToFocusedInput(e.nativeEvent.target)}
+                                                                                    />
+                                                                                </View>
+                                                                            </ShadowBox>
 
-                                                                <ShadowBox
-                                                                    shadowColor={PAGE.habits.primary[1]}>
-                                                                    <View style={{
-                                                                        borderWidth: 2,
-                                                                        borderColor: PAGE.habits.primary[0],
-                                                                        width: 100,
-                                                                        borderRadius: 20,
-                                                                        justifyContent: 'center'
-                                                                    }}>
-                                                                        <TextInput
-                                                                            style={[globalStyles.body, { textAlign: 'center' }]}
-                                                                            keyboardType="numeric"
-                                                                            value={incrementStep.toString()}
-                                                                            onChangeText={text => setincrementStep(Number(text))}
-                                                                            onFocus={(e) => scrollRef.current?.scrollToFocusedInput(e.nativeEvent.target)}
-                                                                        />
+                                                                            <ShadowBox shadowColor={PAGE.habits.primary[1]}>
+                                                                                <Pressable
+                                                                                    onPress={() => setTimeGoalHours(prev => prev + 1)}
+                                                                                    style={{ paddingVertical: 4, paddingHorizontal: 10 }}
+                                                                                >
+                                                                                    <Text style={globalStyles.body}>+</Text>
+                                                                                </Pressable>
+                                                                            </ShadowBox>
+                                                                        </View>
                                                                     </View>
-                                                                </ShadowBox>
 
-                                                                <ShadowBox
-                                                                    shadowColor={PAGE.habits.primary[1]}
-                                                                    style={{
+                                                                    <Text style={[globalStyles.h2, { marginTop: 16 }]}>:</Text>
 
-                                                                    }}>
-                                                                    <Pressable
-                                                                        onPress={() => setincrementStep(prev => prev + 1)}
-                                                                        style={{
-                                                                            paddingVertical: 3,
-                                                                            paddingHorizontal: 8,
-                                                                            alignItems: 'center',
+                                                                    {/* minutes */}
+                                                                    <View style={{ alignItems: 'center', gap: 6 }}>
+                                                                        <Text style={[globalStyles.label, { fontSize: 10 }]}>MINUTES</Text>
+                                                                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                                                            <ShadowBox shadowColor={PAGE.habits.primary[1]}>
+                                                                                <Pressable
+                                                                                    onPress={() => setTimeGoalMinutes(prev => {
+                                                                                        const val = prev - 15;
+                                                                                        return val < 0 ? 0 : val;
+                                                                                    })}
+                                                                                    style={{ paddingVertical: 4, paddingHorizontal: 10 }}
+                                                                                >
+                                                                                    <Text style={globalStyles.body}>-</Text>
+                                                                                </Pressable>
+                                                                            </ShadowBox>
+
+                                                                            <ShadowBox shadowColor={PAGE.habits.primary[1]}>
+                                                                                <View style={{
+                                                                                    borderWidth: 2,
+                                                                                    borderColor: PAGE.habits.primary[0],
+                                                                                    width: 60,
+                                                                                    borderRadius: 20,
+                                                                                    justifyContent: 'center',
+                                                                                }}>
+                                                                                    <TextInput
+                                                                                        style={[globalStyles.body, { textAlign: 'center' }]}
+                                                                                        keyboardType="numeric"
+                                                                                        value={timeGoalMinutes.toString()}
+                                                                                        onChangeText={text => setTimeGoalMinutes(Number(text) || 0)}
+                                                                                        onFocus={(e) => scrollRef.current?.scrollToFocusedInput(e.nativeEvent.target)}
+                                                                                    />
+                                                                                </View>
+                                                                            </ShadowBox>
+
+                                                                            <ShadowBox shadowColor={PAGE.habits.primary[1]}>
+                                                                                <Pressable
+                                                                                    onPress={() => setTimeGoalMinutes(prev => prev + 15)}
+                                                                                    style={{ paddingVertical: 4, paddingHorizontal: 10 }}
+                                                                                >
+                                                                                    <Text style={globalStyles.body}>+</Text>
+                                                                                </Pressable>
+                                                                            </ShadowBox>
+                                                                        </View>
+                                                                    </View>
+                                                                </View>
+                                                            </View>
+                                                        )}
+
+                                                        {incrementType !== 'Time' && (
+                                                        <View style={{ gap: 30 }}>
+                                                            <View style={{ gap: 30 }}>
+                                                                <Text style={globalStyles.label}>INCREMENT AMOUNT</Text>
+
+                                                                <View style={{ flexDirection: 'row', alignSelf: 'center', gap: 10 }}>
+                                                                    <ShadowBox shadowColor={PAGE.habits.primary[1]}>
+                                                                        <Pressable
+                                                                            onPress={() => setincrementStep(prev => Math.max(0, prev - 1))}
+                                                                            style={{
+                                                                                paddingVertical: 3,
+                                                                                paddingHorizontal: 8,
+                                                                                alignItems: 'center',
+                                                                                justifyContent: 'center'
+                                                                            }}>
+                                                                            <Text style={globalStyles.body}>-</Text>
+                                                                        </Pressable>
+                                                                    </ShadowBox>
+
+                                                                    <ShadowBox shadowColor={PAGE.habits.primary[1]}>
+                                                                        <View style={{
+                                                                            borderWidth: 2,
+                                                                            borderColor: PAGE.habits.primary[0],
+                                                                            width: 100,
+                                                                            borderRadius: 20,
                                                                             justifyContent: 'center'
                                                                         }}>
-                                                                        <Text style={globalStyles.body}>+</Text>
-                                                                    </Pressable>
-                                                                </ShadowBox>
+                                                                            <TextInput
+                                                                                style={[globalStyles.body, { textAlign: 'center' }]}
+                                                                                keyboardType="numeric"
+                                                                                value={incrementStep.toString()}
+                                                                                onChangeText={text => setincrementStep(Number(text))}
+                                                                                onFocus={(e) => scrollRef.current?.scrollToFocusedInput(e.nativeEvent.target)}
+                                                                            />
+                                                                        </View>
+                                                                    </ShadowBox>
+
+                                                                    <ShadowBox shadowColor={PAGE.habits.primary[1]}>
+                                                                        <Pressable
+                                                                            onPress={() => setincrementStep(prev => prev + 1)}
+                                                                            style={{
+                                                                                paddingVertical: 3,
+                                                                                paddingHorizontal: 8,
+                                                                                alignItems: 'center',
+                                                                                justifyContent: 'center'
+                                                                            }}>
+                                                                            <Text style={globalStyles.body}>+</Text>
+                                                                        </Pressable>
+                                                                    </ShadowBox>
+                                                                </View>
                                                             </View>
 
-                                                            {/* 
-                                                        **TODO: add goal input (option)
-                                                        1. 
-                                                         */}
-                                                        </View>
+                                                            <View style={{ gap: 30 }}>
+                                                                <Text style={globalStyles.label}>INCREMENT GOAL (OPTIONAL)</Text>
 
-                                                        <View style={{ gap: 30 }}>
-                                                            <Text style={globalStyles.label}>INCREMENT GOAL (OPTIONAL)</Text>
+                                                                <View style={{ flexDirection: 'row', alignSelf: 'center', gap: 10 }}>
+                                                                    <ShadowBox shadowColor={PAGE.habits.primary[0]}>
+                                                                        <Pressable
+                                                                            onPress={() => setIncrementGoal(prev => Math.max(0, prev - 1))}
+                                                                            style={{
+                                                                                paddingVertical: 3,
+                                                                                paddingHorizontal: 8,
+                                                                                alignItems: 'center',
+                                                                                justifyContent: 'center'
+                                                                            }}>
+                                                                            <Text style={globalStyles.body}>-</Text>
+                                                                        </Pressable>
+                                                                    </ShadowBox>
 
-                                                            <View style={{ flexDirection: 'row', alignSelf: 'center', gap: 10 }}>
-                                                                <ShadowBox shadowColor={PAGE.habits.primary[0]}>
-                                                                    <Pressable
-                                                                        onPress={() => setIncrementGoal(prev => Math.max(0, prev - 1))}
-                                                                        style={{
-                                                                            paddingVertical: 3,
-                                                                            paddingHorizontal: 8,
-                                                                            alignItems: 'center',
+                                                                    <ShadowBox shadowColor={PAGE.habits.primary[0]}>
+                                                                        <View style={{
+                                                                            borderWidth: 2,
+                                                                            borderColor: PAGE.habits.primary[0],
+                                                                            width: 100,
+                                                                            borderRadius: 20,
                                                                             justifyContent: 'center'
                                                                         }}>
-                                                                        <Text style={globalStyles.body}>-</Text>
-                                                                    </Pressable>
-                                                                </ShadowBox>
+                                                                            <TextInput
+                                                                                style={[globalStyles.body, { textAlign: 'center' }]}
+                                                                                keyboardType="numeric"
+                                                                                value={incrementGoal.toString()}
+                                                                                onChangeText={text => setIncrementGoal(Number(text))}
+                                                                                onFocus={(e) => scrollRef.current?.scrollToFocusedInput(e.nativeEvent.target)}
+                                                                            />
+                                                                        </View>
+                                                                    </ShadowBox>
 
-                                                                <ShadowBox shadowColor={PAGE.habits.primary[0]}>
-                                                                    <View style={{
-                                                                        borderWidth: 2,
-                                                                        borderColor: PAGE.habits.primary[0],
-                                                                        width: 100,
-                                                                        borderRadius: 20,
-                                                                        justifyContent: 'center'
-                                                                    }}>
-                                                                        <TextInput
-                                                                            style={[globalStyles.body, { textAlign: 'center' }]}
-                                                                            keyboardType="numeric"
-                                                                            value={incrementGoal.toString()}
-                                                                            onChangeText={text => setIncrementGoal(Number(text))}
-                                                                            onFocus={(e) => scrollRef.current?.scrollToFocusedInput(e.nativeEvent.target)}
-                                                                        />
-                                                                    </View>
-                                                                </ShadowBox>
-
-                                                                <ShadowBox shadowColor={PAGE.habits.primary[0]}>
-                                                                    <Pressable
-                                                                        onPress={() => setIncrementGoal(prev => prev + 1)}
-                                                                        style={{
-                                                                            paddingVertical: 3,
-                                                                            paddingHorizontal: 8,
-                                                                            alignItems: 'center',
-                                                                            justifyContent: 'center'
-                                                                        }}>
-                                                                        <Text style={globalStyles.body}>+</Text>
-                                                                    </Pressable>
-                                                                </ShadowBox>
+                                                                    <ShadowBox shadowColor={PAGE.habits.primary[0]}>
+                                                                        <Pressable
+                                                                            onPress={() => setIncrementGoal(prev => prev + 1)}
+                                                                            style={{
+                                                                                paddingVertical: 3,
+                                                                                paddingHorizontal: 8,
+                                                                                alignItems: 'center',
+                                                                                justifyContent: 'center'
+                                                                            }}>
+                                                                            <Text style={globalStyles.body}>+</Text>
+                                                                        </Pressable>
+                                                                    </ShadowBox>
+                                                                </View>
                                                             </View>
                                                         </View>
+                                                        )}
                                                     </View>
                                                 )}
                                             </View>
                                         </>
                                     )}
+
 
 
 

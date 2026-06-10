@@ -1,7 +1,30 @@
 // @/utils/habitUtils.ts
 import { WEEK_DAYS } from '@/constants';
 import { Habit } from '@/types/Habit';
-import { getHabitDate, getHabitDayOfWeek } from '@/utils/dateUtils';
+import { getHabitDate, getHabitDayOfWeek, getWeekDatesForDate } from '@/utils/dateUtils';
+
+/* ============================================================================
+   TIME TRACKING HELPERS
+============================================================================ */
+
+/**
+ * Returns true if a habit is a weekly time-tracking habit.
+ */
+export const isTimeTrackingHabit = (habit: Habit): boolean =>
+  !!habit.increment && habit.incrementType === 'Time';
+
+/**
+ * Sums incrementHistory entries across all days of the week containing `dateStr`.
+ * Returns total minutes logged for that week.
+ */
+export const getWeeklyTimeTotal = (
+  incrementHistory: Record<string, number> | undefined,
+  dateStr: string,
+): number => {
+  if (!incrementHistory) return 0;
+  const weekDates = getWeekDatesForDate(dateStr);
+  return weekDates.reduce((sum, d) => sum + (incrementHistory[d] ?? 0), 0);
+};
 
 /* ============================================================================
    STREAK
@@ -361,7 +384,10 @@ export const getHabitStatus = (
 
   // completed via increment goal reached
   if (habit.increment) {
-    const amount = habit.incrementHistory?.[dateStr] ?? 0;
+    // Time-tracking habits: check weekly total instead of daily
+    const amount = isTimeTrackingHabit(habit)
+      ? getWeeklyTimeTotal(habit.incrementHistory, dateStr)
+      : (habit.incrementHistory?.[dateStr] ?? 0);
 
     // goal logic must match HabitItem:
     // - keepUntil increments: goal defaults to 1
@@ -432,7 +458,9 @@ export const getProgressUnitsForDay = (
     }
 
     // increment habits: partial progress
-    const currentAmount = h.incrementHistory?.[dateStr] ?? 0;
+    const currentAmount = isTimeTrackingHabit(h)
+      ? getWeeklyTimeTotal(h.incrementHistory, dateStr)
+      : (h.incrementHistory?.[dateStr] ?? 0);
     const goal = typeof h.incrementGoal === 'number' ? h.incrementGoal : 0;
     if (goal > 0) {
       progressEarned += Math.min(currentAmount / goal, 1);

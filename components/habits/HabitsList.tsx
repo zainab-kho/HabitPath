@@ -9,7 +9,9 @@ import HabitItem from '@/components/habits/HabitItem';
 import HabitSectionHeader from '@/components/habits/HabitSectionHeader';
 import { isHabitActiveToday } from '@/utils/habitUtils';
 import HabitDetailModal from '@/modals/HabitDetailModal';
+import TimeLogModal from '@/modals/habits/TimeLogModal';
 import { toggleQuestSubtaskCompletion } from '@/lib/supabase/queries/questGoalHabits';
+import { getWeeklyTimeTotal } from '@/utils/habitUtils';
 import { COLORS, PAGE } from '@/constants/colors';
 import { TIME_OPTIONS } from '@/constants/habits';
 import { SYSTEM_ICONS } from '@/constants/icons';
@@ -56,6 +58,22 @@ export default function HabitsList({
   // Modal state
   const [selectedHabit, setSelectedHabit] = useState<HabitWithStatus | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
+
+  // Time log modal state
+  const [timeLogHabit, setTimeLogHabit] = useState<HabitWithStatus | null>(null);
+  const [timeLogVisible, setTimeLogVisible] = useState(false);
+
+  const handleOpenTimeLog = (habit: HabitWithStatus) => {
+    setTimeLogHabit(habit);
+    setTimeLogVisible(true);
+  };
+
+  const handleLogTime = (minutes: number) => {
+    if (!timeLogHabit || !onIncrementUpdate) return;
+    // Add logged minutes to today's amount
+    const todayAmount = timeLogHabit.incrementHistory?.[dateStr] ?? 0;
+    onIncrementUpdate(timeLogHabit.id, todayAmount + minutes);
+  };
 
   const toggleQuestGoalExpanded = (habitId: string) => {
     setExpandedQuestGoals(prev => {
@@ -353,6 +371,7 @@ export default function HabitsList({
                     questExpanded={expandedQuestGoals.has(item.id)}
                     onToggleQuestExpand={() => toggleQuestGoalExpanded(item.id)}
                     onNavigateToQuest={(questId) => router.push(`/(tabs)/quests/${questId}`)}
+                    onOpenTimeLog={handleOpenTimeLog}
                   />
                 )}
                 keyExtractor={(item) => item.id}
@@ -368,6 +387,16 @@ export default function HabitsList({
         habit={selectedHabit}
         onClose={() => setModalVisible(false)}
         onUpdate={handleModalUpdate}
+      />
+
+      <TimeLogModal
+        visible={timeLogVisible}
+        onClose={() => setTimeLogVisible(false)}
+        habitName={timeLogHabit?.name ?? ''}
+        weeklyTotal={timeLogHabit ? getWeeklyTimeTotal(timeLogHabit.incrementHistory, dateStr) : 0}
+        weeklyGoal={timeLogHabit?.incrementGoal ?? 0}
+        habitColor={timeLogHabit?.pathColor ?? undefined}
+        onLogTime={handleLogTime}
       />
     </>
   );

@@ -1,6 +1,6 @@
 // components/habits/HabitsList.tsx
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, { useAnimatedRef } from 'react-native-reanimated';
@@ -77,22 +77,8 @@ export default function HabitsList({
   const [showCompleted, setShowCompleted] = useState(true);
   const [expandedQuestGoals, setExpandedQuestGoals] = useState<Set<string>>(new Set());
 
-  // Snapshot habits when loading finishes — only update the displayed data
-  // on a loading=true→false transition, never mid-cycle.
-  // Track whether initial load has ever completed so we don't flash empty state prematurely.
-  const [snapshotHabits, setSnapshotHabits] = useState<HabitWithStatus[]>(habits);
-  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
-  const wasLoadingRef = useRef(loading);
-
-  useEffect(() => {
-    if (wasLoadingRef.current && !loading) {
-      setSnapshotHabits(habits);
-      setHasLoadedOnce(true);
-    } else if (!loading) {
-      setSnapshotHabits(habits);
-    }
-    wasLoadingRef.current = loading;
-  }, [loading, habits, dateStr]);
+  // No snapshot needed — `loading` from useHabits is derived (habitsForDate !== dateStr),
+  // so it's always true when habits don't match the current date. Safe to use habits directly.
 
   // Modal state
   const [selectedHabit, setSelectedHabit] = useState<HabitWithStatus | null>(null);
@@ -122,27 +108,40 @@ export default function HabitsList({
     });
   };
 
+  // Local subtask completion overrides (optimistic, persisted to Supabase)
+  const [subtaskOverrides, setSubtaskOverrides] = useState<Record<string, boolean>>({});
+
   const handleToggleSubtask = async (subtaskId: string, completed: boolean) => {
     try {
+      setSubtaskOverrides(prev => ({ ...prev, [subtaskId]: completed }));
       await toggleQuestSubtaskCompletion(subtaskId, completed);
-      setSnapshotHabits(prev => prev.map(h => {
-        if (!h.isQuestGoal || !h.questSubtasks) return h;
-        return {
-          ...h,
-          questSubtasks: h.questSubtasks.map(s =>
-            s.id === subtaskId ? { ...s, completed } : s
-          ),
-        };
-      }));
     } catch (err) {
       console.error('Error toggling quest subtask:', err);
+      // revert on error
+      setSubtaskOverrides(prev => {
+        const next = { ...prev };
+        delete next[subtaskId];
+        return next;
+      });
     }
   };
 
-  // snapshotHabits already contains only active habits (filtered by applyHabitsUpdate)
-  // Do NOT re-filter with isHabitActiveToday here — during date transitions the
-  // snapshot date and currentDate can be out of sync, causing a wrong count flash.
-  const activeHabits = snapshotHabits;
+  // Apply subtask overrides to habits
+  const displayHabits = useMemo(() => {
+    if (Object.keys(subtaskOverrides).length === 0) return habits;
+    return habits.map(h => {
+      if (!h.isQuestGoal || !h.questSubtasks) return h;
+      return {
+        ...h,
+        questSubtasks: h.questSubtasks.map(s =>
+          subtaskOverrides[s.id] !== undefined ? { ...s, completed: subtaskOverrides[s.id] } : s
+        ),
+      };
+    });
+  }, [habits, subtaskOverrides]);
+
+  // displayHabits = habits + local subtask overrides. Already active-only from applyHabitsUpdate.
+  const activeHabits = displayHabits;
   const regularActiveHabits = activeHabits.filter(h => !h.isQuestGoal);
   const incompleteCount = regularActiveHabits.filter(h => h.status !== 'completed').length;
   const scheduledHabits = regularActiveHabits;
@@ -252,7 +251,7 @@ export default function HabitsList({
     // Order is derived from habits prop (Supabase data) — no manual reload needed
   };
 
-  if (loading || !hasLoadedOnce) {
+  if (loading) {
     return (
       <View style={{ flex: 1, alignItems: 'center', marginTop: 60 }}>
         <ActivityIndicator size="small" color={COLORS.Primary} />
@@ -260,7 +259,7 @@ export default function HabitsList({
     );
   }
 
-  if (!snapshotHabits || snapshotHabits.length === 0) {
+  if (!habits || habits.length === 0) {
     return (
       <EmptyStateView
         icon={SYSTEM_ICONS.habit}

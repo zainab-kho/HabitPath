@@ -39,7 +39,7 @@ export function useHabits(viewingDate: Date = new Date()) {
   const { user } = useAuth();
 
   const [habits, setHabits] = useState<HabitWithStatus[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [resetTime, setResetTime] = useState({ hour: 4, minute: 0 });
@@ -51,7 +51,13 @@ export function useHabits(viewingDate: Date = new Date()) {
   const [progressEarned, setProgressEarned] = useState(0);
   const [progressSkipped, setProgressSkipped] = useState(0);
 
+  // Track which date the current habits state was computed for
+  const [habitsForDate, setHabitsForDate] = useState<string | null>(null);
+
   const dateStr = getHabitDate(viewingDate, resetTime.hour, resetTime.minute);
+
+  // Derived loading: true during initial fetch OR when habits are for a different date
+  const loading = initialLoading || habitsForDate !== dateStr;
 
   // raw habits from DB/cache — date-independent, used to reprocess on date change without fetching
   const rawHabitsRef = useRef<Habit[]>([]);
@@ -93,6 +99,7 @@ export function useHabits(viewingDate: Date = new Date()) {
       unstable_batchedUpdates(() => {
         setAllHabits(updatedHabits);
         setHabits(withStatus);
+        setHabitsForDate(ds);
         setProgressTotal(progressTotal);
         setProgressEarned(progressEarned);
         setProgressSkipped(progressSkipped);
@@ -113,7 +120,7 @@ export function useHabits(viewingDate: Date = new Date()) {
   const loadHabits = useCallback(async () => {
     if (!user) {
       setHabits([]);
-      setLoading(false);
+      setInitialLoading(false);
       return;
     }
 
@@ -136,16 +143,16 @@ export function useHabits(viewingDate: Date = new Date()) {
 
       // All state updates in one batch — no intermediate renders
       unstable_batchedUpdates(() => {
-        applyHabitsUpdate(merged, reset); // auto-saves real habits to cache
+        applyHabitsUpdate(merged, reset);
         setAppStreak(streak);
         setTotalPoints(total);
-        setLoading(false);
+        setInitialLoading(false);
         setError(null);
       });
     } catch (err) {
       console.error('Error loading habits:', err);
       setError('Failed to load habits');
-      setLoading(false);
+      setInitialLoading(false);
     }
   }, [user, applyHabitsUpdate]);
 
@@ -355,7 +362,8 @@ export function useHabits(viewingDate: Date = new Date()) {
     loadHabits();
   }, [loadHabits]);
 
-  // date navigation — instant reprocess from ref, no fetch needed
+  // date navigation — reprocess from ref. The derived `loading` (habitsForDate !== dateStr)
+  // automatically shows the spinner until this effect runs and applyHabitsUpdate sets habitsForDate.
   useEffect(() => {
     if (rawHabitsRef.current.length > 0) {
       applyHabitsUpdate(rawHabitsRef.current, resetTime);

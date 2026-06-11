@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -20,7 +19,7 @@ import {
     updateReward,
 } from '@/services/rewards/rewards';
 import { useAuth } from '@/contexts/AuthContext';
-import { STORAGE_KEYS } from '@/storage/keys';
+import { loadHabitsFromSupabase } from '@/lib/supabase/queries/habit';
 import { Habit } from '@/types/Habit';
 import { Reward } from '@/types/Reward';
 import { AppLinearGradient } from '@/ui/AppLinearGradient';
@@ -73,20 +72,12 @@ export default function RewardsPage() {
         // Clearing rewards does NOT change this number — only "Redeemed" resets to 0.
         let habitsArr: Habit[] = [];
         try {
-            const raw = await AsyncStorage.getItem(STORAGE_KEYS.HABITS_CACHE);
-            // **LOG
-            console.log('[**LOG rewards page] habits cache raw length:', raw?.length ?? 0)
-            if (raw) {
-                const parsed = JSON.parse(raw);
-                habitsArr = Array.isArray(parsed?.habits)
-                    ? parsed.habits
-                    : Array.isArray(parsed)
-                        ? parsed
-                        : [];
+            if (user) {
+                habitsArr = await loadHabitsFromSupabase(user.id);
                 setHabits(habitsArr);
             }
         } catch (e) {
-            console.error('Error loading habits cache:', e);
+            console.error('Error loading habits:', e);
         }
 
         // Load reset date and redeemed points from Supabase

@@ -9,7 +9,7 @@ import { useRouter } from 'expo-router';
 
 import HabitItem from '@/components/habits/HabitItem';
 import HabitSectionHeader from '@/components/habits/HabitSectionHeader';
-import { isHabitActiveToday, getWeeklyTimeTotal } from '@/utils/habitUtils';
+import { getWeeklyTimeTotal } from '@/utils/habitUtils';
 import HabitDetailModal from '@/modals/HabitDetailModal';
 import TimeLogModal from '@/modals/habits/TimeLogModal';
 import { toggleQuestSubtaskCompletion } from '@/lib/supabase/queries/questGoalHabits';
@@ -78,15 +78,17 @@ export default function HabitsList({
   const [expandedQuestGoals, setExpandedQuestGoals] = useState<Set<string>>(new Set());
 
   // Snapshot habits when loading finishes — only update the displayed data
-  // on a loading=true→false transition, never mid-cycle
+  // on a loading=true→false transition, never mid-cycle.
+  // Track whether initial load has ever completed so we don't flash empty state prematurely.
   const [snapshotHabits, setSnapshotHabits] = useState<HabitWithStatus[]>(habits);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const wasLoadingRef = useRef(loading);
 
   useEffect(() => {
-    if (wasLoadingRef.current && !loading && habits.length > 0) {
+    if (wasLoadingRef.current && !loading) {
       setSnapshotHabits(habits);
-    }
-    if (!loading && habits.length > 0) {
+      setHasLoadedOnce(true);
+    } else if (!loading) {
       setSnapshotHabits(habits);
     }
     wasLoadingRef.current = loading;
@@ -137,9 +139,10 @@ export default function HabitsList({
     }
   };
 
-  const activeHabits = snapshotHabits.filter(habit =>
-    isHabitActiveToday(habit, currentDate, resetTime.hour, resetTime.minute)
-  );
+  // snapshotHabits already contains only active habits (filtered by applyHabitsUpdate)
+  // Do NOT re-filter with isHabitActiveToday here — during date transitions the
+  // snapshot date and currentDate can be out of sync, causing a wrong count flash.
+  const activeHabits = snapshotHabits;
   const regularActiveHabits = activeHabits.filter(h => !h.isQuestGoal);
   const incompleteCount = regularActiveHabits.filter(h => h.status !== 'completed').length;
   const scheduledHabits = regularActiveHabits;
@@ -249,7 +252,7 @@ export default function HabitsList({
     // Order is derived from habits prop (Supabase data) — no manual reload needed
   };
 
-  if (loading && snapshotHabits.length === 0) {
+  if (loading || !hasLoadedOnce) {
     return (
       <View style={{ flex: 1, alignItems: 'center', marginTop: 60 }}>
         <ActivityIndicator size="small" color={COLORS.Primary} />

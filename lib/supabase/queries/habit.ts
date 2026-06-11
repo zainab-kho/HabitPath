@@ -9,7 +9,6 @@ import { Habit } from '@/types/Habit';
  */
 export async function loadHabitsFromSupabase(
   userId: string,
-  cachedHabits: Habit[] = []
 ): Promise<Habit[]> {
   try {
     const { data, error } = await supabase
@@ -20,7 +19,7 @@ export async function loadHabitsFromSupabase(
 
     if (error) throw error;
 
-    const habits = (data || []).map(row => ({
+    return (data || []).map(row => ({
       id: row.id,
       userId: row.user_id,
       name: row.name,
@@ -52,22 +51,6 @@ export async function loadHabitsFromSupabase(
       pathColor: row.path_color,
       created_at: row.created_at,
     })) as Habit[];
-
-    // merge with cached completionHistory to avoid losing recent offline completions
-    const cachedMap = new Map(cachedHabits.map(h => [h.id, h]));
-
-    const merged = habits.map(habit => {
-      const cached = cachedMap.get(habit.id);
-      return {
-        ...habit,
-        completionHistory: Array.from(new Set([
-          ...(habit.completionHistory || []),
-          ...(cached?.completionHistory || []),
-        ])),
-      };
-    });
-
-    return merged;
   } catch (err) {
     console.error('Error: loadHabitsFromSupabase failed', err);
     return [];

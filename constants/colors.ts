@@ -4,11 +4,11 @@
  * core brand and UI colors used throughout the app
  */
 export const COLORS = {
-  Primary: '#99c8e8',
-  PrimaryLight: '#f49cbb',
+  Primary: '#9BDEAC',
+  PrimaryLight: '#F682A4',
   Secondary: '#dd2d4a',
   Completed: '#F0ABFF',
-  ProgressColor: '#51FBDE',
+  ProgressColor: '#9BDEAC',
   Rewards: '#FF7F50',
   RewardsBackground: '#E4E986',
   RewardsAccent: '#7FD1AE',

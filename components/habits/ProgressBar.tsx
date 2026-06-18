@@ -74,7 +74,7 @@ export default function ProgressBar({
                   styles.progressFill,
                   {
                     width: `${completedPct}%`,
-                    backgroundColor: isAllDone ? COLORS.Completed : COLORS.ProgressColor,
+                    backgroundColor: isAllDone ? COLORS.PrimaryLight : COLORS.Primary,
                     zIndex: 2,
                   },
                 ]}

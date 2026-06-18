@@ -236,6 +236,32 @@ export async function skipHabit(
   return updated;
 }
 
+export async function unskipHabit(
+  habitId: string,
+  habits: Habit[],
+  dateStr: string,
+  userId: string
+): Promise<Habit[]> {
+  const updated = habits.map(h => {
+    if (h.id !== habitId) return h;
+    return {
+      ...h,
+      skippedDates: (h.skippedDates ?? []).filter(d => d !== dateStr),
+    };
+  });
+
+  const target = updated.find(h => h.id === habitId);
+  if (target) {
+    await supabase
+      .from('habits')
+      .update({ skipped_dates: target.skippedDates })
+      .eq('id', habitId)
+      .eq('user_id', userId);
+  }
+
+  return updated;
+}
+
 export async function deleteHabit(
   habitId: string,
   habits: Habit[],

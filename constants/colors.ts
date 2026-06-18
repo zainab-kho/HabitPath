@@ -127,6 +127,7 @@ export const BUTTON_COLORS = {
   Close: '#ffc8c8ff',
   Delete: '#ff5656',
   Edit: '#d8c8ffff',
+  Quiet: '#F2F2F2',
   Cancel: '#f0f0f0',
   Disabled: '#ccc'
 } as const;

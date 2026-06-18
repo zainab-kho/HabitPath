@@ -39,6 +39,8 @@ interface HabitsListProps {
   onToggleHabit: (habitId: string) => void;
   onIncrementUpdate?: (habitId: string, newAmount: number) => void;
   onSkipHabit?: (habitId: string) => void;
+  onUnskipHabit?: (habitId: string) => void;
+  onUnskipAndCompleteHabit?: (habitId: string) => void;
   onSnoozeHabit?: (habitId: string) => void;
 }
 
@@ -67,6 +69,8 @@ export default function HabitsList({
   onToggleHabit,
   onIncrementUpdate,
   onSkipHabit,
+  onUnskipHabit,
+  onUnskipAndCompleteHabit,
   onSnoozeHabit,
 }: HabitsListProps) {
   const router = useRouter();
@@ -360,6 +364,8 @@ export default function HabitsList({
                   onPress={() => handleHabitPress(item.habit)}
                   onIncrementUpdate={onIncrementUpdate}
                   onSkip={() => onSkipHabit?.(item.habit.id)}
+                  onUnskip={() => onUnskipHabit?.(item.habit.id)}
+                  onUnskipAndComplete={() => onUnskipAndCompleteHabit?.(item.habit.id)}
                   onSnooze={() => onSnoozeHabit?.(item.habit.id)}
                   onToggleSubtask={handleToggleSubtask}
                   questExpanded={expandedQuestGoals.has(item.habit.id)}

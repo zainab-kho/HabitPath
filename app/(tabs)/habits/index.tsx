@@ -52,6 +52,8 @@ export default function HabitsPage() {
     loadHabits,
     snoozeHabit,
     skipHabit,
+    unskipHabit,
+    unskipAndCompleteHabit,
   } = useHabits(viewingDate);
 
   // snooze modal state
@@ -234,6 +236,8 @@ export default function HabitsPage() {
           onToggleHabit={toggleHabit}
           onIncrementUpdate={updateIncrement}
           onSkipHabit={skipHabit}
+          onUnskipHabit={unskipHabit}
+          onUnskipAndCompleteHabit={unskipAndCompleteHabit}
           onSnoozeHabit={handleSnoozeHabit}
         />
 

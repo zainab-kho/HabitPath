@@ -1,5 +1,5 @@
 // @/components/habits/HabitItem.tsx
-import React, { useMemo, useRef } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { Animated, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 
@@ -11,6 +11,7 @@ import ShadowBox from '@/ui/ShadowBox';
 import { HabitWithStatus } from '@/hooks/useHabits';
 import { formatMinutesAsTime } from '@/utils/dateUtils';
 import { isTimeTrackingHabit, getWeeklyTimeTotal } from '@/utils/habitUtils';
+import UnskipHabitModal from '@/modals/habits/UnskipHabit';
 
 interface HabitItemProps {
   habit: HabitWithStatus;
@@ -19,6 +20,8 @@ interface HabitItemProps {
   onPress?: () => void;
   onIncrementUpdate?: (habitId: string, newAmount: number) => void;
   onSkip?: () => void;
+  onUnskip?: () => void;
+  onUnskipAndComplete?: () => void;
   onSnooze?: () => void;
   onToggleSubtask?: (subtaskId: string, completed: boolean) => void;
   questExpanded?: boolean;
@@ -36,6 +39,8 @@ export default function HabitItem({
   onPress,
   onIncrementUpdate,
   onSkip,
+  onUnskip,
+  onUnskipAndComplete,
   onSnooze,
   onToggleSubtask,
   questExpanded,
@@ -49,6 +54,7 @@ export default function HabitItem({
 
   const isCompleted = habit.status === 'completed';
   const isSkipped = habit.status === 'skipped';
+  const [unskipModalVisible, setUnskipModalVisible] = useState(false);
   const showStreak = (habit.streak ?? 0) >= 3;
 
   const isIncrement = !!habit.increment;
@@ -200,15 +206,15 @@ export default function HabitItem({
   // skipped habits: muted style, no swipe actions, no checkbox
   if (isSkipped) {
     return (
-      <View style={{ opacity: 0.45 }}>
+      <>
         <ShadowBox
           style={styles.container}
-          contentBackgroundColor="#f0f0f0"
-          contentBorderColor="#ccc"
+          contentBackgroundColor="#fff"
+          contentBorderColor="#000"
           contentBorderWidth={1}
           shadowBorderRadius={15}
-          shadowOffset={{ x: 0, y: 0 }}
-          shadowColor="#ccc"
+          shadowOffset={{ x: 0, y: 5 }}
+          shadowColor={habitColor}
         >
           <View style={styles.content}>
             <View style={styles.mainRow}>
@@ -221,18 +227,57 @@ export default function HabitItem({
                   )}
                 </View>
                 <View style={styles.textSection}>
-                  <Text style={[globalStyles.body, styles.habitName, { textDecorationLine: 'line-through' }]}>
+                  <Text style={[globalStyles.body, styles.habitName]}>
                     {habit.name}
                   </Text>
-                  <Text style={[globalStyles.label, { fontSize: 11, opacity: 0.6 }]}>
-                    Skipped
-                  </Text>
+                  <View style={styles.badgesRow}>
+                    {!!habit.rewardPoints && habit.rewardPoints > 0 && (
+                      <View style={[styles.badge, styles.pointsBadge]}>
+                        <Image
+                          source={SYSTEM_ICONS.reward}
+                          style={[styles.badgeIcon, { tintColor: COLORS.Rewards }]}
+                        />
+                        <Text style={styles.badgeText}>{habit.rewardPoints}</Text>
+                      </View>
+                    )}
+                  </View>
                 </View>
               </View>
+
+              {/* red X to unskip */}
+              <Pressable onPress={() => setUnskipModalVisible(true)}>
+                <ShadowBox
+                  shadowBorderRadius={8}
+                  contentBorderRadius={8}
+                  contentBorderColor="#000"
+                  shadowOffset={{ x: -1, y: 1 }}
+                >
+                  <View style={{ width: 28, height: 28, borderRadius: 8, overflow: 'hidden', justifyContent: 'center', alignItems: 'center' }}>
+                    <Image
+                      source={SYSTEM_ICONS.skip}
+                      style={{ width: 33, height: 33, tintColor: '#54d697' }}
+                    />
+                  </View>
+                </ShadowBox>
+              </Pressable>
             </View>
           </View>
         </ShadowBox>
-      </View>
+
+        <UnskipHabitModal
+          visible={unskipModalVisible}
+          onClose={() => setUnskipModalVisible(false)}
+          habit={habit}
+          onUnskip={() => {
+            setUnskipModalVisible(false);
+            onUnskip?.();
+          }}
+          onMarkCompleted={() => {
+            setUnskipModalVisible(false);
+            onUnskipAndComplete?.();
+          }}
+        />
+      </>
     );
   }
 

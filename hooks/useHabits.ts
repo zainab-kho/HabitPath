@@ -17,6 +17,7 @@ import {
   deleteHabit as deleteHabitService,
   loadHabitsFromSupabase,
   skipHabit as skipHabitService,
+  unskipHabit as unskipHabitService,
   snoozeHabit as snoozeHabitService,
   toggleHabitCompletion,
   updateHabitIncrement,
@@ -341,6 +342,39 @@ export function useHabits(viewingDate: Date = new Date()) {
     [habits, viewingDate, resetTime, user, applyHabitsUpdate, loadHabits]
   );
 
+  const unskipHabit = useCallback(
+    async (habitId: string) => {
+      if (!user) return;
+      const ds = getHabitDate(viewingDate, resetTime.hour, resetTime.minute);
+      try {
+        const currentHabits = stripStatus(habits);
+        const updatedHabits = await unskipHabitService(habitId, currentHabits, ds, user.id);
+        applyHabitsUpdate(updatedHabits, resetTime);
+      } catch (err) {
+        console.error('Error unskipping habit:', err);
+        loadHabits();
+      }
+    },
+    [habits, viewingDate, resetTime, user, applyHabitsUpdate, loadHabits]
+  );
+
+  const unskipAndCompleteHabit = useCallback(
+    async (habitId: string) => {
+      if (!user) return;
+      const ds = getHabitDate(viewingDate, resetTime.hour, resetTime.minute);
+      try {
+        const currentHabits = stripStatus(habits);
+        const unskipped = await unskipHabitService(habitId, currentHabits, ds, user.id);
+        const completed = await toggleHabitCompletion(habitId, unskipped, ds, resetTime.hour, resetTime.minute, user.id);
+        applyHabitsUpdate(completed, resetTime);
+      } catch (err) {
+        console.error('Error unskipping and completing habit:', err);
+        loadHabits();
+      }
+    },
+    [habits, viewingDate, resetTime, user, applyHabitsUpdate, loadHabits]
+  );
+
   const deleteHabit = useCallback(
     async (habitId: string) => {
       if (!user) return;
@@ -394,6 +428,8 @@ export function useHabits(viewingDate: Date = new Date()) {
     updateIncrement,
     snoozeHabit,
     skipHabit,
+    unskipHabit,
+    unskipAndCompleteHabit,
     deleteHabit,
   };
 }

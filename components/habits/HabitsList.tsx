@@ -143,7 +143,7 @@ export default function HabitsList({
   // displayHabits = habits + local subtask overrides. Already active-only from applyHabitsUpdate.
   const activeHabits = displayHabits;
   const regularActiveHabits = activeHabits.filter(h => !h.isQuestGoal);
-  const incompleteCount = regularActiveHabits.filter(h => h.status !== 'completed').length;
+  const incompleteCount = regularActiveHabits.filter(h => h.status !== 'completed' && h.status !== 'skipped').length;
   const scheduledHabits = regularActiveHabits;
   const allDoneToday = scheduledHabits.length > 0 && incompleteCount === 0;
 

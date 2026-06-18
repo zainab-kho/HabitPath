@@ -209,16 +209,16 @@ export function getHabitCycleStart(
 ============================================================================ */
 
 /**
- * Determines whether a habit should be visible on a given date.
+ * determines whether a habit should be visible on a given date.
  *
- * For keepUntil habits:
- * - Shows on the day it was scheduled (based on frequency)
- * - Shows on the day it was completed (for viewing history)
- * - Carries over ONLY to actual today if incomplete
- * - Does NOT show on random future dates when browsing
+ * for keepUntil habits:
+ * - shows on the day it was scheduled (based on frequency)
+ * - shows on the day it was completed (for viewing history)
+ * - carries over ONLY to actual today if incomplete
+ * - does not show on random future dates when browsing
  *
- * For normal habits:
- * - Shows only on scheduled days
+ * for normal habits:
+ * - shows only on scheduled days
  */
 export function isHabitActiveToday(
   habit: Habit,
@@ -230,7 +230,8 @@ export function isHabitActiveToday(
   const actualTodayStr = getHabitDate(new Date(), resetHour, resetMinute);
   const isViewingToday = todayStr === actualTodayStr;
 
-  // Archived handling:
+  // **REVIEW:
+  // archived handling:
   // - repeating habits: archived means "never show"
   // - one-time habits: allow showing on the day they were skipped/completed/start for history
   if (habit.archivedAt) {
@@ -245,11 +246,11 @@ export function isHabitActiveToday(
     return false;
   }
 
-  // Not started yet
+  // habit not started yet
   if (todayStr < habit.startDate) return false;
 
-  // Snoozed — hidden until snoozedUntil day (reappears ON that day)
-  // .slice(0,10) normalizes legacy ISO strings ("2026-02-17T05:00:00Z" → "2026-02-17")
+  // snoozed — hidden until snoozedUntil day (reappears ON that day)
+  // .slice(0,10) normalizes legacy ISO strings ("2026-02-17T05:00:00Z" to "2026-02-17")
   const snoozeDay = habit.snoozedUntil?.slice(0, 10);
   const snoozeFrom = habit.snoozedFrom?.slice(0, 10);
 
@@ -400,7 +401,7 @@ export const getHabitStatus = (
     if (goal > 0 && amount >= goal) return 'completed';
   }
 
-  // explicitly skipped
+  // explicitly skipped habits
   if (habit.skippedDates?.includes(dateStr)) return 'skipped';
 
   // past date and never completed = missed
@@ -417,7 +418,7 @@ export const addStatusToHabits = (
   resetMinute: number
 ): (Habit & { status: HabitStatus })[] => {
   const dateStr = getHabitDate(viewingDate, resetHour, resetMinute);
-  const todayStr = getHabitDate(new Date(), resetHour, resetMinute); // same source — respects reset hour
+  const todayStr = getHabitDate(new Date(), resetHour, resetMinute); // respects user's end of day time
   const isViewingToday = dateStr === todayStr;
 
   return habits.map(h => ({

@@ -7,7 +7,7 @@ import React from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 interface ProgressBarProps {
-  totalHabits: number;       // total habits for today (completed + active + missed + skipped)
+  totalHabits: number;       // total habits for today (completed + active + skipped)
   completedHabits: number;   // how many completed (can be decimal for increments)
   skippedHabits: number;     // how many skipped/snoozed (subset of totalHabits)
   earnedPoints: number;
@@ -25,14 +25,21 @@ export default function ProgressBar({
 }: ProgressBarProps) {
   const router = useRouter();
 
-  // totalHabits already includes everything (active + completed + missed + skipped)
-  // so we use it as the denominator directly
-  const completedPct = totalHabits > 0 ? Math.min((completedHabits / totalHabits) * 100, 100) : 0;
-  const skippedPct = totalHabits > 0 ? Math.min((skippedHabits / totalHabits) * 100, 100) : 0;
+  // grandTotal includes skipped habits so the bar never hits 100% when habits are skipped
+  const grandTotal = totalHabits + skippedHabits;
+  const completedPct = grandTotal > 0 ? Math.min((completedHabits / grandTotal) * 100, 100) : 0;
+  const skippedPct = grandTotal > 0 ? Math.min((skippedHabits / grandTotal) * 100, 100) : 0;
 
-  // Calculate non-completed, non-skipped habits (active + missed)
+  // calculate non-completed, non-skipped habits (active + missed)
   const activeAndMissed = totalHabits - completedHabits - skippedHabits;
   const isAllDone = totalHabits > 0 && completedHabits >= totalHabits;
+
+  console.log('totalHabits: ', totalHabits);
+  console.log('completedHabits: ', completedHabits);
+  console.log('skippedHabits: ', skippedHabits);
+  console.log('completedPct: ', completedPct);
+  console.log('skippedPct: ', skippedPct);
+  console.log('isAllDone: ', isAllDone);
 
   return (
     <View style={styles.container}>
@@ -74,7 +81,7 @@ export default function ProgressBar({
               />
             )}
 
-            {/* skipped / snoozed fill — muted, stacks right after completed */}
+            {/* skipped habits stacks right after completed */}
             {skippedPct > 0 && (
               <View
                 style={[
@@ -82,7 +89,7 @@ export default function ProgressBar({
                   {
                     left: `${completedPct}%`,
                     width: `${skippedPct}%`,
-                    backgroundColor: COLORS.Primary ?? '#d1c4e9',
+                    backgroundColor: '#D8E6DD',
                     opacity: 0.6,
                     zIndex: 1,
                   },
@@ -93,7 +100,7 @@ export default function ProgressBar({
             {/* percentage label */}
             <View style={styles.progressTextContainer}>
               <Text style={styles.progressText}>
-                {totalHabits > 0 ? `${Math.round((completedHabits / totalHabits) * 100)}%` : '0%'}
+                {grandTotal > 0 ? `${Math.round((completedHabits / grandTotal) * 100)}%` : '0%'}
               </Text>
             </View>
           </View>

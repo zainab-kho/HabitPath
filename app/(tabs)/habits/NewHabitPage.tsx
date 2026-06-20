@@ -1,6 +1,6 @@
 // @/app/(tabs)/habits/NewHabitPage.tsx
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import {
     Alert,
@@ -46,6 +46,7 @@ const ICON_SIZE = 30;
 export default function NewHabitPage() {
     const router = useRouter();
     const { user } = useAuth();
+    const params = useLocalSearchParams<{ startDate?: string }>();
     const inputRef = useRef<TextInput>(null);
     const scrollRef = useRef<KeyboardAwareScrollView>(null);
 
@@ -58,7 +59,13 @@ export default function NewHabitPage() {
     const [selectedFrequency, setSelectedFrequency] = useState<Frequency>('None');
     const [selectedDays, setSelectedDays] = useState<string[]>([]);
     const [selectedTimeOfDay, setSelectedTimeOfDay] = useState<TimeOfDay>('Anytime');
-    const [startDate, setStartDate] = useState<Date>(new Date());
+    const [startDate, setStartDate] = useState<Date>(() => {
+        if (params.startDate) {
+            const [y, m, d] = params.startDate.split('-').map(Number);
+            return new Date(y, m - 1, d, 12);
+        }
+        return new Date();
+    });
     const [showCalendar, setShowCalendar] = useState(false);
 
     // rewards

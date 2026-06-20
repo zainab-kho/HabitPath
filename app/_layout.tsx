@@ -8,7 +8,7 @@ import { useEffect } from 'react';
 import { View } from 'react-native';
 
 function RootLayoutNav() {
-  const { user, loading } = useAuth();
+  const { user, loading, isPasswordRecovery } = useAuth();
   const segments = useSegments();
   const router = useRouter();
 
@@ -18,14 +18,17 @@ function RootLayoutNav() {
 
     const inAuthGroup = segments[0] === 'auth';
 
+    if (isPasswordRecovery) {
+      router.replace('/auth/ResetPassword');
+      return;
+    }
+
     if (!user && !inAuthGroup) {
-      // not logged in, redirect to login
       router.replace('/auth/LoginScreen');
     } else if (user && inAuthGroup) {
-      // logged in but on auth screen, redirect to app
       router.replace('/(tabs)/habits');
     }
-  }, [user, loading, segments]);
+  }, [user, loading, segments, isPasswordRecovery]);
 
   // show loading screen while checking auth
   if (loading) {
@@ -45,6 +48,8 @@ function RootLayoutNav() {
         >
           <Stack.Screen name="index" />
           <Stack.Screen name="auth/LoginScreen" />
+          <Stack.Screen name="auth/ForgotPassword" />
+          <Stack.Screen name="auth/ResetPassword" />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         </Stack>
 

@@ -5,7 +5,7 @@ import Swipeable from 'react-native-gesture-handler/Swipeable';
 
 import { COLORS, PAGE } from '@/constants/colors';
 import { HABIT_ICONS, SYSTEM_ICONS } from '@/constants/icons';
-import { globalStyles } from '@/styles';
+import { globalStyles, uiStyles } from '@/styles';
 import { Habit } from '@/types/Habit';
 import ShadowBox from '@/ui/ShadowBox';
 import { HabitWithStatus } from '@/hooks/useHabits';
@@ -554,10 +554,10 @@ export default function HabitItem({
 
                   {/* streak badge */}
                   {showStreak && (
-                    <View style={[styles.badge, styles.streakBadge]}>
-                      <Image source={SYSTEM_ICONS.fire} style={styles.badgeIcon} />
-                      <Text style={[styles.badgeText, styles.streakText]}>
-                        {habit.streak}
+                    <View style={styles.streak}>
+                      <Image source={SYSTEM_ICONS.fire} style={styles.streakIcon} />
+                      <Text style={[styles.badgeText]}>
+                        {habit.streak}d
                       </Text>
                     </View>
                   )}
@@ -714,15 +714,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.RewardsAccent,
   },
-  streakBadge: {
-    backgroundColor: 'rgba(255,107,53,0.2)',
-    borderColor: '#FF6B35',
+  streak: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
   },
-  streakText: {
-    color: '#FF6B35',
-    fontWeight: 'bold',
+  streakIcon: {
+    width: 16,
+    height: 16
   },
-
   incrementBadge: {
     backgroundColor: COLORS.ProgressColor,
     borderColor: COLORS.Secondary,

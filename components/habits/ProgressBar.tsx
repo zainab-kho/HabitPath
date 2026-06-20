@@ -34,13 +34,6 @@ export default function ProgressBar({
   const activeAndMissed = totalHabits - completedHabits - skippedHabits;
   const isAllDone = totalHabits > 0 && completedHabits >= totalHabits;
 
-  console.log('totalHabits: ', totalHabits);
-  console.log('completedHabits: ', completedHabits);
-  console.log('skippedHabits: ', skippedHabits);
-  console.log('completedPct: ', completedPct);
-  console.log('skippedPct: ', skippedPct);
-  console.log('isAllDone: ', isAllDone);
-
   return (
     <View style={styles.container}>
       {/* points badge */}

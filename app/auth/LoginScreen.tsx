@@ -163,6 +163,27 @@ export default function LoginScreen() {
                 />
               </View>
 
+              {/* Forgot password link - only show for sign in */}
+              {!isSignUp && (
+                <Pressable
+                  onPress={() => router.push('/auth/ForgotPassword')}
+                  style={({ pressed }) => ({
+                    alignSelf: 'flex-end',
+                    marginBottom: 10,
+                    marginTop: -10,
+                    opacity: pressed ? 0.6 : 1,
+                  })}
+                >
+                  <Text style={{
+                    fontFamily: 'p3',
+                    fontSize: 13,
+                    color: PAGE.auth.border[0],
+                  }}>
+                    Forgot Password?
+                  </Text>
+                </Pressable>
+              )}
+
               {/* Confirm password - only show for sign up */}
               {isSignUp && (
                 <>

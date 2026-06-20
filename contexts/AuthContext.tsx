@@ -8,6 +8,8 @@ import React, { createContext, useContext, useEffect, useState } from 'react'
 interface AuthContextType {
   user: User | null
   loading: boolean
+  isPasswordRecovery: boolean
+  clearPasswordRecovery: () => void
   signUp: (email: string, password: string) => Promise<void>
   signIn: (email: string, password: string) => Promise<void>
   signOut: () => Promise<void>
@@ -48,6 +50,7 @@ const runCacheMigration = async () => {
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false)
 
   useEffect(() => {
     // run one-time cache migration before checking session
@@ -63,8 +66,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     // listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
+      (event, session) => {
         setUser(session?.user ?? null)
+        if (event === 'PASSWORD_RECOVERY') {
+          setIsPasswordRecovery(true)
+        }
       }
     )
 
@@ -110,6 +116,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       value={{
         user,
         loading,
+        isPasswordRecovery,
+        clearPasswordRecovery: () => setIsPasswordRecovery(false),
         signUp: signUpHandler,
         signIn: signInHandler,
         signOut: signOutHandler,

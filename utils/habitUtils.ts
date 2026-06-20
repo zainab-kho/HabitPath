@@ -38,6 +38,7 @@ export async function updateAppStreak(
   if (habits.length === 0) return 0;
 
   const today = new Date();
+  const todayStr = getHabitDate(today, resetHour, resetMinute);
   let streak = 0;
 
   for (let i = 0; i < 365; i++) {
@@ -50,7 +51,10 @@ export async function updateAppStreak(
       h.completionHistory?.includes(dateStr)
     );
 
-    if (!completedAny) break;
+    if (!completedAny) {
+      if (dateStr === todayStr) continue;
+      break;
+    }
     streak++;
   }
 
@@ -411,6 +415,44 @@ export const getHabitStatus = (
   return 'active';
 };
 
+function computeHabitStreak(
+  habit: Habit,
+  resetHour: number,
+  resetMinute: number
+): number {
+  const history = habit.completionHistory ?? [];
+  if (history.length === 0) return 0;
+
+  const oneTime = !habit.frequency || habit.frequency === 'None';
+  if (oneTime) return 0;
+
+  let streak = 0;
+  const now = new Date();
+  const todayStr = getHabitDate(now, resetHour, resetMinute);
+
+  for (let i = 0; i < 365; i++) {
+    const d = new Date(now);
+    d.setDate(now.getDate() - i);
+
+    if (!isHabitScheduledForDate(habit, d, resetHour, resetMinute)) continue;
+
+    const ds = getHabitDate(d, resetHour, resetMinute);
+
+    if (ds < habit.startDate) break;
+
+    if (habit.skippedDates?.includes(ds)) continue;
+
+    if (history.includes(ds)) {
+      streak++;
+    } else {
+      if (ds === todayStr) continue;
+      break;
+    }
+  }
+
+  return streak;
+}
+
 export const addStatusToHabits = (
   habits: Habit[],
   viewingDate: Date,
@@ -418,11 +460,12 @@ export const addStatusToHabits = (
   resetMinute: number
 ): (Habit & { status: HabitStatus })[] => {
   const dateStr = getHabitDate(viewingDate, resetHour, resetMinute);
-  const todayStr = getHabitDate(new Date(), resetHour, resetMinute); // respects user's end of day time
+  const todayStr = getHabitDate(new Date(), resetHour, resetMinute);
   const isViewingToday = dateStr === todayStr;
 
   return habits.map(h => ({
     ...h,
+    streak: computeHabitStreak(h, resetHour, resetMinute),
     status: getHabitStatus(h, dateStr, isViewingToday, todayStr),
   }));
 };

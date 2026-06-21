@@ -51,6 +51,13 @@ export interface Habit {
   incrementType?: string; // e.g., 'miles', 'sips', 'minutes', 'reps'
   incrementHistory?: Record<string, number>; // date -> amount mapping
 
+  // custom frequency
+  customType?: 'daily' | 'weekly' | 'monthly';
+  customInterval?: number;
+
+  // end date (for any repeating habit)
+  endDate?: string;
+
   // history
   completionHistory?: string[];
   completionEntries?: CompletionEntry[];

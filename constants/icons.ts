@@ -320,6 +320,7 @@ export const SYSTEM_ICONS = {
     habit: require('@/assets/icons/system/habit-icon.png'),
     snooze: require('@/assets/icons/system/snooze.png'),
     skip: require('@/assets/icons/system/skip.png'),
+    undo: require('@/assets/icons/system/undo.png'),
 
     assignment: require('@/assets/icons/system/assignment.png'),
     journal: require('@/assets/icons/system/journal-icon.png'),

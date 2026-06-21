@@ -28,4 +28,6 @@ export const WEEK_DAYS = [
   'Saturday',
 ] as const;
 
+export const CUSTOM_TYPES = ['Daily', 'Weekly', 'Monthly'] as const;
+
 export const REWARD_OPTIONS = [0, 1, 2, 3, 5, 10, 15, 20, 25, 50];

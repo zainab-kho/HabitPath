@@ -1,7 +1,7 @@
 // @/utils/habitUtils.ts
 import { WEEK_DAYS } from '@/constants';
 import { Habit } from '@/types/Habit';
-import { getHabitDate, getHabitDayOfWeek, getWeekDatesForDate } from '@/utils/dateUtils';
+import { daysBetween, formatLocalDate, getHabitDate, getHabitDayOfWeek, getWeekDatesForDate, parseLocalDate } from '@/utils/dateUtils';
 
 /* ============================================================================
    TIME TRACKING HELPERS
@@ -37,15 +37,13 @@ export async function updateAppStreak(
 ): Promise<number> {
   if (habits.length === 0) return 0;
 
-  const today = new Date();
-  const todayStr = getHabitDate(today, resetHour, resetMinute);
+  const todayStr = getHabitDate(new Date(), resetHour, resetMinute);
   let streak = 0;
 
   for (let i = 0; i < 365; i++) {
-    const date = new Date(today);
-    date.setDate(today.getDate() - i);
-
-    const dateStr = getHabitDate(date, resetHour, resetMinute);
+    const d = parseLocalDate(todayStr);
+    d.setDate(d.getDate() - i);
+    const dateStr = formatLocalDate(d);
 
     const completedAny = habits.some(h =>
       h.completionHistory?.includes(dateStr)
@@ -100,6 +98,36 @@ function isHabitScheduledForDate(
     const startDay = parseInt(habit.startDate.split('-')[2], 10);
     const thisDay = parseInt(dateStr.split('-')[2], 10);
     return startDay === thisDay;
+  }
+
+  // Custom habits
+  if (habit.frequency === 'Custom') {
+    const interval = habit.customInterval ?? 1;
+    const startDateObj = parseLocalDate(habit.startDate);
+    const currentDateObj = parseLocalDate(dateStr);
+
+    if (habit.customType === 'daily') {
+      const diff = daysBetween(startDateObj, currentDateObj);
+      return diff >= 0 && diff % interval === 0;
+    }
+
+    if (habit.customType === 'weekly') {
+      const dow = WEEK_DAYS[getHabitDayOfWeek(date, resetHour, resetMinute)];
+      if (!(habit.selectedDays?.includes(dow) ?? false)) return false;
+      const diff = daysBetween(startDateObj, currentDateObj);
+      const weeksDiff = Math.floor(diff / 7);
+      return weeksDiff >= 0 && weeksDiff % interval === 0;
+    }
+
+    if (habit.customType === 'monthly') {
+      const startDay = parseInt(habit.startDate.split('-')[2], 10);
+      const thisDay = parseInt(dateStr.split('-')[2], 10);
+      if (startDay !== thisDay) return false;
+      const startParts = habit.startDate.split('-').map(Number);
+      const dateParts = dateStr.split('-').map(Number);
+      const monthsDiff = (dateParts[0] - startParts[0]) * 12 + (dateParts[1] - startParts[1]);
+      return monthsDiff >= 0 && monthsDiff % interval === 0;
+    }
   }
 
   return false;
@@ -203,6 +231,21 @@ export function getHabitCycleStart(
     cycleDate.setDate(startDay);
 
     return getHabitDate(cycleDate, resetHour, resetMinute);
+  }
+
+  // Custom habits — walk backwards to find last scheduled date
+  if (habit.frequency === 'Custom') {
+    const maxLookback = habit.customType === 'monthly'
+      ? 365
+      : (habit.customInterval ?? 1) * 7 + 1;
+
+    for (let i = 0; i < maxLookback; i++) {
+      const d = new Date(date);
+      d.setDate(d.getDate() - i);
+      if (isHabitScheduledForDate(habit, d, resetHour, resetMinute)) {
+        return getHabitDate(d, resetHour, resetMinute);
+      }
+    }
   }
 
   return todayStr;
@@ -336,6 +379,9 @@ export function isHabitActiveToday(
     }
   }
 
+  // End date: stop scheduling new occurrences after end date
+  if (habit.endDate && todayStr > habit.endDate) return false;
+
   // Standard scheduling rules for repeating habits
 
   // Daily habits
@@ -362,6 +408,11 @@ export function isHabitActiveToday(
     const startDay = parseInt(habit.startDate.split('-')[2], 10);
     const todayDay = parseInt(todayStr.split('-')[2], 10);
     return startDay === todayDay;
+  }
+
+  // Custom habits — delegate to isHabitScheduledForDate
+  if (habit.frequency === 'Custom') {
+    return isHabitScheduledForDate(habit, date, resetHour, resetMinute);
   }
 
   return false;
@@ -427,16 +478,15 @@ function computeHabitStreak(
   if (oneTime) return 0;
 
   let streak = 0;
-  const now = new Date();
-  const todayStr = getHabitDate(now, resetHour, resetMinute);
+  const todayStr = getHabitDate(new Date(), resetHour, resetMinute);
 
   for (let i = 0; i < 365; i++) {
-    const d = new Date(now);
-    d.setDate(now.getDate() - i);
+    const d = parseLocalDate(todayStr);
+    d.setDate(d.getDate() - i);
 
     if (!isHabitScheduledForDate(habit, d, resetHour, resetMinute)) continue;
 
-    const ds = getHabitDate(d, resetHour, resetMinute);
+    const ds = formatLocalDate(d);
 
     if (ds < habit.startDate) break;
 

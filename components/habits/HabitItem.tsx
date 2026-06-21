@@ -250,12 +250,13 @@ export default function HabitItem({
                   shadowBorderRadius={8}
                   contentBorderRadius={8}
                   contentBorderColor="#000"
+                  contentBackgroundColor='#54d697'
                   shadowOffset={{ x: -1, y: 1 }}
                 >
                   <View style={{ width: 28, height: 28, borderRadius: 8, overflow: 'hidden', justifyContent: 'center', alignItems: 'center' }}>
                     <Image
-                      source={SYSTEM_ICONS.skip}
-                      style={{ width: 33, height: 33, tintColor: '#54d697' }}
+                      source={SYSTEM_ICONS.undo}
+                      style={{ width: 20, height: 20, tintColor: 'white' }}
                     />
                   </View>
                 </ShadowBox>

@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { Habit } from '@/types/Habit';
+import { formatLocalDate } from '@/utils/dateUtils';
 
 // ─── LOAD ────────────────────────────────────────────────────────────────────
 
@@ -49,6 +50,9 @@ export async function loadHabitsFromSupabase(
       incrementHistory: row.increment_history || {},
       path: row.path,
       pathColor: row.path_color,
+      customType: row.custom_type ?? undefined,
+      customInterval: row.custom_interval ?? undefined,
+      endDate: row.end_date ?? undefined,
       created_at: row.created_at,
     })) as Habit[];
   } catch (err) {
@@ -291,6 +295,20 @@ export async function archiveStaleHabits(
     .eq('frequency', 'None')
     .is('archived_at', null)
     .lt('start_date', cutoffStr);
+
+  if (error) throw error;
+}
+
+export async function archiveEndedHabits(userId: string): Promise<void> {
+  const todayStr = formatLocalDate(new Date());
+
+  const { error } = await supabase
+    .from('habits')
+    .update({ archived_at: new Date().toISOString() })
+    .eq('user_id', userId)
+    .is('archived_at', null)
+    .not('end_date', 'is', null)
+    .lt('end_date', todayStr);
 
   if (error) throw error;
 }

@@ -467,6 +467,12 @@ export default function NewHabitPage() {
                                                             const monday = snapToMonday(startDate);
                                                             setStartDate(monday);
                                                             setEndDate(getSundayOfWeek(monday));
+                                                            if (selectedFrequency === 'Daily') {
+                                                                setSelectedFrequency('None');
+                                                            }
+                                                            if (customType === 'daily') {
+                                                                setCustomType('weekly');
+                                                            }
                                                         } else {
                                                             setEndDate(null);
                                                         }
@@ -592,7 +598,7 @@ export default function NewHabitPage() {
                                         flexWrap: 'wrap',
                                         gap: 8,
                                     }}>
-                                        {FREQUENCIES.map((freq) => (
+                                        {FREQUENCIES.filter(f => !isWeeklyGoal || f !== 'Daily').map((freq) => (
                                             <Pressable
                                                 key={freq}
                                                 onPress={() => handleFrequencyChange(freq)}
@@ -639,7 +645,7 @@ export default function NewHabitPage() {
                                         <>
                                             <Text style={globalStyles.label}>REPEAT TYPE</Text>
                                             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                                                {CUSTOM_TYPES.map((type) => {
+                                                {CUSTOM_TYPES.filter(t => !isWeeklyGoal || t !== 'Daily').map((type) => {
                                                     const typeValue = type.toLowerCase() as 'daily' | 'weekly' | 'monthly';
                                                     const isSelected = customType === typeValue;
                                                     return (
@@ -699,7 +705,7 @@ export default function NewHabitPage() {
                                     )}
 
                                     {/* weekly days selector — shared between Weekly and Custom Weekly */}
-                                    {(selectedFrequency === 'Weekly' || (selectedFrequency === 'Custom' && customType === 'weekly')) && (
+                                    {!isWeeklyGoal && (selectedFrequency === 'Weekly' || (selectedFrequency === 'Custom' && customType === 'weekly')) && (
                                         <>
                                             <Text style={globalStyles.label}>
                                                 SELECT DAYS

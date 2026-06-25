@@ -94,8 +94,8 @@ export function useHabits(viewingDate: Date = new Date()) {
         getProgressUnitsForDay(withStatus, ds);
 
       // earned points for the day (for display in header)
-      const earned = updatedHabits.reduce((sum, h) => {
-        if (h.completionHistory?.includes(ds)) return sum + (h.rewardPoints || 0);
+      const earned = withStatus.reduce((sum, h) => {
+        if (h.status === 'completed') return sum + (h.rewardPoints || 0);
         return sum;
       }, 0);
 

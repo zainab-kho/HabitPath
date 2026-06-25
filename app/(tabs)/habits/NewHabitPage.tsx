@@ -3,6 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import {
+    ActivityIndicator,
     Alert,
     Image,
     Keyboard,
@@ -46,9 +47,12 @@ const ICON_SIZE = 30;
 export default function NewHabitPage() {
     const router = useRouter();
     const { user } = useAuth();
-    const params = useLocalSearchParams<{ startDate?: string }>();
+    const params = useLocalSearchParams<{ startDate?: string; editId?: string }>();
     const inputRef = useRef<TextInput>(null);
     const scrollRef = useRef<KeyboardAwareScrollView>(null);
+
+    const isEditMode = !!params.editId;
+    const [loaded, setLoaded] = useState(!isEditMode);
 
     // basic info
     const [showIconPicker, setShowIconPicker] = useState(false);
@@ -97,6 +101,84 @@ export default function NewHabitPage() {
     // end date
     const [endDate, setEndDate] = useState<Date | null>(null);
     const [showEndDateCalendar, setShowEndDateCalendar] = useState(false);
+
+    // Load existing habit for edit mode
+    React.useEffect(() => {
+        if (!params.editId || !user) return;
+        (async () => {
+            const { data } = await supabase
+                .from('habits')
+                .select('*')
+                .eq('id', params.editId)
+                .eq('user_id', user.id)
+                .single();
+            if (!data) return;
+
+            setHabitName(data.name || '');
+            setSelectedIcon(data.icon || 'goal');
+
+            const freq = data.frequency as string;
+            if (freq === 'Weekly Goal') {
+                setIsWeeklyGoal(true);
+                setShowCalendar(true);
+                setSelectedFrequency('None');
+            } else if (FREQUENCIES.includes(freq as Frequency)) {
+                setSelectedFrequency(freq as Frequency);
+            } else {
+                setSelectedFrequency('None');
+            }
+
+            setSelectedDays(data.selected_days || []);
+            setSelectedTimeOfDay((data.selected_time_of_day as TimeOfDay) || 'Anytime');
+
+            if (data.start_date) {
+                const [y, m, d] = data.start_date.split('-').map(Number);
+                const sd = new Date(y, m - 1, d, 12);
+                setStartDate(sd);
+                if (data.start_date !== habitToday && data.start_date !== habitTomorrowStr) {
+                    setShowCalendar(true);
+                }
+            }
+
+            if (data.end_date) {
+                const [y, m, d] = data.end_date.split('-').map(Number);
+                setEndDate(new Date(y, m - 1, d, 12));
+            }
+
+            setRewardPoints(data.reward_points ?? 1);
+            setKeepUntil(data.keep_until ?? false);
+            setIncrement(data.increment ?? false);
+            setincrementStep(data.increment_step ?? 1);
+            setIncrementType(data.increment_type || 'None');
+
+            if (data.increment_type === 'Time' && data.increment_goal) {
+                setTimeGoalHours(Math.floor(data.increment_goal / 60));
+                setTimeGoalMinutes(data.increment_goal % 60);
+            } else {
+                setIncrementGoal(data.increment_goal ?? 0);
+            }
+
+            if (data.custom_type) setCustomType(data.custom_type);
+            if (data.custom_interval) setCustomInterval(data.custom_interval);
+
+            // Resolve path selection
+            if (data.path) {
+                const { data: pathData } = await supabase
+                    .from('paths')
+                    .select('id')
+                    .eq('user_id', user.id)
+                    .eq('name', data.path)
+                    .single();
+                if (pathData) setSelectedPathId(pathData.id);
+            }
+
+            if (data.increment || data.keep_until) {
+                setMoreOptions(true);
+            }
+
+            setLoaded(true);
+        })();
+    }, [params.editId, user]);
 
     // rewards
     const [rewardPoints, setRewardPoints] = useState<number>(1);
@@ -249,58 +331,46 @@ export default function NewHabitPage() {
                     ? selectedDays
                     : [];
 
-            const newHabit: Habit = {
-                id: String(uuid.v4()),
-                name: habitName.trim(),
-                icon: selectedIcon,
-                frequency: finalFrequency,
-                selectedDays: finalSelectedDays,
-                selectedTimeOfDay,
-                startDate: habitStartDate,     // pure calendar date
-                selectedDate: selectedDateLabel, // display label
-                rewardPoints,
-                keepUntil,
-                increment,
-                incrementStep: incrementType === 'Time' ? 1 : incrementStep,
-                incrementType,
-                incrementGoal: finalIncrementGoal,
-                customType: selectedFrequency === 'Custom' ? customType : undefined,
-                customInterval: selectedFrequency === 'Custom' ? customInterval : undefined,
-                endDate: endDate ? formatLocalDate(endDate) : undefined,
-            };
-
-            // Resolve the selected path's name + hex color so the habit
-            // shows up immediately in the path detail view (which filters by h.path === path.name)
+            // Resolve the selected path's name + hex color
             const selectedPath = paths.find(p => p.id === selectedPathId) ?? null;
             const pathName = selectedPath?.name ?? null;
             const pathColorHex = selectedPath
                 ? (PATH_COLORS[selectedPath.color as PathColorKey] ?? null)
                 : null;
 
-            const { error } = await supabase.from('habits').insert([{
-                id: newHabit.id,
-                user_id: user.id,
-                name: newHabit.name,
-                icon: newHabit.icon,
+            const habitData = {
+                name: habitName.trim(),
+                icon: selectedIcon,
                 frequency: finalFrequency,
                 selected_days: finalSelectedDays,
-                selected_time_of_day: newHabit.selectedTimeOfDay,
-                start_date: newHabit.startDate,
-                selected_date: newHabit.selectedDate,
-                reward_points: newHabit.rewardPoints,
-                keep_until: newHabit.keepUntil,
-                increment: newHabit.increment,
-                increment_step: newHabit.incrementStep,
-                increment_type: newHabit.incrementType,
-                increment_goal: newHabit.incrementGoal,
+                selected_time_of_day: selectedTimeOfDay,
+                start_date: habitStartDate,
+                selected_date: selectedDateLabel,
+                reward_points: rewardPoints,
+                keep_until: keepUntil,
+                increment,
+                increment_step: incrementType === 'Time' ? 1 : incrementStep,
+                increment_type: incrementType,
+                increment_goal: finalIncrementGoal,
                 path: pathName,
                 path_color: pathColorHex,
                 path_ids: selectedPathId ? [selectedPathId] : [],
                 custom_type: finalFrequency === 'Custom' ? customType : null,
                 custom_interval: finalFrequency === 'Custom' ? customInterval : null,
                 end_date: endDate ? formatLocalDate(endDate) : null,
-                created_at: new Date().toISOString(),
-            }]);
+            };
+
+            const { error } = isEditMode
+                ? await supabase.from('habits')
+                    .update(habitData)
+                    .eq('id', params.editId!)
+                    .eq('user_id', user.id)
+                : await supabase.from('habits').insert([{
+                    ...habitData,
+                    id: String(uuid.v4()),
+                    user_id: user.id,
+                    created_at: new Date().toISOString(),
+                }]);
 
             if (error) {
                 console.error('❌ Error saving habit:', error);
@@ -322,9 +392,13 @@ export default function NewHabitPage() {
     return (
         <AppLinearGradient variant="newHabit.background">
             <PageContainer>
-                <PageHeader title="New Habit" showBackButton />
+                <PageHeader title={isEditMode ? "Edit Habit" : "New Habit"} showBackButton />
 
-                {/* **TODO: make sure keyboard works smoothly */}
+                {!loaded ? (
+                    <View style={{ flex: 1, alignItems: 'center', marginTop: 60 }}>
+                        <ActivityIndicator size="small" color={COLORS.Primary} />
+                    </View>
+                ) : (
                 <KeyboardAwareScrollView
                     ref={scrollRef}
                     contentContainerStyle={{ flexGrow: 1, paddingBottom: 50 }}
@@ -1232,6 +1306,7 @@ export default function NewHabitPage() {
                         </ScrollView>
                     </TouchableWithoutFeedback>
                 </KeyboardAwareScrollView>
+                )}
             </PageContainer>
 
             <IconPickerModal

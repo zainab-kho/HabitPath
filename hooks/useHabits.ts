@@ -8,6 +8,7 @@ import { formatLocalDate, getHabitDate } from '@/utils/dateUtils';
 import { getResetTime } from '@/lib/supabase/queries';
 import {
   addStatusToHabits,
+  getHabitCycleStart,
   getProgressUnitsForDay,
   HabitStatus,
   isHabitActiveToday,
@@ -165,10 +166,15 @@ export function useHabits(viewingDate: Date = new Date()) {
     async (habitId: string) => {
       if (!user) return;
 
-      const ds = getHabitDate(viewingDate, resetTime.hour, resetTime.minute);
+      const rawDs = getHabitDate(viewingDate, resetTime.hour, resetTime.minute);
       const currentHabits = stripStatus(habits);
       const target = currentHabits.find(h => h.id === habitId);
       if (!target) return;
+
+      // Weekly Goal: record completion against Monday (cycle start)
+      const ds = target.frequency === 'Weekly Goal'
+        ? getHabitCycleStart(target, viewingDate, resetTime.hour, resetTime.minute)
+        : rawDs;
 
       const isCurrentlyCompleted = target.completionHistory?.includes(ds) ?? false;
 
@@ -219,9 +225,12 @@ export function useHabits(viewingDate: Date = new Date()) {
     async (habitId: string, newAmount: number) => {
       if (!user) return;
 
-      const ds = getHabitDate(viewingDate, resetTime.hour, resetTime.minute);
+      const rawDs = getHabitDate(viewingDate, resetTime.hour, resetTime.minute);
       const currentHabits = stripStatus(habits);
       const target = currentHabits.find(h => h.id === habitId);
+      const ds = target?.frequency === 'Weekly Goal'
+        ? getHabitCycleStart(target, viewingDate, resetTime.hour, resetTime.minute)
+        : rawDs;
 
       // optimistic
       setHabits(prev => prev.map(h =>

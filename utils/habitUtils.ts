@@ -93,6 +93,13 @@ function isHabitScheduledForDate(
     return habit.selectedDays?.includes(dow) ?? false;
   }
 
+  // Weekly Goal habits — active every day Mon–Sun of the week
+  if (habit.frequency === 'Weekly Goal') {
+    const dateMonday = getWeekDatesForDate(dateStr)[0];
+    const startMonday = getWeekDatesForDate(habit.startDate)[0];
+    return dateMonday >= startMonday;
+  }
+
   // Monthly habits
   if (habit.frequency === 'Monthly') {
     const startDay = parseInt(habit.startDate.split('-')[2], 10);
@@ -200,6 +207,11 @@ export function getHabitCycleStart(
   // Daily habits
   if (habit.frequency === 'Daily') {
     return todayStr;
+  }
+
+  // Weekly Goal — cycle start is Monday of the current week
+  if (habit.frequency === 'Weekly Goal') {
+    return getWeekDatesForDate(todayStr)[0];
   }
 
   // Weekly habits (based on selectedDays)
@@ -401,6 +413,19 @@ export function isHabitActiveToday(
     return false;
   }
 
+  // Weekly Goal — visible every day of the week
+  if (habit.frequency === 'Weekly Goal') {
+    const dateMonday = getWeekDatesForDate(todayStr)[0];
+    const startMonday = getWeekDatesForDate(habit.startDate)[0];
+    if (dateMonday < startMonday) return false;
+    // endDate check: compare against Monday so the full last week shows
+    if (habit.endDate) {
+      const endMonday = getWeekDatesForDate(habit.endDate)[0];
+      if (dateMonday > endMonday) return false;
+    }
+    return true;
+  }
+
   // Monthly habits
   if (habit.frequency === 'Monthly') {
     if (habit.startDate > todayStr) return false;
@@ -430,20 +455,25 @@ export const getHabitStatus = (
   isViewingToday: boolean,
   todayStr: string, // must be computed via getHabitDate to respect reset hour — never raw new Date()
 ): HabitStatus => {
+  // Weekly Goal: check completion against Monday (cycle start), not individual day
+  const effectiveDateStr = habit.frequency === 'Weekly Goal'
+    ? getWeekDatesForDate(dateStr)[0]
+    : dateStr;
+
   // snoozed check first so snoozed habits don't show as missed
   // use < (not <=) so the habit is active ON the snoozedUntil day
   // .slice(0,10) normalizes legacy ISO strings ("2026-02-17T05:00:00Z" → "2026-02-17")
   if (habit.snoozedUntil && dateStr < habit.snoozedUntil.slice(0, 10)) return 'snoozed';
 
   // completed via checkmark
-  if (habit.completionHistory?.includes(dateStr)) return 'completed';
+  if (habit.completionHistory?.includes(effectiveDateStr)) return 'completed';
 
   // completed via increment goal reached
   if (habit.increment) {
     // Time-tracking habits: check weekly total instead of daily
     const amount = isTimeTrackingHabit(habit)
       ? getWeeklyTimeTotal(habit.incrementHistory, dateStr)
-      : (habit.incrementHistory?.[dateStr] ?? 0);
+      : (habit.incrementHistory?.[effectiveDateStr] ?? 0);
 
     // goal logic must match HabitItem:
     // - keepUntil increments: goal defaults to 1
@@ -457,7 +487,7 @@ export const getHabitStatus = (
   }
 
   // explicitly skipped habits
-  if (habit.skippedDates?.includes(dateStr)) return 'skipped';
+  if (habit.skippedDates?.includes(effectiveDateStr)) return 'skipped';
 
   // past date and never completed = missed
   // uses todayStr (reset-hour-aware) not raw UTC to avoid off-by-one around midnight
@@ -477,8 +507,31 @@ function computeHabitStreak(
   const oneTime = !habit.frequency || habit.frequency === 'None';
   if (oneTime) return 0;
 
-  let streak = 0;
   const todayStr = getHabitDate(new Date(), resetHour, resetMinute);
+
+  // Weekly Goal: count consecutive completed weeks
+  if (habit.frequency === 'Weekly Goal') {
+    let streak = 0;
+    const thisMonday = getWeekDatesForDate(todayStr)[0];
+    const startMonday = getWeekDatesForDate(habit.startDate)[0];
+
+    for (let i = 0; i < 52; i++) {
+      const d = parseLocalDate(thisMonday);
+      d.setDate(d.getDate() - i * 7);
+      const monday = formatLocalDate(d);
+      if (monday < startMonday) break;
+
+      if (history.includes(monday)) {
+        streak++;
+      } else {
+        if (monday === thisMonday) continue;
+        break;
+      }
+    }
+    return streak;
+  }
+
+  let streak = 0;
 
   for (let i = 0; i < 365; i++) {
     const d = parseLocalDate(todayStr);

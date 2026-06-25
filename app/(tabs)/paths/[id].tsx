@@ -259,7 +259,7 @@ export default function PathDetail() {
   const todayStr = getHabitDate(new Date(), resetHour, resetMin);
 
   const isRecurring = (h: Habit) =>
-    h.frequency === 'Daily' || h.frequency === 'Weekly' || h.frequency === 'Monthly';
+    h.frequency === 'Daily' || h.frequency === 'Weekly' || h.frequency === 'Weekly Goal' || h.frequency === 'Monthly';
 
   // A habit is visible if: recurring, snoozed-to-future, today's one-timer (not yet done),
   // future one-timer, or keepUntil not yet completed.

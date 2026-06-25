@@ -146,7 +146,8 @@ export default function HabitsList({
 
   // displayHabits = habits + local subtask overrides. Already active-only from applyHabitsUpdate.
   const activeHabits = displayHabits;
-  const regularActiveHabits = activeHabits.filter(h => !h.isQuestGoal);
+  const regularActiveHabits = activeHabits.filter(h => !h.isQuestGoal && h.frequency !== 'Weekly Goal');
+  const weeklyAndQuestHabits = activeHabits.filter(h => h.isQuestGoal || h.frequency === 'Weekly Goal');
   const incompleteCount = regularActiveHabits.filter(h => h.status !== 'completed' && h.status !== 'skipped').length;
   const scheduledHabits = regularActiveHabits;
   const allDoneToday = scheduledHabits.length > 0 && incompleteCount === 0;
@@ -177,9 +178,10 @@ export default function HabitsList({
 
   // Build the flat list: headers interleaved with habits, grouped by section
   const flatList = useMemo(() => {
+    const regularOrdered = orderedHabits.filter(h => !h.isQuestGoal && h.frequency !== 'Weekly Goal');
     const visible = showCompleted
-      ? orderedHabits
-      : orderedHabits.filter(h => h.status !== 'completed' && h.status !== 'skipped');
+      ? regularOrdered
+      : regularOrdered.filter(h => h.status !== 'completed' && h.status !== 'skipped');
 
     const grouped: Record<TimeOfDay, HabitWithStatus[]> = {
       'Wake Up': [], 'Morning': [], 'Anytime': [],
@@ -201,6 +203,11 @@ export default function HabitsList({
 
     return items;
   }, [orderedHabits, showCompleted, dateStr]);
+
+  const visibleWeeklyAndQuest = useMemo(() => {
+    if (showCompleted) return weeklyAndQuestHabits;
+    return weeklyAndQuestHabits.filter(h => h.status !== 'completed' && h.status !== 'skipped');
+  }, [weeklyAndQuestHabits, showCompleted]);
 
   const firstHeaderId = flatList.length > 0 && flatList[0]?.type === 'header' ? flatList[0].id : null;
 
@@ -277,8 +284,7 @@ export default function HabitsList({
     );
   }
 
-  const questGoalsActive = activeHabits.filter(h => h.isQuestGoal);
-  if (scheduledHabits.length === 0 && questGoalsActive.length === 0) {
+  if (scheduledHabits.length === 0 && weeklyAndQuestHabits.length === 0) {
     return (
       <View style={{ marginTop: 20, alignItems: 'center', gap: 20 }}>
         <Text style={[globalStyles.body, { opacity: 0.7 }]}>You have no habits today! Add a habit?</Text>
@@ -392,6 +398,34 @@ export default function HabitsList({
           itemExiting={null}
           itemsLayoutTransitionMode="reorder"
         />
+
+        {visibleWeeklyAndQuest.length > 0 && (
+          <View style={{ marginTop: 5 }}>
+            <HabitSectionHeader
+              title="WEEKLY & QUESTS"
+              count={visibleWeeklyAndQuest.length}
+            />
+            {visibleWeeklyAndQuest.map(habit => (
+              <HabitItem
+                key={habit.id}
+                habit={habit}
+                dateStr={dateStr}
+                onToggle={() => onToggleHabit(habit.id)}
+                onPress={() => handleHabitPress(habit)}
+                onIncrementUpdate={onIncrementUpdate}
+                onSkip={() => onSkipHabit?.(habit.id)}
+                onUnskip={() => onUnskipHabit?.(habit.id)}
+                onUnskipAndComplete={() => onUnskipAndCompleteHabit?.(habit.id)}
+                onSnooze={() => onSnoozeHabit?.(habit.id)}
+                onToggleSubtask={handleToggleSubtask}
+                questExpanded={expandedQuestGoals.has(habit.id)}
+                onToggleQuestExpand={() => toggleQuestGoalExpanded(habit.id)}
+                onNavigateToQuest={(questId) => router.push(`/(tabs)/quests/${questId}`)}
+                onOpenTimeLog={handleOpenTimeLog}
+              />
+            ))}
+          </View>
+        )}
       </AnimatedScrollView>
 
       <HabitDetailModal

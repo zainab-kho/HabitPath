@@ -74,6 +74,7 @@ export default function NewHabitPage() {
         return parseLocalDate(habitToday);
     });
     const [showCalendar, setShowCalendar] = useState(false);
+    const [isWeeklyGoal, setIsWeeklyGoal] = useState(false);
 
     const startDateStr = formatLocalDate(startDate);
     const startDateOption: 'today' | 'tomorrow' | 'custom' =
@@ -171,19 +172,9 @@ export default function NewHabitPage() {
     const handleFrequencyChange = (freq: Frequency) => {
         setSelectedFrequency(freq);
 
-        if (selectedFrequency === 'Weekly Goal' && freq !== 'Weekly Goal') {
-            setEndDate(null);
-        }
-
         if (freq === 'Weekly') {
             const dayIndex = startDate.getDay();
             setSelectedDays([WEEK_DAYS[dayIndex]]);
-        } else if (freq === 'Weekly Goal') {
-            const monday = snapToMonday(startDate);
-            setStartDate(monday);
-            setEndDate(getSundayOfWeek(monday));
-            setShowCalendar(true);
-            setSelectedDays([]);
         } else if (freq === 'Custom') {
             setCustomType('daily');
             setCustomInterval(2);
@@ -251,7 +242,7 @@ export default function NewHabitPage() {
                 : incrementGoal;
 
             // Time-tracking habits should be Daily frequency so they show every day
-            const finalFrequency = incrementType === 'Time' ? 'Daily' : selectedFrequency;
+            const finalFrequency = incrementType === 'Time' ? 'Daily' : isWeeklyGoal ? 'Weekly Goal' : selectedFrequency;
             const finalSelectedDays = incrementType === 'Time'
                 ? []
                 : (selectedFrequency === 'Weekly' || (selectedFrequency === 'Custom' && customType === 'weekly'))
@@ -410,79 +401,97 @@ export default function NewHabitPage() {
 
                                 {/* start date */}
                                 <View style={{ gap: 10 }}>
-                                    <Text style={[globalStyles.label]}>
-                                        {selectedFrequency === 'Weekly Goal' ? 'SELECT WEEK' : 'START DATE'}
-                                    </Text>
+                                    <Text style={[globalStyles.label]}>START DATE</Text>
 
-                                    {selectedFrequency === 'Weekly Goal' ? (
-                                        <View style={{ marginVertical: 5 }}>
+                                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                                        {(['today', 'tomorrow', 'custom'] as const).map((option) => {
+                                            const isSelected = startDateOption === option;
+                                            const label = option === 'today' ? 'Today'
+                                                : option === 'tomorrow' ? 'Tomorrow'
+                                                : startDateOption === 'custom' ? getCustomDateLabel(startDate)
+                                                : 'Custom';
+
+                                            return (
+                                                <Pressable
+                                                    key={option}
+                                                    onPress={() => {
+                                                        if (option === 'today') {
+                                                            setStartDate(parseLocalDate(habitToday));
+                                                            setShowCalendar(false);
+                                                            if (isWeeklyGoal) {
+                                                                setIsWeeklyGoal(false);
+                                                                setEndDate(null);
+                                                            }
+                                                        } else if (option === 'tomorrow') {
+                                                            setStartDate(parseLocalDate(habitTomorrowStr));
+                                                            setShowCalendar(false);
+                                                            if (isWeeklyGoal) {
+                                                                setIsWeeklyGoal(false);
+                                                                setEndDate(null);
+                                                            }
+                                                        } else {
+                                                            setShowCalendar(!showCalendar);
+                                                        }
+                                                    }}
+                                                >
+                                                    <ShadowBox
+                                                        contentBackgroundColor={isSelected ? PAGE.habits.primary[0] : '#fff'}
+                                                        contentBorderColor={isSelected ? '#000' : PAGE.habits.primary[0]}
+                                                        shadowBorderColor={isSelected ? '#000' : PAGE.habits.primary[0]}
+                                                        shadowColor={isSelected ? '#000' : PAGE.habits.primary[0]}
+                                                    >
+                                                        <View style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
+                                                            <Text style={globalStyles.body1}>{label}</Text>
+                                                        </View>
+                                                    </ShadowBox>
+                                                </Pressable>
+                                            );
+                                        })}
+                                    </View>
+
+                                    {showCalendar && (
+                                        <View style={{ marginVertical: 5, gap: 8 }}>
+                                            <View style={{
+                                                flexDirection: 'row',
+                                                alignItems: 'center',
+                                                justifyContent: 'space-between',
+                                                paddingVertical: 4,
+                                                paddingHorizontal: 2,
+                                            }}>
+                                                <Text style={globalStyles.body1}>Weekly goal?</Text>
+                                                <Switch
+                                                    value={isWeeklyGoal}
+                                                    onValueChange={(val) => {
+                                                        setIsWeeklyGoal(val);
+                                                        if (val) {
+                                                            const monday = snapToMonday(startDate);
+                                                            setStartDate(monday);
+                                                            setEndDate(getSundayOfWeek(monday));
+                                                        } else {
+                                                            setEndDate(null);
+                                                        }
+                                                    }}
+                                                    trackColor={{ false: '#ddd', true: PAGE.habits.primary[0] }}
+                                                    thumbColor="#fff"
+                                                />
+                                            </View>
                                             <ShadowBox>
                                                 <SimpleCalendar
                                                     selectedDate={startDate}
                                                     onSelectDate={(date) => {
-                                                        setStartDate(date);
-                                                        setEndDate(getSundayOfWeek(date));
+                                                        if (isWeeklyGoal) {
+                                                            setStartDate(date);
+                                                            setEndDate(getSundayOfWeek(date));
+                                                        } else {
+                                                            setStartDate(date);
+                                                            setShowCalendar(false);
+                                                        }
                                                     }}
                                                     selectedDateColor={PAGE.habits.primary[0]}
-                                                    weekSelectMode
+                                                    weekSelectMode={isWeeklyGoal}
                                                 />
                                             </ShadowBox>
                                         </View>
-                                    ) : (
-                                        <>
-                                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                                                {(['today', 'tomorrow', 'custom'] as const).map((option) => {
-                                                    const isSelected = startDateOption === option;
-                                                    const label = option === 'today' ? 'Today'
-                                                        : option === 'tomorrow' ? 'Tomorrow'
-                                                        : startDateOption === 'custom' ? getCustomDateLabel(startDate)
-                                                        : 'Custom';
-
-                                                    return (
-                                                        <Pressable
-                                                            key={option}
-                                                            onPress={() => {
-                                                                if (option === 'today') {
-                                                                    setStartDate(parseLocalDate(habitToday));
-                                                                    setShowCalendar(false);
-                                                                } else if (option === 'tomorrow') {
-                                                                    setStartDate(parseLocalDate(habitTomorrowStr));
-                                                                    setShowCalendar(false);
-                                                                } else {
-                                                                    setShowCalendar(!showCalendar);
-                                                                }
-                                                            }}
-                                                        >
-                                                            <ShadowBox
-                                                                contentBackgroundColor={isSelected ? PAGE.habits.primary[0] : '#fff'}
-                                                                contentBorderColor={isSelected ? '#000' : PAGE.habits.primary[0]}
-                                                                shadowBorderColor={isSelected ? '#000' : PAGE.habits.primary[0]}
-                                                                shadowColor={isSelected ? '#000' : PAGE.habits.primary[0]}
-                                                            >
-                                                                <View style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
-                                                                    <Text style={globalStyles.body1}>{label}</Text>
-                                                                </View>
-                                                            </ShadowBox>
-                                                        </Pressable>
-                                                    );
-                                                })}
-                                            </View>
-
-                                            {showCalendar && (
-                                                <View style={{ marginVertical: 5 }}>
-                                                    <ShadowBox>
-                                                        <SimpleCalendar
-                                                            selectedDate={startDate}
-                                                            onSelectDate={(date) => {
-                                                                setStartDate(date);
-                                                                setShowCalendar(false);
-                                                            }}
-                                                            selectedDateColor={PAGE.habits.primary[0]}
-                                                        />
-                                                    </ShadowBox>
-                                                </View>
-                                            )}
-                                        </>
                                     )}
                                 </View>
 
@@ -804,7 +813,7 @@ export default function NewHabitPage() {
                                     )}
                                 </View>
 
-                                {selectedFrequency !== 'Weekly Goal' && <View style={{ gap: 10 }}>
+                                {!isWeeklyGoal && <View style={{ gap: 10 }}>
                                     {/* time of day */}
                                     <Text style={[globalStyles.label]}>
                                         TIME OF DAY

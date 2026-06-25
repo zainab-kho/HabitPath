@@ -37,7 +37,7 @@ interface HabitDetailModalProps {
 }
 
 const REWARD_OPTIONS = [0, 1, 2, 3, 5, 10, 15, 20, 25, 50];
-const FREQUENCIES = ['Daily', 'Weekly', 'Weekly Goal', 'No Repeat'];
+const FREQUENCIES = ['Daily', 'Weekly', 'No Repeat'];
 const TIMES_OF_DAY = ['Wake Up', 'Morning', 'Anytime', 'Afternoon', 'Evening', 'Bed Time'];
 const WEEK_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 

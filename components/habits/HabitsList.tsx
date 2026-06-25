@@ -400,7 +400,14 @@ export default function HabitsList({
         />
 
         {visibleWeeklyAndQuest.length > 0 && (
-          <View style={{ marginTop: 5 }}>
+          <View style={{
+            marginTop: 10,
+            backgroundColor: COLORS.PrimaryLight + '20',
+            borderColor: '#000',
+            borderWidth: 1,
+            borderRadius: 15,
+            padding: 10,
+          }}>
             <HabitSectionHeader
               title="WEEKLY & QUESTS"
               count={visibleWeeklyAndQuest.length}

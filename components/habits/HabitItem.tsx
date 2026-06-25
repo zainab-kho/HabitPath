@@ -10,6 +10,7 @@ import { Habit } from '@/types/Habit';
 import ShadowBox from '@/ui/ShadowBox';
 import { HabitWithStatus } from '@/hooks/useHabits';
 import { formatMinutesAsTime } from '@/utils/dateUtils';
+import { getWeekDatesForDate } from '@/utils/dateUtils';
 import { isTimeTrackingHabit, getWeeklyTimeTotal } from '@/utils/habitUtils';
 import UnskipHabitModal from '@/modals/habits/UnskipHabit';
 
@@ -60,8 +61,13 @@ export default function HabitItem({
   const isIncrement = !!habit.increment;
   const isTimeTracking = isTimeTrackingHabit(habit);
 
+  // Weekly Goals store increments under Monday (cycle start)
+  const effectiveDateStr = habit.frequency === 'Weekly Goal'
+    ? getWeekDatesForDate(dateStr)[0]
+    : dateStr;
+
   // source of truth for today's increment progress
-  const currentAmount = habit.incrementHistory?.[dateStr] ?? 0;
+  const currentAmount = habit.incrementHistory?.[effectiveDateStr] ?? 0;
 
   // weekly total for time-tracking habits
   const weeklyTimeTotal = isTimeTracking

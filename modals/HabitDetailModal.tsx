@@ -36,7 +36,7 @@ export default function HabitDetailModal({ visible, habit, onClose, onUpdate }: 
 
     const handleEdit = () => {
         onClose();
-        router.push({ pathname: '/(tabs)/habits/NewHabitPage', params: { editId: habit.id } });
+        router.push({ pathname: '/(tabs)/habits/NewHabitPage', params: { editId: habit.id, editData: JSON.stringify(habit) } });
     };
 
     const handleArchive = () => {

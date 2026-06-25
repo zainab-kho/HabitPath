@@ -3,7 +3,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import {
-    ActivityIndicator,
     Alert,
     Image,
     Keyboard,
@@ -47,22 +46,16 @@ const ICON_SIZE = 30;
 export default function NewHabitPage() {
     const router = useRouter();
     const { user } = useAuth();
-    const params = useLocalSearchParams<{ startDate?: string; editId?: string }>();
+    const params = useLocalSearchParams<{ startDate?: string; editId?: string; editData?: string }>();
     const inputRef = useRef<TextInput>(null);
     const scrollRef = useRef<KeyboardAwareScrollView>(null);
 
     const isEditMode = !!params.editId;
-    const [loaded, setLoaded] = useState(!isEditMode);
+    const editHabit = React.useMemo(
+        () => params.editData ? JSON.parse(params.editData) : null,
+        [params.editData]
+    ) as Habit | null;
 
-    // basic info
-    const [showIconPicker, setShowIconPicker] = useState(false);
-    const [habitName, setHabitName] = useState('');
-    const [selectedIcon, setSelectedIcon] = useState('goal');
-
-    // scheduling
-    const [selectedFrequency, setSelectedFrequency] = useState<Frequency>('None');
-    const [selectedDays, setSelectedDays] = useState<string[]>([]);
-    const [selectedTimeOfDay, setSelectedTimeOfDay] = useState<TimeOfDay>('Anytime');
     const habitToday = getHabitDate(new Date());
     const habitTomorrowStr = (() => {
         const d = parseLocalDate(habitToday);
@@ -70,15 +63,40 @@ export default function NewHabitPage() {
         return formatLocalDate(d);
     })();
 
+    // basic info
+    const [showIconPicker, setShowIconPicker] = useState(false);
+    const [habitName, setHabitName] = useState(editHabit?.name ?? '');
+    const [selectedIcon, setSelectedIcon] = useState(editHabit?.icon ?? 'goal');
+
+    // scheduling
+    const editFreq = editHabit?.frequency;
+    const [selectedFrequency, setSelectedFrequency] = useState<Frequency>(() => {
+        if (!editFreq || editFreq === 'Weekly Goal') return 'None';
+        if (FREQUENCIES.includes(editFreq as Frequency)) return editFreq as Frequency;
+        return 'None';
+    });
+    const [selectedDays, setSelectedDays] = useState<string[]>(editHabit?.selectedDays ?? []);
+    const [selectedTimeOfDay, setSelectedTimeOfDay] = useState<TimeOfDay>(
+        (editHabit?.selectedTimeOfDay as TimeOfDay) ?? 'Anytime'
+    );
+
     const [startDate, setStartDate] = useState<Date>(() => {
+        if (editHabit?.startDate) {
+            const [y, m, d] = editHabit.startDate.split('-').map(Number);
+            return new Date(y, m - 1, d, 12);
+        }
         if (params.startDate) {
             const [y, m, d] = params.startDate.split('-').map(Number);
             return new Date(y, m - 1, d, 12);
         }
         return parseLocalDate(habitToday);
     });
-    const [showCalendar, setShowCalendar] = useState(false);
-    const [isWeeklyGoal, setIsWeeklyGoal] = useState(false);
+    const [showCalendar, setShowCalendar] = useState(() => {
+        if (!editHabit) return false;
+        if (editFreq === 'Weekly Goal') return true;
+        return editHabit.startDate !== habitToday && editHabit.startDate !== habitTomorrowStr;
+    });
+    const [isWeeklyGoal, setIsWeeklyGoal] = useState(editFreq === 'Weekly Goal');
 
     const startDateStr = formatLocalDate(startDate);
     const startDateOption: 'today' | 'tomorrow' | 'custom' =
@@ -95,104 +113,53 @@ export default function NewHabitPage() {
     };
 
     // custom frequency
-    const [customType, setCustomType] = useState<'daily' | 'weekly' | 'monthly'>('daily');
-    const [customInterval, setCustomInterval] = useState(2);
+    const [customType, setCustomType] = useState<'daily' | 'weekly' | 'monthly'>(editHabit?.customType ?? 'daily');
+    const [customInterval, setCustomInterval] = useState(editHabit?.customInterval ?? 2);
 
     // end date
-    const [endDate, setEndDate] = useState<Date | null>(null);
+    const [endDate, setEndDate] = useState<Date | null>(() => {
+        if (!editHabit?.endDate) return null;
+        const [y, m, d] = editHabit.endDate.split('-').map(Number);
+        return new Date(y, m - 1, d, 12);
+    });
     const [showEndDateCalendar, setShowEndDateCalendar] = useState(false);
 
-    // Load existing habit for edit mode
+    // Resolve path selection for edit mode
     React.useEffect(() => {
-        if (!params.editId || !user) return;
-        (async () => {
-            const { data } = await supabase
-                .from('habits')
-                .select('*')
-                .eq('id', params.editId)
-                .eq('user_id', user.id)
-                .single();
-            if (!data) return;
-
-            setHabitName(data.name || '');
-            setSelectedIcon(data.icon || 'goal');
-
-            const freq = data.frequency as string;
-            if (freq === 'Weekly Goal') {
-                setIsWeeklyGoal(true);
-                setShowCalendar(true);
-                setSelectedFrequency('None');
-            } else if (FREQUENCIES.includes(freq as Frequency)) {
-                setSelectedFrequency(freq as Frequency);
-            } else {
-                setSelectedFrequency('None');
-            }
-
-            setSelectedDays(data.selected_days || []);
-            setSelectedTimeOfDay((data.selected_time_of_day as TimeOfDay) || 'Anytime');
-
-            if (data.start_date) {
-                const [y, m, d] = data.start_date.split('-').map(Number);
-                const sd = new Date(y, m - 1, d, 12);
-                setStartDate(sd);
-                if (data.start_date !== habitToday && data.start_date !== habitTomorrowStr) {
-                    setShowCalendar(true);
-                }
-            }
-
-            if (data.end_date) {
-                const [y, m, d] = data.end_date.split('-').map(Number);
-                setEndDate(new Date(y, m - 1, d, 12));
-            }
-
-            setRewardPoints(data.reward_points ?? 1);
-            setKeepUntil(data.keep_until ?? false);
-            setIncrement(data.increment ?? false);
-            setincrementStep(data.increment_step ?? 1);
-            setIncrementType(data.increment_type || 'None');
-
-            if (data.increment_type === 'Time' && data.increment_goal) {
-                setTimeGoalHours(Math.floor(data.increment_goal / 60));
-                setTimeGoalMinutes(data.increment_goal % 60);
-            } else {
-                setIncrementGoal(data.increment_goal ?? 0);
-            }
-
-            if (data.custom_type) setCustomType(data.custom_type);
-            if (data.custom_interval) setCustomInterval(data.custom_interval);
-
-            // Resolve path selection
-            if (data.path) {
-                const { data: pathData } = await supabase
-                    .from('paths')
-                    .select('id')
-                    .eq('user_id', user.id)
-                    .eq('name', data.path)
-                    .single();
+        if (!editHabit?.path || !user) return;
+        supabase
+            .from('paths')
+            .select('id')
+            .eq('user_id', user.id)
+            .eq('name', editHabit.path)
+            .single()
+            .then(({ data: pathData }) => {
                 if (pathData) setSelectedPathId(pathData.id);
-            }
-
-            if (data.increment || data.keep_until) {
-                setMoreOptions(true);
-            }
-
-            setLoaded(true);
-        })();
-    }, [params.editId, user]);
+            });
+    }, [editHabit?.path, user]);
 
     // rewards
-    const [rewardPoints, setRewardPoints] = useState<number>(1);
+    const [rewardPoints, setRewardPoints] = useState<number>(editHabit?.rewardPoints ?? 1);
     const [showRewardsPicker, setShowRewardsPicker] = useState(false);
 
     // more options
-    const [moreOptions, setMoreOptions] = useState(false);
-    const [keepUntil, setKeepUntil] = useState(false);
-    const [increment, setIncrement] = useState(false);
-    const [incrementStep, setincrementStep] = useState(1);
-    const [incrementGoal, setIncrementGoal] = useState(0);
-    const [incrementType, setIncrementType] = useState<Habit['incrementType']>('None');
-    const [timeGoalHours, setTimeGoalHours] = useState(10);
-    const [timeGoalMinutes, setTimeGoalMinutes] = useState(0);
+    const [moreOptions, setMoreOptions] = useState(!!(editHabit?.increment || editHabit?.keepUntil));
+    const [keepUntil, setKeepUntil] = useState(editHabit?.keepUntil ?? false);
+    const [increment, setIncrement] = useState(editHabit?.increment ?? false);
+    const [incrementStep, setincrementStep] = useState(editHabit?.incrementStep ?? 1);
+    const [incrementGoal, setIncrementGoal] = useState(() => {
+        if (editHabit?.incrementType === 'Time') return 0;
+        return editHabit?.incrementGoal ?? 0;
+    });
+    const [incrementType, setIncrementType] = useState<Habit['incrementType']>(editHabit?.incrementType ?? 'None');
+    const [timeGoalHours, setTimeGoalHours] = useState(() => {
+        if (editHabit?.incrementType === 'Time' && editHabit?.incrementGoal) return Math.floor(editHabit.incrementGoal / 60);
+        return 10;
+    });
+    const [timeGoalMinutes, setTimeGoalMinutes] = useState(() => {
+        if (editHabit?.incrementType === 'Time' && editHabit?.incrementGoal) return editHabit.incrementGoal % 60;
+        return 0;
+    });
 
     // paths
     interface PathOption { id: string; name: string; color: string; }
@@ -394,11 +361,6 @@ export default function NewHabitPage() {
             <PageContainer>
                 <PageHeader title={isEditMode ? "Edit Habit" : "New Habit"} showBackButton />
 
-                {!loaded ? (
-                    <View style={{ flex: 1, alignItems: 'center', marginTop: 60 }}>
-                        <ActivityIndicator size="small" color={COLORS.Primary} />
-                    </View>
-                ) : (
                 <KeyboardAwareScrollView
                     ref={scrollRef}
                     contentContainerStyle={{ flexGrow: 1, paddingBottom: 50 }}
@@ -1306,7 +1268,6 @@ export default function NewHabitPage() {
                         </ScrollView>
                     </TouchableWithoutFeedback>
                 </KeyboardAwareScrollView>
-                )}
             </PageContainer>
 
             <IconPickerModal

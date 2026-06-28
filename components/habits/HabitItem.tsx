@@ -65,11 +65,12 @@ export default function HabitItem({
   const isTimeTracking = isTimeTrackingHabit(habit);
 
   // keepUntil / Weekly Goal: use cycle start (walks back to find stored data)
-  // snoozed non-keepUntil: use snoozedFrom date
+  // snoozed: use snoozedFrom only while snooze is active
+  const isSnoozedNow = habit.snoozedFrom && habit.snoozedUntil && dateStr <= habit.snoozedUntil.slice(0, 10);
   const effectiveDateStr = (habit.keepUntil || habit.frequency === 'Weekly Goal')
     ? getHabitCycleStart(habit, currentDate, resetTime.hour, resetTime.minute)
-    : habit.snoozedFrom && habit.increment
-      ? habit.snoozedFrom
+    : isSnoozedNow
+      ? habit.snoozedFrom!
       : dateStr;
 
   // source of truth for today's increment progress

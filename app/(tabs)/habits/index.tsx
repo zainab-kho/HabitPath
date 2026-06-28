@@ -54,6 +54,7 @@ export default function HabitsPage() {
     skipHabit,
     unskipHabit,
     unskipAndCompleteHabit,
+    reorderHabits,
   } = useHabits(viewingDate);
 
   // snooze modal state
@@ -137,11 +138,9 @@ export default function HabitsPage() {
 
       (async () => {
         const dirty = await AsyncStorage.getItem(STORAGE_KEYS.HABITS_DIRTY);
-        if (!cancelled && dirty === '1' && !loading) {
+        if (!cancelled && dirty === '1') {
           await AsyncStorage.removeItem(STORAGE_KEYS.HABITS_DIRTY);
           loadHabits();
-
-          console.log('Reloading habits');
         }
       })();
 
@@ -243,6 +242,7 @@ export default function HabitsPage() {
           onUnskipHabit={unskipHabit}
           onUnskipAndCompleteHabit={unskipAndCompleteHabit}
           onSnoozeHabit={handleSnoozeHabit}
+          onReorderHabits={reorderHabits}
         />
 
         {/* snooze confirmation modal */}

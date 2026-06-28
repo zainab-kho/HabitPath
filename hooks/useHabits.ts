@@ -172,12 +172,15 @@ export function useHabits(viewingDate: Date = new Date()) {
       const target = currentHabits.find(h => h.id === habitId);
       if (!target) return;
 
-      // keepUntil / Weekly Goal: use cycle start; snoozed: use snoozedFrom
+      // keepUntil / Weekly Goal: use cycle start; snoozed: use snoozedFrom (only while active)
+      const isSnoozedNow = target.snoozedFrom && target.snoozedUntil && rawDs <= target.snoozedUntil.slice(0, 10);
       const ds = (target.frequency === 'Weekly Goal' || target.keepUntil)
         ? getHabitCycleStart(target, viewingDate, resetTime.hour, resetTime.minute)
-        : target.snoozedFrom
-          ? target.snoozedFrom
+        : isSnoozedNow
+          ? target.snoozedFrom!
           : rawDs;
+
+      console.log(`(**DEBUG) toggleHabit: name=${target.name}, rawDs=${rawDs}, ds=${ds}, keepUntil=${target.keepUntil}, snoozedFrom=${target.snoozedFrom}, frequency=${target.frequency}, completionHistory=${JSON.stringify(target.completionHistory)}`);
 
       const isCurrentlyCompleted = target.completionHistory?.includes(ds) ?? false;
 
@@ -231,10 +234,11 @@ export function useHabits(viewingDate: Date = new Date()) {
       const rawDs = getHabitDate(viewingDate, resetTime.hour, resetTime.minute);
       const currentHabits = stripStatus(habits);
       const target = currentHabits.find(h => h.id === habitId);
+      const isSnoozedNow = target?.snoozedFrom && target?.snoozedUntil && rawDs <= target.snoozedUntil.slice(0, 10);
       const ds = (target?.frequency === 'Weekly Goal' || target?.keepUntil)
         ? getHabitCycleStart(target, viewingDate, resetTime.hour, resetTime.minute)
-        : target?.snoozedFrom && target?.increment
-          ? target.snoozedFrom
+        : isSnoozedNow
+          ? target.snoozedFrom!
           : rawDs;
 
       // optimistic
@@ -453,5 +457,6 @@ export function useHabits(viewingDate: Date = new Date()) {
     unskipHabit,
     unskipAndCompleteHabit,
     deleteHabit,
+    reorderHabits: (updater: (prev: HabitWithStatus[]) => HabitWithStatus[]) => setHabits(updater),
   };
 }

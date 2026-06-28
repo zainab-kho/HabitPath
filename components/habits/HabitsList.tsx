@@ -42,6 +42,7 @@ interface HabitsListProps {
   onUnskipHabit?: (habitId: string) => void;
   onUnskipAndCompleteHabit?: (habitId: string) => void;
   onSnoozeHabit?: (habitId: string) => void;
+  onReorderHabits?: (updater: (prev: HabitWithStatus[]) => HabitWithStatus[]) => void;
 }
 
 type TimeOfDay = typeof TIME_OPTIONS[number];
@@ -72,6 +73,7 @@ export default function HabitsList({
   onUnskipHabit,
   onUnskipAndCompleteHabit,
   onSnoozeHabit,
+  onReorderHabits,
 }: HabitsListProps) {
   const router = useRouter();
   const currentDate = viewingDate || new Date();
@@ -268,7 +270,20 @@ export default function HabitsList({
     const fullOrder = [...newHabitOrder, ...hiddenHabits];
 
     saveDailyOrder(fullOrder.map(h => h.id), userId, dateStr);
-  }, [orderedHabits, dateStr, userId]);
+
+    onReorderHabits?.(prev => prev.map(h => {
+      const idx = fullOrder.findIndex(fo => fo.id === h.id);
+      if (idx === -1) return h;
+      const reordered = fullOrder[idx]!;
+      return {
+        ...h,
+        tempOrder: idx,
+        tempOrderDate: dateStr,
+        tempTimeOfDay: reordered.tempTimeOfDay,
+        tempTimeOfDayDate: reordered.tempTimeOfDayDate,
+      };
+    }));
+  }, [orderedHabits, dateStr, userId, onReorderHabits]);
 
   const handleHabitPress = (habit: HabitWithStatus) => {
     setSelectedHabit(habit);

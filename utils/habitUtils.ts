@@ -459,15 +459,20 @@ export const getHabitStatus = (
   resetHour?: number,
   resetMinute?: number,
 ): HabitStatus => {
-  // keepUntil: use cycle start; Weekly Goal: use Monday; snoozed: use snoozedFrom
+  // keepUntil: use cycle start; Weekly Goal: use Monday; snoozed: use snoozedFrom (only while active)
+  const isSnoozedNow = habit.snoozedFrom && habit.snoozedUntil && dateStr <= habit.snoozedUntil.slice(0, 10);
   const effectiveDateStr =
     (habit.keepUntil && viewingDate && resetHour !== undefined && resetMinute !== undefined)
       ? getHabitCycleStart(habit, viewingDate, resetHour, resetMinute)
       : habit.frequency === 'Weekly Goal'
         ? getWeekDatesForDate(dateStr)[0]
-        : habit.snoozedFrom
-          ? habit.snoozedFrom
+        : isSnoozedNow
+          ? habit.snoozedFrom!
           : dateStr;
+
+  if (habit.name === 'Make bed' || habit.name === 'Wash dishes') {
+    console.log(`(**DEBUG) getHabitStatus: name=${habit.name}, dateStr=${dateStr}, effectiveDateStr=${effectiveDateStr}, keepUntil=${habit.keepUntil}, snoozedFrom=${habit.snoozedFrom}, completionHistory=${JSON.stringify(habit.completionHistory?.slice(-5))}`);
+  }
 
   // snoozed check first so snoozed habits don't show as missed
   // use < (not <=) so the habit is active ON the snoozedUntil day

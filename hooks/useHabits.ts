@@ -277,12 +277,18 @@ export function useHabits(viewingDate: Date = new Date()) {
     async (habitId: string, snoozeDateStr?: string | null) => {
       if (!user) return;
 
-      // default to tomorrow (timezone-safe YYYY-MM-DD)
+      // default: if viewing a past date, snooze to today; if viewing today, snooze to tomorrow
       let targetDate = snoozeDateStr;
       if (targetDate === undefined) {
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        targetDate = formatLocalDate(tomorrow);
+        const todayStr = getHabitDate(new Date(), resetTime.hour, resetTime.minute);
+        const viewingStr = getHabitDate(viewingDate, resetTime.hour, resetTime.minute);
+        if (viewingStr < todayStr) {
+          targetDate = todayStr;
+        } else {
+          const tomorrow = new Date();
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          targetDate = formatLocalDate(tomorrow);
+        }
       }
 
       console.log(`(**TESTING) useHabits.snoozeHabit: habitId=${habitId}, targetDate=${targetDate}`);

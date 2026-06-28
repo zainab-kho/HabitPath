@@ -62,20 +62,24 @@ export default function HabitsPage() {
   const [snoozeDateStr, setSnoozeDateStr] = useState('');
 
   const handleSnoozeHabit = async (habitId: string) => {
-    // find the habit before snoozing (it will disappear from the list after)
     const target = habits.find(h => h.id === habitId) ?? null;
 
-    // compute tomorrow's date (timezone-safe)
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowStr = formatLocalDate(tomorrow);
+    // viewing a past day → snooze to today; viewing today → snooze to tomorrow
+    const todayStr = getHabitDate(new Date(), resetTime.hour, resetTime.minute);
+    const viewingStr = getHabitDate(viewingDate, resetTime.hour, resetTime.minute);
+    let defaultSnoozeStr: string;
+    if (viewingStr < todayStr) {
+      defaultSnoozeStr = todayStr;
+    } else {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      defaultSnoozeStr = formatLocalDate(tomorrow);
+    }
 
-    // snooze to tomorrow immediately
-    await snoozeHabit(habitId);
+    await snoozeHabit(habitId, defaultSnoozeStr);
 
-    // open modal so user can change date or undo
     setSnoozeTargetHabit(target);
-    setSnoozeDateStr(tomorrowStr);
+    setSnoozeDateStr(defaultSnoozeStr);
     setSnoozeModalVisible(true);
   };
 

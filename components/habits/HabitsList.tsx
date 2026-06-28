@@ -325,6 +325,7 @@ export default function HabitsList({
   }
 
   return (
+    <Sortable.PortalProvider>
     <GestureHandlerRootView style={styles.container}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 }}>
         <View>
@@ -474,6 +475,7 @@ export default function HabitsList({
         onLogTime={handleLogTime}
       />
     </GestureHandlerRootView>
+    </Sortable.PortalProvider>
   );
 }
 

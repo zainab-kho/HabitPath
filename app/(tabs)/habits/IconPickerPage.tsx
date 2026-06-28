@@ -26,10 +26,20 @@ export default function IconPickerPage() {
     const categories = Object.keys(ICON_CATEGORIES);
     const [activeTab, setActiveTab] = useState(0);
     const scrollViewRef = useRef<ScrollView>(null);
+    const tabScrollRef = useRef<ScrollView>(null);
+    const tabLayouts = useRef<{ x: number; width: number }[]>([]);
+
+    const scrollTabIntoView = (index: number) => {
+        const layout = tabLayouts.current[index];
+        if (!layout || !tabScrollRef.current) return;
+        const scrollTo = layout.x - (TAB_WIDTH / 2) + (layout.width / 2);
+        tabScrollRef.current.scrollTo({ x: Math.max(0, scrollTo), animated: true });
+    };
 
     const handleTabPress = (index: number) => {
         setActiveTab(index);
         scrollViewRef.current?.scrollTo({ x: index * TAB_WIDTH, animated: true });
+        scrollTabIntoView(index);
     };
 
     const handleIconSelect = async (iconName: string) => {
@@ -43,6 +53,7 @@ export default function IconPickerPage() {
                 <PageHeader title="Choose an Icon" showBackButton />
 
                 <ScrollView
+                    ref={tabScrollRef}
                     horizontal
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={styles.tabButtons}
@@ -53,6 +64,12 @@ export default function IconPickerPage() {
                             key={category}
                             onPress={() => handleTabPress(index)}
                             style={styles.tabButton}
+                            onLayout={(e) => {
+                                tabLayouts.current[index] = {
+                                    x: e.nativeEvent.layout.x,
+                                    width: e.nativeEvent.layout.width,
+                                };
+                            }}
                         >
                             <Text style={[
                                 globalStyles.body,
@@ -75,6 +92,7 @@ export default function IconPickerPage() {
                         const offsetX = e.nativeEvent.contentOffset.x;
                         const index = Math.round(offsetX / TAB_WIDTH);
                         setActiveTab(index);
+                        scrollTabIntoView(index);
                     }}
                     style={{ flex: 1 }}
                 >

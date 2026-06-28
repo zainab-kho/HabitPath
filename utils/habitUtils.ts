@@ -1,7 +1,7 @@
 // @/utils/habitUtils.ts
 import { WEEK_DAYS } from '@/constants';
 import { Habit } from '@/types/Habit';
-import { getHabitDate, getHabitDayOfWeek, getWeekDatesForDate } from '@/utils/dateUtils';
+import { daysBetween, formatLocalDate, getHabitDate, getHabitDayOfWeek, getWeekDatesForDate, parseLocalDate } from '@/utils/dateUtils';
 
 /* ============================================================================
    TIME TRACKING HELPERS
@@ -37,20 +37,22 @@ export async function updateAppStreak(
 ): Promise<number> {
   if (habits.length === 0) return 0;
 
-  const today = new Date();
+  const todayStr = getHabitDate(new Date(), resetHour, resetMinute);
   let streak = 0;
 
   for (let i = 0; i < 365; i++) {
-    const date = new Date(today);
-    date.setDate(today.getDate() - i);
-
-    const dateStr = getHabitDate(date, resetHour, resetMinute);
+    const d = parseLocalDate(todayStr);
+    d.setDate(d.getDate() - i);
+    const dateStr = formatLocalDate(d);
 
     const completedAny = habits.some(h =>
       h.completionHistory?.includes(dateStr)
     );
 
-    if (!completedAny) break;
+    if (!completedAny) {
+      if (dateStr === todayStr) continue;
+      break;
+    }
     streak++;
   }
 
@@ -91,11 +93,48 @@ function isHabitScheduledForDate(
     return habit.selectedDays?.includes(dow) ?? false;
   }
 
+  // Weekly Goal habits — active every day Mon–Sun of the week
+  if (habit.frequency === 'Weekly Goal') {
+    const dateMonday = getWeekDatesForDate(dateStr)[0];
+    const startMonday = getWeekDatesForDate(habit.startDate)[0];
+    return dateMonday >= startMonday;
+  }
+
   // Monthly habits
   if (habit.frequency === 'Monthly') {
     const startDay = parseInt(habit.startDate.split('-')[2], 10);
     const thisDay = parseInt(dateStr.split('-')[2], 10);
     return startDay === thisDay;
+  }
+
+  // Custom habits
+  if (habit.frequency === 'Custom') {
+    const interval = habit.customInterval ?? 1;
+    const startDateObj = parseLocalDate(habit.startDate);
+    const currentDateObj = parseLocalDate(dateStr);
+
+    if (habit.customType === 'daily') {
+      const diff = daysBetween(startDateObj, currentDateObj);
+      return diff >= 0 && diff % interval === 0;
+    }
+
+    if (habit.customType === 'weekly') {
+      const dow = WEEK_DAYS[getHabitDayOfWeek(date, resetHour, resetMinute)];
+      if (!(habit.selectedDays?.includes(dow) ?? false)) return false;
+      const diff = daysBetween(startDateObj, currentDateObj);
+      const weeksDiff = Math.floor(diff / 7);
+      return weeksDiff >= 0 && weeksDiff % interval === 0;
+    }
+
+    if (habit.customType === 'monthly') {
+      const startDay = parseInt(habit.startDate.split('-')[2], 10);
+      const thisDay = parseInt(dateStr.split('-')[2], 10);
+      if (startDay !== thisDay) return false;
+      const startParts = habit.startDate.split('-').map(Number);
+      const dateParts = dateStr.split('-').map(Number);
+      const monthsDiff = (dateParts[0] - startParts[0]) * 12 + (dateParts[1] - startParts[1]);
+      return monthsDiff >= 0 && monthsDiff % interval === 0;
+    }
   }
 
   return false;
@@ -131,33 +170,34 @@ export function getHabitCycleStart(
     return startStr;
   }
 
-  // For keepUntil habits, find the FIRST incomplete scheduled day
-  if (habit.keepUntil && habit.completionHistory) {
+  // For keepUntil habits, find the earliest incomplete scheduled day after the last completion
+  if (habit.keepUntil) {
+    const history = habit.completionHistory ?? [];
     let earliestIncomplete: string | null = null;
 
-    // Look back up to 365 days for incomplete work
     for (let i = 0; i < 365; i++) {
       const d = new Date(date);
       d.setDate(date.getDate() - i);
       const dStr = getHabitDate(d, resetHour, resetMinute);
 
-      // Stop if we go before start date
       if (dStr < startStr) break;
 
-      // Check if this day was scheduled
       const wasScheduled = isHabitScheduledForDate(habit, d, resetHour, resetMinute);
+      if (!wasScheduled) continue;
 
-      if (wasScheduled) {
-        // If completed, stop here - cycle starts AFTER completion
-        if (habit.completionHistory.includes(dStr)) {
-          break;
-        }
-        // If incomplete, this is part of current cycle
-        earliestIncomplete = dStr;
+      let completed = history.includes(dStr);
+      if (habit.increment && !completed) {
+        const amt = habit.incrementHistory?.[dStr] ?? 0;
+        const goal = habit.incrementGoal && habit.incrementGoal > 0 ? habit.incrementGoal : 1;
+        completed = amt >= goal;
       }
+
+      if (completed) {
+        break;
+      }
+      earliestIncomplete = dStr;
     }
 
-    // If we found incomplete work, use that as cycle start
     if (earliestIncomplete) {
       return earliestIncomplete;
     }
@@ -168,6 +208,11 @@ export function getHabitCycleStart(
   // Daily habits
   if (habit.frequency === 'Daily') {
     return todayStr;
+  }
+
+  // Weekly Goal — cycle start is Monday of the current week
+  if (habit.frequency === 'Weekly Goal') {
+    return getWeekDatesForDate(todayStr)[0];
   }
 
   // Weekly habits (based on selectedDays)
@@ -201,6 +246,21 @@ export function getHabitCycleStart(
     return getHabitDate(cycleDate, resetHour, resetMinute);
   }
 
+  // Custom habits — walk backwards to find last scheduled date
+  if (habit.frequency === 'Custom') {
+    const maxLookback = habit.customType === 'monthly'
+      ? 365
+      : (habit.customInterval ?? 1) * 7 + 1;
+
+    for (let i = 0; i < maxLookback; i++) {
+      const d = new Date(date);
+      d.setDate(d.getDate() - i);
+      if (isHabitScheduledForDate(habit, d, resetHour, resetMinute)) {
+        return getHabitDate(d, resetHour, resetMinute);
+      }
+    }
+  }
+
   return todayStr;
 }
 
@@ -209,16 +269,16 @@ export function getHabitCycleStart(
 ============================================================================ */
 
 /**
- * Determines whether a habit should be visible on a given date.
+ * determines whether a habit should be visible on a given date.
  *
- * For keepUntil habits:
- * - Shows on the day it was scheduled (based on frequency)
- * - Shows on the day it was completed (for viewing history)
- * - Carries over ONLY to actual today if incomplete
- * - Does NOT show on random future dates when browsing
+ * for keepUntil habits:
+ * - shows on the day it was scheduled (based on frequency)
+ * - shows on the day it was completed (for viewing history)
+ * - carries over ONLY to actual today if incomplete
+ * - does not show on random future dates when browsing
  *
- * For normal habits:
- * - Shows only on scheduled days
+ * for normal habits:
+ * - shows only on scheduled days
  */
 export function isHabitActiveToday(
   habit: Habit,
@@ -230,7 +290,8 @@ export function isHabitActiveToday(
   const actualTodayStr = getHabitDate(new Date(), resetHour, resetMinute);
   const isViewingToday = todayStr === actualTodayStr;
 
-  // Archived handling:
+  // **REVIEW:
+  // archived handling:
   // - repeating habits: archived means "never show"
   // - one-time habits: allow showing on the day they were skipped/completed/start for history
   if (habit.archivedAt) {
@@ -245,11 +306,11 @@ export function isHabitActiveToday(
     return false;
   }
 
-  // Not started yet
+  // habit not started yet
   if (todayStr < habit.startDate) return false;
 
-  // Snoozed — hidden until snoozedUntil day (reappears ON that day)
-  // .slice(0,10) normalizes legacy ISO strings ("2026-02-17T05:00:00Z" → "2026-02-17")
+  // snoozed — hidden until snoozedUntil day (reappears ON that day)
+  // .slice(0,10) normalizes legacy ISO strings ("2026-02-17T05:00:00Z" to "2026-02-17")
   const snoozeDay = habit.snoozedUntil?.slice(0, 10);
   const snoozeFrom = habit.snoozedFrom?.slice(0, 10);
 
@@ -331,6 +392,9 @@ export function isHabitActiveToday(
     }
   }
 
+  // End date: stop scheduling new occurrences after end date
+  if (habit.endDate && todayStr > habit.endDate) return false;
+
   // Standard scheduling rules for repeating habits
 
   // Daily habits
@@ -350,6 +414,19 @@ export function isHabitActiveToday(
     return false;
   }
 
+  // Weekly Goal — visible every day of the week
+  if (habit.frequency === 'Weekly Goal') {
+    const dateMonday = getWeekDatesForDate(todayStr)[0];
+    const startMonday = getWeekDatesForDate(habit.startDate)[0];
+    if (dateMonday < startMonday) return false;
+    // endDate check: compare against Monday so the full last week shows
+    if (habit.endDate) {
+      const endMonday = getWeekDatesForDate(habit.endDate)[0];
+      if (dateMonday > endMonday) return false;
+    }
+    return true;
+  }
+
   // Monthly habits
   if (habit.frequency === 'Monthly') {
     if (habit.startDate > todayStr) return false;
@@ -357,6 +434,11 @@ export function isHabitActiveToday(
     const startDay = parseInt(habit.startDate.split('-')[2], 10);
     const todayDay = parseInt(todayStr.split('-')[2], 10);
     return startDay === todayDay;
+  }
+
+  // Custom habits — delegate to isHabitScheduledForDate
+  if (habit.frequency === 'Custom') {
+    return isHabitScheduledForDate(habit, date, resetHour, resetMinute);
   }
 
   return false;
@@ -373,21 +455,34 @@ export const getHabitStatus = (
   dateStr: string,
   isViewingToday: boolean,
   todayStr: string, // must be computed via getHabitDate to respect reset hour — never raw new Date()
+  viewingDate?: Date,
+  resetHour?: number,
+  resetMinute?: number,
 ): HabitStatus => {
+  // keepUntil: use cycle start; Weekly Goal: use Monday; snoozed: use snoozedFrom
+  const effectiveDateStr =
+    (habit.keepUntil && viewingDate && resetHour !== undefined && resetMinute !== undefined)
+      ? getHabitCycleStart(habit, viewingDate, resetHour, resetMinute)
+      : habit.frequency === 'Weekly Goal'
+        ? getWeekDatesForDate(dateStr)[0]
+        : habit.snoozedFrom
+          ? habit.snoozedFrom
+          : dateStr;
+
   // snoozed check first so snoozed habits don't show as missed
   // use < (not <=) so the habit is active ON the snoozedUntil day
   // .slice(0,10) normalizes legacy ISO strings ("2026-02-17T05:00:00Z" → "2026-02-17")
   if (habit.snoozedUntil && dateStr < habit.snoozedUntil.slice(0, 10)) return 'snoozed';
 
   // completed via checkmark
-  if (habit.completionHistory?.includes(dateStr)) return 'completed';
+  if (habit.completionHistory?.includes(effectiveDateStr)) return 'completed';
 
   // completed via increment goal reached
   if (habit.increment) {
     // Time-tracking habits: check weekly total instead of daily
     const amount = isTimeTrackingHabit(habit)
       ? getWeeklyTimeTotal(habit.incrementHistory, dateStr)
-      : (habit.incrementHistory?.[dateStr] ?? 0);
+      : (habit.incrementHistory?.[effectiveDateStr] ?? 0);
 
     // goal logic must match HabitItem:
     // - keepUntil increments: goal defaults to 1
@@ -400,8 +495,8 @@ export const getHabitStatus = (
     if (goal > 0 && amount >= goal) return 'completed';
   }
 
-  // explicitly skipped
-  if (habit.skippedDates?.includes(dateStr)) return 'skipped';
+  // explicitly skipped habits
+  if (habit.skippedDates?.includes(effectiveDateStr)) return 'skipped';
 
   // past date and never completed = missed
   // uses todayStr (reset-hour-aware) not raw UTC to avoid off-by-one around midnight
@@ -410,6 +505,66 @@ export const getHabitStatus = (
   return 'active';
 };
 
+function computeHabitStreak(
+  habit: Habit,
+  resetHour: number,
+  resetMinute: number
+): number {
+  const history = habit.completionHistory ?? [];
+  if (history.length === 0) return 0;
+
+  const oneTime = !habit.frequency || habit.frequency === 'None';
+  if (oneTime) return 0;
+
+  const todayStr = getHabitDate(new Date(), resetHour, resetMinute);
+
+  // Weekly Goal: count consecutive completed weeks
+  if (habit.frequency === 'Weekly Goal') {
+    let streak = 0;
+    const thisMonday = getWeekDatesForDate(todayStr)[0];
+    const startMonday = getWeekDatesForDate(habit.startDate)[0];
+
+    for (let i = 0; i < 52; i++) {
+      const d = parseLocalDate(thisMonday);
+      d.setDate(d.getDate() - i * 7);
+      const monday = formatLocalDate(d);
+      if (monday < startMonday) break;
+
+      if (history.includes(monday)) {
+        streak++;
+      } else {
+        if (monday === thisMonday) continue;
+        break;
+      }
+    }
+    return streak;
+  }
+
+  let streak = 0;
+
+  for (let i = 0; i < 365; i++) {
+    const d = parseLocalDate(todayStr);
+    d.setDate(d.getDate() - i);
+
+    if (!isHabitScheduledForDate(habit, d, resetHour, resetMinute)) continue;
+
+    const ds = formatLocalDate(d);
+
+    if (ds < habit.startDate) break;
+
+    if (habit.skippedDates?.includes(ds)) continue;
+
+    if (history.includes(ds)) {
+      streak++;
+    } else {
+      if (ds === todayStr) continue;
+      break;
+    }
+  }
+
+  return streak;
+}
+
 export const addStatusToHabits = (
   habits: Habit[],
   viewingDate: Date,
@@ -417,12 +572,13 @@ export const addStatusToHabits = (
   resetMinute: number
 ): (Habit & { status: HabitStatus })[] => {
   const dateStr = getHabitDate(viewingDate, resetHour, resetMinute);
-  const todayStr = getHabitDate(new Date(), resetHour, resetMinute); // same source — respects reset hour
+  const todayStr = getHabitDate(new Date(), resetHour, resetMinute);
   const isViewingToday = dateStr === todayStr;
 
   return habits.map(h => ({
     ...h,
-    status: getHabitStatus(h, dateStr, isViewingToday, todayStr),
+    streak: computeHabitStreak(h, resetHour, resetMinute),
+    status: getHabitStatus(h, dateStr, isViewingToday, todayStr, viewingDate, resetHour, resetMinute),
   }));
 };
 
@@ -432,40 +588,50 @@ export const addStatusToHabits = (
 
 export const getProgressUnitsForDay = (
   habits: (Habit & { status: HabitStatus })[],
-  dateStr: string
+  dateStr: string,
+  viewingDate?: Date,
+  resetHour?: number,
+  resetMinute?: number,
 ): { progressTotal: number; progressEarned: number; progressSkipped: number } => {
-  // progressTotal  = completed + active + missed (your real workload for the day)
-  // progressEarned = completed (how much you've done)
-  // progressSkipped = skipped + snoozed (shown as a separate color, not in the denominator)
   let progressTotal = 0;
   let progressEarned = 0;
   let progressSkipped = 0;
 
   for (const h of habits) {
+    if (h.frequency === 'Weekly Goal') continue;
+
     if (h.status === 'skipped' || h.status === 'snoozed') {
       progressSkipped += 1;
       continue;
     }
 
-    // completed, active, missed all count toward the workload total
     progressTotal += 1;
 
-    if (h.status !== 'completed') continue;
+    if (h.increment) {
+      const effectiveDate =
+        (h.keepUntil || h.frequency === 'Weekly Goal') && viewingDate && resetHour !== undefined && resetMinute !== undefined
+          ? getHabitCycleStart(h, viewingDate, resetHour, resetMinute)
+          : h.snoozedFrom
+            ? h.snoozedFrom
+            : dateStr;
 
-    if (!h.increment) {
-      progressEarned += 1;
+      const currentAmount = isTimeTrackingHabit(h)
+        ? getWeeklyTimeTotal(h.incrementHistory, dateStr)
+        : (h.incrementHistory?.[effectiveDate] ?? 0);
+      const goal = h.keepUntil
+        ? (h.incrementGoal && h.incrementGoal > 0 ? h.incrementGoal : 1)
+        : (h.incrementGoal ?? 0);
+
+      if (goal > 0) {
+        progressEarned += Math.min(currentAmount / goal, 1);
+      } else if (h.status === 'completed') {
+        progressEarned += 1;
+      }
       continue;
     }
 
-    // increment habits: partial progress
-    const currentAmount = isTimeTrackingHabit(h)
-      ? getWeeklyTimeTotal(h.incrementHistory, dateStr)
-      : (h.incrementHistory?.[dateStr] ?? 0);
-    const goal = typeof h.incrementGoal === 'number' ? h.incrementGoal : 0;
-    if (goal > 0) {
-      progressEarned += Math.min(currentAmount / goal, 1);
-    } else {
-      progressEarned += currentAmount > 0 ? 1 : 0;
+    if (h.status === 'completed') {
+      progressEarned += 1;
     }
   }
 

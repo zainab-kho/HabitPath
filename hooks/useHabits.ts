@@ -8,15 +8,18 @@ import { formatLocalDate, getHabitDate } from '@/utils/dateUtils';
 import { getResetTime } from '@/lib/supabase/queries';
 import {
   addStatusToHabits,
+  getHabitCycleStart,
   getProgressUnitsForDay,
   HabitStatus,
   isHabitActiveToday,
   updateAppStreak,
 } from '@/utils/habitUtils';
 import {
+  archiveEndedHabits,
   deleteHabit as deleteHabitService,
   loadHabitsFromSupabase,
   skipHabit as skipHabitService,
+  unskipHabit as unskipHabitService,
   snoozeHabit as snoozeHabitService,
   toggleHabitCompletion,
   updateHabitIncrement,
@@ -27,12 +30,7 @@ import {
   snoozeQuestGoal,
   skipQuestGoal,
 } from '@/lib/supabase/queries/questGoalHabits';
-import {
-  isInCacheWindow,
-  loadFromCache,
-  saveToCache,
-  getTotalPoints,
-} from '@/services/habits/cache';
+import { getTotalPoints } from '@/services/habits/cache';
 
 // ─── types ────────────────────────────────────────────────────────────────────
 
@@ -44,7 +42,7 @@ export function useHabits(viewingDate: Date = new Date()) {
   const { user } = useAuth();
 
   const [habits, setHabits] = useState<HabitWithStatus[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [resetTime, setResetTime] = useState({ hour: 4, minute: 0 });
@@ -56,7 +54,13 @@ export function useHabits(viewingDate: Date = new Date()) {
   const [progressEarned, setProgressEarned] = useState(0);
   const [progressSkipped, setProgressSkipped] = useState(0);
 
+  // Track which date the current habits state was computed for
+  const [habitsForDate, setHabitsForDate] = useState<string | null>(null);
+
   const dateStr = getHabitDate(viewingDate, resetTime.hour, resetTime.minute);
+
+  // Derived loading: true during initial fetch OR when habits are for a different date
+  const loading = initialLoading || habitsForDate !== dateStr;
 
   // raw habits from DB/cache — date-independent, used to reprocess on date change without fetching
   const rawHabitsRef = useRef<Habit[]>([]);
@@ -87,18 +91,19 @@ export function useHabits(viewingDate: Date = new Date()) {
 
       // compute progress units for progress bar
       const { progressTotal, progressEarned, progressSkipped } =
-        getProgressUnitsForDay(withStatus, ds);
+        getProgressUnitsForDay(withStatus, ds, viewingDate, reset.hour, reset.minute);
 
-      // earned points for the day (for display in header)
-      const earned = updatedHabits.reduce((sum, h) => {
-        if (h.completionHistory?.includes(ds)) return sum + (h.rewardPoints || 0);
+      // earned points for the day (only fully completed daily habits, not weekly goals)
+      const earned = withStatus.reduce((sum, h) => {
+        if (h.frequency === 'Weekly Goal') return sum;
+        if (h.status === 'completed') return sum + (h.rewardPoints || 0);
         return sum;
       }, 0);
 
-      // **TODO: find a way to make everything load at the same time
       unstable_batchedUpdates(() => {
         setAllHabits(updatedHabits);
         setHabits(withStatus);
+        setHabitsForDate(ds);
         setProgressTotal(progressTotal);
         setProgressEarned(progressEarned);
         setProgressSkipped(progressSkipped);
@@ -119,7 +124,7 @@ export function useHabits(viewingDate: Date = new Date()) {
   const loadHabits = useCallback(async () => {
     if (!user) {
       setHabits([]);
-      setLoading(false);
+      setInitialLoading(false);
       return;
     }
 
@@ -127,47 +132,32 @@ export function useHabits(viewingDate: Date = new Date()) {
       const reset = await getResetTime();
       setResetTime(reset);
 
-      // load cache for immediate display and for merge with fresh data
-      const cached = await loadFromCache();
+      // Fetch everything in parallel — habits, quest goals, archive ended habits
+      const [fresh, questGoals] = await Promise.all([
+        loadHabitsFromSupabase(user.id),
+        loadQuestGoalsAsHabits(user.id),
+        archiveEndedHabits(user.id).catch(console.error),
+      ]);
+      const merged = [...fresh, ...questGoals];
 
-      if (isInCacheWindow(viewingDate)) {
-        // show cache immediately so the UI isn't blank
-        if (cached && cached.length > 0) {
-          applyHabitsUpdate(cached, reset);
-          setLoading(false);
-        }
-
-        // always fetch fresh in background, passing cache for completion history merge
-        const [fresh, questGoals] = await Promise.all([
-          loadHabitsFromSupabase(user.id, cached ?? []),
-          loadQuestGoalsAsHabits(user.id),
-        ]);
-        const merged = [...fresh, ...questGoals];
-        await saveToCache(fresh, reset); // only cache real habits, not quest goals
-        applyHabitsUpdate(merged, reset);
-      } else {
-        setLoading(true);
-        const [fresh, questGoals] = await Promise.all([
-          loadHabitsFromSupabase(user.id, cached ?? []),
-          loadQuestGoalsAsHabits(user.id),
-        ]);
-        const merged = [...fresh, ...questGoals];
-        applyHabitsUpdate(merged, reset);
-      }
-
+      // Fetch streak + points before updating UI so everything lands in one render
       const [streak, total] = await Promise.all([
-        updateAppStreak(rawHabitsRef.current, reset.hour, reset.minute),
+        updateAppStreak(fresh, reset.hour, reset.minute),
         getTotalPoints(),
       ]);
-      setAppStreak(streak);
-      setTotalPoints(total);
 
-      setLoading(false);
-      setError(null);
+      // All state updates in one batch — no intermediate renders
+      unstable_batchedUpdates(() => {
+        applyHabitsUpdate(merged, reset);
+        setAppStreak(streak);
+        setTotalPoints(total);
+        setInitialLoading(false);
+        setError(null);
+      });
     } catch (err) {
       console.error('Error loading habits:', err);
       setError('Failed to load habits');
-      setLoading(false);
+      setInitialLoading(false);
     }
   }, [user, applyHabitsUpdate]);
 
@@ -177,10 +167,17 @@ export function useHabits(viewingDate: Date = new Date()) {
     async (habitId: string) => {
       if (!user) return;
 
-      const ds = getHabitDate(viewingDate, resetTime.hour, resetTime.minute);
+      const rawDs = getHabitDate(viewingDate, resetTime.hour, resetTime.minute);
       const currentHabits = stripStatus(habits);
       const target = currentHabits.find(h => h.id === habitId);
       if (!target) return;
+
+      // keepUntil / Weekly Goal: use cycle start; snoozed: use snoozedFrom
+      const ds = (target.frequency === 'Weekly Goal' || target.keepUntil)
+        ? getHabitCycleStart(target, viewingDate, resetTime.hour, resetTime.minute)
+        : target.snoozedFrom
+          ? target.snoozedFrom
+          : rawDs;
 
       const isCurrentlyCompleted = target.completionHistory?.includes(ds) ?? false;
 
@@ -211,7 +208,6 @@ export function useHabits(viewingDate: Date = new Date()) {
         }
 
         const updatedHabits = await toggleHabitCompletion(habitId, currentHabits, ds, resetTime.hour, resetTime.minute, user.id);
-        await saveToCache(updatedHabits.filter(h => !h.isQuestGoal), resetTime);
         applyHabitsUpdate(updatedHabits, resetTime);
 
         const [streak, total] = await Promise.all([
@@ -232,9 +228,14 @@ export function useHabits(viewingDate: Date = new Date()) {
     async (habitId: string, newAmount: number) => {
       if (!user) return;
 
-      const ds = getHabitDate(viewingDate, resetTime.hour, resetTime.minute);
+      const rawDs = getHabitDate(viewingDate, resetTime.hour, resetTime.minute);
       const currentHabits = stripStatus(habits);
       const target = currentHabits.find(h => h.id === habitId);
+      const ds = (target?.frequency === 'Weekly Goal' || target?.keepUntil)
+        ? getHabitCycleStart(target, viewingDate, resetTime.hour, resetTime.minute)
+        : target?.snoozedFrom && target?.increment
+          ? target.snoozedFrom
+          : rawDs;
 
       // optimistic
       setHabits(prev => prev.map(h =>
@@ -250,7 +251,6 @@ export function useHabits(viewingDate: Date = new Date()) {
         if (target?.isQuestGoal) return;
 
         const updatedHabits = await updateHabitIncrement(habitId, currentHabits, ds, newAmount, user.id);
-        await saveToCache(updatedHabits.filter(h => !h.isQuestGoal), resetTime);
         applyHabitsUpdate(updatedHabits, resetTime);
       } catch (err) {
         console.error('Error updating increment:', err);
@@ -262,13 +262,11 @@ export function useHabits(viewingDate: Date = new Date()) {
 
   const addHabit = useCallback(
     async (newHabit: Habit) => {
-      const withStatus: HabitWithStatus = { ...newHabit, status: 'active' };
-      setHabits(prev => [withStatus, ...prev]);
-
-      const currentHabits = stripStatus(habits);
-      await saveToCache([...currentHabits, newHabit], resetTime);
+      // Use rawHabitsRef for the current truth — `habits` state can be stale in closures
+      const updatedHabits = [...rawHabitsRef.current, newHabit];
+      applyHabitsUpdate(updatedHabits, resetTime);
     },
-    [habits, resetTime]
+    [resetTime, applyHabitsUpdate]
   );
 
   /**
@@ -313,7 +311,6 @@ export function useHabits(viewingDate: Date = new Date()) {
           user.id,
           ds
         );
-        await saveToCache(updatedHabits.filter(h => !h.isQuestGoal), resetTime);
         applyHabitsUpdate(updatedHabits, resetTime);
       } catch (err) {
         console.error('Error snoozing habit:', err);
@@ -352,10 +349,42 @@ export function useHabits(viewingDate: Date = new Date()) {
         }
 
         const updatedHabits = await skipHabitService(habitId, currentHabits, ds, user.id);
-        await saveToCache(updatedHabits.filter(h => !h.isQuestGoal), resetTime);
         applyHabitsUpdate(updatedHabits, resetTime);
       } catch (err) {
         console.error('Error skipping habit:', err);
+        loadHabits();
+      }
+    },
+    [habits, viewingDate, resetTime, user, applyHabitsUpdate, loadHabits]
+  );
+
+  const unskipHabit = useCallback(
+    async (habitId: string) => {
+      if (!user) return;
+      const ds = getHabitDate(viewingDate, resetTime.hour, resetTime.minute);
+      try {
+        const currentHabits = stripStatus(habits);
+        const updatedHabits = await unskipHabitService(habitId, currentHabits, ds, user.id);
+        applyHabitsUpdate(updatedHabits, resetTime);
+      } catch (err) {
+        console.error('Error unskipping habit:', err);
+        loadHabits();
+      }
+    },
+    [habits, viewingDate, resetTime, user, applyHabitsUpdate, loadHabits]
+  );
+
+  const unskipAndCompleteHabit = useCallback(
+    async (habitId: string) => {
+      if (!user) return;
+      const ds = getHabitDate(viewingDate, resetTime.hour, resetTime.minute);
+      try {
+        const currentHabits = stripStatus(habits);
+        const unskipped = await unskipHabitService(habitId, currentHabits, ds, user.id);
+        const completed = await toggleHabitCompletion(habitId, unskipped, ds, resetTime.hour, resetTime.minute, user.id);
+        applyHabitsUpdate(completed, resetTime);
+      } catch (err) {
+        console.error('Error unskipping and completing habit:', err);
         loadHabits();
       }
     },
@@ -367,7 +396,6 @@ export function useHabits(viewingDate: Date = new Date()) {
       if (!user) return;
       try {
         const updatedHabits = await deleteHabitService(habitId, stripStatus(habits), user.id);
-        await saveToCache(updatedHabits, resetTime);
         applyHabitsUpdate(updatedHabits, resetTime);
       } catch (err) {
         console.error('Error deleting habit:', err);
@@ -384,14 +412,13 @@ export function useHabits(viewingDate: Date = new Date()) {
     loadHabits();
   }, [loadHabits]);
 
-  // date navigation — instant reprocess from ref, no fetch, no flicker
+  // date navigation — reprocess from ref. The derived `loading` (habitsForDate !== dateStr)
+  // automatically shows the spinner until this effect runs and applyHabitsUpdate sets habitsForDate.
   useEffect(() => {
     if (rawHabitsRef.current.length > 0) {
       applyHabitsUpdate(rawHabitsRef.current, resetTime);
     }
-  }, [viewingDate, resetTime]); // include resetTime // eslint-disable-line react-hooks/exhaustive-deps
-  // ↑ intentionally only viewingDate — applyHabitsUpdate and resetTime are stable
-  //   enough within a date-nav gesture that we don't need them here
+  }, [viewingDate, resetTime]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─── return ─────────────────────────────────────────────────────────────────
 
@@ -417,6 +444,8 @@ export function useHabits(viewingDate: Date = new Date()) {
     updateIncrement,
     snoozeHabit,
     skipHabit,
+    unskipHabit,
+    unskipAndCompleteHabit,
     deleteHabit,
   };
 }

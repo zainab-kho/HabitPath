@@ -28,9 +28,11 @@ export interface Habit {
   lastCompletedDate?: string;
 
 
-  // temporary times of days for one day
+  // temporary overrides for one day
   tempTimeOfDay?: string;
   tempTimeOfDayDate?: string;
+  tempOrder?: number;
+  tempOrderDate?: string;
 
   // exceptions
   snoozedFrom?: string; // YYYY-MM-DD date string when the habit was snoozed
@@ -48,6 +50,13 @@ export interface Habit {
   incrementStep?: number;
   incrementType?: string; // e.g., 'miles', 'sips', 'minutes', 'reps'
   incrementHistory?: Record<string, number>; // date -> amount mapping
+
+  // custom frequency
+  customType?: 'daily' | 'weekly' | 'monthly';
+  customInterval?: number;
+
+  // end date (for any repeating habit)
+  endDate?: string;
 
   // history
   completionHistory?: string[];

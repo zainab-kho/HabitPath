@@ -4,11 +4,11 @@
  * core brand and UI colors used throughout the app
  */
 export const COLORS = {
-  Primary: '#99c8e8',
-  PrimaryLight: '#f49cbb',
+  Primary: '#9BDEAC',
+  PrimaryLight: '#F682A4',
   Secondary: '#dd2d4a',
-  Completed: '#E9E4F0',
-  ProgressColor: '#dcc4ff',
+  Completed: '#F0ABFF',
+  ProgressColor: '#9BDEAC',
   Rewards: '#FF7F50',
   RewardsBackground: '#E4E986',
   RewardsAccent: '#7FD1AE',
@@ -127,6 +127,7 @@ export const BUTTON_COLORS = {
   Close: '#ffc8c8ff',
   Delete: '#ff5656',
   Edit: '#d8c8ffff',
+  Quiet: '#F2F2F2',
   Cancel: '#f0f0f0',
   Disabled: '#ccc'
 } as const;

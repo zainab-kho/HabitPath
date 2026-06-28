@@ -1,17 +1,18 @@
 // components/habits/HabitsList.tsx
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import Animated, { useAnimatedRef } from 'react-native-reanimated';
+import Sortable from 'react-native-sortables';
 import { useRouter } from 'expo-router';
 
 import HabitItem from '@/components/habits/HabitItem';
 import HabitSectionHeader from '@/components/habits/HabitSectionHeader';
-import { isHabitActiveToday } from '@/utils/habitUtils';
+import { getHabitCycleStart, getWeeklyTimeTotal } from '@/utils/habitUtils';
 import HabitDetailModal from '@/modals/HabitDetailModal';
 import TimeLogModal from '@/modals/habits/TimeLogModal';
 import { toggleQuestSubtaskCompletion } from '@/lib/supabase/queries/questGoalHabits';
-import { getWeeklyTimeTotal } from '@/utils/habitUtils';
 import { COLORS, PAGE } from '@/constants/colors';
 import { TIME_OPTIONS } from '@/constants/habits';
 import { SYSTEM_ICONS } from '@/constants/icons';
@@ -23,37 +24,65 @@ import ShadowBox from '@/ui/ShadowBox';
 import { getHabitDate } from '@/utils/dateUtils';
 
 import { HabitWithStatus } from '@/hooks/useHabits';
+import {
+  applyDailyOrder,
+  saveDailyOrder,
+  saveTempTimeOfDay,
+} from '@/hooks/useDailyHabitOverrides';
 
 interface HabitsListProps {
   habits: HabitWithStatus[];
+  loading?: boolean;
   viewingDate: Date | null;
   resetTime: { hour: number; minute: number };
+  userId: string;
   onToggleHabit: (habitId: string) => void;
   onIncrementUpdate?: (habitId: string, newAmount: number) => void;
   onSkipHabit?: (habitId: string) => void;
+  onUnskipHabit?: (habitId: string) => void;
+  onUnskipAndCompleteHabit?: (habitId: string) => void;
   onSnoozeHabit?: (habitId: string) => void;
 }
 
 type TimeOfDay = typeof TIME_OPTIONS[number];
 
-const DEBUG = false;
+// Union type for items in the flat sortable list
+type ListItem =
+  | { type: 'header'; id: string; timeOfDay: TimeOfDay; count: number }
+  | { type: 'habit'; id: string; habit: HabitWithStatus };
+
+const AnimatedScrollView = Animated.createAnimatedComponent(ScrollView);
+
+function getSection(habit: Pick<Habit, 'selectedTimeOfDay' | 'tempTimeOfDay' | 'tempTimeOfDayDate'>, dateStr: string): TimeOfDay {
+  const tod = (habit.tempTimeOfDay && habit.tempTimeOfDayDate === dateStr)
+    ? habit.tempTimeOfDay
+    : (habit.selectedTimeOfDay ?? 'Anytime');
+  return tod as TimeOfDay;
+}
 
 export default function HabitsList({
   habits,
+  loading,
   viewingDate,
   resetTime,
+  userId,
   onToggleHabit,
   onIncrementUpdate,
   onSkipHabit,
+  onUnskipHabit,
+  onUnskipAndCompleteHabit,
   onSnoozeHabit,
 }: HabitsListProps) {
   const router = useRouter();
   const currentDate = viewingDate || new Date();
   const dateStr = getHabitDate(currentDate, resetTime.hour, resetTime.minute);
+  const scrollableRef = useAnimatedRef<Animated.ScrollView>();
 
   const [showCompleted, setShowCompleted] = useState(true);
-  const [orderedHabits, setOrderedHabits] = useState<HabitWithStatus[]>([]);
   const [expandedQuestGoals, setExpandedQuestGoals] = useState<Set<string>>(new Set());
+
+  // No snapshot needed — `loading` from useHabits is derived (habitsForDate !== dateStr),
+  // so it's always true when habits don't match the current date. Safe to use habits directly.
 
   // Modal state
   const [selectedHabit, setSelectedHabit] = useState<HabitWithStatus | null>(null);
@@ -68,9 +97,25 @@ export default function HabitsList({
     setTimeLogVisible(true);
   };
 
+  const handleUndoIncrement = (habitId: string) => {
+    if (!onIncrementUpdate) return;
+    const habit = activeHabits.find(h => h.id === habitId);
+    if (!habit?.increment) return;
+
+    const effectiveDate = (habit.keepUntil || habit.frequency === 'Weekly Goal')
+      ? getHabitCycleStart(habit, currentDate, resetTime.hour, resetTime.minute)
+      : habit.snoozedFrom && habit.increment
+        ? habit.snoozedFrom
+        : dateStr;
+
+    const currentAmount = habit.incrementHistory?.[effectiveDate] ?? 0;
+    const step = habit.incrementStep && habit.incrementStep > 0 ? habit.incrementStep : 1;
+    const newAmount = Math.max(0, currentAmount - step);
+    onIncrementUpdate(habitId, newAmount);
+  };
+
   const handleLogTime = (minutes: number) => {
     if (!timeLogHabit || !onIncrementUpdate) return;
-    // Add logged minutes to today's amount
     const todayAmount = timeLogHabit.incrementHistory?.[dateStr] ?? 0;
     onIncrementUpdate(timeLogHabit.id, todayAmount + minutes);
   };
@@ -84,31 +129,43 @@ export default function HabitsList({
     });
   };
 
+  // Local subtask completion overrides (optimistic, persisted to Supabase)
+  const [subtaskOverrides, setSubtaskOverrides] = useState<Record<string, boolean>>({});
+
   const handleToggleSubtask = async (subtaskId: string, completed: boolean) => {
     try {
+      setSubtaskOverrides(prev => ({ ...prev, [subtaskId]: completed }));
       await toggleQuestSubtaskCompletion(subtaskId, completed);
-      // Optimistically update local state
-      setOrderedHabits(prev => prev.map(h => {
-        if (!h.isQuestGoal || !h.questSubtasks) return h;
-        return {
-          ...h,
-          questSubtasks: h.questSubtasks.map(s =>
-            s.id === subtaskId ? { ...s, completed } : s
-          ),
-        };
-      }));
     } catch (err) {
       console.error('Error toggling quest subtask:', err);
+      // revert on error
+      setSubtaskOverrides(prev => {
+        const next = { ...prev };
+        delete next[subtaskId];
+        return next;
+      });
     }
   };
 
-  const ORDER_STORAGE_KEY = `@habit_order_${dateStr}`;
+  // Apply subtask overrides to habits
+  const displayHabits = useMemo(() => {
+    if (Object.keys(subtaskOverrides).length === 0) return habits;
+    return habits.map(h => {
+      if (!h.isQuestGoal || !h.questSubtasks) return h;
+      return {
+        ...h,
+        questSubtasks: h.questSubtasks.map(s =>
+          subtaskOverrides[s.id] !== undefined ? { ...s, completed: subtaskOverrides[s.id] } : s
+        ),
+      };
+    });
+  }, [habits, subtaskOverrides]);
 
-  const activeHabits = habits.filter(habit =>
-    isHabitActiveToday(habit, currentDate, resetTime.hour, resetTime.minute)
-  );
-  const regularActiveHabits = activeHabits.filter(h => !h.isQuestGoal);
-  const incompleteCount = regularActiveHabits.filter(h => h.status !== 'completed').length;
+  // displayHabits = habits + local subtask overrides. Already active-only from applyHabitsUpdate.
+  const activeHabits = displayHabits;
+  const regularActiveHabits = activeHabits.filter(h => !h.isQuestGoal && h.frequency !== 'Weekly Goal');
+  const weeklyAndQuestHabits = activeHabits.filter(h => h.isQuestGoal || h.frequency === 'Weekly Goal');
+  const incompleteCount = regularActiveHabits.filter(h => h.status !== 'completed' && h.status !== 'skipped').length;
   const scheduledHabits = regularActiveHabits;
   const allDoneToday = scheduledHabits.length > 0 && incompleteCount === 0;
 
@@ -119,162 +176,99 @@ export default function HabitsList({
       STORAGE_KEYS.TOGGLE_STATE,
       nextValue ? '1' : '0'
     );
-    console.log(nextValue ? 'showing completed' : 'hiding completed');
   };
 
-  useEffect(() => {
-    if (DEBUG) {
-      console.log('\n📋 ========== HABITS LIST DEBUG ==========');
-      console.log('Viewing date:', currentDate.toISOString());
-      console.log('Habit date string:', dateStr);
-      console.log('Reset time:', `${resetTime.hour}:${resetTime.minute}`);
-      console.log('Total habits from hook:', habits.length);
-      console.log('Active habits after filter:', activeHabits.length);
-      console.log('\n🔍 Checking each habit:');
-
-      habits.forEach((habit, index) => {
-        const isActive = isHabitActiveToday(habit, currentDate, resetTime.hour, resetTime.minute);
-
-        console.log(`\n   ${index + 1}. ${habit.name}`);
-        console.log(`      Frequency: ${habit.frequency}`);
-        console.log(`      Start Date: ${habit.startDate}`);
-        console.log(`      Today (habit date): ${dateStr}`);
-        console.log(`      Is Active: ${isActive ? '✅ YES' : '❌ NO'}`);
-
-        if (!isActive) {
-          console.log(`      ❓ Why not active?`);
-
-          if (habit.startDate > dateStr) {
-            console.log(`         - Start date (${habit.startDate}) is AFTER today (${dateStr})`);
-          }
-
-          if (habit.snoozedUntil && dateStr < habit.snoozedUntil) {
-            console.log(`         - Habit is snoozed until ${habit.snoozedUntil}`);
-          }
-
-          if (habit.frequency === 'No Repeat' && habit.startDate !== dateStr) {
-            console.log(`         - No Repeat habit, start (${habit.startDate}) ≠ today (${dateStr})`);
-          }
-
-          if (habit.frequency === 'Weekly' && habit.startDate < dateStr) {
-            console.log(`         - Weekly habit, check selected days:`, habit.selectedDays);
-          }
-        }
-
-        if (habit.status === 'completed') {
-          console.log(`      ✓ Completed: YES`);
-        }
-      });
-
-      console.log('\n========================================\n');
-    }
-  }, [habits, activeHabits, dateStr, currentDate, resetTime]);
+  // Order comes directly from Supabase (tempOrder/tempOrderDate on each habit)
+  const orderedHabits = useMemo(
+    () => applyDailyOrder(activeHabits ?? [], dateStr),
+    [activeHabits, dateStr],
+  );
 
   useEffect(() => {
-    loadDailyOrder();
-
     (async () => {
       const stored = await AsyncStorage.getItem(STORAGE_KEYS.TOGGLE_STATE);
       if (stored !== null) {
         setShowCompleted(stored === '1');
       }
     })();
-  }, [habits, dateStr]);
+  }, []);
 
-  const loadDailyOrder = async () => {
-    try {
-      const savedOrder = await AsyncStorage.getItem(ORDER_STORAGE_KEY);
+  // Build the flat list: headers interleaved with habits, grouped by section
+  const flatList = useMemo(() => {
+    const regularOrdered = orderedHabits.filter(h => !h.isQuestGoal && h.frequency !== 'Weekly Goal');
+    const visible = showCompleted
+      ? regularOrdered
+      : regularOrdered.filter(h => h.status !== 'completed' && h.status !== 'skipped');
 
-      if (savedOrder) {
-        const orderIds = JSON.parse(savedOrder);
-        const sorted = [...activeHabits].sort((a, b) => {
-          const indexA = orderIds.indexOf(a.id);
-          const indexB = orderIds.indexOf(b.id);
-
-          const safeA = indexA === -1 ? Number.MAX_SAFE_INTEGER : indexA;
-          const safeB = indexB === -1 ? Number.MAX_SAFE_INTEGER : indexB;
-
-          if (safeA === Number.MAX_SAFE_INTEGER && safeB === Number.MAX_SAFE_INTEGER) {
-            return (a.startDate ?? '').localeCompare(b.startDate ?? '');
-          }
-
-          return safeA - safeB;
-        });
-        setOrderedHabits(sorted);
-      } else {
-        const defaultSorted = [...activeHabits].sort((a, b) =>
-          (a.startDate ?? '').localeCompare(b.startDate ?? '')
-        );
-        setOrderedHabits(defaultSorted);
-      }
-
-    } catch (error) {
-      console.error('Error loading habit order:', error);
-      const fallbackSorted = [...activeHabits].sort((a, b) =>
-        (a.startDate ?? '').localeCompare(b.startDate ?? '')
-      );
-      setOrderedHabits(fallbackSorted);
-    }
-  };
-
-  const saveDailyOrder = async (newOrder: HabitWithStatus[]) => {
-    try {
-      const orderIds = newOrder.map(h => h.id);
-      await AsyncStorage.setItem(ORDER_STORAGE_KEY, JSON.stringify(orderIds));
-    } catch (error) {
-      console.error('Error saving habit order:', error);
-    }
-  };
-
-  const groupByTimeOfDay = (habitsList: HabitWithStatus[]) => {
     const grouped: Record<TimeOfDay, HabitWithStatus[]> = {
-      'Wake Up': [],
-      'Morning': [],
-      'Anytime': [],
-      'Afternoon': [],
-      'Evening': [],
-      'Bed Time': [],
+      'Wake Up': [], 'Morning': [], 'Anytime': [],
+      'Afternoon': [], 'Evening': [], 'Bed Time': [],
     };
-
-    habitsList.forEach(habit => {
-      const timeOfDay = (habit.selectedTimeOfDay || 'Anytime') as TimeOfDay;
-      if (grouped[timeOfDay]) {
-        grouped[timeOfDay].push(habit);
-      } else {
-        grouped['Anytime'].push(habit);
-      }
+    visible.forEach(h => {
+      const section = getSection(h, dateStr);
+      (grouped[section] || grouped['Anytime']).push(h);
     });
 
-    return grouped;
-  };
-
-  const visibleHabits = showCompleted
-    ? orderedHabits
-    : orderedHabits.filter(h => h.status !== 'completed' && h.status !== 'skipped');
-
-  const groupedHabits = groupByTimeOfDay(visibleHabits);
-
-  const handleDragEnd = (timeOfDay: TimeOfDay, newOrder: HabitWithStatus[]) => {
-    const otherHabits = orderedHabits.filter(
-      h => (h.selectedTimeOfDay || 'Anytime') !== timeOfDay
-    );
-
-    const updatedOrder = [...otherHabits];
-
+    const items: ListItem[] = [];
     TIME_OPTIONS.forEach(time => {
-      if (time === timeOfDay) {
-        updatedOrder.push(...newOrder);
-      } else {
-        const habitsInTime = orderedHabits.filter(
-          h => (h.selectedTimeOfDay || 'Anytime') === time
-        );
-        updatedOrder.push(...habitsInTime);
+      const habitsInTime = grouped[time];
+      if (habitsInTime.length > 0) {
+        items.push({ type: 'header', id: `header-${time}`, timeOfDay: time, count: habitsInTime.length });
+        habitsInTime.forEach(h => items.push({ type: 'habit', id: h.id, habit: h }));
       }
     });
 
-    setOrderedHabits(updatedOrder);
-    saveDailyOrder(updatedOrder);
-  };
+    return items;
+  }, [orderedHabits, showCompleted, dateStr]);
+
+  const visibleWeeklyAndQuest = useMemo(() => {
+    if (showCompleted) return weeklyAndQuestHabits;
+    return weeklyAndQuestHabits.filter(h => h.status !== 'completed' && h.status !== 'skipped');
+  }, [weeklyAndQuestHabits, showCompleted]);
+
+  const firstHeaderId = flatList.length > 0 && flatList[0]?.type === 'header' ? flatList[0].id : null;
+
+  const handleDragEnd = useCallback(async (params: { key: string; data: ListItem[] }) => {
+    const { key: draggedKey, data: newOrder } = params;
+
+    let currentSection: TimeOfDay = 'Anytime';
+    const newHabitOrder: HabitWithStatus[] = [];
+    const sectionChanges: { habitId: string; newSection: TimeOfDay }[] = [];
+
+    for (const item of newOrder) {
+      if (item.type === 'header') {
+        currentSection = item.timeOfDay;
+      } else {
+        const habit = item.habit;
+        const oldSection = getSection(habit, dateStr);
+
+        if (oldSection !== currentSection) {
+          sectionChanges.push({ habitId: habit.id, newSection: currentSection });
+          newHabitOrder.push({
+            ...habit,
+            tempTimeOfDay: currentSection,
+            tempTimeOfDayDate: dateStr,
+          });
+        } else {
+          newHabitOrder.push(habit);
+        }
+      }
+    }
+
+    for (const change of sectionChanges) {
+      try {
+        await saveTempTimeOfDay(change.habitId, userId, change.newSection, dateStr);
+      } catch {
+        // Continue with other changes
+      }
+    }
+
+    const visibleIds = new Set(newHabitOrder.map(h => h.id));
+    const hiddenHabits = orderedHabits.filter(h => !visibleIds.has(h.id));
+    const fullOrder = [...newHabitOrder, ...hiddenHabits];
+
+    saveDailyOrder(fullOrder.map(h => h.id), userId, dateStr);
+  }, [orderedHabits, dateStr, userId]);
 
   const handleHabitPress = (habit: HabitWithStatus) => {
     setSelectedHabit(habit);
@@ -282,11 +276,18 @@ export default function HabitsList({
   };
 
   const handleModalUpdate = () => {
-    loadDailyOrder();
+    // Order is derived from habits prop (Supabase data) — no manual reload needed
   };
 
+  if (loading) {
+    return (
+      <View style={{ flex: 1, alignItems: 'center', marginTop: 60 }}>
+        <ActivityIndicator size="small" color={COLORS.Primary} />
+      </View>
+    );
+  }
+
   if (!habits || habits.length === 0) {
-    if (DEBUG) console.log('📭 No habits found in database');
     return (
       <EmptyStateView
         icon={SYSTEM_ICONS.habit}
@@ -300,8 +301,7 @@ export default function HabitsList({
     );
   }
 
-  const questGoalsActive = activeHabits.filter(h => h.isQuestGoal);
-  if (scheduledHabits.length === 0 && questGoalsActive.length === 0) {
+  if (scheduledHabits.length === 0 && weeklyAndQuestHabits.length === 0) {
     return (
       <View style={{ marginTop: 20, alignItems: 'center', gap: 20 }}>
         <Text style={[globalStyles.body, { opacity: 0.7 }]}>You have no habits today! Add a habit?</Text>
@@ -324,8 +324,8 @@ export default function HabitsList({
     );
   }
 
-  const renderHabitsList = () => (
-    <>
+  return (
+    <GestureHandlerRootView style={styles.container}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 }}>
         <View>
           <Text style={globalStyles.body}>You have {incompleteCount} goals left today!</Text>
@@ -348,45 +348,120 @@ export default function HabitsList({
         </View>
       )}
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.contentContainer}>
-        {TIME_OPTIONS.map(timeOfDay => {
-          const habitsInTime = groupedHabits[timeOfDay];
-          if (habitsInTime.length === 0) return null;
+      <AnimatedScrollView
+        ref={scrollableRef}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.contentContainer}
+      >
+        <Sortable.Grid
+          data={flatList}
+          columns={1}
+          customHandle
+          renderItem={({ item }) => {
+            if (item.type === 'header') {
+              const isFirstHeader = item.id === firstHeaderId;
+              if (isFirstHeader) {
+                return (
+                  <Sortable.Handle mode="fixed-order">
+                    <HabitSectionHeader
+                      title={item.timeOfDay}
+                      count={item.count}
+                    />
+                  </Sortable.Handle>
+                );
+              }
+              return (
+                <HabitSectionHeader
+                  title={item.timeOfDay}
+                  count={item.count}
+                />
+              );
+            }
 
-          return (
-            <View key={timeOfDay}>
-              <HabitSectionHeader title={timeOfDay} count={habitsInTime.length} />
-              <FlatList
-                data={habitsInTime}
-                renderItem={({ item }) => (
-                  <HabitItem
-                    habit={item}
-                    dateStr={dateStr}
-                    onToggle={() => onToggleHabit(item.id)}
-                    onPress={() => handleHabitPress(item)}
-                    onIncrementUpdate={onIncrementUpdate}
-                    onSkip={() => onSkipHabit?.(item.id)}
-                    onSnooze={() => onSnoozeHabit?.(item.id)}
-                    onToggleSubtask={handleToggleSubtask}
-                    questExpanded={expandedQuestGoals.has(item.id)}
-                    onToggleQuestExpand={() => toggleQuestGoalExpanded(item.id)}
-                    onNavigateToQuest={(questId) => router.push(`/(tabs)/quests/${questId}`)}
-                    onOpenTimeLog={handleOpenTimeLog}
-                  />
-                )}
-                keyExtractor={(item) => item.id}
-                scrollEnabled={false}
+            return (
+              <Sortable.Handle>
+                <HabitItem
+                  habit={item.habit}
+                  dateStr={dateStr}
+                  currentDate={currentDate}
+                  resetTime={resetTime}
+                  onToggle={() => onToggleHabit(item.habit.id)}
+                  onPress={() => handleHabitPress(item.habit)}
+                  onIncrementUpdate={onIncrementUpdate}
+                  onSkip={() => onSkipHabit?.(item.habit.id)}
+                  onUnskip={() => onUnskipHabit?.(item.habit.id)}
+                  onUnskipAndComplete={() => onUnskipAndCompleteHabit?.(item.habit.id)}
+                  onSnooze={() => onSnoozeHabit?.(item.habit.id)}
+                  onToggleSubtask={handleToggleSubtask}
+                  questExpanded={expandedQuestGoals.has(item.habit.id)}
+                  onToggleQuestExpand={() => toggleQuestGoalExpanded(item.habit.id)}
+                  onNavigateToQuest={(questId) => router.push(`/(tabs)/quests/${questId}`)}
+                  onOpenTimeLog={handleOpenTimeLog}
+                />
+              </Sortable.Handle>
+            );
+          }}
+          keyExtractor={(item) => item.id}
+          onDragEnd={handleDragEnd}
+          scrollableRef={scrollableRef}
+          dragActivationDelay={200}
+          activeItemScale={1.02}
+          activeItemShadowOpacity={0.15}
+          activeItemOpacity={1}
+          inactiveItemOpacity={1}
+          inactiveItemScale={1}
+          hapticsEnabled
+          overDrag="vertical"
+          reorderTriggerOrigin="touch"
+          itemEntering={null}
+          itemExiting={null}
+          itemsLayoutTransitionMode="reorder"
+        />
+
+        {visibleWeeklyAndQuest.length > 0 && (
+          <View style={{
+            marginTop: 10,
+            backgroundColor: COLORS.PrimaryLight + '20',
+            borderColor: '#000',
+            borderWidth: 1,
+            borderRadius: 15,
+            padding: 10,
+          }}>
+            <HabitSectionHeader
+              title="WEEKLY & QUESTS"
+              count={visibleWeeklyAndQuest.length}
+            />
+            {visibleWeeklyAndQuest.map(habit => (
+              <HabitItem
+                key={habit.id}
+                habit={habit}
+                dateStr={dateStr}
+                currentDate={currentDate}
+                resetTime={resetTime}
+                onToggle={() => onToggleHabit(habit.id)}
+                onPress={() => handleHabitPress(habit)}
+                onIncrementUpdate={onIncrementUpdate}
+                onSkip={() => onSkipHabit?.(habit.id)}
+                onUnskip={() => onUnskipHabit?.(habit.id)}
+                onUnskipAndComplete={() => onUnskipAndCompleteHabit?.(habit.id)}
+                onSnooze={() => onSnoozeHabit?.(habit.id)}
+                onToggleSubtask={handleToggleSubtask}
+                questExpanded={expandedQuestGoals.has(habit.id)}
+                onToggleQuestExpand={() => toggleQuestGoalExpanded(habit.id)}
+                onNavigateToQuest={(questId) => router.push(`/(tabs)/quests/${questId}`)}
+                onOpenTimeLog={handleOpenTimeLog}
               />
-            </View>
-          );
-        })}
-      </ScrollView>
+            ))}
+          </View>
+        )}
+      </AnimatedScrollView>
 
       <HabitDetailModal
         visible={modalVisible}
         habit={selectedHabit}
         onClose={() => setModalVisible(false)}
         onUpdate={handleModalUpdate}
+        onUndoIncrement={handleUndoIncrement}
       />
 
       <TimeLogModal
@@ -398,12 +473,6 @@ export default function HabitsList({
         habitColor={timeLogHabit?.pathColor ?? undefined}
         onLogTime={handleLogTime}
       />
-    </>
-  );
-
-  return (
-    <GestureHandlerRootView style={styles.container}>
-      {renderHabitsList()}
     </GestureHandlerRootView>
   );
 }
@@ -411,19 +480,6 @@ export default function HabitsList({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-
-  loadingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    marginTop: 100
-  },
-
-  loadingText: {
-    marginTop: 12,
-    fontSize: 14,
-    fontFamily: 'p2',
-    color: 'rgba(0, 0, 0, 0.6)',
   },
 
   toggleContainer: {

@@ -90,6 +90,34 @@ export default function SettingsPage() {
         }
     };
 
+    const handleResetPassword = () => {
+        const email = user?.email;
+        if (!email) {
+            Alert.alert('Error', 'No email found for your account.');
+            return;
+        }
+
+        Alert.alert(
+            'Reset Password',
+            `A password reset link will be sent to ${email}.`,
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Send Link',
+                    onPress: async () => {
+                        try {
+                            const { error } = await supabase.auth.resetPasswordForEmail(email);
+                            if (error) throw error;
+                            Alert.alert('Email Sent', 'Check your inbox for the password reset link.');
+                        } catch (err) {
+                            Alert.alert('Error', 'Something went wrong. Please try again.');
+                        }
+                    },
+                },
+            ]
+        );
+    };
+
     const handleClearWishlist = () => {
         Alert.alert(
             'Clear Wishlist',
@@ -210,6 +238,20 @@ export default function SettingsPage() {
                             style={{ paddingVertical: 5, paddingHorizontal: 15, flex: 1, alignItems: 'center' }}
                         >
                             <Text style={globalStyles.body1}>Edit Pin</Text>
+                        </Pressable>
+                    </ShadowBox>
+
+                    {/* reset password */}
+                    <ShadowBox
+                        contentBorderRadius={20}
+                        shadowBorderRadius={20}
+                        contentBackgroundColor={PAGE.settings.pin[0]}
+                    >
+                        <Pressable
+                            onPress={handleResetPassword}
+                            style={{ paddingVertical: 5, paddingHorizontal: 15, flex: 1, alignItems: 'center' }}
+                        >
+                            <Text style={globalStyles.body1}>Reset Password</Text>
                         </Pressable>
                     </ShadowBox>
 

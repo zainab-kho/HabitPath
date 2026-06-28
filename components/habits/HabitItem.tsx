@@ -1,24 +1,29 @@
 // @/components/habits/HabitItem.tsx
-import React, { useMemo, useRef } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { Animated, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 
 import { COLORS, PAGE } from '@/constants/colors';
 import { HABIT_ICONS, SYSTEM_ICONS } from '@/constants/icons';
-import { globalStyles } from '@/styles';
+import { globalStyles, uiStyles } from '@/styles';
 import { Habit } from '@/types/Habit';
 import ShadowBox from '@/ui/ShadowBox';
 import { HabitWithStatus } from '@/hooks/useHabits';
 import { formatMinutesAsTime } from '@/utils/dateUtils';
-import { isTimeTrackingHabit, getWeeklyTimeTotal } from '@/utils/habitUtils';
+import { getHabitCycleStart, isTimeTrackingHabit, getWeeklyTimeTotal } from '@/utils/habitUtils';
+import UnskipHabitModal from '@/modals/habits/UnskipHabit';
 
 interface HabitItemProps {
   habit: HabitWithStatus;
   dateStr: string;
+  currentDate: Date;
+  resetTime: { hour: number; minute: number };
   onToggle: () => void;
   onPress?: () => void;
   onIncrementUpdate?: (habitId: string, newAmount: number) => void;
   onSkip?: () => void;
+  onUnskip?: () => void;
+  onUnskipAndComplete?: () => void;
   onSnooze?: () => void;
   onToggleSubtask?: (subtaskId: string, completed: boolean) => void;
   questExpanded?: boolean;
@@ -32,10 +37,14 @@ const AUTO_COMPLETE_ON_GOAL = false;
 export default function HabitItem({
   habit,
   dateStr,
+  currentDate,
+  resetTime,
   onToggle,
   onPress,
   onIncrementUpdate,
   onSkip,
+  onUnskip,
+  onUnskipAndComplete,
   onSnooze,
   onToggleSubtask,
   questExpanded,
@@ -49,13 +58,22 @@ export default function HabitItem({
 
   const isCompleted = habit.status === 'completed';
   const isSkipped = habit.status === 'skipped';
+  const [unskipModalVisible, setUnskipModalVisible] = useState(false);
   const showStreak = (habit.streak ?? 0) >= 3;
 
   const isIncrement = !!habit.increment;
   const isTimeTracking = isTimeTrackingHabit(habit);
 
+  // keepUntil / Weekly Goal: use cycle start (walks back to find stored data)
+  // snoozed non-keepUntil: use snoozedFrom date
+  const effectiveDateStr = (habit.keepUntil || habit.frequency === 'Weekly Goal')
+    ? getHabitCycleStart(habit, currentDate, resetTime.hour, resetTime.minute)
+    : habit.snoozedFrom && habit.increment
+      ? habit.snoozedFrom
+      : dateStr;
+
   // source of truth for today's increment progress
-  const currentAmount = habit.incrementHistory?.[dateStr] ?? 0;
+  const currentAmount = habit.incrementHistory?.[effectiveDateStr] ?? 0;
 
   // weekly total for time-tracking habits
   const weeklyTimeTotal = isTimeTracking
@@ -200,15 +218,15 @@ export default function HabitItem({
   // skipped habits: muted style, no swipe actions, no checkbox
   if (isSkipped) {
     return (
-      <View style={{ opacity: 0.45 }}>
+      <>
         <ShadowBox
           style={styles.container}
-          contentBackgroundColor="#f0f0f0"
-          contentBorderColor="#ccc"
+          contentBackgroundColor="#fff"
+          contentBorderColor="#000"
           contentBorderWidth={1}
           shadowBorderRadius={15}
-          shadowOffset={{ x: 0, y: 0 }}
-          shadowColor="#ccc"
+          shadowOffset={{ x: 0, y: 5 }}
+          shadowColor={habitColor}
         >
           <View style={styles.content}>
             <View style={styles.mainRow}>
@@ -221,18 +239,58 @@ export default function HabitItem({
                   )}
                 </View>
                 <View style={styles.textSection}>
-                  <Text style={[globalStyles.body, styles.habitName, { textDecorationLine: 'line-through' }]}>
+                  <Text style={[globalStyles.body, styles.habitName]}>
                     {habit.name}
                   </Text>
-                  <Text style={[globalStyles.label, { fontSize: 11, opacity: 0.6 }]}>
-                    Skipped
-                  </Text>
+                  <View style={styles.badgesRow}>
+                    {!!habit.rewardPoints && habit.rewardPoints > 0 && (
+                      <View style={[styles.badge, styles.pointsBadge]}>
+                        <Image
+                          source={SYSTEM_ICONS.reward}
+                          style={[styles.badgeIcon, { tintColor: COLORS.Rewards }]}
+                        />
+                        <Text style={styles.badgeText}>{habit.rewardPoints}</Text>
+                      </View>
+                    )}
+                  </View>
                 </View>
               </View>
+
+              {/* red X to unskip */}
+              <Pressable onPress={() => setUnskipModalVisible(true)}>
+                <ShadowBox
+                  shadowBorderRadius={8}
+                  contentBorderRadius={8}
+                  contentBorderColor="#000"
+                  contentBackgroundColor='#54d697'
+                  shadowOffset={{ x: -1, y: 1 }}
+                >
+                  <View style={{ width: 28, height: 28, borderRadius: 8, overflow: 'hidden', justifyContent: 'center', alignItems: 'center' }}>
+                    <Image
+                      source={SYSTEM_ICONS.undo}
+                      style={{ width: 20, height: 20, tintColor: 'white' }}
+                    />
+                  </View>
+                </ShadowBox>
+              </Pressable>
             </View>
           </View>
         </ShadowBox>
-      </View>
+
+        <UnskipHabitModal
+          visible={unskipModalVisible}
+          onClose={() => setUnskipModalVisible(false)}
+          habit={habit}
+          onUnskip={() => {
+            setUnskipModalVisible(false);
+            onUnskip?.();
+          }}
+          onMarkCompleted={() => {
+            setUnskipModalVisible(false);
+            onUnskipAndComplete?.();
+          }}
+        />
+      </>
     );
   }
 
@@ -509,10 +567,10 @@ export default function HabitItem({
 
                   {/* streak badge */}
                   {showStreak && (
-                    <View style={[styles.badge, styles.streakBadge]}>
-                      <Image source={SYSTEM_ICONS.fire} style={styles.badgeIcon} />
-                      <Text style={[styles.badgeText, styles.streakText]}>
-                        {habit.streak}
+                    <View style={styles.streak}>
+                      <Image source={SYSTEM_ICONS.fire} style={styles.streakIcon} />
+                      <Text style={[styles.badgeText]}>
+                        {habit.streak}d
                       </Text>
                     </View>
                   )}
@@ -537,7 +595,7 @@ export default function HabitItem({
                           styles.progressBarFill,
                           {
                             width: `${progressPercentage}%`,
-                            backgroundColor: isGoalReached ? '#54d697' : COLORS.ProgressColor,
+                            backgroundColor: isGoalReached ? COLORS.PrimaryLight : COLORS.ProgressColor,
                           },
                         ]}
                       />
@@ -564,8 +622,10 @@ export default function HabitItem({
             {/* right-side action */}
             <Pressable
               onPress={handleRightAction}
-              onLongPress={isIncrement ? handleLongPress : undefined}
+              onLongPress={undefined}
               delayLongPress={600}
+              hitSlop={{ top: 15, bottom: 15, left: 10, right: 20 }}
+              style={{ paddingLeft: 10 }}
             >
               <ShadowBox
                 shadowBorderRadius={8}
@@ -669,15 +729,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.RewardsAccent,
   },
-  streakBadge: {
-    backgroundColor: 'rgba(255,107,53,0.2)',
-    borderColor: '#FF6B35',
+  streak: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 2,
   },
-  streakText: {
-    color: '#FF6B35',
-    fontWeight: 'bold',
+  streakIcon: {
+    width: 16,
+    height: 16
   },
-
   incrementBadge: {
     backgroundColor: COLORS.ProgressColor,
     borderColor: COLORS.Secondary,

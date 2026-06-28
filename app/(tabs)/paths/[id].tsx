@@ -1,12 +1,11 @@
 // app/(tabs)/paths/[id].tsx
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BUTTON_COLORS } from '@/constants/colors';
 import { PATH_COLORS, type PathColorKey } from '@/colors/pathColors';
-import { STORAGE_KEYS } from '@/storage/keys';
 import { HABIT_ICONS } from '@/constants/icons';
 import { useAuth } from '@/contexts/AuthContext';
 import { useHabits } from '@/hooks/useHabits';
 import { supabase } from '@/lib/supabase';
+import { loadHabitsFromSupabase } from '@/lib/supabase/queries/habit';
 import AddHabitsToPathModal from '@/modals/AddHabitsToPathModal';
 import { globalStyles } from '@/styles';
 import { Habit } from '@/types/Habit';
@@ -313,19 +312,14 @@ export default function PathDetail() {
     : [];
 
   const loadAllHabits = useCallback(async () => {
+    if (!user) return;
     try {
-      const raw = await AsyncStorage.getItem(STORAGE_KEYS.HABITS_CACHE);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        const habits: Habit[] = Array.isArray(parsed?.habits)
-          ? parsed.habits
-          : Array.isArray(parsed) ? parsed : [];
-        setAllHabitsAll(habits.filter(h => !h.archivedAt));
-      }
+      const habits = await loadHabitsFromSupabase(user.id);
+      setAllHabitsAll(habits.filter(h => !h.archivedAt));
     } catch (e) {
-      console.error('Error loading habits cache:', e);
+      console.error('Error loading habits:', e);
     }
-  }, []);
+  }, [user]);
 
   const loadPath = useCallback(async () => {
     if (!user || !id) return;

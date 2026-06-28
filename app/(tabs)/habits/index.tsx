@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router, useFocusEffect } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { Image, Pressable, Text, View } from 'react-native';
+import { ActivityIndicator, Image, Pressable, Text, View } from 'react-native';
 
 import HabitsList from '@/components/habits/HabitsList';
 import { isHabitActiveToday } from '@/utils/habitUtils';
@@ -52,6 +52,8 @@ export default function HabitsPage() {
     loadHabits,
     snoozeHabit,
     skipHabit,
+    unskipHabit,
+    unskipAndCompleteHabit,
   } = useHabits(viewingDate);
 
   // snooze modal state
@@ -100,7 +102,7 @@ export default function HabitsPage() {
 
   // calculate totals for points badge (unchanged)
   const totalActivePoints = activeHabits.reduce(
-    (sum, h) => sum + (h.rewardPoints || 0),
+    (sum, h) => h.frequency === 'Weekly Goal' ? sum : sum + (h.rewardPoints || 0),
     0
   );
 
@@ -227,11 +229,15 @@ export default function HabitsPage() {
         {/* habits list */}
         <HabitsList
           habits={habits}
+          loading={loading}
           viewingDate={viewingDate}
           resetTime={resetTime}
+          userId={user?.id ?? ''}
           onToggleHabit={toggleHabit}
           onIncrementUpdate={updateIncrement}
           onSkipHabit={skipHabit}
+          onUnskipHabit={unskipHabit}
+          onUnskipAndCompleteHabit={unskipAndCompleteHabit}
           onSnoozeHabit={handleSnoozeHabit}
         />
 
@@ -262,7 +268,7 @@ export default function HabitsPage() {
               </ShadowBox>
             </Pressable>
 
-            <Pressable onPress={() => router.push('/habits/NewHabitPage')}>
+            <Pressable onPress={() => router.push({ pathname: '/habits/NewHabitPage', params: { startDate: formatLocalDate(viewingDate) } })}>
               <ShadowBox
                 contentBackgroundColor={PAGE.habits.button[0]}
                 contentBorderRadius={30}

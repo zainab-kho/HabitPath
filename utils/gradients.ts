@@ -15,13 +15,9 @@ export const getGradientForTime = (): [string, string, ...string[]] => {
   if (hour >= 12 && hour < 15)
     return ['#a1c4fd', '#c2e9fb'];
 
-  // 3pm - 4pm
-  if (hour >= 15 && hour < 16)
-    return ['#6495ed', '#7c9ec3'];
-
-  // 4pm - 5pm
-  if (hour >= 16 && hour < 18)
-    return ['#fa7ea5', '#5FC3E4'];
+  // 3pm - 5pm
+  if (hour >= 15 && hour < 17)
+    return ['#c2e9fb', '#6495ed'];
 
   // 6pm - 9pm
   if (hour >= 18 && hour < 21)

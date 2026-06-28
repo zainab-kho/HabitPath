@@ -2,8 +2,8 @@
 import { PAGE } from '@/constants/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import { globalStyles } from '@/styles';
-import { formatLocalDate } from '@/utils/dateUtils';
-import React, { useState } from 'react';
+import { formatLocalDate, getWeekDatesForDate } from '@/utils/dateUtils';
+import React, { useMemo, useState } from 'react';
 import { Image, Pressable, Text, View } from 'react-native';
 
 interface SimpleCalendarProps {
@@ -11,9 +11,10 @@ interface SimpleCalendarProps {
     onSelectDate: (date: Date) => void;
     selectedDateColor: string;
     minDate?: Date;
+    weekSelectMode?: boolean;
 }
 
-export default function SimpleCalendar({ selectedDate, onSelectDate, selectedDateColor, minDate }: SimpleCalendarProps) {
+export default function SimpleCalendar({ selectedDate, onSelectDate, selectedDateColor, minDate, weekSelectMode }: SimpleCalendarProps) {
     const [currentMonth, setCurrentMonth] = useState(new Date(selectedDate ?? new Date()));
 
     const getDaysInMonth = (date: Date) => {
@@ -40,12 +41,48 @@ export default function SimpleCalendar({ selectedDate, onSelectDate, selectedDat
     const selectDate = (day: number) => {
         const newDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
         if (minDate && formatLocalDate(newDate) < formatLocalDate(minDate)) return;
-        onSelectDate(newDate);
+        if (weekSelectMode) {
+            const weekDates = getWeekDatesForDate(formatLocalDate(newDate));
+            const mondayParts = weekDates[0].split('-').map(Number);
+            const monday = new Date(mondayParts[0], mondayParts[1] - 1, mondayParts[2], 12);
+            onSelectDate(monday);
+        } else {
+            onSelectDate(newDate);
+        }
     };
+
+    const selectedWeekDatesArr = useMemo(() => {
+        if (!weekSelectMode || !selectedDate) return [] as string[];
+        return getWeekDatesForDate(formatLocalDate(selectedDate));
+    }, [weekSelectMode, selectedDate]);
+
+    const selectedWeekDates = useMemo(() => new Set(selectedWeekDatesArr), [selectedWeekDatesArr]);
 
     const isSelectedDate = (day: number) => {
         const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
-        return selectedDate ? formatLocalDate(date) === formatLocalDate(selectedDate) : false;
+        const dateStr = formatLocalDate(date);
+        if (weekSelectMode) {
+            return selectedWeekDates.has(dateStr);
+        }
+        return selectedDate ? dateStr === formatLocalDate(selectedDate) : false;
+    };
+
+    const isSelectedMonday = (day: number) => {
+        if (!weekSelectMode || !selectedDate) return false;
+        const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+        return formatLocalDate(date) === formatLocalDate(selectedDate);
+    };
+
+    const isWeekFirstDay = (day: number) => {
+        if (!weekSelectMode || selectedWeekDatesArr.length === 0) return false;
+        const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+        return formatLocalDate(date) === selectedWeekDatesArr[0];
+    };
+
+    const isWeekLastDay = (day: number) => {
+        if (!weekSelectMode || selectedWeekDatesArr.length === 0) return false;
+        const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+        return formatLocalDate(date) === selectedWeekDatesArr[selectedWeekDatesArr.length - 1];
     };
 
     const isDisabledDate = (day: number) => {
@@ -109,15 +146,39 @@ export default function SimpleCalendar({ selectedDate, onSelectDate, selectedDat
                 {Array.from({ length: daysInMonth }).map((_, i) => {
                     const day = i + 1;
                     const selected = isSelectedDate(day);
+                    const monday = isSelectedMonday(day);
                     const disabled = isDisabledDate(day);
                     const today = isTodayDate(day);
+                    const firstDay = isWeekFirstDay(day);
+                    const lastDay = isWeekLastDay(day);
                     return (
                         <Pressable
                             key={day}
-                            style={{ width: '14.28%', aspectRatio: 1, justifyContent: 'center', alignItems: 'center' }}
+                            style={{
+                                width: '14.28%',
+                                aspectRatio: 1,
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                            }}
                             onPress={() => selectDate(day)}
                             disabled={disabled}
                         >
+                            {weekSelectMode && selected && (
+                                <View
+                                    style={{
+                                        position: 'absolute',
+                                        left: firstDay ? '12%' : 0,
+                                        right: lastDay ? '12%' : 0,
+                                        top: 5,
+                                        height: 30,
+                                        backgroundColor: selectedDateColor,
+                                        borderTopLeftRadius: firstDay ? 16 : 0,
+                                        borderBottomLeftRadius: firstDay ? 16 : 0,
+                                        borderTopRightRadius: lastDay ? 16 : 0,
+                                        borderBottomRightRadius: lastDay ? 16 : 0,
+                                    }}
+                                />
+                            )}
                             <View
                                 style={{
                                     width: 32,
@@ -125,7 +186,7 @@ export default function SimpleCalendar({ selectedDate, onSelectDate, selectedDat
                                     borderRadius: 16,
                                     justifyContent: 'center',
                                     alignItems: 'center',
-                                    backgroundColor: selected ? selectedDateColor : 'transparent',
+                                    backgroundColor: !weekSelectMode && selected ? selectedDateColor : 'transparent',
                                     borderWidth: today && !selected ? 1.5 : 0,
                                     borderColor: today && !selected ? selectedDateColor : 'transparent',
                                 }}

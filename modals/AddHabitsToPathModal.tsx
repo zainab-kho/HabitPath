@@ -51,7 +51,7 @@ export default function AddHabitsToPathModal({
 
     // ── helpers ──────────────────────────────────────────────────────────────
     const isRecurring = (h: Habit) =>
-        h.frequency === 'Daily' || h.frequency === 'Weekly' || h.frequency === 'Monthly';
+        h.frequency === 'Daily' || h.frequency === 'Weekly' || h.frequency === 'Weekly Goal' || h.frequency === 'Monthly';
 
     const isActiveToday = (h: Habit) =>
         isHabitActiveToday(h, TODAY, RESET_HOUR, RESET_MINUTE);

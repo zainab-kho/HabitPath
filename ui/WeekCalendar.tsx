@@ -9,6 +9,7 @@ interface WeekCalendarProps {
     selectedWeekStart: Date;
     onSelectWeek: (weekStart: Date) => void;
     weekStartDay?: number;
+    displayStartDay?: number;
     highlightColor?: string;
 }
 
@@ -32,8 +33,10 @@ export default function WeekCalendar({
     selectedWeekStart,
     onSelectWeek,
     weekStartDay = 1,
+    displayStartDay,
     highlightColor,
 }: WeekCalendarProps) {
+    const gridStartDay = displayStartDay ?? weekStartDay;
     const effectiveGetWeekStart = (date: Date) => getWeekStartForDay(date, weekStartDay);
     const [currentMonth, setCurrentMonth] = useState(new Date(selectedWeekStart));
 
@@ -52,8 +55,8 @@ export default function WeekCalendar({
         const firstOfMonth = new Date(year, month, 1);
         const lastOfMonth = new Date(year, month + 1, 0);
 
-        const start = effectiveGetWeekStart(firstOfMonth);
-        const end = new Date(effectiveGetWeekStart(lastOfMonth));
+        const start = getWeekStartForDay(firstOfMonth, gridStartDay);
+        const end = new Date(getWeekStartForDay(lastOfMonth, gridStartDay));
         end.setDate(end.getDate() + 6);
 
         const days = [];
@@ -65,7 +68,7 @@ export default function WeekCalendar({
         }
 
         return days;
-    }, [year, month, weekStartDay]);
+    }, [year, month, gridStartDay]);
 
     const selectedWeekDays = useMemo(() => {
         return Array.from({ length: 7 }).map((_, i) => {
@@ -123,7 +126,7 @@ export default function WeekCalendar({
             {/* weekday headers */}
             <View style={{ flexDirection: 'row', marginBottom: 8 }}>
                 {Array.from({ length: 7 }, (_, i) =>
-                    ['S', 'M', 'T', 'W', 'T', 'F', 'S'][(weekStartDay + i) % 7]
+                    ['S', 'M', 'T', 'W', 'T', 'F', 'S'][(gridStartDay + i) % 7]
                 ).map((day, i) => (
                     <View key={i} style={{ flex: 1, alignItems: 'center' }}>
                         <Text style={[globalStyles.label, { fontSize: 11, opacity: 0.6 }]}>

@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { Habit } from '@/types/Habit';
+import { formatLocalDate } from '@/utils/dateUtils';
 
 // ─── LOAD ────────────────────────────────────────────────────────────────────
 
@@ -9,7 +10,6 @@ import { Habit } from '@/types/Habit';
  */
 export async function loadHabitsFromSupabase(
   userId: string,
-  cachedHabits: Habit[] = []
 ): Promise<Habit[]> {
   try {
     const { data, error } = await supabase
@@ -20,7 +20,7 @@ export async function loadHabitsFromSupabase(
 
     if (error) throw error;
 
-    const habits = (data || []).map(row => ({
+    return (data || []).map(row => ({
       id: row.id,
       userId: row.user_id,
       name: row.name,
@@ -29,6 +29,10 @@ export async function loadHabitsFromSupabase(
       frequency: row.frequency,
       selectedDays: row.selected_days || [],
       selectedTimeOfDay: row.selected_time_of_day,
+      tempTimeOfDay: row.temp_time_of_day ?? undefined,
+      tempTimeOfDayDate: row.temp_time_of_day_date ?? undefined,
+      tempOrder: row.temp_order ?? undefined,
+      tempOrderDate: row.temp_order_date ?? undefined,
       startDate: row.start_date,
       selectedDate: row.selected_date,
       rewardPoints: row.reward_points || 0,
@@ -46,24 +50,11 @@ export async function loadHabitsFromSupabase(
       incrementHistory: row.increment_history || {},
       path: row.path,
       pathColor: row.path_color,
+      customType: row.custom_type ?? undefined,
+      customInterval: row.custom_interval ?? undefined,
+      endDate: row.end_date ?? undefined,
       created_at: row.created_at,
     })) as Habit[];
-
-    // merge with cached completionHistory to avoid losing recent offline completions
-    const cachedMap = new Map(cachedHabits.map(h => [h.id, h]));
-
-    const merged = habits.map(habit => {
-      const cached = cachedMap.get(habit.id);
-      return {
-        ...habit,
-        completionHistory: Array.from(new Set([
-          ...(habit.completionHistory || []),
-          ...(cached?.completionHistory || []),
-        ])),
-      };
-    });
-
-    return merged;
   } catch (err) {
     console.error('Error: loadHabitsFromSupabase failed', err);
     return [];
@@ -98,7 +89,7 @@ export async function toggleHabitCompletion(
 
   if (target) {
     try {
-      const { error } = await supabase
+      await supabase
         .from('habits')
         .update({ completion_history: target.completionHistory })
         .eq('id', habitId)
@@ -197,49 +188,43 @@ export async function skipHabit(
 
   const isOneTime = !target.frequency || target.frequency === 'None';
 
-  console.log(`(**TESTING) skipHabit: id=${habitId}, dateStr=${dateStr}, isOneTime=${isOneTime}`);
-
-  
-
   if (isOneTime) {
-  const archiveIso = new Date().toISOString();
+    const archiveIso = new Date().toISOString();
 
-  const updated = habits.map(h => {
-    if (h.id !== habitId) return h;
+    const updated = habits.map(h => {
+      if (h.id !== habitId) return h;
 
-    const currentSkipped = h.skippedDates || [];
-    const nextSkipped = currentSkipped.includes(dateStr)
-      ? currentSkipped
-      : [...currentSkipped, dateStr];
+      const currentSkipped = h.skippedDates || [];
+      const nextSkipped = currentSkipped.includes(dateStr)
+        ? currentSkipped
+        : [...currentSkipped, dateStr];
 
-    return {
-      ...h,
-      skippedDates: nextSkipped,
-      archivedAt: archiveIso,
-    };
-  });
+      return {
+        ...h,
+        skippedDates: nextSkipped,
+        archivedAt: archiveIso,
+      };
+    });
 
-  const updatedTarget = updated.find(h => h.id === habitId);
+    const updatedTarget = updated.find(h => h.id === habitId);
 
-  await supabase
-    .from('habits')
-    .update({
-      skipped_dates: updatedTarget?.skippedDates ?? [dateStr],
-      archived_at: archiveIso,
-    })
-    .eq('id', habitId)
-    .eq('user_id', userId);
+    await supabase
+      .from('habits')
+      .update({
+        skipped_dates: updatedTarget?.skippedDates ?? [dateStr],
+        archived_at: archiveIso,
+      })
+      .eq('id', habitId)
+      .eq('user_id', userId);
 
-  console.log(`(**TESTING) skipHabit: archived one-time + skipped ${dateStr} for ${habitId}`);
-
-  return updated;
-}
+    return updated;
+  }
 
   // repeating habits: append to skippedDates
   const updated = habits.map(h => {
     if (h.id !== habitId) return h;
     const currentSkipped = h.skippedDates || [];
-    if (currentSkipped.includes(dateStr)) return h; // already skipped
+    if (currentSkipped.includes(dateStr)) return h;
     return { ...h, skippedDates: [...currentSkipped, dateStr] };
   });
 
@@ -252,7 +237,32 @@ export async function skipHabit(
       .eq('user_id', userId);
   }
 
-  console.log(`(**TESTING) skipHabit: added ${dateStr} to skippedDates for ${habitId}`);
+  return updated;
+}
+
+export async function unskipHabit(
+  habitId: string,
+  habits: Habit[],
+  dateStr: string,
+  userId: string
+): Promise<Habit[]> {
+  const updated = habits.map(h => {
+    if (h.id !== habitId) return h;
+    return {
+      ...h,
+      skippedDates: (h.skippedDates ?? []).filter(d => d !== dateStr),
+    };
+  });
+
+  const target = updated.find(h => h.id === habitId);
+  if (target) {
+    await supabase
+      .from('habits')
+      .update({ skipped_dates: target.skippedDates })
+      .eq('id', habitId)
+      .eq('user_id', userId);
+  }
+
   return updated;
 }
 
@@ -270,10 +280,6 @@ export async function deleteHabit(
   return habits.filter(h => h.id !== habitId);
 }
 
-/* ============================================================================
-   ARCHIVE
-============================================================================ */
-
 export async function archiveStaleHabits(
   userId: string,
   daysThreshold = 14
@@ -289,6 +295,20 @@ export async function archiveStaleHabits(
     .eq('frequency', 'None')
     .is('archived_at', null)
     .lt('start_date', cutoffStr);
+
+  if (error) throw error;
+}
+
+export async function archiveEndedHabits(userId: string): Promise<void> {
+  const todayStr = formatLocalDate(new Date());
+
+  const { error } = await supabase
+    .from('habits')
+    .update({ archived_at: new Date().toISOString() })
+    .eq('user_id', userId)
+    .is('archived_at', null)
+    .not('end_date', 'is', null)
+    .lt('end_date', todayStr);
 
   if (error) throw error;
 }

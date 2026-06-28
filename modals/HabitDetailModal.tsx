@@ -1,10 +1,8 @@
 import React from 'react';
 import {
     Alert,
-    Image,
     Modal,
     Pressable,
-    StyleSheet,
     Text,
     View,
 } from 'react-native';
@@ -13,7 +11,6 @@ import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { BUTTON_COLORS, COLORS, PAGE } from '@/constants/colors';
-import { HABIT_ICONS } from '@/constants/icons';
 import { globalStyles } from '@/styles';
 import ShadowBox from '@/ui/ShadowBox';
 import { HabitWithStatus } from '@/hooks/useHabits';
@@ -33,11 +30,22 @@ export default function HabitDetailModal({ visible, habit, onClose, onUpdate, on
     if (!habit) return null;
 
     const habitColor = habit.pathColor || COLORS.Primary;
-    const iconFile = habit.icon ? HABIT_ICONS[habit.icon] : null;
+
+    const frequencyLabel = habit.frequency === 'Weekly Goal'
+        ? 'Weekly Goal'
+        : habit.frequency === 'Custom'
+            ? `Every ${habit.customInterval ?? 1} ${habit.customType ?? 'days'}`
+            : habit.frequency || 'One-time';
 
     const handleEdit = () => {
         onClose();
         router.push({ pathname: '/(tabs)/habits/NewHabitPage', params: { editId: habit.id, editData: JSON.stringify(habit) } });
+    };
+
+    const handleDuplicate = () => {
+        onClose();
+        const { id, completionHistory, completionEntries, incrementHistory, incrementAmount, streak, bestStreak, lastCompletedDate, snoozedFrom, snoozedUntil, skippedDates, archivedAt, ...rest } = habit;
+        router.push({ pathname: '/(tabs)/habits/NewHabitPage', params: { editData: JSON.stringify(rest) } });
     };
 
     const handleArchive = () => {
@@ -99,38 +107,28 @@ export default function HabitDetailModal({ visible, habit, onClose, onUpdate, on
         );
     };
 
-    const frequencyLabel = habit.frequency === 'Weekly Goal'
-        ? 'Weekly Goal'
-        : habit.frequency === 'Custom'
-            ? `Every ${habit.customInterval ?? 1} ${habit.customType ?? 'days'}`
-            : habit.frequency || 'One-time';
-
     return (
         <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
-            <Pressable style={styles.overlay} onPress={onClose}>
-                <Pressable style={[styles.card, { borderColor: habitColor }]} onPress={(e) => e.stopPropagation()}>
-
-                    {/* habit icon + name */}
-                    <View style={{ alignItems: 'center', marginTop: 24, marginBottom: 16, paddingHorizontal: 20 }}>
-                        <View style={{
-                            width: 52,
-                            height: 52,
-                            borderRadius: 14,
-                            backgroundColor: habitColor + '25',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            marginBottom: 10,
-                        }}>
-                            {iconFile
-                                ? <Image source={iconFile} style={{ width: 28, height: 28 }} />
-                                : <Text style={{ fontSize: 20 }}>✦</Text>
-                            }
-                        </View>
-                        <Text style={[globalStyles.h3, { textAlign: 'center' }]} numberOfLines={2}>
+            <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center' }}>
+                <Pressable
+                    style={{
+                        backgroundColor: '#fff',
+                        borderRadius: 20,
+                        borderWidth: 3,
+                        borderColor: PAGE.habits.primary[1],
+                        maxHeight: '75%',
+                        width: '90%',
+                        alignSelf: 'center',
+                    }}
+                    onPress={(e) => e.stopPropagation()}
+                >
+                    {/* header */}
+                    <View style={{ marginTop: 20, marginBottom: 15 }}>
+                        <Text style={[globalStyles.h2, { textAlign: 'center', marginBottom: 5 }]}>
                             {habit.name}
                         </Text>
-                        <Text style={[globalStyles.body2, { opacity: 0.5, marginTop: 2 }]}>
-                            {frequencyLabel}
+                        <Text style={[globalStyles.label, { textAlign: 'center', opacity: 0.6 }]}>
+                            {frequencyLabel.toUpperCase()}
                         </Text>
                     </View>
 
@@ -138,10 +136,9 @@ export default function HabitDetailModal({ visible, habit, onClose, onUpdate, on
                     <View style={{
                         flexDirection: 'row',
                         justifyContent: 'space-around',
-                        paddingHorizontal: 10,
                         paddingVertical: 12,
-                        marginHorizontal: 16,
-                        marginBottom: 16,
+                        marginHorizontal: 20,
+                        marginBottom: 15,
                         backgroundColor: habitColor + '12',
                         borderRadius: 12,
                         borderWidth: 1,
@@ -174,19 +171,16 @@ export default function HabitDetailModal({ visible, habit, onClose, onUpdate, on
                     </View>
 
                     {/* action buttons */}
-                    <View style={{ paddingHorizontal: 16, gap: 8, marginBottom: 16 }}>
+                    <View style={{ paddingHorizontal: 20, gap: 8, marginBottom: 15 }}>
                         {habit.increment && onUndoIncrement && (
-                            <Pressable onPress={() => {
-                                onUndoIncrement(habit.id);
-                                onClose();
-                            }}>
+                            <Pressable onPress={() => { onUndoIncrement(habit.id); onClose(); }}>
                                 <ShadowBox
                                     contentBackgroundColor={COLORS.ProgressColor + '30'}
                                     contentBorderColor={COLORS.ProgressColor}
                                     shadowColor={COLORS.ProgressColor}
-                                    shadowBorderRadius={12}
+                                    shadowBorderRadius={15}
                                 >
-                                    <View style={{ paddingVertical: 10, alignItems: 'center' }}>
+                                    <View style={{ paddingVertical: 6, alignItems: 'center' }}>
                                         <Text style={globalStyles.body}>Undo Increment</Text>
                                     </View>
                                 </ShadowBox>
@@ -198,57 +192,60 @@ export default function HabitDetailModal({ visible, habit, onClose, onUpdate, on
                                 contentBackgroundColor={habitColor + '20'}
                                 contentBorderColor={habitColor}
                                 shadowColor={habitColor}
-                                shadowBorderRadius={12}
+                                shadowBorderRadius={15}
                             >
-                                <View style={{ paddingVertical: 10, alignItems: 'center' }}>
+                                <View style={{ paddingVertical: 6, alignItems: 'center' }}>
                                     <Text style={globalStyles.body}>Edit Habit</Text>
                                 </View>
                             </ShadowBox>
                         </Pressable>
 
-                        <Pressable onPress={handleArchive}>
+                        <Pressable onPress={handleDuplicate}>
                             <ShadowBox
-                                contentBackgroundColor={BUTTON_COLORS.Cancel}
-                                shadowBorderRadius={12}
+                                contentBackgroundColor={habitColor + '20'}
+                                contentBorderColor={habitColor}
+                                shadowColor={habitColor}
+                                shadowBorderRadius={15}
                             >
-                                <View style={{ paddingVertical: 10, alignItems: 'center' }}>
-                                    <Text style={globalStyles.body}>Archive Habit</Text>
-                                </View>
-                            </ShadowBox>
-                        </Pressable>
-
-                        <Pressable onPress={handleDelete}>
-                            <ShadowBox
-                                contentBackgroundColor="#FFE0E0"
-                                contentBorderColor="#E57373"
-                                shadowColor="#E57373"
-                                shadowBorderRadius={12}
-                            >
-                                <View style={{ paddingVertical: 10, alignItems: 'center' }}>
-                                    <Text style={[globalStyles.body, { color: '#C62828' }]}>Delete Habit</Text>
+                                <View style={{ paddingVertical: 6, alignItems: 'center' }}>
+                                    <Text style={globalStyles.body}>Duplicate Habit</Text>
                                 </View>
                             </ShadowBox>
                         </Pressable>
                     </View>
 
+                    {/* bottom row */}
+                    <View style={{ flexDirection: 'row', borderTopWidth: 1, padding: 10, gap: 10 }}>
+                        <Pressable onPress={handleArchive} style={{ flex: 1 }}>
+                            <ShadowBox
+                                contentBackgroundColor={BUTTON_COLORS.Cancel}
+                                shadowBorderRadius={15}
+                            >
+                                <View style={{ paddingVertical: 6 }}>
+                                    <Text style={[globalStyles.body, { textAlign: 'center' }]}>
+                                        Archive
+                                    </Text>
+                                </View>
+                            </ShadowBox>
+                        </Pressable>
+
+                        <Pressable onPress={handleDelete} style={{ flex: 1 }}>
+                            <ShadowBox
+                                contentBackgroundColor="#FFE0E0"
+                                contentBorderColor="#E57373"
+                                shadowColor="#E57373"
+                                shadowBorderRadius={15}
+                            >
+                                <View style={{ paddingVertical: 6 }}>
+                                    <Text style={[globalStyles.body, { textAlign: 'center', color: '#C62828' }]}>
+                                        Delete
+                                    </Text>
+                                </View>
+                            </ShadowBox>
+                        </Pressable>
+                    </View>
                 </Pressable>
-            </Pressable>
+            </View>
         </Modal>
     );
 }
-
-const styles = StyleSheet.create({
-    overlay: {
-        flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.45)',
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    card: {
-        backgroundColor: '#fff',
-        borderRadius: 20,
-        borderWidth: 3,
-        width: '85%',
-        alignSelf: 'center',
-    },
-});

@@ -1,5 +1,6 @@
 // @/components/habits/HabitItem.tsx
 import React, { useMemo, useRef, useState } from 'react';
+import * as Haptics from 'expo-haptics';
 import { Animated, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 
@@ -128,6 +129,7 @@ export default function HabitItem({
 
   const handleRightAction = (e: any) => {
     e.stopPropagation();
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     // normal habits behave like checkbox toggle
     if (!isIncrement) {

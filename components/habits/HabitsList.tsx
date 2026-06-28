@@ -22,6 +22,7 @@ import { Habit } from '@/types/Habit';
 import EmptyStateView from '@/ui/EmptyStateView';
 import ShadowBox from '@/ui/ShadowBox';
 import { getHabitDate } from '@/utils/dateUtils';
+import * as Haptics from 'expo-haptics';
 
 import { HabitWithStatus } from '@/hooks/useHabits';
 import {
@@ -426,7 +427,7 @@ export default function HabitsList({
           activeItemOpacity={1}
           inactiveItemOpacity={1}
           inactiveItemScale={1}
-          hapticsEnabled
+          onDragStart={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)}
           overDrag="vertical"
           reorderTriggerOrigin="touch"
           itemEntering={null}

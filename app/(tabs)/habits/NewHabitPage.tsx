@@ -1,7 +1,7 @@
 // @/app/(tabs)/habits/NewHabitPage.tsx
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     Alert,
     Image,
@@ -45,6 +45,7 @@ export default function NewHabitPage() {
     const params = useLocalSearchParams<{ startDate?: string; editId?: string; editData?: string }>();
     const inputRef = useRef<TextInput>(null);
     const scrollRef = useRef<KeyboardAwareScrollView>(null);
+    const hasNavigatedAway = useRef(false);
 
     const isEditMode = !!params.editId;
     const editHabit = React.useMemo(
@@ -62,6 +63,12 @@ export default function NewHabitPage() {
     // basic info
     const [habitName, setHabitName] = useState(editHabit?.name ?? '');
     const [selectedIcon, setSelectedIcon] = useState(editHabit?.icon ?? 'goal');
+
+    useEffect(() => {
+        if (!isEditMode) {
+            setTimeout(() => inputRef.current?.focus(), 100);
+        }
+    }, []);
 
     useFocusEffect(
         useCallback(() => {
@@ -429,7 +436,7 @@ export default function NewHabitPage() {
                                         placeholderTextColor="rgba(0,0,0,0.4)"
                                         value={habitName}
                                         onChangeText={setHabitName}
-                                        autoFocus
+                                        autoFocus={false}
                                         cursorColor={PAGE.habits.border[0]}
                                         selectionColor={PAGE.habits.border[0]}
                                         onFocus={(e) => scrollRef.current?.scrollToFocusedInput(e.nativeEvent.target)}

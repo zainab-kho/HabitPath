@@ -93,8 +93,9 @@ export function useHabits(viewingDate: Date = new Date()) {
       const { progressTotal, progressEarned, progressSkipped } =
         getProgressUnitsForDay(withStatus, ds, viewingDate, reset.hour, reset.minute);
 
-      // earned points for the day (only fully completed habits)
+      // earned points for the day (only fully completed daily habits, not weekly goals)
       const earned = withStatus.reduce((sum, h) => {
+        if (h.frequency === 'Weekly Goal') return sum;
         if (h.status === 'completed') return sum + (h.rewardPoints || 0);
         return sum;
       }, 0);

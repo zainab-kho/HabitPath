@@ -102,7 +102,7 @@ export default function HabitsPage() {
 
   // calculate totals for points badge (unchanged)
   const totalActivePoints = activeHabits.reduce(
-    (sum, h) => sum + (h.rewardPoints || 0),
+    (sum, h) => h.frequency === 'Weekly Goal' ? sum : sum + (h.rewardPoints || 0),
     0
   );
 

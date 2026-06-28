@@ -598,6 +598,8 @@ export const getProgressUnitsForDay = (
   let progressSkipped = 0;
 
   for (const h of habits) {
+    if (h.frequency === 'Weekly Goal') continue;
+
     if (h.status === 'skipped' || h.status === 'snoozed') {
       progressSkipped += 1;
       continue;

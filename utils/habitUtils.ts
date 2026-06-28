@@ -170,33 +170,34 @@ export function getHabitCycleStart(
     return startStr;
   }
 
-  // For keepUntil habits, find the FIRST incomplete scheduled day
-  if (habit.keepUntil && habit.completionHistory) {
+  // For keepUntil habits, find the earliest incomplete scheduled day after the last completion
+  if (habit.keepUntil) {
+    const history = habit.completionHistory ?? [];
     let earliestIncomplete: string | null = null;
 
-    // Look back up to 365 days for incomplete work
     for (let i = 0; i < 365; i++) {
       const d = new Date(date);
       d.setDate(date.getDate() - i);
       const dStr = getHabitDate(d, resetHour, resetMinute);
 
-      // Stop if we go before start date
       if (dStr < startStr) break;
 
-      // Check if this day was scheduled
       const wasScheduled = isHabitScheduledForDate(habit, d, resetHour, resetMinute);
+      if (!wasScheduled) continue;
 
-      if (wasScheduled) {
-        // If completed, stop here - cycle starts AFTER completion
-        if (habit.completionHistory.includes(dStr)) {
-          break;
-        }
-        // If incomplete, this is part of current cycle
-        earliestIncomplete = dStr;
+      let completed = history.includes(dStr);
+      if (habit.increment && !completed) {
+        const amt = habit.incrementHistory?.[dStr] ?? 0;
+        const goal = habit.incrementGoal && habit.incrementGoal > 0 ? habit.incrementGoal : 1;
+        completed = amt >= goal;
       }
+
+      if (completed) {
+        break;
+      }
+      earliestIncomplete = dStr;
     }
 
-    // If we found incomplete work, use that as cycle start
     if (earliestIncomplete) {
       return earliestIncomplete;
     }
@@ -454,13 +455,19 @@ export const getHabitStatus = (
   dateStr: string,
   isViewingToday: boolean,
   todayStr: string, // must be computed via getHabitDate to respect reset hour — never raw new Date()
+  viewingDate?: Date,
+  resetHour?: number,
+  resetMinute?: number,
 ): HabitStatus => {
-  // Weekly Goal: use Monday; snoozed: use snoozedFrom; otherwise: use dateStr
-  const effectiveDateStr = habit.frequency === 'Weekly Goal'
-    ? getWeekDatesForDate(dateStr)[0]
-    : habit.snoozedFrom
-      ? habit.snoozedFrom
-      : dateStr;
+  // keepUntil: use cycle start; Weekly Goal: use Monday; snoozed: use snoozedFrom
+  const effectiveDateStr =
+    (habit.keepUntil && viewingDate && resetHour !== undefined && resetMinute !== undefined)
+      ? getHabitCycleStart(habit, viewingDate, resetHour, resetMinute)
+      : habit.frequency === 'Weekly Goal'
+        ? getWeekDatesForDate(dateStr)[0]
+        : habit.snoozedFrom
+          ? habit.snoozedFrom
+          : dateStr;
 
   // snoozed check first so snoozed habits don't show as missed
   // use < (not <=) so the habit is active ON the snoozedUntil day
@@ -571,7 +578,7 @@ export const addStatusToHabits = (
   return habits.map(h => ({
     ...h,
     streak: computeHabitStreak(h, resetHour, resetMinute),
-    status: getHabitStatus(h, dateStr, isViewingToday, todayStr),
+    status: getHabitStatus(h, dateStr, isViewingToday, todayStr, viewingDate, resetHour, resetMinute),
   }));
 };
 

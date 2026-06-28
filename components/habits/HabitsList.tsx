@@ -325,7 +325,7 @@ export default function HabitsList({
         <ShadowBox
           shadowBorderRadius={20}
           contentBorderRadius={20}
-          contentBackgroundColor={PAGE.habits.button[0]}
+          contentBackgroundColor={PAGE.habits.primary[0]}
         >
           <Pressable
             onPress={() => router.push('/(tabs)/habits/NewHabitPage')}

@@ -274,7 +274,7 @@ export default function HabitsPage() {
 
             <Pressable onPress={() => router.push({ pathname: '/habits/NewHabitPage', params: { startDate: formatLocalDate(viewingDate) } })}>
               <ShadowBox
-                contentBackgroundColor={PAGE.habits.button[0]}
+                contentBackgroundColor={PAGE.habits.primary[0]}
                 contentBorderRadius={30}
                 shadowBorderRadius={30}
               >

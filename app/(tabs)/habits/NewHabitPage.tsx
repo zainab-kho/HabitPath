@@ -390,10 +390,9 @@ export default function NewHabitPage() {
                                             height: 50,
                                             borderRadius: 25,
                                             borderWidth: 1,
-                                            // borderColor: COLORS.Primary,
                                             justifyContent: 'center',
                                             alignItems: 'center',
-                                            backgroundColor: COLORS.PrimaryLight,
+                                            backgroundColor: PAGE.habits.primary[1],
                                         }}
                                     >
                                         <Image

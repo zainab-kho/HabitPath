@@ -595,7 +595,7 @@ export default function HabitItem({
                           styles.progressBarFill,
                           {
                             width: `${progressPercentage}%`,
-                            backgroundColor: isGoalReached ? '#54d697' : COLORS.ProgressColor,
+                            backgroundColor: isGoalReached ? COLORS.PrimaryLight : COLORS.ProgressColor,
                           },
                         ]}
                       />
@@ -624,6 +624,8 @@ export default function HabitItem({
               onPress={handleRightAction}
               onLongPress={undefined}
               delayLongPress={600}
+              hitSlop={{ top: 15, bottom: 15, left: 10, right: 20 }}
+              style={{ paddingLeft: 10 }}
             >
               <ShadowBox
                 shadowBorderRadius={8}

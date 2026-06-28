@@ -109,7 +109,7 @@ export default function HabitDetailModal({ visible, habit, onClose, onUpdate, on
 
     return (
         <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
-            <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center' }}>
+            <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center' }} onPress={onClose}>
                 <Pressable
                     style={{
                         backgroundColor: '#fff',
@@ -216,6 +216,19 @@ export default function HabitDetailModal({ visible, habit, onClose, onUpdate, on
 
                     {/* bottom row */}
                     <View style={{ flexDirection: 'row', borderTopWidth: 1, padding: 10, gap: 10 }}>
+                        <Pressable onPress={onClose} style={{ flex: 1 }}>
+                            <ShadowBox
+                                contentBackgroundColor={BUTTON_COLORS.Cancel}
+                                shadowBorderRadius={15}
+                            >
+                                <View style={{ paddingVertical: 6 }}>
+                                    <Text style={[globalStyles.body, { textAlign: 'center' }]}>
+                                        Cancel
+                                    </Text>
+                                </View>
+                            </ShadowBox>
+                        </Pressable>
+
                         <Pressable onPress={handleArchive} style={{ flex: 1 }}>
                             <ShadowBox
                                 contentBackgroundColor={BUTTON_COLORS.Cancel}
@@ -245,7 +258,7 @@ export default function HabitDetailModal({ visible, habit, onClose, onUpdate, on
                         </Pressable>
                     </View>
                 </Pressable>
-            </View>
+            </Pressable>
         </Modal>
     );
 }

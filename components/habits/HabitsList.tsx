@@ -9,7 +9,7 @@ import { useRouter } from 'expo-router';
 
 import HabitItem from '@/components/habits/HabitItem';
 import HabitSectionHeader from '@/components/habits/HabitSectionHeader';
-import { getWeeklyTimeTotal } from '@/utils/habitUtils';
+import { getHabitCycleStart, getWeeklyTimeTotal } from '@/utils/habitUtils';
 import HabitDetailModal from '@/modals/HabitDetailModal';
 import TimeLogModal from '@/modals/habits/TimeLogModal';
 import { toggleQuestSubtaskCompletion } from '@/lib/supabase/queries/questGoalHabits';
@@ -95,6 +95,23 @@ export default function HabitsList({
   const handleOpenTimeLog = (habit: HabitWithStatus) => {
     setTimeLogHabit(habit);
     setTimeLogVisible(true);
+  };
+
+  const handleUndoIncrement = (habitId: string) => {
+    if (!onIncrementUpdate) return;
+    const habit = activeHabits.find(h => h.id === habitId);
+    if (!habit?.increment) return;
+
+    const effectiveDate = (habit.keepUntil || habit.frequency === 'Weekly Goal')
+      ? getHabitCycleStart(habit, currentDate, resetTime.hour, resetTime.minute)
+      : habit.snoozedFrom && habit.increment
+        ? habit.snoozedFrom
+        : dateStr;
+
+    const currentAmount = habit.incrementHistory?.[effectiveDate] ?? 0;
+    const step = habit.incrementStep && habit.incrementStep > 0 ? habit.incrementStep : 1;
+    const newAmount = Math.max(0, currentAmount - step);
+    onIncrementUpdate(habitId, newAmount);
   };
 
   const handleLogTime = (minutes: number) => {
@@ -444,6 +461,7 @@ export default function HabitsList({
         habit={selectedHabit}
         onClose={() => setModalVisible(false)}
         onUpdate={handleModalUpdate}
+        onUndoIncrement={handleUndoIncrement}
       />
 
       <TimeLogModal

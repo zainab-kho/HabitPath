@@ -622,7 +622,7 @@ export default function HabitItem({
             {/* right-side action */}
             <Pressable
               onPress={handleRightAction}
-              onLongPress={isIncrement ? handleLongPress : undefined}
+              onLongPress={undefined}
               delayLongPress={600}
             >
               <ShadowBox

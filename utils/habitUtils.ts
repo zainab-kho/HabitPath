@@ -588,11 +588,11 @@ export const addStatusToHabits = (
 
 export const getProgressUnitsForDay = (
   habits: (Habit & { status: HabitStatus })[],
-  dateStr: string
+  dateStr: string,
+  viewingDate?: Date,
+  resetHour?: number,
+  resetMinute?: number,
 ): { progressTotal: number; progressEarned: number; progressSkipped: number } => {
-  // progressTotal  = completed + active + missed (your real workload for the day)
-  // progressEarned = completed (how much you've done)
-  // progressSkipped = skipped + snoozed (shown as a separate color, not in the denominator)
   let progressTotal = 0;
   let progressEarned = 0;
   let progressSkipped = 0;
@@ -603,25 +603,33 @@ export const getProgressUnitsForDay = (
       continue;
     }
 
-    // completed, active, missed all count toward the workload total
     progressTotal += 1;
 
-    if (h.status !== 'completed') continue;
+    if (h.increment) {
+      const effectiveDate =
+        (h.keepUntil || h.frequency === 'Weekly Goal') && viewingDate && resetHour !== undefined && resetMinute !== undefined
+          ? getHabitCycleStart(h, viewingDate, resetHour, resetMinute)
+          : h.snoozedFrom
+            ? h.snoozedFrom
+            : dateStr;
 
-    if (!h.increment) {
-      progressEarned += 1;
+      const currentAmount = isTimeTrackingHabit(h)
+        ? getWeeklyTimeTotal(h.incrementHistory, dateStr)
+        : (h.incrementHistory?.[effectiveDate] ?? 0);
+      const goal = h.keepUntil
+        ? (h.incrementGoal && h.incrementGoal > 0 ? h.incrementGoal : 1)
+        : (h.incrementGoal ?? 0);
+
+      if (goal > 0) {
+        progressEarned += Math.min(currentAmount / goal, 1);
+      } else if (h.status === 'completed') {
+        progressEarned += 1;
+      }
       continue;
     }
 
-    // increment habits: partial progress
-    const currentAmount = isTimeTrackingHabit(h)
-      ? getWeeklyTimeTotal(h.incrementHistory, dateStr)
-      : (h.incrementHistory?.[dateStr] ?? 0);
-    const goal = typeof h.incrementGoal === 'number' ? h.incrementGoal : 0;
-    if (goal > 0) {
-      progressEarned += Math.min(currentAmount / goal, 1);
-    } else {
-      progressEarned += currentAmount > 0 ? 1 : 0;
+    if (h.status === 'completed') {
+      progressEarned += 1;
     }
   }
 

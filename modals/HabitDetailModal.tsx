@@ -23,9 +23,10 @@ interface HabitDetailModalProps {
     habit: HabitWithStatus | null;
     onClose: () => void;
     onUpdate: () => void;
+    onUndoIncrement?: (habitId: string) => void;
 }
 
-export default function HabitDetailModal({ visible, habit, onClose, onUpdate }: HabitDetailModalProps) {
+export default function HabitDetailModal({ visible, habit, onClose, onUpdate, onUndoIncrement }: HabitDetailModalProps) {
     const { user } = useAuth();
     const router = useRouter();
 
@@ -174,6 +175,24 @@ export default function HabitDetailModal({ visible, habit, onClose, onUpdate }: 
 
                     {/* action buttons */}
                     <View style={{ paddingHorizontal: 16, gap: 8, marginBottom: 16 }}>
+                        {habit.increment && onUndoIncrement && (
+                            <Pressable onPress={() => {
+                                onUndoIncrement(habit.id);
+                                onClose();
+                            }}>
+                                <ShadowBox
+                                    contentBackgroundColor={COLORS.ProgressColor + '30'}
+                                    contentBorderColor={COLORS.ProgressColor}
+                                    shadowColor={COLORS.ProgressColor}
+                                    shadowBorderRadius={12}
+                                >
+                                    <View style={{ paddingVertical: 10, alignItems: 'center' }}>
+                                        <Text style={globalStyles.body}>Undo Increment</Text>
+                                    </View>
+                                </ShadowBox>
+                            </Pressable>
+                        )}
+
                         <Pressable onPress={handleEdit}>
                             <ShadowBox
                                 contentBackgroundColor={habitColor + '20'}

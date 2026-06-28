@@ -10,13 +10,14 @@ import { Habit } from '@/types/Habit';
 import ShadowBox from '@/ui/ShadowBox';
 import { HabitWithStatus } from '@/hooks/useHabits';
 import { formatMinutesAsTime } from '@/utils/dateUtils';
-import { getWeekDatesForDate } from '@/utils/dateUtils';
-import { isTimeTrackingHabit, getWeeklyTimeTotal } from '@/utils/habitUtils';
+import { getHabitCycleStart, isTimeTrackingHabit, getWeeklyTimeTotal } from '@/utils/habitUtils';
 import UnskipHabitModal from '@/modals/habits/UnskipHabit';
 
 interface HabitItemProps {
   habit: HabitWithStatus;
   dateStr: string;
+  currentDate: Date;
+  resetTime: { hour: number; minute: number };
   onToggle: () => void;
   onPress?: () => void;
   onIncrementUpdate?: (habitId: string, newAmount: number) => void;
@@ -36,6 +37,8 @@ const AUTO_COMPLETE_ON_GOAL = false;
 export default function HabitItem({
   habit,
   dateStr,
+  currentDate,
+  resetTime,
   onToggle,
   onPress,
   onIncrementUpdate,
@@ -61,10 +64,13 @@ export default function HabitItem({
   const isIncrement = !!habit.increment;
   const isTimeTracking = isTimeTrackingHabit(habit);
 
-  // Weekly Goals store increments under Monday (cycle start)
-  const effectiveDateStr = habit.frequency === 'Weekly Goal'
-    ? getWeekDatesForDate(dateStr)[0]
-    : dateStr;
+  // keepUntil / Weekly Goal: use cycle start (walks back to find stored data)
+  // snoozed non-keepUntil: use snoozedFrom date
+  const effectiveDateStr = (habit.keepUntil || habit.frequency === 'Weekly Goal')
+    ? getHabitCycleStart(habit, currentDate, resetTime.hour, resetTime.minute)
+    : habit.snoozedFrom && habit.increment
+      ? habit.snoozedFrom
+      : dateStr;
 
   // source of truth for today's increment progress
   const currentAmount = habit.incrementHistory?.[effectiveDateStr] ?? 0;

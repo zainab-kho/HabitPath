@@ -455,10 +455,12 @@ export const getHabitStatus = (
   isViewingToday: boolean,
   todayStr: string, // must be computed via getHabitDate to respect reset hour — never raw new Date()
 ): HabitStatus => {
-  // Weekly Goal: check completion against Monday (cycle start), not individual day
+  // Weekly Goal: use Monday; snoozed: use snoozedFrom; otherwise: use dateStr
   const effectiveDateStr = habit.frequency === 'Weekly Goal'
     ? getWeekDatesForDate(dateStr)[0]
-    : dateStr;
+    : habit.snoozedFrom
+      ? habit.snoozedFrom
+      : dateStr;
 
   // snoozed check first so snoozed habits don't show as missed
   // use < (not <=) so the habit is active ON the snoozedUntil day

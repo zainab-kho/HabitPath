@@ -366,6 +366,8 @@ export default function HabitsList({
                 <HabitItem
                   habit={item.habit}
                   dateStr={dateStr}
+                  currentDate={currentDate}
+                  resetTime={resetTime}
                   onToggle={() => onToggleHabit(item.habit.id)}
                   onPress={() => handleHabitPress(item.habit)}
                   onIncrementUpdate={onIncrementUpdate}
@@ -417,6 +419,8 @@ export default function HabitsList({
                 key={habit.id}
                 habit={habit}
                 dateStr={dateStr}
+                currentDate={currentDate}
+                resetTime={resetTime}
                 onToggle={() => onToggleHabit(habit.id)}
                 onPress={() => handleHabitPress(habit)}
                 onIncrementUpdate={onIncrementUpdate}

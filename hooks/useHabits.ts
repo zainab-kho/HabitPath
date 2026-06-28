@@ -171,10 +171,12 @@ export function useHabits(viewingDate: Date = new Date()) {
       const target = currentHabits.find(h => h.id === habitId);
       if (!target) return;
 
-      // Weekly Goal: record completion against Monday (cycle start)
-      const ds = target.frequency === 'Weekly Goal'
+      // keepUntil / Weekly Goal: use cycle start; snoozed: use snoozedFrom
+      const ds = (target.frequency === 'Weekly Goal' || target.keepUntil)
         ? getHabitCycleStart(target, viewingDate, resetTime.hour, resetTime.minute)
-        : rawDs;
+        : target.snoozedFrom
+          ? target.snoozedFrom
+          : rawDs;
 
       const isCurrentlyCompleted = target.completionHistory?.includes(ds) ?? false;
 
@@ -228,9 +230,11 @@ export function useHabits(viewingDate: Date = new Date()) {
       const rawDs = getHabitDate(viewingDate, resetTime.hour, resetTime.minute);
       const currentHabits = stripStatus(habits);
       const target = currentHabits.find(h => h.id === habitId);
-      const ds = target?.frequency === 'Weekly Goal'
+      const ds = (target?.frequency === 'Weekly Goal' || target?.keepUntil)
         ? getHabitCycleStart(target, viewingDate, resetTime.hour, resetTime.minute)
-        : rawDs;
+        : target?.snoozedFrom && target?.increment
+          ? target.snoozedFrom
+          : rawDs;
 
       // optimistic
       setHabits(prev => prev.map(h =>

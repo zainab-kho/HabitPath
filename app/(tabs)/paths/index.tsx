@@ -77,7 +77,7 @@ interface WeekGridProps {
 }
 
 function WeekGrid({ pathName, habits, color, week, todayStr, now, resetHour, resetMin }: WeekGridProps) {
-    const pathHabits = habits.filter(h => h.path === pathName);
+    const pathHabits = habits.filter(h => h.path === pathName && h.frequency !== 'Weekly Goal');
 
     return (
         <View style={grid.row}>

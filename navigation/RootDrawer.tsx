@@ -129,16 +129,6 @@ export function RootDrawer() {
             icon: SYSTEM_ICONS.assignment,
         },
         {
-            label: 'Focus',
-            path: '/(tabs)/more/focus',
-            icon: SYSTEM_ICONS.stopwatch,
-        },
-        {
-            label: 'Stats',
-            path: '/(tabs)/more/stats',
-            icon: SYSTEM_ICONS.stats,
-        },
-        {
             label: 'Settings',
             path: '/(tabs)/more/settings',
             icon: SYSTEM_ICONS.settings,

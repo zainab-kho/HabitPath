@@ -572,7 +572,7 @@ export default function NewHabitPage() {
                                         <View style={{
                                             flexDirection: 'row',
                                             flexWrap: 'wrap',
-                                            gap: 10,
+                                            gap: 8,
                                         }}>
                                             {REWARD_OPTIONS.map((points) => (
                                                 <Pressable
@@ -581,6 +581,7 @@ export default function NewHabitPage() {
                                                         setRewardPoints(points);
                                                         setShowRewardsPicker(false);
                                                     }}
+                                                    style={{ width: '22%' }}
                                                 >
                                                     <ShadowBox
                                                         contentBackgroundColor={
@@ -606,13 +607,9 @@ export default function NewHabitPage() {
                                                     >
                                                         <View style={{
                                                             paddingVertical: 6,
-                                                            paddingHorizontal: 12,
-                                                            width: 60,
                                                             alignItems: 'center',
                                                         }}>
-                                                            <Text style={[
-                                                                globalStyles.label,
-                                                            ]}>
+                                                            <Text style={globalStyles.label} numberOfLines={1}>
                                                                 {points} pts
                                                             </Text>
                                                         </View>

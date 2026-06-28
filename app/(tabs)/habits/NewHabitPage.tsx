@@ -1,7 +1,7 @@
 // @/app/(tabs)/habits/NewHabitPage.tsx
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useRef, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useCallback, useRef, useState } from 'react';
 import {
     Alert,
     Image,
@@ -27,7 +27,6 @@ import { getIconFile } from '@/components/habits/iconUtils';
 import { BUTTON_COLORS, COLORS, PAGE } from '@/constants/colors';
 import { CUSTOM_TYPES, FREQUENCIES, REWARD_OPTIONS, TIME_OPTIONS, WEEK_DAYS } from '@/constants/habits';
 import { SYSTEM_ICONS } from '@/constants/icons';
-import IconPickerModal from '@/modals/IconPickerModal';
 import { globalStyles } from '@/styles';
 import { AppLinearGradient } from '@/ui/AppLinearGradient';
 import PageContainer from '@/ui/PageContainer';
@@ -61,9 +60,20 @@ export default function NewHabitPage() {
     })();
 
     // basic info
-    const [showIconPicker, setShowIconPicker] = useState(false);
     const [habitName, setHabitName] = useState(editHabit?.name ?? '');
     const [selectedIcon, setSelectedIcon] = useState(editHabit?.icon ?? 'goal');
+
+    useFocusEffect(
+        useCallback(() => {
+            (async () => {
+                const picked = await AsyncStorage.getItem('pickedIcon');
+                if (picked) {
+                    setSelectedIcon(picked);
+                    await AsyncStorage.removeItem('pickedIcon');
+                }
+            })();
+        }, [])
+    );
 
     // scheduling
     const editFreq = editHabit?.frequency;
@@ -384,7 +394,7 @@ export default function NewHabitPage() {
                                     gap: 15,
                                 }}>
                                     <Pressable
-                                        onPress={() => setShowIconPicker(true)}
+                                        onPress={() => router.push('/(tabs)/habits/IconPickerPage' as any)}
                                         style={{
                                             width: 50,
                                             height: 50,
@@ -1258,12 +1268,6 @@ export default function NewHabitPage() {
                 </KeyboardAwareScrollView>
             </PageContainer>
 
-            <IconPickerModal
-                visible={showIconPicker}
-                selectedIcon={selectedIcon}
-                onClose={() => setShowIconPicker(false)}
-                onSelectIcon={(iconName) => setSelectedIcon(iconName)}
-            />
         </AppLinearGradient >
     );
 }

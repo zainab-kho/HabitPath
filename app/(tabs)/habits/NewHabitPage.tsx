@@ -5,13 +5,10 @@ import React, { useRef, useState } from 'react';
 import {
     Alert,
     Image,
-    Keyboard,
     Pressable,
-    ScrollView,
     Switch,
     Text,
     TextInput,
-    TouchableWithoutFeedback,
     View
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
@@ -370,11 +367,7 @@ export default function NewHabitPage() {
                     showsVerticalScrollIndicator={false}
                     keyboardShouldPersistTaps="handled"
                 >
-                    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-                        <ScrollView
-                            keyboardShouldPersistTaps="handled"
-                            showsVerticalScrollIndicator={false}
-                        >
+                        <View>
                             {/* main card */}
                             <View style={{
                                 backgroundColor: '#fff',
@@ -1262,8 +1255,7 @@ export default function NewHabitPage() {
                                     </View>
                                 </View>
                             </View>
-                        </ScrollView>
-                    </TouchableWithoutFeedback>
+                        </View>
                 </KeyboardAwareScrollView>
             </PageContainer>
 

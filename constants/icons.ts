@@ -40,6 +40,7 @@ export const HABIT_ICONS: Record<string, any> = {
   'nail-polish': require('@/assets/icons/habits/self-care/nail-polish.png'),
   'face-powder': require('@/assets/icons/habits/self-care/face-powder.png'),
   facemask: require('@/assets/icons/habits/self-care/facemask.png'),
+  mirror: require('@/assets/icons/habits/self-care/mirror.png'),
 
   // Work & Study
   monitor: require('@/assets/icons/habits/work/monitor.png'),
@@ -102,6 +103,8 @@ export const HABIT_ICONS: Record<string, any> = {
   'washing-machine': require('@/assets/icons/habits/cleaning/washing-machine.png'),
   broom: require('@/assets/icons/habits/cleaning/broom.png'),
   balcony: require('@/assets/icons/habits/home/balcony.png'),
+  recycling: require('@/assets/icons/habits/home/recycling.png'),
+  trash: require('@/assets/icons/habits/home/trash.png'),
   microwave: require('@/assets/icons/habits/food/microwave.png'),
   rug: require('@/assets/icons/habits/home/rug.png'),
   multicooker: require('@/assets/icons/habits/home/multicooker.png'),
@@ -199,6 +202,7 @@ export const ICON_CATEGORIES: Record<string, HabitIcon[]> = {
     { name: 'makeup-brush', file: HABIT_ICONS['makeup-brush'] },
     { name: 'face-powder', file: HABIT_ICONS['face-powder'] },
     { name: 'nail-polish', file: HABIT_ICONS['nail-polish'] },
+    { name: 'mirror', file: HABIT_ICONS.mirror },
     // transport & misc
     { name: 'car', file: HABIT_ICONS.car },
     { name: 'gas-station', file: HABIT_ICONS['gas-station'] },
@@ -279,6 +283,8 @@ export const ICON_CATEGORIES: Record<string, HabitIcon[]> = {
     { name: 'washing-machine', file: HABIT_ICONS['washing-machine'] },
     { name: 'broom', file: HABIT_ICONS.broom },
     { name: 'rug', file: HABIT_ICONS.rug },
+    { name: 'recycling', file: HABIT_ICONS.recycling },
+    { name: 'trash', file: HABIT_ICONS.trash },
     { name: 'paint-roller', file: HABIT_ICONS['paint-roller'] },
     // appliances
     { name: 'microwave', file: HABIT_ICONS.microwave },

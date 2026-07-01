@@ -476,7 +476,7 @@ export default function Paths() {
 
     // stable date reference for the hook
     const today = useMemo(() => new Date(), []);
-    const { habits: allHabitsRaw, allHabits: allHabitsUnfiltered, loadHabits, resetTime } = useHabits(today);
+    const { habits: allHabitsRaw, allHabits: allHabitsUnfiltered, loading: habitsLoading, loadHabits, resetTime } = useHabits(today);
 
     // use the user's actual reset time, falling back to 4am default
     const resetHour = resetTime.hour;
@@ -489,17 +489,15 @@ export default function Paths() {
     const weekHabits: Habit[] = allHabitsUnfiltered;
 
     const [paths, setPaths] = useState<Path[]>([]);
-    const [loading, setLoading] = useState(true);
+    const [pathsLoading, setPathsLoading] = useState(true);
     const [showNewPath, setShowNewPath] = useState(false);
     const [showInactive, setShowInactive] = useState(false);
     const scrollableRef = useAnimatedRef<Animated.ScrollView>();
 
-    // prevents the flash → spinner → reload when swiping back from [id].tsx
     const hasLoadedOnce = useRef(false);
 
-    const loadPaths = useCallback(async (showLoader: boolean = true) => {
+    const loadPaths = useCallback(async () => {
         if (!user) return;
-        if (showLoader) setLoading(true);
         try {
             const { data: pathsData, error } = await supabase
                 .from('paths')
@@ -513,21 +511,22 @@ export default function Paths() {
         } catch (err) {
             console.error('Error loading paths:', err);
         } finally {
-            setLoading(false);
+            setPathsLoading(false);
         }
     }, [user]);
 
-    // refresh when you come back to the tab (keeps completion history in sync)
-    // spinner only shows on first mount — subsequent focus events refresh silently
     useFocusEffect(
         useCallback(() => {
-            const isFirstLoad = !hasLoadedOnce.current;
-            hasLoadedOnce.current = true;
-
-            loadPaths(isFirstLoad);
+            loadPaths();
             loadHabits();
         }, [loadPaths, loadHabits])
     );
+
+    // show spinner only on the very first load, and only until both paths + habits are ready
+    const loading = !hasLoadedOnce.current && (pathsLoading || habitsLoading);
+    if (!loading && !hasLoadedOnce.current) {
+        hasLoadedOnce.current = true;
+    }
 
     const handlePathCreated = (pathId: string) => {
         loadPaths();

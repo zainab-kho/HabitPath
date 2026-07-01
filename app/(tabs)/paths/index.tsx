@@ -17,8 +17,12 @@ import PageHeader from '@/ui/PageHeader';
 import ShadowBox from '@/ui/ShadowBox';
 import { getHabitDate } from '@/utils/dateUtils';
 import { useFocusEffect, useRouter } from 'expo-router';
+import * as Haptics from 'expo-haptics';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View, Image } from 'react-native';
+import { ActivityIndicator, Pressable, StyleSheet, Text, View, Image } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import Animated, { useAnimatedRef } from 'react-native-reanimated';
+import Sortable from 'react-native-sortables';
 
 // ─── date helpers ─────────────────────────────────────────────────────────────
 
@@ -488,6 +492,7 @@ export default function Paths() {
     const [loading, setLoading] = useState(true);
     const [showNewPath, setShowNewPath] = useState(false);
     const [showInactive, setShowInactive] = useState(false);
+    const scrollableRef = useAnimatedRef<Animated.ScrollView>();
 
     // prevents the flash → spinner → reload when swiping back from [id].tsx
     const hasLoadedOnce = useRef(false);
@@ -500,6 +505,7 @@ export default function Paths() {
                 .from('paths')
                 .select('*')
                 .eq('user_id', user.id)
+                .order('sort_order', { ascending: true, nullsFirst: false })
                 .order('created_date', { ascending: true });
 
             if (error) throw error;
@@ -529,6 +535,29 @@ export default function Paths() {
         router.push(`/(tabs)/paths/${pathId}`);
     };
 
+    const activePaths = useMemo(() =>
+        paths.filter(p => !p.paused && !p.archived_at),
+        [paths]
+    );
+
+    const inactivePaths = useMemo(() =>
+        paths.filter(p => p.paused || p.archived_at),
+        [paths]
+    );
+
+    const handleDragEnd = useCallback(async (params: { data: Path[] }) => {
+        const newOrder = params.data;
+        setPaths(prev => {
+            const inactive = prev.filter(p => p.paused || p.archived_at);
+            return [...newOrder.map((p, i) => ({ ...p, sort_order: i })), ...inactive];
+        });
+
+        const updates = newOrder.map((p, i) =>
+            supabase.from('paths').update({ sort_order: i }).eq('id', p.id)
+        );
+        await Promise.all(updates);
+    }, []);
+
     // "live" date values for display + scheduling logic
     const now = new Date();
     const todayStr = getHabitDate(now, resetHour, resetMin);
@@ -553,7 +582,13 @@ export default function Paths() {
                         buttonColor={PAGE.path.primary[0]}
                     />
                 ) : (
-                    <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+                    <Sortable.PortalProvider>
+                    <GestureHandlerRootView style={{ flex: 1 }}>
+                    <Animated.ScrollView
+                        ref={scrollableRef}
+                        showsVerticalScrollIndicator={false}
+                        contentContainerStyle={{ paddingBottom: 40 }}
+                    >
                         <DailySummary
                             habits={habits}
                             now={now}
@@ -561,32 +596,53 @@ export default function Paths() {
                             resetHour={resetHour}
                             resetMin={resetMin}
                         />
-                        {paths.filter(p => !p.paused && !p.archived_at).map(path => (
-                            <PathCard
-                                key={path.id}
-                                path={path}
-                                habits={weekHabits}
-                                week={week}
-                                todayStr={todayStr}
-                                now={now}
-                                resetHour={resetHour}
-                                resetMin={resetMin}
-                                onPress={() => router.push(`/(tabs)/paths/${path.id}`)}
-                            />
-                        ))}
+                        <Sortable.Grid
+                            data={activePaths}
+                            columns={1}
+                            customHandle
+                            renderItem={({ item: path }) => (
+                                <Sortable.Handle>
+                                    <PathCard
+                                        path={path}
+                                        habits={weekHabits}
+                                        week={week}
+                                        todayStr={todayStr}
+                                        now={now}
+                                        resetHour={resetHour}
+                                        resetMin={resetMin}
+                                        onPress={() => router.push(`/(tabs)/paths/${path.id}`)}
+                                    />
+                                </Sortable.Handle>
+                            )}
+                            keyExtractor={(path) => path.id}
+                            onDragEnd={handleDragEnd}
+                            scrollableRef={scrollableRef}
+                            dragActivationDelay={200}
+                            activeItemScale={1.02}
+                            activeItemShadowOpacity={0.15}
+                            activeItemOpacity={1}
+                            inactiveItemOpacity={1}
+                            inactiveItemScale={1}
+                            onDragStart={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)}
+                            overDrag="vertical"
+                            reorderTriggerOrigin="touch"
+                            itemEntering={null}
+                            itemExiting={null}
+                            itemsLayoutTransitionMode="reorder"
+                        />
 
                         {/* paused & archived section */}
-                        {paths.some(p => p.paused || p.archived_at) && (
+                        {inactivePaths.length > 0 && (
                             <View style={{ marginTop: 20 }}>
                                 <Pressable onPress={() => setShowInactive(!showInactive)}>
                                     <Text style={[globalStyles.label, { textAlign: 'center', opacity: 0.4, fontSize: 12 }]}>
-                                        {showInactive ? 'Hide' : 'Show'} Paused & Archived ({paths.filter(p => p.paused || p.archived_at).length})
+                                        {showInactive ? 'Hide' : 'Show'} Paused & Archived ({inactivePaths.length})
                                     </Text>
                                 </Pressable>
 
                                 {showInactive && (
                                     <View style={{ marginTop: 12, opacity: 0.6 }}>
-                                        {paths.filter(p => p.paused || p.archived_at).map(path => (
+                                        {inactivePaths.map(path => (
                                             <PathCard
                                                 key={path.id}
                                                 path={path}
@@ -603,7 +659,9 @@ export default function Paths() {
                                 )}
                             </View>
                         )}
-                    </ScrollView>
+                    </Animated.ScrollView>
+                    </GestureHandlerRootView>
+                    </Sortable.PortalProvider>
                 )}
 
                 {/* floating buttons */}

@@ -11,4 +11,5 @@ export interface Path {
   paused?: boolean;
   paused_at?: string;
   archived_at?: string;
+  sort_order?: number;
 }

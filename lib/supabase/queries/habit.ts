@@ -157,15 +157,27 @@ export async function snoozeHabit(
   userId: string,
   snoozedFrom?: string
 ): Promise<Habit[]> {
+  const target = habits.find(h => h.id === habitId);
+  const clearArchive = target?.keepUntil && snoozeDateStr;
+
   const updated = habits.map(h =>
     h.id === habitId
-      ? { ...h, snoozedUntil: snoozeDateStr ?? undefined, snoozedFrom: snoozedFrom ?? undefined }
+      ? {
+          ...h,
+          snoozedUntil: snoozeDateStr ?? undefined,
+          snoozedFrom: snoozedFrom ?? undefined,
+          ...(clearArchive ? { archivedAt: undefined } : {}),
+        }
       : h
   );
 
   await supabase
     .from('habits')
-    .update({ snoozed_until: snoozeDateStr, snoozed_from: snoozedFrom ?? null })
+    .update({
+      snoozed_until: snoozeDateStr,
+      snoozed_from: snoozedFrom ?? null,
+      ...(clearArchive ? { archived_at: null } : {}),
+    })
     .eq('id', habitId)
     .eq('user_id', userId);
 
@@ -186,7 +198,7 @@ export async function skipHabit(
   const target = habits.find(h => h.id === habitId);
   if (!target) return habits;
 
-  const isOneTime = !target.frequency || target.frequency === 'None';
+  const isOneTime = (!target.frequency || target.frequency === 'None') && !target.keepUntil;
 
   if (isOneTime) {
     const archiveIso = new Date().toISOString();
@@ -293,6 +305,7 @@ export async function archiveStaleHabits(
     .update({ archived_at: new Date().toISOString() })
     .eq('user_id', userId)
     .eq('frequency', 'None')
+    .eq('keep_until', false)
     .is('archived_at', null)
     .lt('start_date', cutoffStr);
 

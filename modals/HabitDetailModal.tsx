@@ -241,7 +241,7 @@ export default function HabitDetailModal({ visible, habit, onClose, onUpdate, on
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                             <Image source={SYSTEM_ICONS.stats} style={{ width: ICON_SIZE, height: ICON_SIZE, tintColor: ICON_TINT }} />
                             <Text style={[globalStyles.body, { fontSize: 14, opacity: 0.7 }]}>
-                                {formatLastCompleted(habit.lastCompletedDate)}
+                                {formatLastCompleted(habit.completionHistory?.length ? [...habit.completionHistory].sort().at(-1) : undefined)}
                             </Text>
                         </View>
                         {/* Next assigned */}

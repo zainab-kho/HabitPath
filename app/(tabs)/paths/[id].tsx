@@ -1,7 +1,7 @@
 // app/(tabs)/paths/[id].tsx
 import { BUTTON_COLORS } from '@/constants/colors';
 import { PATH_COLORS, type PathColorKey } from '@/colors/pathColors';
-import { HABIT_ICONS } from '@/constants/icons';
+import { HABIT_ICONS, SYSTEM_ICONS } from '@/constants/icons';
 import { useAuth } from '@/contexts/AuthContext';
 import { useHabits } from '@/hooks/useHabits';
 import { supabase } from '@/lib/supabase';
@@ -76,15 +76,17 @@ function HeatMap({
   const now = new Date();
   const todayStr = getHabitDate(now, resetHour, resetMin);
 
-  // current month bounds
-  const year = now.getFullYear();
-  const month = now.getMonth();
+  const [viewingMonth, setViewingMonth] = useState(new Date(now.getFullYear(), now.getMonth(), 1));
+
+  const year = viewingMonth.getFullYear();
+  const month = viewingMonth.getMonth();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const startingDayOfWeek = new Date(year, month, 1).getDay(); // 0=Sun
+  const startingDayOfWeek = new Date(year, month, 1).getDay();
 
-  const monthName = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  const isCurrentMonth = year === now.getFullYear() && month === now.getMonth();
 
-  // build date strings for every day of the month
+  const monthName = viewingMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
   const monthDays = Array.from({ length: daysInMonth }, (_, i) => {
     const d = new Date(year, month, i + 1);
     return getHabitDate(d, resetHour, resetMin);
@@ -93,10 +95,25 @@ function HeatMap({
   const counts = monthDays.map(d => completionsOnDate(habits, d));
   const maxCount = Math.max(...counts, 1);
 
+  const prevMonth = () => setViewingMonth(new Date(year, month - 1, 1));
+  const nextMonth = () => {
+    if (!isCurrentMonth) setViewingMonth(new Date(year, month + 1, 1));
+  };
+
   return (
     <View style={heatmap.wrap}>
-      {/* month label */}
-      <Text style={heatmap.monthLabel}>{monthName}</Text>
+      {/* month navigator */}
+      <View style={heatmap.monthNav}>
+        <Pressable onPress={prevMonth} style={{ padding: 4 }}>
+          <Image source={SYSTEM_ICONS.sortLeft} style={{ width: 16, height: 16 }} />
+        </Pressable>
+        <Pressable onPress={() => setViewingMonth(new Date(now.getFullYear(), now.getMonth(), 1))}>
+          <Text style={heatmap.monthLabel}>{monthName}</Text>
+        </Pressable>
+        <Pressable onPress={nextMonth} style={{ padding: 4, opacity: isCurrentMonth ? 0.2 : 1 }}>
+          <Image source={SYSTEM_ICONS.sortRight} style={{ width: 16, height: 16 }} />
+        </Pressable>
+      </View>
 
       {/* S M T W T F S header */}
       <View style={heatmap.headerRow}>
@@ -109,7 +126,7 @@ function HeatMap({
       <View style={heatmap.grid}>
         {/* invisible placeholders before the 1st */}
         {Array.from({ length: startingDayOfWeek }).map((_, i) => (
-          <View key={`empty-${i}`} style={heatmap.cell} />
+          <View key={`empty-${i}`} style={[heatmap.cell, { borderWidth: 0, backgroundColor: 'transparent' }]} />
         ))}
 
         {/* actual days */}
@@ -124,13 +141,13 @@ function HeatMap({
           if (isFuture || count === 0) {
             bgColor = 'rgba(0,0,0,0.05)';
           } else if (ratio <= 0.25) {
-            bgColor = color + '40';
+            bgColor = color + '77';
           } else if (ratio <= 0.5) {
-            bgColor = color + '70';
+            bgColor = color + 'aa';
           } else if (ratio <= 0.75) {
-            bgColor = color + 'a8';
+            bgColor = color + 'dd';
           } else {
-            bgColor = color + 'ee';
+            bgColor = color;
           }
 
           const textColor = ratio > 0.5 && !isFuture && count > 0 ? '#fff' : 'rgba(0,0,0,0.5)';
@@ -141,7 +158,7 @@ function HeatMap({
               style={[
                 heatmap.cell,
                 { backgroundColor: bgColor },
-                isToday && { borderRadius: 50 },
+                isToday && { borderWidth: 2, borderColor: '#000' },
                 isFuture && { opacity: 0.25 },
               ]}
             >
@@ -154,12 +171,13 @@ function HeatMap({
             </View>
           );
         })}
+
       </View>
 
       {/* legend */}
       <View style={heatmap.legend}>
         <Text style={heatmap.legendLabel}>Less</Text>
-        {['rgba(0,0,0,0.05)', color + '40', color + '70', color + 'a8', color + 'ee'].map((c, i) => (
+        {['rgba(0,0,0,0.05)', color + '77', color + 'aa', color + 'dd', color].map((c, i) => (
           <View key={i} style={[heatmap.legendCell, { backgroundColor: c }]} />
         ))}
         <Text style={heatmap.legendLabel}>More</Text>
@@ -170,20 +188,22 @@ function HeatMap({
 
 const heatmap = StyleSheet.create({
   wrap: {
-    paddingTop: 4,
-    width: '70%',
-    alignSelf: 'center',
+  },
+  monthNav: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
   },
   monthLabel: {
     fontFamily: 'p2',
     fontSize: 13,
     textAlign: 'center',
-    marginBottom: 10,
     opacity: 0.7,
   },
   headerRow: {
     flexDirection: 'row',
-    marginBottom: 4,
+    marginBottom: 10,
   },
   dayLabel: {
     width: '14.28%',
@@ -195,14 +215,17 @@ const heatmap = StyleSheet.create({
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    columnGap: 1.5,
+    rowGap: 1.5,
   },
   cell: {
-    width: '14.28%',
+    width: '13.2%',
     aspectRatio: 1,
-    borderRadius: 6,
+    borderRadius: 0,
+    borderWidth: 1.3,
+    borderColor: '#000',
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 1,
   },
   dayNum: {
     fontFamily: 'label',
@@ -219,12 +242,14 @@ const heatmap = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-end',
     gap: 3,
-    marginTop: 8,
+    marginTop: -25,
   },
   legendCell: {
     width: 10,
     height: 10,
-    borderRadius: 2,
+    borderRadius: 0,
+    borderWidth: 1.3,
+    borderColor: '#000',
   },
   legendLabel: {
     fontFamily: 'label',
@@ -506,12 +531,11 @@ export default function PathDetail() {
 
           {/* ── 28-day heat map ── */}
           <ShadowBox
-            contentBackgroundColor="#fff"
-            shadowBorderRadius={16}
-            shadowOffset={{ x: 0, y: 2 }}
+            shadowColor={colorHex}
+            shadowOffset={{x: 0, y: 5}}
             style={{ marginBottom: 16 }}
           >
-            <View style={styles.card}>
+            <View style={[styles.card, { paddingBottom: 10 }]}>
               <Text style={styles.sectionLabel}>THIS MONTH</Text>
               {allPathHabits.length === 0 ? (
                 <Text style={[globalStyles.label, { opacity: 0.4, marginTop: 8 }]}>

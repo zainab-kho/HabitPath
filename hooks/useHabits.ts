@@ -73,12 +73,6 @@ export function useHabits(viewingDate: Date = new Date()) {
       rawHabitsRef.current = updatedHabits;
       const ds = getHabitDate(viewingDate, reset.hour, reset.minute);
 
-      const keepUntilHabits = updatedHabits.filter(h => h.keepUntil);
-      if (keepUntilHabits.length > 0) {
-        console.log(`(**DEBUG) applyHabitsUpdate: ${updatedHabits.length} total habits, ${keepUntilHabits.length} keepUntil. viewingDate=${ds}`);
-        keepUntilHabits.forEach(h => console.log(`(**DEBUG)   keepUntil habit: name=${h.name}, startDate=${h.startDate}, archivedAt=${h.archivedAt}, snoozedFrom=${h.snoozedFrom}, snoozedUntil=${h.snoozedUntil}`));
-      }
-
       const activeHabits = updatedHabits.filter(h =>
         isHabitActiveToday(h, viewingDate, reset.hour, reset.minute)
       );
@@ -146,11 +140,6 @@ export function useHabits(viewingDate: Date = new Date()) {
       ]);
       const merged = [...fresh, ...questGoals];
 
-      // Debug: log all keepUntil habits loaded from DB
-      const keepUntils = merged.filter(h => h.keepUntil);
-      console.log(`(**DEBUG) loadHabits: ${merged.length} total loaded (${fresh.length} habits + ${questGoals.length} quests), ${keepUntils.length} keepUntil`);
-      keepUntils.forEach(h => console.log(`(**DEBUG) LOADED keepUntil: name="${h.name}", id=${h.id}, startDate=${h.startDate}, archivedAt=${h.archivedAt}, snoozedFrom=${h.snoozedFrom}, snoozedUntil=${h.snoozedUntil}, freq=${h.frequency}, completionHistory=${JSON.stringify(h.completionHistory)}`));
-
       // Fetch streak + points before updating UI so everything lands in one render
       const [streak, total] = await Promise.all([
         updateAppStreak(fresh, reset.hour, reset.minute),
@@ -190,8 +179,6 @@ export function useHabits(viewingDate: Date = new Date()) {
         : isSnoozedNow
           ? target.snoozedFrom!
           : rawDs;
-
-      console.log(`(**DEBUG) toggleHabit: name=${target.name}, rawDs=${rawDs}, ds=${ds}, keepUntil=${target.keepUntil}, snoozedFrom=${target.snoozedFrom}, frequency=${target.frequency}, completionHistory=${JSON.stringify(target.completionHistory)}`);
 
       const isCurrentlyCompleted = target.completionHistory?.includes(ds) ?? false;
 
@@ -310,14 +297,10 @@ export function useHabits(viewingDate: Date = new Date()) {
         const ds = getHabitDate(viewingDate, resetTime.hour, resetTime.minute);
 
         // Prevent backwards snooze (target date must be after source date)
-        if (targetDate && targetDate <= ds) {
-          console.warn(`(**DEBUG) snoozeHabit: target ${targetDate} <= source ${ds}, skipping`);
-          return;
-        }
+        if (targetDate && targetDate <= ds) return;
 
         const currentHabits = rawHabitsRef.current;
         const target = currentHabits.find(h => h.id === habitId);
-        console.log(`(**DEBUG) snoozeHabit: name=${target?.name}, keepUntil=${target?.keepUntil}, freq=${target?.frequency}, snoozedFrom=${ds}, snoozedUntil=${targetDate}, startDate=${target?.startDate}`);
 
         // Quest goals: update quest_goals table
         if (target?.isQuestGoal && target.questGoalId) {
@@ -363,7 +346,6 @@ export function useHabits(viewingDate: Date = new Date()) {
       const ds = target?.keepUntil
         ? getHabitCycleStart(target, viewingDate, resetTime.hour, resetTime.minute)
         : rawDs;
-      console.log(`(**TESTING) useHabits.skipHabit: habitId=${habitId}, dateStr=${ds}`);
 
       try {
 

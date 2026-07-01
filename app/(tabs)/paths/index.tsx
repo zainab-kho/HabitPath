@@ -445,14 +445,17 @@ function DailySummary({
     return (
         <View style={summaryStyles.wrap}>
             {totalWeekOccurrences > 0 && (
-                <View style={[uiStyles.badge, {
-                    width: 150,
+                <View style={{
                     alignSelf: 'center',
                     justifyContent: 'center',
+                    paddingHorizontal: 10,
+                    paddingVertical: 5,
+                    borderRadius: 12,
+                    borderWidth: 1,
+                    borderColor: '#000',
                     backgroundColor: PAGE.path.primary[1],
-                    borderColor: PAGE.path.primary[0],
-                }]}>
-                    <Text style={summaryStyles.sub}>
+                }}>
+                    <Text style={[globalStyles.body2, { fontSize: 13 }]}>
                         {doneWeekOccurrences}/{totalWeekOccurrences} done this week
                     </Text>
                 </View>

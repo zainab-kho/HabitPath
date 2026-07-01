@@ -290,10 +290,6 @@ export function isHabitActiveToday(
   const actualTodayStr = getHabitDate(new Date(), resetHour, resetMinute);
   const isViewingToday = todayStr === actualTodayStr;
 
-  if (habit.keepUntil) {
-    console.log(`(**DEBUG) isHabitActiveToday ENTRY: name=${habit.name}, todayStr=${todayStr}, startDate=${habit.startDate}, archivedAt=${habit.archivedAt}, snoozedFrom=${habit.snoozedFrom}, snoozedUntil=${habit.snoozedUntil}, freq=${habit.frequency}`);
-  }
-
   // **REVIEW:
   // archived handling:
   // - repeating habits: archived means "never show"
@@ -324,7 +320,6 @@ export function isHabitActiveToday(
   const snoozeFrom = habit.snoozedFrom?.slice(0, 10);
 
   if (snoozeDay && snoozeFrom) {
-    console.log(`(**DEBUG) isHabitActiveToday snooze check: name=${habit.name}, todayStr=${todayStr}, snoozeFrom=${snoozeFrom}, snoozeDay=${snoozeDay}, keepUntil=${habit.keepUntil}, inWindow=${todayStr >= snoozeFrom && todayStr < snoozeDay}, isSnoozeDay=${todayStr === snoozeDay}`);
     // Hide for the entire snooze window (from snoozeFrom up to but not including snoozeDay)
     if (todayStr >= snoozeFrom && todayStr < snoozeDay) return false;
 
@@ -346,7 +341,6 @@ export function isHabitActiveToday(
   if (!habit.frequency || habit.frequency === 'None') {
     if (habit.keepUntil) {
       const cycleStart = getHabitCycleStart(habit, date, resetHour, resetMinute);
-      console.log(`(**DEBUG) isHabitActiveToday keepUntil: name=${habit.name}, todayStr=${todayStr}, startDate=${habit.startDate}, cycleStart=${cycleStart}, isViewingToday=${isViewingToday}, snoozeDay=${snoozeDay}, snoozeFrom=${snoozeFrom}, completionHistory=${JSON.stringify(habit.completionHistory)}`);
 
       // Check if completed (either checkmark OR reached increment goal)
       let isCompleted = habit.completionHistory?.includes(cycleStart) ?? false;
@@ -469,10 +463,6 @@ export const getHabitStatus = (
         : isSnoozedNow
           ? habit.snoozedFrom!
           : dateStr;
-
-  if (habit.keepUntil) {
-    console.log(`(**DEBUG) getHabitStatus keepUntil: name=${habit.name}, dateStr=${dateStr}, effectiveDateStr=${effectiveDateStr}, snoozedFrom=${habit.snoozedFrom}, snoozedUntil=${habit.snoozedUntil}, isSnoozedNow=${isSnoozedNow}`);
-  }
 
   // snoozed check first so snoozed habits don't show as missed
   // use < (not <=) so the habit is active ON the snoozedUntil day

@@ -89,7 +89,6 @@ export default function HabitsPage() {
   };
 
   const handleUndoSnooze = async (habitId: string) => {
-    console.log(`(**TESTING) HabitsPage.handleUndoSnooze: habitId=${habitId}`);
     await snoozeHabit(habitId, null);
   };
 

@@ -443,7 +443,7 @@ function DailySummary({
         );
     }, 0);
 
-    // pick a fill color 
+    // pick a fill color
     const fillColor = pctRounded === 100 ? PAGE.habits.primary[0] : PAGE.path.primary[1];
 
     return (
@@ -589,7 +589,7 @@ export default function Paths() {
                         contentContainerStyle={{ paddingBottom: 40 }}
                     >
                         <DailySummary
-                            habits={habits}
+                            habits={weekHabits}
                             now={now}
                             todayStr={todayStr}
                             resetHour={resetHour}

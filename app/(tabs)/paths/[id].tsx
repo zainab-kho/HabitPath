@@ -301,6 +301,11 @@ export default function PathDetail() {
     ? allHabitsAll.filter(h => h.path === path.name && isVisible(h))
     : [];
 
+  // all habits in this path (including archived) — used for heatmap history
+  const allPathHabits = path
+    ? allHabitsAll.filter(h => h.path === path.name)
+    : [];
+
   // Past/completed one-time habits in this path (shown in Archived modal)
   const archivedHabits = path
     ? allHabitsAll.filter(h => h.path === path.name && isArchived(h))
@@ -315,7 +320,7 @@ export default function PathDetail() {
     if (!user) return;
     try {
       const habits = await loadHabitsFromSupabase(user.id);
-      setAllHabitsAll(habits.filter(h => !h.archivedAt));
+      setAllHabitsAll(habits);
     } catch (e) {
       console.error('Error loading habits:', e);
     }
@@ -477,9 +482,9 @@ export default function PathDetail() {
   };
 
   const pathHabitIds = pathHabits.map(h => h.id);
-  const weekCompletions = completionsThisWeek(pathHabits, resetHour, resetMin);
-  const pts = totalPoints(pathHabits);
-  const bestStreak = Math.max(...pathHabits.map(h => h.bestStreak ?? 0), 0);
+  const weekCompletions = completionsThisWeek(allPathHabits, resetHour, resetMin);
+  const pts = totalPoints(allPathHabits);
+  const bestStreak = Math.max(...allPathHabits.map(h => h.bestStreak ?? 0), 0);
 
   return (
     <AppLinearGradient variant="path.background">
@@ -508,13 +513,13 @@ export default function PathDetail() {
           >
             <View style={styles.card}>
               <Text style={styles.sectionLabel}>THIS MONTH</Text>
-              {pathHabits.length === 0 ? (
+              {allPathHabits.length === 0 ? (
                 <Text style={[globalStyles.label, { opacity: 0.4, marginTop: 8 }]}>
                   Add habits to see your progress
                 </Text>
               ) : (
                 <HeatMap
-                  habits={pathHabits}
+                  habits={allPathHabits}
                   color={colorHex}
                   resetHour={resetHour}
                   resetMin={resetMin}

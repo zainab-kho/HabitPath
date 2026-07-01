@@ -1,5 +1,6 @@
 // @/components/habits/HabitItem.tsx
 import React, { useMemo, useRef, useState } from 'react';
+import * as Haptics from 'expo-haptics';
 import { Animated, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 
@@ -65,11 +66,12 @@ export default function HabitItem({
   const isTimeTracking = isTimeTrackingHabit(habit);
 
   // keepUntil / Weekly Goal: use cycle start (walks back to find stored data)
-  // snoozed non-keepUntil: use snoozedFrom date
+  // snoozed: use snoozedFrom only while snooze is active
+  const isSnoozedNow = habit.snoozedFrom && habit.snoozedUntil && dateStr <= habit.snoozedUntil.slice(0, 10);
   const effectiveDateStr = (habit.keepUntil || habit.frequency === 'Weekly Goal')
     ? getHabitCycleStart(habit, currentDate, resetTime.hour, resetTime.minute)
-    : habit.snoozedFrom && habit.increment
-      ? habit.snoozedFrom
+    : isSnoozedNow
+      ? habit.snoozedFrom!
       : dateStr;
 
   // source of truth for today's increment progress
@@ -127,6 +129,7 @@ export default function HabitItem({
 
   const handleRightAction = (e: any) => {
     e.stopPropagation();
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
 
     // normal habits behave like checkbox toggle
     if (!isIncrement) {

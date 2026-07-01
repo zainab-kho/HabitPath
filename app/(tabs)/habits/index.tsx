@@ -54,6 +54,7 @@ export default function HabitsPage() {
     skipHabit,
     unskipHabit,
     unskipAndCompleteHabit,
+    reorderHabits,
   } = useHabits(viewingDate);
 
   // snooze modal state
@@ -62,20 +63,24 @@ export default function HabitsPage() {
   const [snoozeDateStr, setSnoozeDateStr] = useState('');
 
   const handleSnoozeHabit = async (habitId: string) => {
-    // find the habit before snoozing (it will disappear from the list after)
     const target = habits.find(h => h.id === habitId) ?? null;
 
-    // compute tomorrow's date (timezone-safe)
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowStr = formatLocalDate(tomorrow);
+    // viewing a past day → snooze to today; viewing today → snooze to tomorrow
+    const todayStr = getHabitDate(new Date(), resetTime.hour, resetTime.minute);
+    const viewingStr = getHabitDate(viewingDate, resetTime.hour, resetTime.minute);
+    let defaultSnoozeStr: string;
+    if (viewingStr < todayStr) {
+      defaultSnoozeStr = todayStr;
+    } else {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      defaultSnoozeStr = formatLocalDate(tomorrow);
+    }
 
-    // snooze to tomorrow immediately
-    await snoozeHabit(habitId);
+    await snoozeHabit(habitId, defaultSnoozeStr);
 
-    // open modal so user can change date or undo
     setSnoozeTargetHabit(target);
-    setSnoozeDateStr(tomorrowStr);
+    setSnoozeDateStr(defaultSnoozeStr);
     setSnoozeModalVisible(true);
   };
 
@@ -133,11 +138,9 @@ export default function HabitsPage() {
 
       (async () => {
         const dirty = await AsyncStorage.getItem(STORAGE_KEYS.HABITS_DIRTY);
-        if (!cancelled && dirty === '1' && !loading) {
+        if (!cancelled && dirty === '1') {
           await AsyncStorage.removeItem(STORAGE_KEYS.HABITS_DIRTY);
           loadHabits();
-
-          console.log('Reloading habits');
         }
       })();
 
@@ -239,6 +242,7 @@ export default function HabitsPage() {
           onUnskipHabit={unskipHabit}
           onUnskipAndCompleteHabit={unskipAndCompleteHabit}
           onSnoozeHabit={handleSnoozeHabit}
+          onReorderHabits={reorderHabits}
         />
 
         {/* snooze confirmation modal */}
@@ -270,7 +274,7 @@ export default function HabitsPage() {
 
             <Pressable onPress={() => router.push({ pathname: '/habits/NewHabitPage', params: { startDate: formatLocalDate(viewingDate) } })}>
               <ShadowBox
-                contentBackgroundColor={PAGE.habits.button[0]}
+                contentBackgroundColor={PAGE.habits.primary[0]}
                 contentBorderRadius={30}
                 shadowBorderRadius={30}
               >

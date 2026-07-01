@@ -1,17 +1,14 @@
 // @/app/(tabs)/habits/NewHabitPage.tsx
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useRef, useState } from 'react';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     Alert,
     Image,
-    Keyboard,
     Pressable,
-    ScrollView,
     Switch,
     Text,
     TextInput,
-    TouchableWithoutFeedback,
     View
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
@@ -30,7 +27,6 @@ import { getIconFile } from '@/components/habits/iconUtils';
 import { BUTTON_COLORS, COLORS, PAGE } from '@/constants/colors';
 import { CUSTOM_TYPES, FREQUENCIES, REWARD_OPTIONS, TIME_OPTIONS, WEEK_DAYS } from '@/constants/habits';
 import { SYSTEM_ICONS } from '@/constants/icons';
-import IconPickerModal from '@/modals/IconPickerModal';
 import { globalStyles } from '@/styles';
 import { AppLinearGradient } from '@/ui/AppLinearGradient';
 import PageContainer from '@/ui/PageContainer';
@@ -49,6 +45,7 @@ export default function NewHabitPage() {
     const params = useLocalSearchParams<{ startDate?: string; editId?: string; editData?: string }>();
     const inputRef = useRef<TextInput>(null);
     const scrollRef = useRef<KeyboardAwareScrollView>(null);
+    const hasNavigatedAway = useRef(false);
 
     const isEditMode = !!params.editId;
     const editHabit = React.useMemo(
@@ -64,9 +61,26 @@ export default function NewHabitPage() {
     })();
 
     // basic info
-    const [showIconPicker, setShowIconPicker] = useState(false);
     const [habitName, setHabitName] = useState(editHabit?.name ?? '');
     const [selectedIcon, setSelectedIcon] = useState(editHabit?.icon ?? 'goal');
+
+    useEffect(() => {
+        if (!isEditMode) {
+            setTimeout(() => inputRef.current?.focus(), 100);
+        }
+    }, []);
+
+    useFocusEffect(
+        useCallback(() => {
+            (async () => {
+                const picked = await AsyncStorage.getItem('pickedIcon');
+                if (picked) {
+                    setSelectedIcon(picked);
+                    await AsyncStorage.removeItem('pickedIcon');
+                }
+            })();
+        }, [])
+    );
 
     // scheduling
     const editFreq = editHabit?.frequency;
@@ -370,11 +384,7 @@ export default function NewHabitPage() {
                     showsVerticalScrollIndicator={false}
                     keyboardShouldPersistTaps="handled"
                 >
-                    <TouchableWithoutFeedback onPress={Keyboard.dismiss} accessible={false}>
-                        <ScrollView
-                            keyboardShouldPersistTaps="handled"
-                            showsVerticalScrollIndicator={false}
-                        >
+                        <View>
                             {/* main card */}
                             <View style={{
                                 backgroundColor: '#fff',
@@ -391,16 +401,15 @@ export default function NewHabitPage() {
                                     gap: 15,
                                 }}>
                                     <Pressable
-                                        onPress={() => setShowIconPicker(true)}
+                                        onPress={() => router.push('/(tabs)/habits/IconPickerPage' as any)}
                                         style={{
                                             width: 50,
                                             height: 50,
                                             borderRadius: 25,
                                             borderWidth: 1,
-                                            // borderColor: COLORS.Primary,
                                             justifyContent: 'center',
                                             alignItems: 'center',
-                                            backgroundColor: COLORS.PrimaryLight,
+                                            backgroundColor: PAGE.habits.primary[1],
                                         }}
                                     >
                                         <Image
@@ -427,7 +436,7 @@ export default function NewHabitPage() {
                                         placeholderTextColor="rgba(0,0,0,0.4)"
                                         value={habitName}
                                         onChangeText={setHabitName}
-                                        autoFocus
+                                        autoFocus={false}
                                         cursorColor={PAGE.habits.border[0]}
                                         selectionColor={PAGE.habits.border[0]}
                                         onFocus={(e) => scrollRef.current?.scrollToFocusedInput(e.nativeEvent.target)}
@@ -1262,17 +1271,10 @@ export default function NewHabitPage() {
                                     </View>
                                 </View>
                             </View>
-                        </ScrollView>
-                    </TouchableWithoutFeedback>
+                        </View>
                 </KeyboardAwareScrollView>
             </PageContainer>
 
-            <IconPickerModal
-                visible={showIconPicker}
-                selectedIcon={selectedIcon}
-                onClose={() => setShowIconPicker(false)}
-                onSelectIcon={(iconName) => setSelectedIcon(iconName)}
-            />
         </AppLinearGradient >
     );
 }

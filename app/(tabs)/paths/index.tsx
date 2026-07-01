@@ -76,6 +76,16 @@ interface WeekGridProps {
     resetMin: number;
 }
 
+function isHabitCompletedForDate(h: Habit, dateStr: string): boolean {
+    if (h.completionHistory?.includes(dateStr)) return true;
+    const snoozeUntil = h.snoozedUntil?.slice(0, 10);
+    const snoozeFrom = h.snoozedFrom?.slice(0, 10);
+    if (snoozeUntil && snoozeFrom && dateStr === snoozeUntil) {
+        return h.completionHistory?.includes(snoozeFrom) ?? false;
+    }
+    return false;
+}
+
 function WeekGrid({ pathName, habits, color, week, todayStr, now, resetHour, resetMin }: WeekGridProps) {
     const pathHabits = habits.filter(h => h.path === pathName && h.frequency !== 'Weekly Goal');
 
@@ -93,14 +103,14 @@ function WeekGrid({ pathName, habits, color, week, todayStr, now, resetHour, res
                 const incrementHabits = scheduledHabits.filter(h => h.increment);
 
                 const regularDone = regularHabits.filter(h =>
-                    h.completionHistory?.includes(str)
+                    isHabitCompletedForDate(h, str)
                 ).length;
                 const regularSkipped = regularHabits.filter(h =>
                     h.skippedDates?.includes(str)
                 ).length;
                 const emptyCount = regularHabits.length - regularDone - regularSkipped;
                 const total = scheduledHabits.length;
-                const done = scheduledHabits.filter(h => h.completionHistory?.includes(str)).length;
+                const done = scheduledHabits.filter(h => isHabitCompletedForDate(h, str)).length;
 
                 const pillOpacity = isFuture ? { opacity: .75 } : {};
 
@@ -151,7 +161,7 @@ function WeekGrid({ pathName, habits, color, week, todayStr, now, resetHour, res
                                         const ratio = goal > 0 ? Math.min(amount / goal, 1) : 0;
                                         const isDone = goal > 0
                                             ? ratio >= 1
-                                            : h.completionHistory?.includes(str) ?? false;
+                                            : isHabitCompletedForDate(h, str);
 
                                         return (
                                             <View key={`inc-${i}`} style={grid.pillWrap}>

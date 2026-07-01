@@ -22,6 +22,7 @@ import { Habit } from '@/types/Habit';
 import EmptyStateView from '@/ui/EmptyStateView';
 import ShadowBox from '@/ui/ShadowBox';
 import { getHabitDate } from '@/utils/dateUtils';
+import * as Haptics from 'expo-haptics';
 
 import { HabitWithStatus } from '@/hooks/useHabits';
 import {
@@ -42,6 +43,7 @@ interface HabitsListProps {
   onUnskipHabit?: (habitId: string) => void;
   onUnskipAndCompleteHabit?: (habitId: string) => void;
   onSnoozeHabit?: (habitId: string) => void;
+  onReorderHabits?: (updater: (prev: HabitWithStatus[]) => HabitWithStatus[]) => void;
 }
 
 type TimeOfDay = typeof TIME_OPTIONS[number];
@@ -72,6 +74,7 @@ export default function HabitsList({
   onUnskipHabit,
   onUnskipAndCompleteHabit,
   onSnoozeHabit,
+  onReorderHabits,
 }: HabitsListProps) {
   const router = useRouter();
   const currentDate = viewingDate || new Date();
@@ -164,7 +167,7 @@ export default function HabitsList({
   // displayHabits = habits + local subtask overrides. Already active-only from applyHabitsUpdate.
   const activeHabits = displayHabits;
   const regularActiveHabits = activeHabits.filter(h => !h.isQuestGoal && h.frequency !== 'Weekly Goal');
-  const weeklyAndQuestHabits = activeHabits.filter(h => h.isQuestGoal || h.frequency === 'Weekly Goal');
+  const weeklyHabits = activeHabits.filter(h => h.frequency === 'Weekly Goal');
   const incompleteCount = regularActiveHabits.filter(h => h.status !== 'completed' && h.status !== 'skipped').length;
   const scheduledHabits = regularActiveHabits;
   const allDoneToday = scheduledHabits.length > 0 && incompleteCount === 0;
@@ -195,7 +198,7 @@ export default function HabitsList({
 
   // Build the flat list: headers interleaved with habits, grouped by section
   const flatList = useMemo(() => {
-    const regularOrdered = orderedHabits.filter(h => !h.isQuestGoal && h.frequency !== 'Weekly Goal');
+    const regularOrdered = orderedHabits.filter(h => !h.isQuestGoal && h.frequency !== 'Weekly Goal' );
     const visible = showCompleted
       ? regularOrdered
       : regularOrdered.filter(h => h.status !== 'completed' && h.status !== 'skipped');
@@ -221,10 +224,10 @@ export default function HabitsList({
     return items;
   }, [orderedHabits, showCompleted, dateStr]);
 
-  const visibleWeeklyAndQuest = useMemo(() => {
-    if (showCompleted) return weeklyAndQuestHabits;
-    return weeklyAndQuestHabits.filter(h => h.status !== 'completed' && h.status !== 'skipped');
-  }, [weeklyAndQuestHabits, showCompleted]);
+  const visibleWeekly = useMemo(() => {
+    if (showCompleted) return weeklyHabits;
+    return weeklyHabits.filter(h => h.status !== 'completed' && h.status !== 'skipped');
+  }, [weeklyHabits, showCompleted]);
 
   const firstHeaderId = flatList.length > 0 && flatList[0]?.type === 'header' ? flatList[0].id : null;
 
@@ -268,7 +271,20 @@ export default function HabitsList({
     const fullOrder = [...newHabitOrder, ...hiddenHabits];
 
     saveDailyOrder(fullOrder.map(h => h.id), userId, dateStr);
-  }, [orderedHabits, dateStr, userId]);
+
+    onReorderHabits?.(prev => prev.map(h => {
+      const idx = fullOrder.findIndex(fo => fo.id === h.id);
+      if (idx === -1) return h;
+      const reordered = fullOrder[idx]!;
+      return {
+        ...h,
+        tempOrder: idx,
+        tempOrderDate: dateStr,
+        tempTimeOfDay: reordered.tempTimeOfDay,
+        tempTimeOfDayDate: reordered.tempTimeOfDayDate,
+      };
+    }));
+  }, [orderedHabits, dateStr, userId, onReorderHabits]);
 
   const handleHabitPress = (habit: HabitWithStatus) => {
     setSelectedHabit(habit);
@@ -301,7 +317,7 @@ export default function HabitsList({
     );
   }
 
-  if (scheduledHabits.length === 0 && weeklyAndQuestHabits.length === 0) {
+  if (scheduledHabits.length === 0 && weeklyHabits.length === 0) {
     return (
       <View style={{ marginTop: 20, alignItems: 'center', gap: 20 }}>
         <Text style={[globalStyles.body, { opacity: 0.7 }]}>You have no habits today! Add a habit?</Text>
@@ -309,7 +325,7 @@ export default function HabitsList({
         <ShadowBox
           shadowBorderRadius={20}
           contentBorderRadius={20}
-          contentBackgroundColor={PAGE.habits.button[0]}
+          contentBackgroundColor={PAGE.habits.primary[0]}
         >
           <Pressable
             onPress={() => router.push('/(tabs)/habits/NewHabitPage')}
@@ -325,6 +341,7 @@ export default function HabitsList({
   }
 
   return (
+    <Sortable.PortalProvider>
     <GestureHandlerRootView style={styles.container}>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 }}>
         <View>
@@ -410,7 +427,7 @@ export default function HabitsList({
           activeItemOpacity={1}
           inactiveItemOpacity={1}
           inactiveItemScale={1}
-          hapticsEnabled
+          onDragStart={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium)}
           overDrag="vertical"
           reorderTriggerOrigin="touch"
           itemEntering={null}
@@ -418,20 +435,15 @@ export default function HabitsList({
           itemsLayoutTransitionMode="reorder"
         />
 
-        {visibleWeeklyAndQuest.length > 0 && (
-          <View style={{
-            marginTop: 10,
-            backgroundColor: COLORS.PrimaryLight + '20',
-            borderColor: '#000',
-            borderWidth: 1,
-            borderRadius: 15,
-            padding: 10,
-          }}>
-            <HabitSectionHeader
-              title="WEEKLY & QUESTS"
-              count={visibleWeeklyAndQuest.length}
-            />
-            {visibleWeeklyAndQuest.map(habit => (
+        {visibleWeekly.length > 0 && (
+          <View style={{ marginTop: 15 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 8 }}>
+              <Text style={{ fontSize: 12, fontFamily: 'label', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, opacity: 0.7 }}>
+                WEEKLY
+              </Text>
+              <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(0,0,0,0.15)' }} />
+            </View>
+            {visibleWeekly.map(habit => (
               <HabitItem
                 key={habit.id}
                 habit={habit}
@@ -474,6 +486,7 @@ export default function HabitsList({
         onLogTime={handleLogTime}
       />
     </GestureHandlerRootView>
+    </Sortable.PortalProvider>
   );
 }
 

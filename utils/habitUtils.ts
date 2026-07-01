@@ -290,20 +290,29 @@ export function isHabitActiveToday(
   const actualTodayStr = getHabitDate(new Date(), resetHour, resetMinute);
   const isViewingToday = todayStr === actualTodayStr;
 
+  if (habit.keepUntil) {
+    console.log(`(**DEBUG) isHabitActiveToday ENTRY: name=${habit.name}, todayStr=${todayStr}, startDate=${habit.startDate}, archivedAt=${habit.archivedAt}, snoozedFrom=${habit.snoozedFrom}, snoozedUntil=${habit.snoozedUntil}, freq=${habit.frequency}`);
+  }
+
   // **REVIEW:
   // archived handling:
   // - repeating habits: archived means "never show"
   // - one-time habits: allow showing on the day they were skipped/completed/start for history
   if (habit.archivedAt) {
-    const isOneTime = !habit.frequency || habit.frequency === 'None';
-    if (!isOneTime) return false;
+    // keepUntil habits should ignore archival — they stay until completed
+    if (habit.keepUntil) {
+      // fall through to normal logic below
+    } else {
+      const isOneTime = !habit.frequency || habit.frequency === 'None';
+      if (!isOneTime) return false;
 
-    // one-time: show ONLY on meaningful history days
-    if (todayStr === habit.startDate) return true;
-    if (habit.skippedDates?.includes(todayStr)) return true;
-    if (habit.completionHistory?.includes(todayStr)) return true;
+      // one-time: show ONLY on meaningful history days
+      if (todayStr === habit.startDate) return true;
+      if (habit.skippedDates?.includes(todayStr)) return true;
+      if (habit.completionHistory?.includes(todayStr)) return true;
 
-    return false;
+      return false;
+    }
   }
 
   // habit not started yet
@@ -315,6 +324,7 @@ export function isHabitActiveToday(
   const snoozeFrom = habit.snoozedFrom?.slice(0, 10);
 
   if (snoozeDay && snoozeFrom) {
+    console.log(`(**DEBUG) isHabitActiveToday snooze check: name=${habit.name}, todayStr=${todayStr}, snoozeFrom=${snoozeFrom}, snoozeDay=${snoozeDay}, keepUntil=${habit.keepUntil}, inWindow=${todayStr >= snoozeFrom && todayStr < snoozeDay}, isSnoozeDay=${todayStr === snoozeDay}`);
     // Hide for the entire snooze window (from snoozeFrom up to but not including snoozeDay)
     if (todayStr >= snoozeFrom && todayStr < snoozeDay) return false;
 
@@ -326,8 +336,8 @@ export function isHabitActiveToday(
   if (habit.skippedDates?.includes(todayStr)) return true;
   if (habit.completionHistory?.includes(todayStr)) return true;
 
-  // Archived one-time habits: hide on all other days
-  if (habit.archivedAt && (!habit.frequency || habit.frequency === 'None')) return false;
+  // Archived one-time habits: hide on all other days (keepUntil ignores archival)
+  if (habit.archivedAt && (!habit.frequency || habit.frequency === 'None') && !habit.keepUntil) return false;
 
   // If it was completed on this day, also show it for history.
   if (habit.completionHistory?.includes(todayStr)) return true;
@@ -336,6 +346,7 @@ export function isHabitActiveToday(
   if (!habit.frequency || habit.frequency === 'None') {
     if (habit.keepUntil) {
       const cycleStart = getHabitCycleStart(habit, date, resetHour, resetMinute);
+      console.log(`(**DEBUG) isHabitActiveToday keepUntil: name=${habit.name}, todayStr=${todayStr}, startDate=${habit.startDate}, cycleStart=${cycleStart}, isViewingToday=${isViewingToday}, snoozeDay=${snoozeDay}, snoozeFrom=${snoozeFrom}, completionHistory=${JSON.stringify(habit.completionHistory)}`);
 
       // Check if completed (either checkmark OR reached increment goal)
       let isCompleted = habit.completionHistory?.includes(cycleStart) ?? false;
@@ -352,19 +363,8 @@ export function isHabitActiveToday(
         return todayStr === cycleStart;
       }
 
-      // If incomplete:
-      // - Show on start date
-      // - Show on actual TODAY if started in past (carry over)
-      // - Do NOT show on random future/past dates when browsing
-      if (todayStr === habit.startDate) {
-        return true; // Show on start date
-      }
-
-      if (isViewingToday && todayStr > habit.startDate) {
-        return true; // Carry over to actual today only
-      }
-
-      return false;
+      // If incomplete, show on every day from startDate through actual today
+      return todayStr >= habit.startDate && todayStr <= actualTodayStr;
     } else {
       // Normal one-time goals: show only on start date
       return todayStr === habit.startDate;
@@ -459,15 +459,20 @@ export const getHabitStatus = (
   resetHour?: number,
   resetMinute?: number,
 ): HabitStatus => {
-  // keepUntil: use cycle start; Weekly Goal: use Monday; snoozed: use snoozedFrom
+  // keepUntil: use cycle start; Weekly Goal: use Monday; snoozed: use snoozedFrom (only while active)
+  const isSnoozedNow = habit.snoozedFrom && habit.snoozedUntil && dateStr <= habit.snoozedUntil.slice(0, 10);
   const effectiveDateStr =
     (habit.keepUntil && viewingDate && resetHour !== undefined && resetMinute !== undefined)
       ? getHabitCycleStart(habit, viewingDate, resetHour, resetMinute)
       : habit.frequency === 'Weekly Goal'
         ? getWeekDatesForDate(dateStr)[0]
-        : habit.snoozedFrom
-          ? habit.snoozedFrom
+        : isSnoozedNow
+          ? habit.snoozedFrom!
           : dateStr;
+
+  if (habit.keepUntil) {
+    console.log(`(**DEBUG) getHabitStatus keepUntil: name=${habit.name}, dateStr=${dateStr}, effectiveDateStr=${effectiveDateStr}, snoozedFrom=${habit.snoozedFrom}, snoozedUntil=${habit.snoozedUntil}, isSnoozedNow=${isSnoozedNow}`);
+  }
 
   // snoozed check first so snoozed habits don't show as missed
   // use < (not <=) so the habit is active ON the snoozedUntil day
@@ -565,6 +570,59 @@ function computeHabitStreak(
   return streak;
 }
 
+function computeBestStreak(
+  habit: Habit,
+  resetHour: number,
+  resetMinute: number
+): number {
+  const history = habit.completionHistory ?? [];
+  if (history.length === 0) return 0;
+
+  const oneTime = !habit.frequency || habit.frequency === 'None';
+  if (oneTime) return 0;
+
+  if (habit.frequency === 'Weekly Goal') {
+    const sortedWeeks = [...history].sort();
+    let best = 1;
+    let current = 1;
+    for (let i = 1; i < sortedWeeks.length; i++) {
+      const prev = parseLocalDate(sortedWeeks[i - 1]);
+      const curr = parseLocalDate(sortedWeeks[i]);
+      const diff = Math.round((curr.getTime() - prev.getTime()) / (7 * 86400000));
+      if (diff === 1) {
+        current++;
+        if (current > best) best = current;
+      } else {
+        current = 1;
+      }
+    }
+    return best;
+  }
+
+  const todayStr = getHabitDate(new Date(), resetHour, resetMinute);
+  let best = 0;
+  let current = 0;
+
+  for (let i = 365; i >= 0; i--) {
+    const d = parseLocalDate(todayStr);
+    d.setDate(d.getDate() - i);
+    const ds = formatLocalDate(d);
+
+    if (ds < habit.startDate) continue;
+    if (!isHabitScheduledForDate(habit, d, resetHour, resetMinute)) continue;
+    if (habit.skippedDates?.includes(ds)) continue;
+
+    if (history.includes(ds)) {
+      current++;
+      if (current > best) best = current;
+    } else {
+      current = 0;
+    }
+  }
+
+  return best;
+}
+
 export const addStatusToHabits = (
   habits: Habit[],
   viewingDate: Date,
@@ -578,6 +636,7 @@ export const addStatusToHabits = (
   return habits.map(h => ({
     ...h,
     streak: computeHabitStreak(h, resetHour, resetMinute),
+    bestStreak: computeBestStreak(h, resetHour, resetMinute),
     status: getHabitStatus(h, dateStr, isViewingToday, todayStr, viewingDate, resetHour, resetMinute),
   }));
 };

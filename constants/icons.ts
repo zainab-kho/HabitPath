@@ -5,51 +5,69 @@ export interface HabitIcon {
 }
 
 export const HABIT_ICONS: Record<string, any> = {
-  // Daily Activities
+  // Daily
   goal: require('@/assets/icons/habits/daily-activities/goal.png'),
   target: require('@/assets/icons/habits/daily-activities/target.png'),
+  'target-logo': require('@/assets/icons/habits/daily-activities/target-logo.png'),
   alarmClock: require('@/assets/icons/habits/daily-activities/alarm-clock.png'),
+  'timeline-week': require('@/assets/icons/habits/daily-activities/timeline-week.png'),
+  hourglass: require('@/assets/icons/habits/daily-activities/hourglass.png'),
+  phone: require('@/assets/icons/habits/daily-activities/phone.png'),
+  car: require('@/assets/icons/habits/daily-activities/car.png'),
+  'gas-station': require('@/assets/icons/habits/daily-activities/gas-station.png'),
+  'dental-floss': require('@/assets/icons/habits/daily-activities/dental-floss.png'),
+  sunrise: require('@/assets/icons/habits/daily-activities/sunrise.png'),
+  sun: require('@/assets/icons/habits/daily-activities/sun.png'),
+  'iced-coffee': require('@/assets/icons/habits/daily-activities/iced-coffee.png'),
+  'coffee-to-go': require('@/assets/icons/habits/daily-activities/coffee-to-go.png'),
+  'coffee-maker': require('@/assets/icons/habits/morning/coffee-maker.png'),
+  'matcha-tea': require('@/assets/icons/habits/morning/matcha-tea.png'),
+  cup: require('@/assets/icons/habits/morning/cup.png'),
+  camper: require('@/assets/icons/habits/daily-activities/camper.png'),
+  address: require('@/assets/icons/habits/daily-activities/address.png'),
+
+  // Self-Care
   shower: require('@/assets/icons/habits/daily-activities/shower.png'),
   bathtub: require('@/assets/icons/habits/daily-activities/bathtub.png'),
   soap: require('@/assets/icons/habits/daily-activities/soap.png'),
   'soap-dispenser': require('@/assets/icons/habits/daily-activities/soap-dispenser.png'),
   'electric-toothbrush': require('@/assets/icons/habits/daily-activities/electric-toothbrush.png'),
-  sunrise: require('@/assets/icons/habits/daily-activities/sunrise.png'),
-  sun: require('@/assets/icons/habits/daily-activities/sun.png'),
-  'iced-coffee': require('@/assets/icons/habits/daily-activities/iced-coffee.png'),
-  'coffee-to-go': require('@/assets/icons/habits/daily-activities/coffee-to-go.png'),
-  books: require('@/assets/icons/habits/daily-activities/books.png'),
-  kindle: require('@/assets/icons/habits/daily-activities/kindle.png'),
-  study: require('@/assets/icons/habits/daily-activities/study.png'),
-  ipad: require('@/assets/icons/habits/daily-activities/ipad.png'),
-  cooker: require('@/assets/icons/habits/daily-activities/cooker.png'),
-  laptop: require('@/assets/icons/habits/daily-activities/laptop.png'),
-  'food-and-wine': require('@/assets/icons/habits/daily-activities/food-and-wine.png'),
-  podcast: require('@/assets/icons/habits/daily-activities/podcast.png'),
-  'doctors-bag': require('@/assets/icons/habits/daily-activities/doctors-bag.png'),
-  'target-logo': require('@/assets/icons/habits/daily-activities/target-logo.png'),
+  'sleeping-in-bed': require('@/assets/icons/habits/self-care/sleeping-in-bed.png'),
+  'spa-mask': require('@/assets/icons/habits/self-care/spa-mask.png'),
+  'hair-brush': require('@/assets/icons/habits/self-care/hair-brush.png'),
+  mascara: require('@/assets/icons/habits/self-care/mascara.png'),
+  'makeup-brush': require('@/assets/icons/habits/self-care/makeup-brush.png'),
+  'nail-polish': require('@/assets/icons/habits/self-care/nail-polish.png'),
+  'face-powder': require('@/assets/icons/habits/self-care/face-powder.png'),
+  facemask: require('@/assets/icons/habits/self-care/facemask.png'),
+  mirror: require('@/assets/icons/habits/self-care/mirror.png'),
 
-  // Cleaning
-  housekeeping: require('@/assets/icons/habits/cleaning/housekeeping.png'),
-  'vacuum-cleaner': require('@/assets/icons/habits/cleaning/vacuum-cleaner.png'),
-  'washing-machine': require('@/assets/icons/habits/cleaning/washing-machine.png'),
-  broom: require('@/assets/icons/habits/cleaning/broom.png'),
-
-  // Work
+  // Work & Study
   monitor: require('@/assets/icons/habits/work/monitor.png'),
   workstation: require('@/assets/icons/habits/work/workstation.png'),
   code: require('@/assets/icons/habits/work/code.png'),
   'code-1': require('@/assets/icons/habits/work/code-1.png'),
+  laptop: require('@/assets/icons/habits/daily-activities/laptop.png'),
+  ipad: require('@/assets/icons/habits/daily-activities/ipad.png'),
   mousepad: require('@/assets/icons/habits/work/mousepad.png'),
   folder: require('@/assets/icons/habits/work/folder.png'),
   accounting: require('@/assets/icons/habits/work/accounting.png'),
   github: require('@/assets/icons/habits/work/github.png'),
   'visual-studio-code': require('@/assets/icons/habits/work/visual-studio-code.png'),
-  goodnotes: require('@/assets/icons/habits/work/goodnotes.png'),
-  'health-book': require('@/assets/icons/habits/work/health-book.png'),
-  bookmark: require('@/assets/icons/habits/work/bookmark.png'),
-  'book-and-pencil': require('@/assets/icons/habits/work/book-and-pencil.png'),
   'inspect-code': require('@/assets/icons/habits/work/inspect-code.png'),
+  bookmark: require('@/assets/icons/habits/work/bookmark.png'),
+  profile: require('@/assets/icons/habits/work/profile.png'),
+  suitcase: require('@/assets/icons/habits/work/suitcase.png'),
+  books: require('@/assets/icons/habits/daily-activities/books.png'),
+  kindle: require('@/assets/icons/habits/daily-activities/kindle.png'),
+  study: require('@/assets/icons/habits/daily-activities/study.png'),
+  goodnotes: require('@/assets/icons/habits/work/goodnotes.png'),
+  'book-and-pencil': require('@/assets/icons/habits/work/book-and-pencil.png'),
+  'health-book': require('@/assets/icons/habits/work/health-book.png'),
+  journal: require('@/assets/icons/habits/learning/journal.png'),
+  'art-book': require('@/assets/icons/habits/learning/art-book.png'),
+  'graduation-cap': require('@/assets/icons/habits/learning/graduation-cap.png'),
+  classroom: require('@/assets/icons/habits/learning/classroom.png'),
 
   // Food
   'kitchen-room': require('@/assets/icons/habits/food/kitchen-room.png'),
@@ -69,6 +87,37 @@ export const HABIT_ICONS: Record<string, any> = {
   'sunny-side-up-eggs': require('@/assets/icons/habits/food/sunny-side-up-eggs.png'),
   avocado: require('@/assets/icons/habits/food/avocado.png'),
   banana: require('@/assets/icons/habits/food/banana.png'),
+  cooker: require('@/assets/icons/habits/daily-activities/cooker.png'),
+  'food-and-wine': require('@/assets/icons/habits/daily-activities/food-and-wine.png'),
+  pie: require('@/assets/icons/habits/food/pie.png'),
+  hamburger: require('@/assets/icons/habits/food/hamburger.png'),
+  cinnamon: require('@/assets/icons/habits/food/cinnamon.png'),
+  cafe: require('@/assets/icons/habits/food/cafe.png'),
+  'birthday-cake': require('@/assets/icons/habits/food/birthday-cake.png'),
+  milkshake: require('@/assets/icons/habits/food/milkshake.png'),
+  noodles: require('@/assets/icons/habits/food/noodles.png'),
+
+  // Home
+  housekeeping: require('@/assets/icons/habits/cleaning/housekeeping.png'),
+  'vacuum-cleaner': require('@/assets/icons/habits/cleaning/vacuum-cleaner.png'),
+  'washing-machine': require('@/assets/icons/habits/cleaning/washing-machine.png'),
+  broom: require('@/assets/icons/habits/cleaning/broom.png'),
+  balcony: require('@/assets/icons/habits/home/balcony.png'),
+  recycling: require('@/assets/icons/habits/home/recycling.png'),
+  trash: require('@/assets/icons/habits/home/trash.png'),
+  microwave: require('@/assets/icons/habits/food/microwave.png'),
+  rug: require('@/assets/icons/habits/home/rug.png'),
+  multicooker: require('@/assets/icons/habits/home/multicooker.png'),
+  home: require('@/assets/icons/habits/home/home.png'),
+  'home-automation': require('@/assets/icons/habits/home/home-automation.png'),
+  'home-address': require('@/assets/icons/habits/home/home-address.png'),
+  fridge: require('@/assets/icons/habits/home/fridge.png'),
+  bed: require('@/assets/icons/habits/home/bed.png'),
+  armchair: require('@/assets/icons/habits/home/armchair.png'),
+  apartment: require('@/assets/icons/habits/home/apartment.png'),
+  garage: require('@/assets/icons/habits/home/garage.png'),
+  'living-room': require('@/assets/icons/habits/home/living-room.png'),
+  'paint-roller': require('@/assets/icons/habits/home/paint-roller.png'),
 
   // Fitness
   running: require('@/assets/icons/habits/fitness/running.png'),
@@ -76,19 +125,33 @@ export const HABIT_ICONS: Record<string, any> = {
   'yoga-mat': require('@/assets/icons/habits/fitness/yoga-mat.png'),
   kicking: require('@/assets/icons/habits/fitness/kicking.png'),
   dumbbell: require('@/assets/icons/habits/fitness/dumbbell.png'),
+  'heart-with-pulse': require('@/assets/icons/habits/fitness/heart-with-pulse.png'),
+  'doctors-bag': require('@/assets/icons/habits/fitness/doctors-bag.png'),
 
-  // Financing
+  // Shopping & Finance
   budget: require('@/assets/icons/habits/financing/budget.png'),
-  'dollar-bag': require('@/assets/icons/habits/financing/dollar-bag.png'),
+  'dollar-bag': require('@/assets/icons/habits/shopping/dollar-bag.png'),
   'money-transfer': require('@/assets/icons/habits/financing/money-transfer.png'),
   'money-box': require('@/assets/icons/habits/financing/money-box.png'),
+  shop: require('@/assets/icons/habits/shopping/shop.png'),
+  'shopping-basket': require('@/assets/icons/habits/shopping/shopping-basket.png'),
+  amazon: require('@/assets/icons/habits/shopping/amazon.png'),
+  'return-purchases': require('@/assets/icons/habits/shopping/return-purchases.png'),
+  'measurement-tool': require('@/assets/icons/habits/shopping/measurement-tool.png'),
 
-  // Nature
+  // Views
   nature: require('@/assets/icons/habits/nature/nature.png'),
   valley: require('@/assets/icons/habits/nature/valley.png'),
   field: require('@/assets/icons/habits/nature/field.png'),
+  'mountain-city': require('@/assets/icons/habits/views/mountain-city.png'),
+  lake: require('@/assets/icons/habits/views/lake.png'),
+  swamp: require('@/assets/icons/habits/views/swamp.png'),
+  sky: require('@/assets/icons/habits/views/sky.png'),
+  forest: require('@/assets/icons/habits/views/forest.png'),
+  night: require('@/assets/icons/habits/views/night.png'),
+  'moon-and-stars': require('@/assets/icons/habits/views/moon-and-stars.png'),
 
-  // Music
+  // Entertainment
   radio: require('@/assets/icons/habits/music/radio.png'),
   music: require('@/assets/icons/habits/music/music.png'),
   'apple-music': require('@/assets/icons/habits/music/apple-music.png'),
@@ -97,102 +160,180 @@ export const HABIT_ICONS: Record<string, any> = {
   piano: require('@/assets/icons/habits/music/piano.png'),
   violin: require('@/assets/icons/habits/music/violin.png'),
   'quarter-rest': require('@/assets/icons/habits/music/quarter-rest.png'),
+  podcast: require('@/assets/icons/habits/daily-activities/podcast.png'),
+  'retro-tv': require('@/assets/icons/habits/daily-activities/retro-tv.png'),
+  youtube: require('@/assets/icons/habits/entertainment/youtube.png'),
+  instagram: require('@/assets/icons/habits/entertainment/instagram.png'),
+  'icons8-radio-100': require('@/assets/icons/habits/entertainment/icons8-radio-100.png'),
+  news: require('@/assets/icons/habits/entertainment/news.png'),
 };
 
-// Now the categories using the HABIT_ICONS mapping
 export const ICON_CATEGORIES: Record<string, HabitIcon[]> = {
-  'Daily Activities': [
+  Daily: [
+    // goals
     { name: 'goal', file: HABIT_ICONS.goal },
     { name: 'target', file: HABIT_ICONS.target },
+    // morning & time
+    { name: 'sunrise', file: HABIT_ICONS.sunrise },
+    { name: 'sun', file: HABIT_ICONS.sun },
     { name: 'alarmClock', file: HABIT_ICONS.alarmClock },
+    { name: 'sleeping-in-bed', file: HABIT_ICONS['sleeping-in-bed'] },
+    { name: 'night', file: HABIT_ICONS.night },
+    { name: 'moon-and-stars', file: HABIT_ICONS['moon-and-stars'] },
+    { name: 'hourglass', file: HABIT_ICONS.hourglass },
+    { name: 'timeline-week', file: HABIT_ICONS['timeline-week'] },
+    // drinks
+    { name: 'coffee-to-go', file: HABIT_ICONS['coffee-to-go'] },
+    { name: 'iced-coffee', file: HABIT_ICONS['iced-coffee'] },
+    { name: 'matcha-tea', file: HABIT_ICONS['matcha-tea'] },
+    { name: 'cup', file: HABIT_ICONS.cup },
+    // hygiene
     { name: 'shower', file: HABIT_ICONS.shower },
     { name: 'bathtub', file: HABIT_ICONS.bathtub },
     { name: 'soap', file: HABIT_ICONS.soap },
     { name: 'soap-dispenser', file: HABIT_ICONS['soap-dispenser'] },
     { name: 'electric-toothbrush', file: HABIT_ICONS['electric-toothbrush'] },
-    { name: 'sunrise', file: HABIT_ICONS.sunrise },
-    { name: 'sun', file: HABIT_ICONS.sun },
-    { name: 'iced-coffee', file: HABIT_ICONS['iced-coffee'] },
-    { name: 'coffee-to-go', file: HABIT_ICONS['coffee-to-go'] },
+    { name: 'dental-floss', file: HABIT_ICONS['dental-floss'] },
+    // beauty
+    { name: 'spa-mask', file: HABIT_ICONS['spa-mask'] },
+    { name: 'facemask', file: HABIT_ICONS.facemask },
+    { name: 'hair-brush', file: HABIT_ICONS['hair-brush'] },
+    { name: 'mascara', file: HABIT_ICONS.mascara },
+    { name: 'makeup-brush', file: HABIT_ICONS['makeup-brush'] },
+    { name: 'face-powder', file: HABIT_ICONS['face-powder'] },
+    { name: 'nail-polish', file: HABIT_ICONS['nail-polish'] },
+    { name: 'mirror', file: HABIT_ICONS.mirror },
+    // transport & misc
+    { name: 'car', file: HABIT_ICONS.car },
+    { name: 'gas-station', file: HABIT_ICONS['gas-station'] },
+    { name: 'phone', file: HABIT_ICONS.phone },
+    { name: 'address', file: HABIT_ICONS.address },
+  ],
+
+  'Work & Study': [
+    // devices
+    { name: 'laptop', file: HABIT_ICONS.laptop },
+    { name: 'monitor', file: HABIT_ICONS.monitor },
+    { name: 'workstation', file: HABIT_ICONS.workstation },
+    { name: 'ipad', file: HABIT_ICONS.ipad },
+    { name: 'mousepad', file: HABIT_ICONS.mousepad },
+    // coding
+    { name: 'code', file: HABIT_ICONS.code },
+    { name: 'code-1', file: HABIT_ICONS['code-1'] },
+    { name: 'visual-studio-code', file: HABIT_ICONS['visual-studio-code'] },
+    { name: 'inspect-code', file: HABIT_ICONS['inspect-code'] },
+    { name: 'github', file: HABIT_ICONS.github },
+    // office
+    { name: 'folder', file: HABIT_ICONS.folder },
+    { name: 'accounting', file: HABIT_ICONS.accounting },
+    { name: 'suitcase', file: HABIT_ICONS.suitcase },
+    { name: 'profile', file: HABIT_ICONS.profile },
+    // reading & study
     { name: 'books', file: HABIT_ICONS.books },
     { name: 'kindle', file: HABIT_ICONS.kindle },
     { name: 'study', file: HABIT_ICONS.study },
-    { name: 'ipad', file: HABIT_ICONS.ipad },
-    { name: 'cooker', file: HABIT_ICONS.cooker },
-    { name: 'laptop', file: HABIT_ICONS.laptop },
-    { name: 'food-and-wine', file: HABIT_ICONS['food-and-wine'] },
-    { name: 'podcast', file: HABIT_ICONS.podcast },
-    { name: 'doctors-bag', file: HABIT_ICONS['doctors-bag'] },
-    { name: 'target-logo', file: HABIT_ICONS['target-logo'] },
+    { name: 'bookmark', file: HABIT_ICONS.bookmark },
+    { name: 'goodnotes', file: HABIT_ICONS.goodnotes },
+    { name: 'book-and-pencil', file: HABIT_ICONS['book-and-pencil'] },
+    { name: 'journal', file: HABIT_ICONS.journal },
+    { name: 'art-book', file: HABIT_ICONS['art-book'] },
+    { name: 'health-book', file: HABIT_ICONS['health-book'] },
+    // school
+    { name: 'graduation-cap', file: HABIT_ICONS['graduation-cap'] },
+    { name: 'classroom', file: HABIT_ICONS.classroom },
   ],
 
-  Cleaning: [
+  Food: [
+    // cooking & kitchen
+    { name: 'kitchen-room', file: HABIT_ICONS['kitchen-room'] },
+    { name: 'kitchen-pot', file: HABIT_ICONS['kitchen-pot'] },
+    { name: 'cooker', file: HABIT_ICONS.cooker },
+    { name: 'cutlery', file: HABIT_ICONS.cutlery },
+    { name: 'ingredients', file: HABIT_ICONS.ingredients },
+    // meals
+    { name: 'sunny-side-up-eggs', file: HABIT_ICONS['sunny-side-up-eggs'] },
+    { name: 'boiled-egg', file: HABIT_ICONS['boiled-egg'] },
+    { name: 'sandwich', file: HABIT_ICONS.sandwich },
+    { name: 'hamburger', file: HABIT_ICONS.hamburger },
+    { name: 'rice-bowl', file: HABIT_ICONS['rice-bowl'] },
+    { name: 'noodles', file: HABIT_ICONS.noodles },
+    { name: 'sushi', file: HABIT_ICONS.sushi },
+    { name: 'tofu', file: HABIT_ICONS.tofu },
+    // ingredients & produce
+    { name: 'avocado', file: HABIT_ICONS.avocado },
+    { name: 'banana', file: HABIT_ICONS.banana },
+    { name: 'lemon', file: HABIT_ICONS.lemon },
+    { name: 'olive-oil', file: HABIT_ICONS['olive-oil'] },
+    { name: 'flour', file: HABIT_ICONS.flour },
+    { name: 'cinnamon', file: HABIT_ICONS.cinnamon },
+    // treats & drinks
+    { name: 'popcorn', file: HABIT_ICONS.popcorn },
+    { name: 'cheesecake', file: HABIT_ICONS.cheesecake },
+    { name: 'pie', file: HABIT_ICONS.pie },
+    { name: 'birthday-cake', file: HABIT_ICONS['birthday-cake'] },
+    { name: 'milkshake', file: HABIT_ICONS.milkshake },
+    { name: 'cafe', file: HABIT_ICONS.cafe },
+    { name: 'food-and-wine', file: HABIT_ICONS['food-and-wine'] },
+  ],
+
+  'Home & Shopping': [
+    // cleaning
     { name: 'housekeeping', file: HABIT_ICONS.housekeeping },
     { name: 'vacuum-cleaner', file: HABIT_ICONS['vacuum-cleaner'] },
     { name: 'washing-machine', file: HABIT_ICONS['washing-machine'] },
     { name: 'broom', file: HABIT_ICONS.broom },
-  ],
-
-  Work: [
-    { name: 'monitor', file: HABIT_ICONS.monitor },
-    { name: 'workstation', file: HABIT_ICONS.workstation },
-    { name: 'code', file: HABIT_ICONS.code },
-    { name: 'code-1', file: HABIT_ICONS['code-1'] },
-    { name: 'mousepad', file: HABIT_ICONS.mousepad },
-    { name: 'folder', file: HABIT_ICONS.folder },
-    { name: 'accounting', file: HABIT_ICONS.accounting },
-    { name: 'github', file: HABIT_ICONS.github },
-    { name: 'visual-studio-code', file: HABIT_ICONS['visual-studio-code'] },
-    { name: 'goodnotes', file: HABIT_ICONS.goodnotes },
-    { name: 'health-book', file: HABIT_ICONS['health-book'] },
-    { name: 'bookmark', file: HABIT_ICONS.bookmark },
-    { name: 'book-and-pencil', file: HABIT_ICONS['book-and-pencil'] },
-    { name: 'inspect-code', file: HABIT_ICONS['inspect-code'] },
-  ],
-
-  Food: [
-    { name: 'kitchen-room', file: HABIT_ICONS['kitchen-room'] },
-    { name: 'kitchen-pot', file: HABIT_ICONS['kitchen-pot'] },
-    { name: 'cutlery', file: HABIT_ICONS.cutlery },
-    { name: 'ingredients', file: HABIT_ICONS.ingredients },
-    { name: 'olive-oil', file: HABIT_ICONS['olive-oil'] },
-    { name: 'sandwich', file: HABIT_ICONS.sandwich },
-    { name: 'rice-bowl', file: HABIT_ICONS['rice-bowl'] },
-    { name: 'lemon', file: HABIT_ICONS.lemon },
-    { name: 'flour', file: HABIT_ICONS.flour },
-    { name: 'popcorn', file: HABIT_ICONS.popcorn },
-    { name: 'boiled-egg', file: HABIT_ICONS['boiled-egg'] },
-    { name: 'sushi', file: HABIT_ICONS.sushi },
-    { name: 'cheesecake', file: HABIT_ICONS.cheesecake },
-    { name: 'tofu', file: HABIT_ICONS.tofu },
-    { name: 'sunny-side-up-eggs', file: HABIT_ICONS['sunny-side-up-eggs'] },
-    { name: 'avocado', file: HABIT_ICONS.avocado },
-    { name: 'banana', file: HABIT_ICONS.banana },
-  ],
-
-  Fitness: [
-    { name: 'running', file: HABIT_ICONS.running },
-    { name: 'girl-running', file: HABIT_ICONS['girl-running'] },
-    { name: 'yoga-mat', file: HABIT_ICONS['yoga-mat'] },
-    { name: 'kicking', file: HABIT_ICONS.kicking },
-    { name: 'dumbbell', file: HABIT_ICONS.dumbbell },
-  ],
-
-  Financing: [
+    { name: 'rug', file: HABIT_ICONS.rug },
+    { name: 'recycling', file: HABIT_ICONS.recycling },
+    { name: 'trash', file: HABIT_ICONS.trash },
+    { name: 'paint-roller', file: HABIT_ICONS['paint-roller'] },
+    // appliances
+    { name: 'microwave', file: HABIT_ICONS.microwave },
+    { name: 'multicooker', file: HABIT_ICONS.multicooker },
+    { name: 'fridge', file: HABIT_ICONS.fridge },
+    { name: 'coffee-maker', file: HABIT_ICONS['coffee-maker'] },
+    // spaces
+    { name: 'home', file: HABIT_ICONS.home },
+    { name: 'apartment', file: HABIT_ICONS.apartment },
+    { name: 'living-room', file: HABIT_ICONS['living-room'] },
+    { name: 'bed', file: HABIT_ICONS.bed },
+    { name: 'armchair', file: HABIT_ICONS.armchair },
+    { name: 'balcony', file: HABIT_ICONS.balcony },
+    { name: 'garage', file: HABIT_ICONS.garage },
+    { name: 'home-address', file: HABIT_ICONS['home-address'] },
+    { name: 'home-automation', file: HABIT_ICONS['home-automation'] },
+    // shopping & finance
+    { name: 'shop', file: HABIT_ICONS.shop },
+    { name: 'shopping-basket', file: HABIT_ICONS['shopping-basket'] },
+    { name: 'target-logo', file: HABIT_ICONS['target-logo'] },
+    { name: 'amazon', file: HABIT_ICONS.amazon },
+    { name: 'return-purchases', file: HABIT_ICONS['return-purchases'] },
+    { name: 'measurement-tool', file: HABIT_ICONS['measurement-tool'] },
     { name: 'budget', file: HABIT_ICONS.budget },
     { name: 'dollar-bag', file: HABIT_ICONS['dollar-bag'] },
     { name: 'money-transfer', file: HABIT_ICONS['money-transfer'] },
     { name: 'money-box', file: HABIT_ICONS['money-box'] },
   ],
 
-  Nature: [
+  Lifestyle: [
+    // fitness
+    { name: 'running', file: HABIT_ICONS.running },
+    { name: 'girl-running', file: HABIT_ICONS['girl-running'] },
+    { name: 'dumbbell', file: HABIT_ICONS.dumbbell },
+    { name: 'yoga-mat', file: HABIT_ICONS['yoga-mat'] },
+    { name: 'kicking', file: HABIT_ICONS.kicking },
+    { name: 'heart-with-pulse', file: HABIT_ICONS['heart-with-pulse'] },
+    { name: 'doctors-bag', file: HABIT_ICONS['doctors-bag'] },
+    // nature & outdoors
     { name: 'nature', file: HABIT_ICONS.nature },
-    { name: 'valley', file: HABIT_ICONS.valley },
+    { name: 'forest', file: HABIT_ICONS.forest },
     { name: 'field', file: HABIT_ICONS.field },
-  ],
-
-  Music: [
-    { name: 'radio', file: HABIT_ICONS.radio },
+    { name: 'valley', file: HABIT_ICONS.valley },
+    { name: 'mountain-city', file: HABIT_ICONS['mountain-city'] },
+    { name: 'lake', file: HABIT_ICONS.lake },
+    { name: 'swamp', file: HABIT_ICONS.swamp },
+    { name: 'sky', file: HABIT_ICONS.sky },
+    { name: 'camper', file: HABIT_ICONS.camper },
+    // music
     { name: 'music', file: HABIT_ICONS.music },
     { name: 'apple-music', file: HABIT_ICONS['apple-music'] },
     { name: 'headphones', file: HABIT_ICONS.headphones },
@@ -200,6 +341,14 @@ export const ICON_CATEGORIES: Record<string, HabitIcon[]> = {
     { name: 'piano', file: HABIT_ICONS.piano },
     { name: 'violin', file: HABIT_ICONS.violin },
     { name: 'quarter-rest', file: HABIT_ICONS['quarter-rest'] },
+    { name: 'radio', file: HABIT_ICONS.radio },
+    { name: 'icons8-radio-100', file: HABIT_ICONS['icons8-radio-100'] },
+    // media
+    { name: 'podcast', file: HABIT_ICONS.podcast },
+    { name: 'retro-tv', file: HABIT_ICONS['retro-tv'] },
+    { name: 'youtube', file: HABIT_ICONS.youtube },
+    { name: 'instagram', file: HABIT_ICONS.instagram },
+    { name: 'news', file: HABIT_ICONS.news },
   ],
 };
 
@@ -208,111 +357,7 @@ export function getHabitIcon(name: string) {
     const found = category.find(icon => icon.name === name);
     if (found) return found.file;
   }
-  return null; // icon not found
-}
-
-export const ICON_CATEGORIES2: Record<string, HabitIcon[]> = {
-    'Daily Activities': [
-        { name: 'goal', file: require('@/assets/icons/habits/daily-activities/goal.png') },
-        { name: 'target', file: require('@/assets/icons/habits/daily-activities/target.png') },
-        { name: 'alarm-clock', file: require('@/assets/icons/habits/daily-activities/alarm-clock.png') },
-        { name: 'shower', file: require('@/assets/icons/habits/daily-activities/shower.png') },
-        { name: 'bathtub', file: require('@/assets/icons/habits/daily-activities/bathtub.png') },
-        { name: 'soap', file: require('@/assets/icons/habits/daily-activities/soap.png') },
-        { name: 'soap-dispenser', file: require('@/assets/icons/habits/daily-activities/soap-dispenser.png') },
-        { name: 'electric-toothbrush', file: require('@/assets/icons/habits/daily-activities/electric-toothbrush.png') },
-        { name: 'sunrise', file: require('@/assets/icons/habits/daily-activities/sunrise.png') },
-        { name: 'sun', file: require('@/assets/icons/habits/daily-activities/sun.png') },
-        { name: 'iced-coffee', file: require('@/assets/icons/habits/daily-activities/iced-coffee.png') },
-        { name: 'coffee-to-go', file: require('@/assets/icons/habits/daily-activities/coffee-to-go.png') },
-        { name: 'books', file: require('@/assets/icons/habits/daily-activities/books.png') },
-        { name: 'kindle', file: require('@/assets/icons/habits/daily-activities/kindle.png') },
-        { name: 'study', file: require('@/assets/icons/habits/daily-activities/study.png') },
-        { name: 'ipad', file: require('@/assets/icons/habits/daily-activities/ipad.png') },
-        { name: 'cooker', file: require('@/assets/icons/habits/daily-activities/cooker.png') },
-        { name: 'laptop', file: require('@/assets/icons/habits/daily-activities/laptop.png') },
-        { name: 'food-and-wine', file: require('@/assets/icons/habits/daily-activities/food-and-wine.png') },
-        { name: 'podcast', file: require('@/assets/icons/habits/daily-activities/podcast.png') },
-        { name: 'doctors-bag', file: require('@/assets/icons/habits/daily-activities/doctors-bag.png') },
-        { name: 'target-logo', file: require('@/assets/icons/habits/daily-activities/target-logo.png') },
-    ],
-
-    'Cleaning': [
-        { name: 'housekeeping', file: require('@/assets/icons/habits/cleaning/housekeeping.png') },
-        { name: 'vacuum-cleaner', file: require('@/assets/icons/habits/cleaning/vacuum-cleaner.png') },
-        { name: 'washing-machine', file: require('@/assets/icons/habits/cleaning/washing-machine.png') },
-        { name: 'broom', file: require('@/assets/icons/habits/cleaning/broom.png') },
-    ],
-
-    'Work': [
-        { name: 'monitor', file: require('@/assets/icons/habits/work/monitor.png') },
-        { name: 'workstation', file: require('@/assets/icons/habits/work/workstation.png') },
-        { name: 'code', file: require('@/assets/icons/habits/work/code.png') },
-        { name: 'code-1', file: require('@/assets/icons/habits/work/code-1.png') },
-        { name: 'mousepad', file: require('@/assets/icons/habits/work/mousepad.png') },
-        { name: 'folder', file: require('@/assets/icons/habits/work/folder.png') },
-        { name: 'accounting', file: require('@/assets/icons/habits/work/accounting.png') },
-        { name: 'github', file: require('@/assets/icons/habits/work/github.png') },
-        { name: 'visual-studio-code', file: require('@/assets/icons/habits/work/visual-studio-code.png') },
-        { name: 'goodnotes', file: require('@/assets/icons/habits/work/goodnotes.png') },
-        { name: 'health-book', file: require('@/assets/icons/habits/work/health-book.png') },
-        { name: 'bookmark', file: require('@/assets/icons/habits/work/bookmark.png') },
-        { name: 'book-and-pencil', file: require('@/assets/icons/habits/work/book-and-pencil.png') },
-        { name: 'inspect-code', file: require('@/assets/icons/habits/work/inspect-code.png') },
-    ],
-
-    'Food': [
-        { name: 'kitchen-room', file: require('@/assets/icons/habits/food/kitchen-room.png') },
-        { name: 'kitchen-pot', file: require('@/assets/icons/habits/food/kitchen-pot.png') },
-        // { name: 'coffee-maker', file: require('@/assets/icons/habits/food/coffee-maker.png') },
-        { name: 'cutlery', file: require('@/assets/icons/habits/food/cutlery.png') },
-        { name: 'ingredients', file: require('@/assets/icons/habits/food/ingredients.png') },
-        { name: 'olive-oil', file: require('@/assets/icons/habits/food/olive-oil.png') },
-        { name: 'sandwich', file: require('@/assets/icons/habits/food/sandwich.png') },
-        { name: 'rice-bowl', file: require('@/assets/icons/habits/food/rice-bowl.png') },
-        { name: 'lemon', file: require('@/assets/icons/habits/food/lemon.png') },
-        { name: 'flour', file: require('@/assets/icons/habits/food/flour.png') },
-        { name: 'popcorn', file: require('@/assets/icons/habits/food/popcorn.png') },
-        { name: 'boiled-egg', file: require('@/assets/icons/habits/food/boiled-egg.png') },
-        { name: 'sushi', file: require('@/assets/icons/habits/food/sushi.png') },
-        { name: 'cheesecake', file: require('@/assets/icons/habits/food/cheesecake.png') },
-        { name: 'tofu', file: require('@/assets/icons/habits/food/tofu.png') },
-        { name: 'sunny-side-up-eggs', file: require('@/assets/icons/habits/food/sunny-side-up-eggs.png') },
-        { name: 'avocado', file: require('@/assets/icons/habits/food/avocado.png') },
-        { name: 'banana', file: require('@/assets/icons/habits/food/banana.png') },
-    ],
-
-    'Fitnesss': [
-        { name: 'running', file: require('@/assets/icons/habits/fitness/running.png') },
-        { name: 'girl-running', file: require('@/assets/icons/habits/fitness/girl-running.png') },
-        { name: 'yoga-mat', file: require('@/assets/icons/habits/fitness/yoga-mat.png') },
-        { name: 'kicking', file: require('@/assets/icons/habits/fitness/kicking.png') },
-        { name: 'dumbbell', file: require('@/assets/icons/habits/fitness/dumbbell.png') },
-    ],
-
-    'Financing': [
-        { name: 'budget', file: require('@/assets/icons/habits/financing/budget.png') },
-        { name: 'dollar-bag', file: require('@/assets/icons/habits/financing/dollar-bag.png') },
-        { name: 'money-transfer', file: require('@/assets/icons/habits/financing/money-transfer.png') },
-        { name: 'money-box', file: require('@/assets/icons/habits/financing/money-box.png') },
-    ],
-
-    'Nature': [
-        { name: 'nature', file: require('@/assets/icons/habits/nature/nature.png') },
-        { name: 'valley', file: require('@/assets/icons/habits/nature/valley.png') },
-        { name: 'field', file: require('@/assets/icons/habits/nature/field.png') },
-    ],
-
-    'Music': [
-        { name: 'radio', file: require('@/assets/icons/habits/music/radio.png') },
-        { name: 'music', file: require('@/assets/icons/habits/music/music.png') },
-        { name: 'apple-music', file: require('@/assets/icons/habits/music/apple-music.png') },
-        { name: 'headphones', file: require('@/assets/icons/habits/music/headphones.png') },
-        { name: 'earbuds', file: require('@/assets/icons/habits/music/earbuds.png') },
-        { name: 'piano', file: require('@/assets/icons/habits/music/piano.png') },
-        { name: 'violin', file: require('@/assets/icons/habits/music/violin.png') },
-        { name: 'quarter-rest', file: require('@/assets/icons/habits/music/quarter-rest.png') },
-    ]
+  return null;
 }
 
 export const SYSTEM_ICONS = {
@@ -334,6 +379,10 @@ export const SYSTEM_ICONS = {
     back: require('@/assets/icons/system/back.png'),
 
     fire: require('@/assets/icons/system/fire.png'),
+    fireBlue: require('@/assets/icons/system/fire-blue.png'),
+    duplicate: require('@/assets/icons/system/duplicate.png'),
+    archive: require('@/assets/icons/system/archive.png'),
+    trash: require('@/assets/icons/system/trash.png'),
     star: require('@/assets/icons/system/star-icon.png'),
     show: require('@/assets/icons/system/show.png'),
     hide: require('@/assets/icons/system/hide.png'),
@@ -364,4 +413,3 @@ export const SYSTEM_ICONS = {
     gift: require('@/assets/icons/system/gift.png'),
     photo: require('@/assets/icons/system/photo.png'),
 };
-

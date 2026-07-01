@@ -73,6 +73,12 @@ export function useHabits(viewingDate: Date = new Date()) {
       rawHabitsRef.current = updatedHabits;
       const ds = getHabitDate(viewingDate, reset.hour, reset.minute);
 
+      const keepUntilHabits = updatedHabits.filter(h => h.keepUntil);
+      if (keepUntilHabits.length > 0) {
+        console.log(`(**DEBUG) applyHabitsUpdate: ${updatedHabits.length} total habits, ${keepUntilHabits.length} keepUntil. viewingDate=${ds}`);
+        keepUntilHabits.forEach(h => console.log(`(**DEBUG)   keepUntil habit: name=${h.name}, startDate=${h.startDate}, archivedAt=${h.archivedAt}, snoozedFrom=${h.snoozedFrom}, snoozedUntil=${h.snoozedUntil}`));
+      }
+
       const activeHabits = updatedHabits.filter(h =>
         isHabitActiveToday(h, viewingDate, reset.hour, reset.minute)
       );
@@ -140,6 +146,11 @@ export function useHabits(viewingDate: Date = new Date()) {
       ]);
       const merged = [...fresh, ...questGoals];
 
+      // Debug: log all keepUntil habits loaded from DB
+      const keepUntils = merged.filter(h => h.keepUntil);
+      console.log(`(**DEBUG) loadHabits: ${merged.length} total loaded (${fresh.length} habits + ${questGoals.length} quests), ${keepUntils.length} keepUntil`);
+      keepUntils.forEach(h => console.log(`(**DEBUG) LOADED keepUntil: name="${h.name}", id=${h.id}, startDate=${h.startDate}, archivedAt=${h.archivedAt}, snoozedFrom=${h.snoozedFrom}, snoozedUntil=${h.snoozedUntil}, freq=${h.frequency}, completionHistory=${JSON.stringify(h.completionHistory)}`));
+
       // Fetch streak + points before updating UI so everything lands in one render
       const [streak, total] = await Promise.all([
         updateAppStreak(fresh, reset.hour, reset.minute),
@@ -168,16 +179,19 @@ export function useHabits(viewingDate: Date = new Date()) {
       if (!user) return;
 
       const rawDs = getHabitDate(viewingDate, resetTime.hour, resetTime.minute);
-      const currentHabits = stripStatus(habits);
+      const currentHabits = rawHabitsRef.current;
       const target = currentHabits.find(h => h.id === habitId);
       if (!target) return;
 
-      // keepUntil / Weekly Goal: use cycle start; snoozed: use snoozedFrom
+      // keepUntil / Weekly Goal: use cycle start; snoozed: use snoozedFrom (only while active)
+      const isSnoozedNow = target.snoozedFrom && target.snoozedUntil && rawDs <= target.snoozedUntil.slice(0, 10);
       const ds = (target.frequency === 'Weekly Goal' || target.keepUntil)
         ? getHabitCycleStart(target, viewingDate, resetTime.hour, resetTime.minute)
-        : target.snoozedFrom
-          ? target.snoozedFrom
+        : isSnoozedNow
+          ? target.snoozedFrom!
           : rawDs;
+
+      console.log(`(**DEBUG) toggleHabit: name=${target.name}, rawDs=${rawDs}, ds=${ds}, keepUntil=${target.keepUntil}, snoozedFrom=${target.snoozedFrom}, frequency=${target.frequency}, completionHistory=${JSON.stringify(target.completionHistory)}`);
 
       const isCurrentlyCompleted = target.completionHistory?.includes(ds) ?? false;
 
@@ -221,7 +235,7 @@ export function useHabits(viewingDate: Date = new Date()) {
         loadHabits();
       }
     },
-    [habits, viewingDate, resetTime, user, applyHabitsUpdate, loadHabits]
+    [viewingDate, resetTime, user, applyHabitsUpdate, loadHabits]
   );
 
   const updateIncrement = useCallback(
@@ -229,12 +243,13 @@ export function useHabits(viewingDate: Date = new Date()) {
       if (!user) return;
 
       const rawDs = getHabitDate(viewingDate, resetTime.hour, resetTime.minute);
-      const currentHabits = stripStatus(habits);
+      const currentHabits = rawHabitsRef.current;
       const target = currentHabits.find(h => h.id === habitId);
+      const isSnoozedNow = target?.snoozedFrom && target?.snoozedUntil && rawDs <= target.snoozedUntil.slice(0, 10);
       const ds = (target?.frequency === 'Weekly Goal' || target?.keepUntil)
         ? getHabitCycleStart(target, viewingDate, resetTime.hour, resetTime.minute)
-        : target?.snoozedFrom && target?.increment
-          ? target.snoozedFrom
+        : isSnoozedNow
+          ? target.snoozedFrom!
           : rawDs;
 
       // optimistic
@@ -257,7 +272,7 @@ export function useHabits(viewingDate: Date = new Date()) {
         loadHabits();
       }
     },
-    [habits, viewingDate, resetTime, user, applyHabitsUpdate, loadHabits]
+    [viewingDate, resetTime, user, applyHabitsUpdate, loadHabits]
   );
 
   const addHabit = useCallback(
@@ -277,20 +292,32 @@ export function useHabits(viewingDate: Date = new Date()) {
     async (habitId: string, snoozeDateStr?: string | null) => {
       if (!user) return;
 
-      // default to tomorrow (timezone-safe YYYY-MM-DD)
+      // default: if viewing a past date, snooze to today; if viewing today, snooze to tomorrow
       let targetDate = snoozeDateStr;
       if (targetDate === undefined) {
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        targetDate = formatLocalDate(tomorrow);
+        const todayStr = getHabitDate(new Date(), resetTime.hour, resetTime.minute);
+        const viewingStr = getHabitDate(viewingDate, resetTime.hour, resetTime.minute);
+        if (viewingStr < todayStr) {
+          targetDate = todayStr;
+        } else {
+          const tomorrow = new Date();
+          tomorrow.setDate(tomorrow.getDate() + 1);
+          targetDate = formatLocalDate(tomorrow);
+        }
       }
-
-      console.log(`(**TESTING) useHabits.snoozeHabit: habitId=${habitId}, targetDate=${targetDate}`);
 
       try {
         const ds = getHabitDate(viewingDate, resetTime.hour, resetTime.minute);
-        const currentHabits = stripStatus(habits);
+
+        // Prevent backwards snooze (target date must be after source date)
+        if (targetDate && targetDate <= ds) {
+          console.warn(`(**DEBUG) snoozeHabit: target ${targetDate} <= source ${ds}, skipping`);
+          return;
+        }
+
+        const currentHabits = rawHabitsRef.current;
         const target = currentHabits.find(h => h.id === habitId);
+        console.log(`(**DEBUG) snoozeHabit: name=${target?.name}, keepUntil=${target?.keepUntil}, freq=${target?.frequency}, snoozedFrom=${ds}, snoozedUntil=${targetDate}, startDate=${target?.startDate}`);
 
         // Quest goals: update quest_goals table
         if (target?.isQuestGoal && target.questGoalId) {
@@ -317,7 +344,7 @@ export function useHabits(viewingDate: Date = new Date()) {
         loadHabits();
       }
     },
-    [habits, resetTime, user, applyHabitsUpdate, loadHabits]
+    [resetTime, user, applyHabitsUpdate, loadHabits]
   );
 
   /**
@@ -329,12 +356,16 @@ export function useHabits(viewingDate: Date = new Date()) {
     async (habitId: string) => {
       if (!user) return;
 
-      const ds = getHabitDate(viewingDate, resetTime.hour, resetTime.minute);
+      const rawDs = getHabitDate(viewingDate, resetTime.hour, resetTime.minute);
+      const currentHabits = rawHabitsRef.current;
+      const target = currentHabits.find(h => h.id === habitId);
+
+      const ds = target?.keepUntil
+        ? getHabitCycleStart(target, viewingDate, resetTime.hour, resetTime.minute)
+        : rawDs;
       console.log(`(**TESTING) useHabits.skipHabit: habitId=${habitId}, dateStr=${ds}`);
 
       try {
-        const currentHabits = stripStatus(habits);
-        const target = currentHabits.find(h => h.id === habitId);
 
         // Quest goals: update quest_goals table
         if (target?.isQuestGoal && target.questGoalId) {
@@ -355,15 +386,19 @@ export function useHabits(viewingDate: Date = new Date()) {
         loadHabits();
       }
     },
-    [habits, viewingDate, resetTime, user, applyHabitsUpdate, loadHabits]
+    [viewingDate, resetTime, user, applyHabitsUpdate, loadHabits]
   );
 
   const unskipHabit = useCallback(
     async (habitId: string) => {
       if (!user) return;
-      const ds = getHabitDate(viewingDate, resetTime.hour, resetTime.minute);
+      const rawDs = getHabitDate(viewingDate, resetTime.hour, resetTime.minute);
+      const currentHabits = rawHabitsRef.current;
+      const target = currentHabits.find(h => h.id === habitId);
+      const ds = target?.keepUntil
+        ? getHabitCycleStart(target, viewingDate, resetTime.hour, resetTime.minute)
+        : rawDs;
       try {
-        const currentHabits = stripStatus(habits);
         const updatedHabits = await unskipHabitService(habitId, currentHabits, ds, user.id);
         applyHabitsUpdate(updatedHabits, resetTime);
       } catch (err) {
@@ -371,15 +406,19 @@ export function useHabits(viewingDate: Date = new Date()) {
         loadHabits();
       }
     },
-    [habits, viewingDate, resetTime, user, applyHabitsUpdate, loadHabits]
+    [viewingDate, resetTime, user, applyHabitsUpdate, loadHabits]
   );
 
   const unskipAndCompleteHabit = useCallback(
     async (habitId: string) => {
       if (!user) return;
-      const ds = getHabitDate(viewingDate, resetTime.hour, resetTime.minute);
+      const rawDs = getHabitDate(viewingDate, resetTime.hour, resetTime.minute);
+      const currentHabits = rawHabitsRef.current;
+      const target = currentHabits.find(h => h.id === habitId);
+      const ds = target?.keepUntil
+        ? getHabitCycleStart(target, viewingDate, resetTime.hour, resetTime.minute)
+        : rawDs;
       try {
-        const currentHabits = stripStatus(habits);
         const unskipped = await unskipHabitService(habitId, currentHabits, ds, user.id);
         const completed = await toggleHabitCompletion(habitId, unskipped, ds, resetTime.hour, resetTime.minute, user.id);
         applyHabitsUpdate(completed, resetTime);
@@ -388,21 +427,21 @@ export function useHabits(viewingDate: Date = new Date()) {
         loadHabits();
       }
     },
-    [habits, viewingDate, resetTime, user, applyHabitsUpdate, loadHabits]
+    [viewingDate, resetTime, user, applyHabitsUpdate, loadHabits]
   );
 
   const deleteHabit = useCallback(
     async (habitId: string) => {
       if (!user) return;
       try {
-        const updatedHabits = await deleteHabitService(habitId, stripStatus(habits), user.id);
+        const updatedHabits = await deleteHabitService(habitId, rawHabitsRef.current, user.id);
         applyHabitsUpdate(updatedHabits, resetTime);
       } catch (err) {
         console.error('Error deleting habit:', err);
         loadHabits();
       }
     },
-    [habits, viewingDate, resetTime, user, applyHabitsUpdate, loadHabits]
+    [viewingDate, resetTime, user, applyHabitsUpdate, loadHabits]
   );
 
   // ─── effects ────────────────────────────────────────────────────────────────
@@ -447,5 +486,6 @@ export function useHabits(viewingDate: Date = new Date()) {
     unskipHabit,
     unskipAndCompleteHabit,
     deleteHabit,
+    reorderHabits: (updater: (prev: HabitWithStatus[]) => HabitWithStatus[]) => setHabits(updater),
   };
 }

@@ -51,8 +51,6 @@ export const PAGE = {
     primary: ['#FED0FF'],
   },
   habits: {
-    background: ['#89F7FE', '#66A6FF'],
-    habitCard: ['#FFFFFF', '#F0F0F0'],
     border: ['#4caff6'],
     primary: ['#FFDDC1', '#FFABAB'],
     button: ['#FFF5DF']

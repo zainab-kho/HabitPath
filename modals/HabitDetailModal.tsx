@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
     Alert,
+    Image,
     Modal,
     Pressable,
     Text,
@@ -10,9 +11,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
-import { BUTTON_COLORS, COLORS, PAGE } from '@/constants/colors';
-import { globalStyles } from '@/styles';
+import { COLORS, PAGE } from '@/constants/colors';
+import { SYSTEM_ICONS } from '@/constants/icons';
 import ShadowBox from '@/ui/ShadowBox';
+import { globalStyles } from '@/styles';
 import { HabitWithStatus } from '@/hooks/useHabits';
 
 interface HabitDetailModalProps {
@@ -23,19 +25,56 @@ interface HabitDetailModalProps {
     onUndoIncrement?: (habitId: string) => void;
 }
 
+const ICON_SIZE = 20;
+const ICON_TINT = COLORS.PrimaryLight;
+
+function formatLastCompleted(dateStr?: string): string {
+    if (!dateStr) return 'Never';
+    const d = new Date(dateStr + 'T12:00:00');
+    return d.toLocaleDateString('en-US', { weekday: 'short', month: 'long', day: 'numeric' });
+}
+
+function formatSelectedDays(days?: string[]): string {
+    if (!days || days.length === 0) return 'Every day';
+    if (days.length === 7) return 'Every day';
+    const abbrev: Record<string, string> = {
+        Sunday: 'Sun', Monday: 'Mon', Tuesday: 'Tue', Wednesday: 'Wed',
+        Thursday: 'Thu', Friday: 'Fri', Saturday: 'Sat',
+    };
+    return days.map(d => abbrev[d] || d).join(', ');
+}
+
+function getFrequencyLabel(habit: HabitWithStatus): string {
+    if (habit.frequency === 'Weekly Goal') return 'Weekly Goal';
+    if (habit.frequency === 'Weekly') return 'Weekly';
+    if (habit.frequency === 'Daily') return 'Daily';
+    if (habit.frequency === 'Custom') return `Every ${habit.customInterval ?? 1} ${habit.customType ?? 'days'}`;
+    return habit.frequency || 'One-time';
+}
+
+function getNextAssignedDate(habit: HabitWithStatus): string {
+    if (!habit.selectedDays || habit.selectedDays.length === 0 || habit.selectedDays.length === 7) {
+        return 'Tomorrow';
+    }
+    const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const today = new Date();
+    for (let i = 1; i <= 7; i++) {
+        const next = new Date(today);
+        next.setDate(today.getDate() + i);
+        const dayName = dayNames[next.getDay()];
+        if (habit.selectedDays.includes(dayName)) {
+            return next.toLocaleDateString('en-US', { weekday: 'short', month: 'long', day: 'numeric' });
+        }
+    }
+    return 'N/A';
+}
+
 export default function HabitDetailModal({ visible, habit, onClose, onUpdate, onUndoIncrement }: HabitDetailModalProps) {
     const { user } = useAuth();
     const router = useRouter();
+    const [showMore, setShowMore] = useState(false);
 
     if (!habit) return null;
-
-    const habitColor = habit.pathColor || COLORS.Primary;
-
-    const frequencyLabel = habit.frequency === 'Weekly Goal'
-        ? 'Weekly Goal'
-        : habit.frequency === 'Custom'
-            ? `Every ${habit.customInterval ?? 1} ${habit.customType ?? 'days'}`
-            : habit.frequency || 'One-time';
 
     const handleEdit = () => {
         onClose();
@@ -63,7 +102,6 @@ export default function HabitDetailModal({ visible, habit, onClose, onUpdate, on
                                 .update({ archived_at: new Date().toISOString() })
                                 .eq('id', habit.id)
                                 .eq('user_id', user?.id);
-
                             await AsyncStorage.setItem('@habits_dirty', '1');
                             onUpdate();
                             onClose();
@@ -93,7 +131,6 @@ export default function HabitDetailModal({ visible, habit, onClose, onUpdate, on
                                 .delete()
                                 .eq('id', habit.id)
                                 .eq('user_id', user?.id);
-
                             await AsyncStorage.setItem('@habits_dirty', '1');
                             onUpdate();
                             onClose();
@@ -107,6 +144,9 @@ export default function HabitDetailModal({ visible, habit, onClose, onUpdate, on
         );
     };
 
+    const frequencyLabel = getFrequencyLabel(habit);
+    const daysLabel = formatSelectedDays(habit.selectedDays);
+
     return (
         <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
             <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center' }} onPress={onClose}>
@@ -116,147 +156,207 @@ export default function HabitDetailModal({ visible, habit, onClose, onUpdate, on
                         borderRadius: 20,
                         borderWidth: 3,
                         borderColor: PAGE.habits.primary[1],
-                        maxHeight: '75%',
                         width: '90%',
                         alignSelf: 'center',
                     }}
                     onPress={(e) => e.stopPropagation()}
                 >
-                    {/* header */}
-                    <View style={{ marginTop: 20, marginBottom: 15 }}>
-                        <Text style={[globalStyles.h2, { textAlign: 'center', marginBottom: 5 }]}>
+                    {/* Header: name + frequency */}
+                    <View style={{ paddingTop: 20, paddingBottom: 12, paddingHorizontal: 20 }}>
+                        <Text style={[globalStyles.h2, { textAlign: 'center', marginBottom: 4 }]}>
                             {habit.name}
                         </Text>
-                        <Text style={[globalStyles.label, { textAlign: 'center', opacity: 0.6 }]}>
-                            {frequencyLabel.toUpperCase()}
+                        <Text style={[globalStyles.label, { textAlign: 'center', opacity: 0.5, textTransform: 'uppercase' }]}>
+                            {frequencyLabel}
                         </Text>
                     </View>
 
-                    {/* stats row */}
-                    <View style={{
-                        flexDirection: 'row',
-                        justifyContent: 'space-around',
-                        paddingVertical: 12,
-                        marginHorizontal: 20,
-                        marginBottom: 15,
-                        backgroundColor: habitColor + '12',
-                        borderRadius: 12,
-                        borderWidth: 1,
-                        borderColor: habitColor + '30',
-                    }}>
-                        <View style={{ alignItems: 'center' }}>
-                            <Text style={[globalStyles.h3, { fontSize: 18 }]}>
-                                {habit.streak ?? 0}
+                    {/* Divider */}
+                    <View style={{ height: 1, backgroundColor: 'rgba(0,0,0,0.1)', marginHorizontal: 20 }} />
+
+                    {/* Stats row - only show for repeating habits */}
+                    {habit.frequency !== 'None' && habit.frequency && (
+                        <>
+                            <View style={{
+                                flexDirection: 'row',
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                paddingVertical: 14,
+                                paddingHorizontal: 20,
+                                gap: 12,
+                                marginHorizontal: 20,
+                                marginVertical: 10,
+                                borderRadius: 12,
+                                borderWidth: 1,
+                                borderColor: '#000',
+                                backgroundColor: COLORS.PrimaryLight,
+                            }}>
+                                {/* Streak */}
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                                    <Image source={SYSTEM_ICONS.fire} style={{ width: 18, height: 18 }} />
+                                    <Text style={{ fontSize: 12, fontFamily: 'label' }}>{habit.streak ?? 0}d</Text>
+                                </View>
+                                {/* Best streak */}
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                                    <Image source={SYSTEM_ICONS.fireBlue} style={{ width: 18, height: 18 }} />
+                                    <Text style={{ fontSize: 12, fontFamily: 'label' }}>{habit.bestStreak ?? 0}d</Text>
+                                </View>
+                                {/* Points */}
+                                <View style={{
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 5,
+                                    paddingHorizontal: 8,
+                                    paddingVertical: 3,
+                                    borderRadius: 8,
+                                    borderWidth: 1,
+                                    backgroundColor: COLORS.RewardsBackground,
+                                    borderColor: COLORS.RewardsAccent,
+                                }}>
+                                    <Image source={SYSTEM_ICONS.reward} style={{ width: 14, height: 14, tintColor: COLORS.Rewards }} />
+                                    <Text style={{ fontSize: 12, fontFamily: 'label' }}>{habit.rewardPoints ?? 0}</Text>
+                                </View>
+                                {/* Completed count */}
+                                <View style={{
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 5,
+                                    paddingHorizontal: 8,
+                                    paddingVertical: 3,
+                                    borderRadius: 8,
+                                    borderWidth: 1,
+                                    backgroundColor: COLORS.ProgressColor,
+                                    borderColor: COLORS.Secondary,
+                                }}>
+                                    <Image source={SYSTEM_ICONS.star} style={{ width: 14, height: 14, tintColor: COLORS.Star }} />
+                                    <Text style={{ fontSize: 12, fontFamily: 'label' }}>{habit.completionHistory?.length ?? 0}</Text>
+                                </View>
+                            </View>
+                        </>
+                    )}
+
+                    {/* Info rows */}
+                    <View style={{ paddingHorizontal: 20, paddingVertical: 14, gap: 12 }}>
+                        {/* Last completed */}
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                            <Image source={SYSTEM_ICONS.stats} style={{ width: ICON_SIZE, height: ICON_SIZE, tintColor: ICON_TINT }} />
+                            <Text style={[globalStyles.body, { fontSize: 14, opacity: 0.7 }]}>
+                                {formatLastCompleted(habit.lastCompletedDate)}
                             </Text>
-                            <Text style={[globalStyles.label, { fontSize: 10 }]}>Streak</Text>
                         </View>
-                        <View style={{ alignItems: 'center' }}>
-                            <Text style={[globalStyles.h3, { fontSize: 18 }]}>
-                                {habit.bestStreak ?? 0}
+                        {/* Next assigned */}
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                            <Image source={SYSTEM_ICONS.calendar} style={{ width: ICON_SIZE, height: ICON_SIZE, tintColor: ICON_TINT }} />
+                            <Text style={[globalStyles.body, { fontSize: 14, opacity: 0.7 }]}>
+                                {habit.keepUntil ? 'Keep until finished' : getNextAssignedDate(habit)}
                             </Text>
-                            <Text style={[globalStyles.label, { fontSize: 10 }]}>Best</Text>
                         </View>
-                        <View style={{ alignItems: 'center' }}>
-                            <Text style={[globalStyles.h3, { fontSize: 18 }]}>
-                                {habit.rewardPoints ?? 0}
+                        {/* Frequency + days */}
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                            <Image source={SYSTEM_ICONS.repeat} style={{ width: ICON_SIZE, height: ICON_SIZE, tintColor: ICON_TINT }} />
+                            <Text style={[globalStyles.body, { fontSize: 14, opacity: 0.7 }]}>
+                                {frequencyLabel}
+                                {habit.selectedDays && habit.selectedDays.length > 0 && habit.selectedDays.length < 7
+                                    ? `  ·  ${daysLabel}`
+                                    : ''}
                             </Text>
-                            <Text style={[globalStyles.label, { fontSize: 10 }]}>Points</Text>
-                        </View>
-                        <View style={{ alignItems: 'center' }}>
-                            <Text style={[globalStyles.h3, { fontSize: 18 }]}>
-                                {habit.completionHistory?.length ?? 0}
-                            </Text>
-                            <Text style={[globalStyles.label, { fontSize: 10 }]}>Done</Text>
                         </View>
                     </View>
 
-                    {/* action buttons */}
-                    <View style={{ paddingHorizontal: 20, gap: 8, marginBottom: 15 }}>
-                        {habit.increment && onUndoIncrement && (
-                            <Pressable onPress={() => { onUndoIncrement(habit.id); onClose(); }}>
-                                <ShadowBox
-                                    contentBackgroundColor={COLORS.ProgressColor + '30'}
-                                    contentBorderColor={COLORS.ProgressColor}
-                                    shadowColor={COLORS.ProgressColor}
-                                    shadowBorderRadius={15}
+                    {/* Undo increment (if applicable) */}
+                    {habit.increment && onUndoIncrement && (
+                        <View style={{ paddingHorizontal: 20, marginBottom: 10 }}>
+                            <ShadowBox
+                                contentBorderRadius={20}
+                                shadowBorderRadius={20}
+                                contentBackgroundColor={COLORS.ProgressColor}
+                            >
+                                <Pressable
+                                    onPress={() => { onUndoIncrement(habit.id); onClose(); }}
+                                    style={{ paddingVertical: 5, paddingHorizontal: 15, alignItems: 'center' }}
                                 >
-                                    <View style={{ paddingVertical: 6, alignItems: 'center' }}>
-                                        <Text style={globalStyles.body}>Undo Increment</Text>
+                                    <Text style={globalStyles.body}>Undo Increment</Text>
+                                </Pressable>
+                            </ShadowBox>
+                        </View>
+                    )}
+
+                    {/* More options toggle */}
+                    <Pressable
+                        onPress={() => setShowMore(!showMore)}
+                        style={{ alignSelf: 'center', paddingVertical: 8, marginBottom: showMore ? 15 : 0 }}
+                    >
+                        <Text style={[globalStyles.body2, { fontSize: 13, opacity: 0.5 }]}>
+                            {showMore ? 'Less options' : 'More options'}
+                        </Text>
+                    </Pressable>
+
+                    {/* Action icons row */}
+                    {showMore && (
+                        <View style={{
+                            flexDirection: 'row',
+                            justifyContent: 'center',
+                            gap: 28,
+                            paddingBottom: 8,
+                            paddingHorizontal: 20,
+                        }}>
+                            <Pressable onPress={handleEdit} style={{ alignItems: 'center', gap: 6 }}>
+                                <ShadowBox
+                                    contentBackgroundColor={COLORS.PrimaryLight}
+                                    contentBorderRadius={20}
+                                    shadowBorderRadius={20}
+                                    shadowOffset={{ x: 2, y: 2 }}
+                                >
+                                    <View style={{ padding: 10 }}>
+                                        <Image source={SYSTEM_ICONS.write} style={{ width: ICON_SIZE, height: ICON_SIZE }} />
                                     </View>
                                 </ShadowBox>
+                                <Text style={[globalStyles.label, { fontSize: 10, opacity: 0.6 }]}>Edit</Text>
                             </Pressable>
-                        )}
+                            <Pressable onPress={handleDuplicate} style={{ alignItems: 'center', gap: 6 }}>
+                                <ShadowBox
+                                    contentBackgroundColor={COLORS.PrimaryLight}
+                                    contentBorderRadius={20}
+                                    shadowBorderRadius={20}
+                                    shadowOffset={{ x: 2, y: 2 }}
+                                >
+                                    <View style={{ padding: 10 }}>
+                                        <Image source={SYSTEM_ICONS.duplicate} style={{ width: ICON_SIZE, height: ICON_SIZE }} />
+                                    </View>
+                                </ShadowBox>
+                                <Text style={[globalStyles.label, { fontSize: 10, opacity: 0.6 }]}>Duplicate</Text>
+                            </Pressable>
+                            <Pressable onPress={handleArchive} style={{ alignItems: 'center', gap: 6 }}>
+                                <ShadowBox
+                                    contentBackgroundColor={'#D3D3D3'}
+                                    contentBorderRadius={20}
+                                    shadowBorderRadius={20}
+                                    shadowOffset={{ x: 2, y: 2 }}
+                                >
+                                    <View style={{ padding: 10 }}>
+                                        <Image source={SYSTEM_ICONS.archive} style={{ width: ICON_SIZE, height: ICON_SIZE }} />
+                                    </View>
+                                </ShadowBox>
+                                <Text style={[globalStyles.label, { fontSize: 10, opacity: 0.6 }]}>Archive</Text>
+                            </Pressable>
+                            <Pressable onPress={handleDelete} style={{ alignItems: 'center', gap: 6 }}>
+                                <ShadowBox
+                                    contentBackgroundColor={'#FFE0E0'}
+                                    contentBorderRadius={20}
+                                    shadowBorderRadius={20}
+                                    shadowOffset={{ x: 2, y: 2 }}
+                                >
+                                    <View style={{ padding: 10 }}>
+                                        <Image source={SYSTEM_ICONS.trash} style={{ width: ICON_SIZE, height: ICON_SIZE }} />
+                                    </View>
+                                </ShadowBox>
+                                <Text style={[globalStyles.label, { fontSize: 10, opacity: 0.6 }]}>Delete</Text>
+                            </Pressable>
+                        </View>
+                    )}
 
-                        <Pressable onPress={handleEdit}>
-                            <ShadowBox
-                                contentBackgroundColor={habitColor + '20'}
-                                contentBorderColor={habitColor}
-                                shadowColor={habitColor}
-                                shadowBorderRadius={15}
-                            >
-                                <View style={{ paddingVertical: 6, alignItems: 'center' }}>
-                                    <Text style={globalStyles.body}>Edit Habit</Text>
-                                </View>
-                            </ShadowBox>
-                        </Pressable>
-
-                        <Pressable onPress={handleDuplicate}>
-                            <ShadowBox
-                                contentBackgroundColor={habitColor + '20'}
-                                contentBorderColor={habitColor}
-                                shadowColor={habitColor}
-                                shadowBorderRadius={15}
-                            >
-                                <View style={{ paddingVertical: 6, alignItems: 'center' }}>
-                                    <Text style={globalStyles.body}>Duplicate Habit</Text>
-                                </View>
-                            </ShadowBox>
-                        </Pressable>
-                    </View>
-
-                    {/* bottom row */}
-                    <View style={{ flexDirection: 'row', borderTopWidth: 1, padding: 10, gap: 10 }}>
-                        <Pressable onPress={onClose} style={{ flex: 1 }}>
-                            <ShadowBox
-                                contentBackgroundColor={BUTTON_COLORS.Cancel}
-                                shadowBorderRadius={15}
-                            >
-                                <View style={{ paddingVertical: 6 }}>
-                                    <Text style={[globalStyles.body, { textAlign: 'center' }]}>
-                                        Cancel
-                                    </Text>
-                                </View>
-                            </ShadowBox>
-                        </Pressable>
-
-                        <Pressable onPress={handleArchive} style={{ flex: 1 }}>
-                            <ShadowBox
-                                contentBackgroundColor={BUTTON_COLORS.Cancel}
-                                shadowBorderRadius={15}
-                            >
-                                <View style={{ paddingVertical: 6 }}>
-                                    <Text style={[globalStyles.body, { textAlign: 'center' }]}>
-                                        Archive
-                                    </Text>
-                                </View>
-                            </ShadowBox>
-                        </Pressable>
-
-                        <Pressable onPress={handleDelete} style={{ flex: 1 }}>
-                            <ShadowBox
-                                contentBackgroundColor="#FFE0E0"
-                                contentBorderColor="#E57373"
-                                shadowColor="#E57373"
-                                shadowBorderRadius={15}
-                            >
-                                <View style={{ paddingVertical: 6 }}>
-                                    <Text style={[globalStyles.body, { textAlign: 'center', color: '#C62828' }]}>
-                                        Delete
-                                    </Text>
-                                </View>
-                            </ShadowBox>
-                        </Pressable>
-                    </View>
+                    {/* Bottom padding */}
+                    <View style={{ height: 12 }} />
                 </Pressable>
             </Pressable>
         </Modal>

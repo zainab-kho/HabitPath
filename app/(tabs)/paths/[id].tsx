@@ -14,7 +14,8 @@ import { AppLinearGradient } from '@/ui/AppLinearGradient';
 import PageContainer from '@/ui/PageContainer';
 import PageHeader from '@/ui/PageHeader';
 import ShadowBox from '@/ui/ShadowBox';
-import { getHabitDate, formatDisplayDateString } from '@/utils/dateUtils';
+import { getHabitDate, formatDisplayDateString, parseLocalDate } from '@/utils/dateUtils';
+import { isHabitActiveToday, getHabitStatus } from '@/utils/habitUtils';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -31,33 +32,25 @@ import {
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
-/** last N days as YYYY-MM-DD strings (oldest → newest), reset-time-aware */
-function lastNDays(n: number, resetHour = 4, resetMin = 0): string[] {
-  const days: string[] = [];
-  for (let i = n - 1; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    days.push(getHabitDate(d, resetHour, resetMin));
-  }
-  return days;
-}
-
 /** how many habits in this path were completed on a given date */
 function completionsOnDate(habits: Habit[], date: string): number {
   return habits.filter(h => h.completionHistory?.includes(date)).length;
 }
 
-/** total points earned by all habits in path */
-function totalPoints(habits: Habit[]): number {
-  return habits.reduce((sum, h) => {
-    return sum + (h.completionEntries?.reduce((s, e) => s + (e.pointsEarned || 0), 0) ?? 0);
-  }, 0);
+/** completions in a date range */
+function completionsInRange(habits: Habit[], days: string[]): number {
+  return days.reduce((sum, d) => sum + completionsOnDate(habits, d), 0);
 }
 
-/** completions in last 7 days */
-function completionsThisWeek(habits: Habit[], resetHour = 4, resetMin = 0): number {
-  const recentDays = lastNDays(7, resetHour, resetMin);
-  return recentDays.reduce((sum, d) => sum + completionsOnDate(habits, d), 0);
+/** N days ending `offset` days ago */
+function daysRange(n: number, offset: number, resetHour = 4, resetMin = 0): string[] {
+  const days: string[] = [];
+  for (let i = n - 1 + offset; i >= offset; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    days.push(getHabitDate(d, resetHour, resetMin));
+  }
+  return days;
 }
 
 // ─── heat map ────────────────────────────────────────────────────────────────
@@ -67,11 +60,15 @@ function HeatMap({
   color,
   resetHour,
   resetMin,
+  selectedDay,
+  onSelectDay,
 }: {
   habits: Habit[];
   color: string;
   resetHour: number;
   resetMin: number;
+  selectedDay: string | null;
+  onSelectDay: (day: string | null) => void;
 }) {
   const now = new Date();
   const todayStr = getHabitDate(now, resetHour, resetMin);
@@ -152,18 +149,21 @@ function HeatMap({
 
           const textColor = ratio > 0.5 && !isFuture && count > 0 ? '#fff' : 'rgba(0,0,0,0.5)';
 
+          const isSelected = day === selectedDay;
+
           return (
-            <View
+            <Pressable
               key={day}
+              onPress={() => !isFuture && onSelectDay(isSelected ? null : day)}
               style={[
                 heatmap.cell,
                 { backgroundColor: bgColor },
-                // isToday && { borderColor: '#000' },
                 isFuture && { borderColor: 'rgba(196, 196, 196, 0.87)', opacity: 0.25 },
+                isSelected && { borderColor: color },
               ]}
             >
               <Text style={[heatmap.dayNum, { color: textColor }]}>{dayNum}</Text>
-            </View>
+            </Pressable>
           );
         })}
 
@@ -190,7 +190,7 @@ const heatmap = StyleSheet.create({
   },
   monthLabel: {
     fontFamily: 'p2',
-    fontSize: 13,
+    fontSize: 14,
     textAlign: 'center',
     opacity: 0.7,
   },
@@ -203,7 +203,7 @@ const heatmap = StyleSheet.create({
     width: '13.2%',
     textAlign: 'center',
     fontFamily: 'label',
-    fontSize: 10,
+    fontSize: 12,
     opacity: 0.4,
   },
   grid: {
@@ -243,7 +243,7 @@ const heatmap = StyleSheet.create({
   },
   legendLabel: {
     fontFamily: 'label',
-    fontSize: 9,
+    fontSize: 10,
     opacity: 0.45,
     marginHorizontal: 5
   },
@@ -270,6 +270,7 @@ export default function PathDetail() {
   const [showArchived, setShowArchived] = useState(false);
   // all habits from cache — not date-filtered, so we see recurring + future + past
   const [allHabitsAll, setAllHabitsAll] = useState<Habit[]>([]);
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
 
   // ── helpers ──────────────────────────────────────────────────────────────
   const todayStr = getHabitDate(new Date(), resetHour, resetMin);
@@ -498,9 +499,51 @@ export default function PathDetail() {
   };
 
   const pathHabitIds = pathHabits.map(h => h.id);
-  const weekCompletions = completionsThisWeek(allPathHabits, resetHour, resetMin);
-  const pts = totalPoints(allPathHabits);
-  const bestStreak = Math.max(...allPathHabits.map(h => h.bestStreak ?? 0), 0);
+
+  const todayHabitStr = getHabitDate(new Date(), resetHour, resetMin);
+  const todayDate = new Date(todayHabitStr + 'T12:00:00');
+  const todayDow = (todayDate.getDay() + 6) % 7; // 0=Mon, 6=Sun
+  const thisMonday = new Date(todayDate);
+  thisMonday.setDate(todayDate.getDate() - todayDow);
+  const lastMonday = new Date(thisMonday);
+  lastMonday.setDate(thisMonday.getDate() - 7);
+
+  const daysIntoWeek = todayDow + 1;
+  const thisWeekDays: string[] = [];
+  const lastWeekDays: string[] = [];
+  for (let i = 0; i < 7; i++) {
+    const lastD = new Date(lastMonday);
+    lastD.setDate(lastMonday.getDate() + i);
+    lastWeekDays.push(getHabitDate(lastD, resetHour, resetMin));
+    if (i < daysIntoWeek) {
+      const thisD = new Date(thisMonday);
+      thisD.setDate(thisMonday.getDate() + i);
+      thisWeekDays.push(getHabitDate(thisD, resetHour, resetMin));
+    }
+  }
+  const thisWeek = completionsInRange(allPathHabits, thisWeekDays);
+  const lastWeek = completionsInRange(allPathHabits, lastWeekDays);
+  const weekDiff = thisWeek - lastWeek;
+
+  const todayHabitDate = getHabitDate(new Date(), resetHour, resetMin);
+  const habitYear = parseInt(todayHabitDate.slice(0, 4));
+  const habitMonth = parseInt(todayHabitDate.slice(5, 7)) - 1;
+  const habitDay = parseInt(todayHabitDate.slice(8, 10));
+  const lastMonthLength = new Date(habitYear, habitMonth, 0).getDate();
+  const thisMonthDays: string[] = [];
+  const lastMonthDays: string[] = [];
+  for (let i = 1; i <= habitDay; i++) {
+    const thisD = new Date(habitYear, habitMonth, i, 12);
+    thisMonthDays.push(getHabitDate(thisD, resetHour, resetMin));
+    if (i <= lastMonthLength) {
+      const lastD = new Date(habitYear, habitMonth - 1, i, 12);
+      lastMonthDays.push(getHabitDate(lastD, resetHour, resetMin));
+    }
+  }
+  const thisMonth = completionsInRange(allPathHabits, thisMonthDays);
+  const lastMonth = completionsInRange(allPathHabits, lastMonthDays);
+  const monthDiff = thisMonth - lastMonth;
+
 
   return (
     <AppLinearGradient variant="path.background">
@@ -512,18 +555,46 @@ export default function PathDetail() {
         />
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
-          {/* ── stats row ── */}
-          <View style={styles.statsRow}>
-            <StatBubble label="Habits" value={String(pathHabits.length)} color={colorHex} />
-            <StatBubble label="This week" value={String(weekCompletions)} color={colorHex} />
-            <StatBubble label="Best streak" value={bestStreak > 0 ? `${bestStreak}🔥` : '—'} color={colorHex} />
-            <StatBubble label="Points" value={pts > 0 ? `${pts}✦` : '—'} color={colorHex} />
+          {/* ── trend bubbles ── */}
+          <View style={styles.trendRow}>
+            <View style={[styles.trendBubble, { backgroundColor: colorHex + '22' }]}>
+              <Text style={[globalStyles.body1, { fontSize: 13 }]}>
+                {thisWeek} this week
+              </Text>
+              {lastWeek > 0 && (
+                <View style={styles.trendIndicator}>
+                  <Image
+                    source={weekDiff > 0 ? SYSTEM_ICONS.trendUp : weekDiff < 0 ? SYSTEM_ICONS.trendDown : SYSTEM_ICONS.trendUp}
+                    style={[styles.trendIcon, { tintColor: weekDiff > 0 ? '#2bb471' : weekDiff < 0 ? '#bc2d2d' : '#999' }]}
+                  />
+                  <Text style={[globalStyles.body1, { color: weekDiff > 0 ? '#2bb471' : weekDiff < 0 ? '#bc2d2d' : '#999' }]}>
+                    {weekDiff === 0 ? '0%' : `${Math.round(Math.abs(weekDiff / lastWeek) * 100)}%`}
+                  </Text>
+                </View>
+              )}
+            </View>
+            <View style={[styles.trendBubble, { backgroundColor: colorHex }]}>
+              <Text style={[globalStyles.body2, { fontSize: 13 }]}>
+                {thisMonth} this month
+              </Text>
+              {lastMonth > 0 && (
+                <View style={styles.trendIndicator}>
+                  <Image
+                    source={monthDiff > 0 ? SYSTEM_ICONS.trendUp : monthDiff < 0 ? SYSTEM_ICONS.trendDown : SYSTEM_ICONS.trendUp}
+                    style={[styles.trendIcon, { tintColor: monthDiff > 0 ? '#2bb471' : monthDiff < 0 ? '#bc2d2d' : '#999' }]}
+                  />
+                  <Text style={[globalStyles.body1, { color: monthDiff > 0 ? '#2bb471' : monthDiff < 0 ? '#bc2d2d' : '#999' }]}>
+                    {monthDiff === 0 ? '0%' : `${Math.round(Math.abs(monthDiff / lastMonth) * 100)}%`}
+                  </Text>
+                </View>
+              )}
+            </View>
           </View>
 
           {/* ── 28-day heat map ── */}
           <ShadowBox
             shadowColor={colorHex}
-            shadowOffset={{x: 0, y: 5}}
+            shadowOffset={{ x: 0, y: 5 }}
             style={{ marginBottom: 16 }}
           >
             <View style={[styles.card, { paddingBottom: 10 }]}>
@@ -537,110 +608,215 @@ export default function PathDetail() {
                   color={colorHex}
                   resetHour={resetHour}
                   resetMin={resetMin}
+                  selectedDay={selectedDay}
+                  onSelectDay={setSelectedDay}
                 />
               )}
+
             </View>
           </ShadowBox>
 
           {/* ── habits list ── */}
-          <View style={styles.sectionHeader}>
-            <Text style={styles.sectionLabel}>HABITS</Text>
-            <View style={{ flexDirection: 'row', gap: 8 }}>
-              {archivedHabits.length > 0 && (
-                <Pressable onPress={() => setShowArchived(true)}>
-                  <ShadowBox contentBackgroundColor="#f0f0f0" shadowBorderRadius={15} shadowOffset={{ x: 0, y: 3 }}>
-                    <View style={{ paddingVertical: 6, paddingHorizontal: 14 }}>
-                      <Text style={[globalStyles.body, { textAlign: 'center', fontSize: 13 }]}>📦 Archived</Text>
+          {(() => {
+            const showingSelectedDay = !!selectedDay;
+            let displayHabits: (Habit & { dayStatus?: string })[] = [];
+
+            if (showingSelectedDay) {
+              const selDate = parseLocalDate(selectedDay);
+              selDate.setHours(12);
+              const todayStr2 = getHabitDate(new Date(), resetHour, resetMin);
+              const isViewingToday2 = selectedDay === todayStr2;
+
+              displayHabits = allPathHabits
+                .filter(h => isHabitActiveToday(h, selDate, resetHour, resetMin))
+                .map(h => ({
+                  ...h,
+                  dayStatus: getHabitStatus(h, selectedDay, isViewingToday2, todayStr2, selDate, resetHour, resetMin),
+                }));
+            }
+
+            const selectedDateLabel = showingSelectedDay
+              ? new Date(selectedDay + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
+              : null;
+
+            return (
+              <>
+                <View style={styles.sectionHeader}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <Text style={styles.sectionLabel}>
+                      {showingSelectedDay ? selectedDateLabel!.toUpperCase() : 'HABITS'}
+                    </Text>
+                    {showingSelectedDay && (
+                      <Pressable onPress={() => setSelectedDay(null)} hitSlop={8}>
+                        <Text style={[globalStyles.label, { opacity: 0.5, fontSize: 10 }]}>✕ CLEAR</Text>
+                      </Pressable>
+                    )}
+                  </View>
+                  <View style={{ flexDirection: 'row', gap: 8 }}>
+                    {!showingSelectedDay && archivedHabits.length > 0 && (
+                      <Pressable onPress={() => setShowArchived(true)}>
+                        <ShadowBox contentBackgroundColor="#f0f0f0" shadowBorderRadius={15} shadowOffset={{ x: 0, y: 3 }}>
+                          <View style={{ paddingVertical: 6, paddingHorizontal: 14 }}>
+                            <Text style={[globalStyles.body, { textAlign: 'center', fontSize: 13 }]}>📦 Archived</Text>
+                          </View>
+                        </ShadowBox>
+                      </Pressable>
+                    )}
+                    {!showingSelectedDay && (
+                      <Pressable onPress={() => setShowAddHabits(true)}>
+                        <ShadowBox contentBackgroundColor={colorHex} shadowBorderRadius={15} shadowOffset={{ x: 0, y: 3 }}>
+                          <View style={{ paddingVertical: 6, paddingHorizontal: 14 }}>
+                            <Text style={[globalStyles.body, { textAlign: 'center', fontSize: 13 }]}>+ Add</Text>
+                          </View>
+                        </ShadowBox>
+                      </Pressable>
+                    )}
+                  </View>
+                </View>
+
+                {showingSelectedDay ? (
+                  displayHabits.length === 0 ? (
+                    <ShadowBox
+                      contentBackgroundColor="#fff"
+                      shadowBorderRadius={15}
+                      shadowOffset={{ x: 0, y: 5 }}
+                      shadowColor={colorHex}
+                      style={{ marginBottom: 12 }}
+                    >
+                      <View style={[styles.card, { alignItems: 'center', paddingVertical: 24 }]}>
+                        <Text style={[globalStyles.label, { opacity: 0.5 }]}>
+                          No habits scheduled for this day
+                        </Text>
+                      </View>
+                    </ShadowBox>
+                  ) : (
+                    displayHabits.map(habit => {
+                      const iconFile = habit.icon ? HABIT_ICONS[habit.icon] : null;
+                      const isDone = habit.dayStatus === 'completed';
+                      const isSkipped = habit.dayStatus === 'skipped';
+
+                      return (
+                        <ShadowBox
+                          key={habit.id}
+                          contentBackgroundColor={isDone ? colorHex : '#fff'}
+                          contentBorderColor="#000"
+                          contentBorderWidth={1}
+                          shadowBorderRadius={15}
+                          shadowOffset={{ x: 0, y: 5 }}
+                          shadowColor={isDone ? '#000' : colorHex}
+                          style={{ marginBottom: 12, opacity: isSkipped ? 0.5 : 1 }}
+                        >
+                          <View style={styles.habitRow}>
+                            <View style={styles.habitIconWrap}>
+                              {iconFile ? (
+                                <Image source={iconFile} style={styles.habitIcon} />
+                              ) : (
+                                <Text style={{ fontSize: 24 }}>✦</Text>
+                              )}
+                            </View>
+
+                            <View style={{ flex: 1, gap: 6 }}>
+                              <Text style={[globalStyles.body, { fontSize: 15 }]} numberOfLines={1}>
+                                {habit.name}
+                              </Text>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                <View style={[
+                                  globalStyles.bubbleLabel,
+                                  {
+                                    backgroundColor: isDone ? 'rgba(255,255,255,0.3)' : isSkipped ? 'rgba(240,173,78,0.15)' : 'rgba(0,0,0,0.04)',
+                                    borderColor: isDone ? 'rgba(255,255,255,0.5)' : isSkipped ? '#f0ad4e55' : 'rgba(0,0,0,0.1)',
+                                  },
+                                ]}>
+                                  <Text style={[globalStyles.label, { opacity: 1, color: isDone ? '#fff' : isSkipped ? '#f0ad4e' : '#999' }]}>
+                                    {isDone ? '✓ Done' : isSkipped ? 'Skipped' : habit.dayStatus === 'missed' ? 'Missed' : 'Pending'}
+                                  </Text>
+                                </View>
+                              </View>
+                            </View>
+                          </View>
+                        </ShadowBox>
+                      );
+                    })
+                  )
+                ) : pathHabits.length === 0 ? (
+                  <ShadowBox
+                    contentBackgroundColor="#fff"
+                    shadowBorderRadius={15}
+                    shadowOffset={{ x: 0, y: 5 }}
+                    shadowColor={colorHex}
+                    style={{ marginBottom: 12 }}
+                  >
+                    <View style={[styles.card, { alignItems: 'center', paddingVertical: 24 }]}>
+                      <Text style={[globalStyles.label, { opacity: 0.5 }]}>
+                        No habits yet — tap Add to get started
+                      </Text>
                     </View>
                   </ShadowBox>
-                </Pressable>
-              )}
-              <Pressable onPress={() => setShowAddHabits(true)}>
-                <ShadowBox contentBackgroundColor={colorHex} shadowBorderRadius={15} shadowOffset={{ x: 0, y: 3 }}>
-                  <View style={{ paddingVertical: 6, paddingHorizontal: 14 }}>
-                    <Text style={[globalStyles.body, { textAlign: 'center', fontSize: 13 }]}>+ Add</Text>
-                  </View>
-                </ShadowBox>
-              </Pressable>
-            </View>
-          </View>
+                ) : (
+                  pathHabits.map(habit => {
+                    const iconFile = habit.icon ? HABIT_ICONS[habit.icon] : null;
+                    const showStreak = (habit.streak ?? 0) >= 3;
 
-          {pathHabits.length === 0 ? (
-            <ShadowBox
-              contentBackgroundColor="#fff"
-              shadowBorderRadius={15}
-              shadowOffset={{ x: 0, y: 5 }}
-              shadowColor={colorHex}
-              style={{ marginBottom: 12 }}
-            >
-              <View style={[styles.card, { alignItems: 'center', paddingVertical: 24 }]}>
-                <Text style={[globalStyles.label, { opacity: 0.5 }]}>
-                  No habits yet — tap Add to get started
-                </Text>
-              </View>
-            </ShadowBox>
-          ) : (
-            pathHabits.map(habit => {
-              const iconFile = habit.icon ? HABIT_ICONS[habit.icon] : null;
-              const showStreak = (habit.streak ?? 0) >= 3;
-
-              return (
-                <ShadowBox
-                  key={habit.id}
-                  contentBackgroundColor="#fff"
-                  contentBorderColor="#000"
-                  contentBorderWidth={1}
-                  shadowBorderRadius={15}
-                  shadowOffset={{ x: 0, y: 5 }}
-                  shadowColor={colorHex}
-                  style={{ marginBottom: 12 }}
-                >
-                  <View style={styles.habitRow}>
-                    <View style={styles.habitIconWrap}>
-                      {iconFile ? (
-                        <Image source={iconFile} style={styles.habitIcon} />
-                      ) : (
-                        <Text style={{ fontSize: 24 }}>✦</Text>
-                      )}
-                    </View>
-
-                    <View style={{ flex: 1, gap: 6 }}>
-                      <Text style={[globalStyles.body, { fontSize: 15 }]} numberOfLines={1}>
-                        {habit.name}
-                      </Text>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                        {!!habit.rewardPoints && habit.rewardPoints > 0 && (
-                          <View style={styles.badge}>
-                            <Image
-                              source={SYSTEM_ICONS.reward}
-                              style={[styles.badgeIcon, { tintColor: COLORS.Rewards }]}
-                            />
-                            <Text style={styles.badgeText}>{habit.rewardPoints}</Text>
+                    return (
+                      <ShadowBox
+                        key={habit.id}
+                        contentBackgroundColor="#fff"
+                        contentBorderColor="#000"
+                        contentBorderWidth={1}
+                        shadowBorderRadius={15}
+                        shadowOffset={{ x: 0, y: 5 }}
+                        shadowColor={colorHex}
+                        style={{ marginBottom: 12 }}
+                      >
+                        <View style={styles.habitRow}>
+                          <View style={styles.habitIconWrap}>
+                            {iconFile ? (
+                              <Image source={iconFile} style={styles.habitIcon} />
+                            ) : (
+                              <Text style={{ fontSize: 24 }}>✦</Text>
+                            )}
                           </View>
-                        )}
-                        {showStreak && (
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
-                            <Image source={SYSTEM_ICONS.fire} style={{ width: 16, height: 16 }} />
-                            <Text style={styles.badgeText}>{habit.streak}d</Text>
+
+                          <View style={{ flex: 1, gap: 6 }}>
+                            <Text style={[globalStyles.body, { fontSize: 15 }]} numberOfLines={1}>
+                              {habit.name}
+                            </Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                              {!!habit.rewardPoints && habit.rewardPoints > 0 && (
+                                <View style={styles.badge}>
+                                  <Image
+                                    source={SYSTEM_ICONS.reward}
+                                    style={[styles.badgeIcon, { tintColor: COLORS.Rewards }]}
+                                  />
+                                  <Text style={styles.badgeText}>{habit.rewardPoints}</Text>
+                                </View>
+                              )}
+                              {showStreak && (
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
+                                  <Image source={SYSTEM_ICONS.fire} style={{ width: 16, height: 16 }} />
+                                  <Text style={styles.badgeText}>{habit.streak}d</Text>
+                                </View>
+                              )}
+                              <View style={[globalStyles.bubbleLabel, { backgroundColor: colorHex + '22', borderColor: colorHex + '55' }]}>
+                                <Text style={[globalStyles.label, { opacity: 1, color: '#444' }]}>
+                                  {isRecurring(habit) ? `↻ ${habit.frequency}` : '1× One-time'}
+                                </Text>
+                              </View>
+                              {nextDueLabel(habit) && (
+                                <View style={[globalStyles.bubbleLabel, { backgroundColor: 'rgba(0,0,0,0.04)', borderColor: 'rgba(0,0,0,0.1)' }]}>
+                                  <Text style={globalStyles.label}>{nextDueLabel(habit)}</Text>
+                                </View>
+                              )}
+                            </View>
                           </View>
-                        )}
-                        <View style={[globalStyles.bubbleLabel, { backgroundColor: colorHex + '22', borderColor: colorHex + '55' }]}>
-                          <Text style={[globalStyles.label, { opacity: 1, color: '#444' }]}>
-                            {isRecurring(habit) ? `↻ ${habit.frequency}` : '1× One-time'}
-                          </Text>
                         </View>
-                        {nextDueLabel(habit) && (
-                          <View style={[globalStyles.bubbleLabel, { backgroundColor: 'rgba(0,0,0,0.04)', borderColor: 'rgba(0,0,0,0.1)' }]}>
-                            <Text style={globalStyles.label}>{nextDueLabel(habit)}</Text>
-                          </View>
-                        )}
-                      </View>
-                    </View>
-                  </View>
-                </ShadowBox>
-              );
-            })
-          )}
+                      </ShadowBox>
+                    );
+                  })
+                )}
+              </>
+            );
+          })()}
 
           {/* ── unassigned habits ── */}
           {unassignedHabits.length > 0 && (
@@ -820,42 +996,39 @@ export default function PathDetail() {
   );
 }
 
-// ─── stat bubble ──────────────────────────────────────────────────────────────
-
-function StatBubble({ label, value, color }: { label: string; value: string; color: string }) {
-  return (
-    <ShadowBox contentBackgroundColor="#fff" shadowBorderRadius={14} shadowOffset={{ x: 0, y: 2 }} style={{ flex: 1 }}>
-      <View style={styles.statBubble}>
-        <Text style={[styles.statValue, { color }]}>{value}</Text>
-        <Text style={styles.statLabel}>{label}</Text>
-      </View>
-    </ShadowBox>
-  );
-}
 
 // ─── styles ───────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
-  statsRow: {
+  trendRow: {
     flexDirection: 'row',
+    justifyContent: 'center',
     gap: 8,
     marginBottom: 16,
   },
-  statBubble: {
+  trendBubble: {
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 10,
-    paddingHorizontal: 4,
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#000',
+  },
+  trendIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 2,
   },
-  statValue: {
-    fontFamily: 'p2',
-    fontSize: 16,
+  trendIcon: {
+    width: 14,
+    height: 14,
   },
-  statLabel: {
-    fontFamily: 'label',
-    fontSize: 10,
-    opacity: 0.6,
-  },
+  // trendPct: {
+  //   fontFamily: 'label',
+  //   fontSize: 11,
+  // },
   card: {
     padding: 16,
   },

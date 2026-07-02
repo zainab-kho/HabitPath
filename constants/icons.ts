@@ -399,6 +399,8 @@ export const SYSTEM_ICONS = {
     sort: require('@/assets/icons/system/sort.png'),
     sortLeft: require('@/assets/icons/system/sort-left.png'),
     sortRight: require('@/assets/icons/system/sort-right.png'),
+    trendUp: require('@/assets/icons/system/trend-up.png'),
+    trendDown: require('@/assets/icons/system/trend-down.png'),
     clock: require('@/assets/icons/system/clock.png'),
     repeat: require('@/assets/icons/system/repeat.png'),
     calendar: require('@/assets/icons/system/calendar.png'),

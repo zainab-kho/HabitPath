@@ -67,7 +67,7 @@ export default function HabitItem({
 
   // keepUntil / Weekly Goal: use cycle start (walks back to find stored data)
   // snoozed: use snoozedFrom only while snooze is active
-  const isSnoozedNow = habit.snoozedFrom && habit.snoozedUntil && dateStr <= habit.snoozedUntil.slice(0, 10);
+  const isSnoozedNow = habit.snoozedFrom && habit.snoozedUntil && dateStr < habit.snoozedUntil.slice(0, 10);
   const effectiveDateStr = (habit.keepUntil || habit.frequency === 'Weekly Goal')
     ? getHabitCycleStart(habit, currentDate, resetTime.hour, resetTime.minute)
     : isSnoozedNow

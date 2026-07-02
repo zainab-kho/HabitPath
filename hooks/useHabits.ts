@@ -173,7 +173,7 @@ export function useHabits(viewingDate: Date = new Date()) {
       if (!target) return;
 
       // keepUntil / Weekly Goal: use cycle start; snoozed: use snoozedFrom (only while active)
-      const isSnoozedNow = target.snoozedFrom && target.snoozedUntil && rawDs <= target.snoozedUntil.slice(0, 10);
+      const isSnoozedNow = target.snoozedFrom && target.snoozedUntil && rawDs < target.snoozedUntil.slice(0, 10);
       const ds = (target.frequency === 'Weekly Goal' || target.keepUntil)
         ? getHabitCycleStart(target, viewingDate, resetTime.hour, resetTime.minute)
         : isSnoozedNow
@@ -232,7 +232,7 @@ export function useHabits(viewingDate: Date = new Date()) {
       const rawDs = getHabitDate(viewingDate, resetTime.hour, resetTime.minute);
       const currentHabits = rawHabitsRef.current;
       const target = currentHabits.find(h => h.id === habitId);
-      const isSnoozedNow = target?.snoozedFrom && target?.snoozedUntil && rawDs <= target.snoozedUntil.slice(0, 10);
+      const isSnoozedNow = target?.snoozedFrom && target?.snoozedUntil && rawDs < target.snoozedUntil.slice(0, 10);
       const ds = (target?.frequency === 'Weekly Goal' || target?.keepUntil)
         ? getHabitCycleStart(target, viewingDate, resetTime.hour, resetTime.minute)
         : isSnoozedNow

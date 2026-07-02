@@ -558,14 +558,14 @@ export default function PathDetail() {
               <Text style={[globalStyles.body1, { fontSize: 13 }]}>
                 {thisWeek} this week
               </Text>
-              {lastWeek > 0 && (
+              {(thisWeek > 0 || lastWeek > 0) && (
                 <View style={styles.trendIndicator}>
                   <Image
                     source={weekDiff > 0 ? SYSTEM_ICONS.trendUp : weekDiff < 0 ? SYSTEM_ICONS.trendDown : SYSTEM_ICONS.trendUp}
                     style={[styles.trendIcon, { tintColor: weekDiff > 0 ? '#2bb471' : weekDiff < 0 ? '#bc2d2d' : '#999' }]}
                   />
                   <Text style={[globalStyles.body1, { color: weekDiff > 0 ? '#2bb471' : weekDiff < 0 ? '#bc2d2d' : '#999' }]}>
-                    {weekDiff === 0 ? '0%' : `${Math.round(Math.abs(weekDiff / lastWeek) * 100)}%`}
+                    {weekDiff === 0 ? '0%' : lastWeek === 0 ? 'New' : `${Math.round(Math.abs(weekDiff / lastWeek) * 100)}%`}
                   </Text>
                 </View>
               )}
@@ -574,14 +574,14 @@ export default function PathDetail() {
               <Text style={[globalStyles.body2, { fontSize: 13 }]}>
                 {thisMonth} this month
               </Text>
-              {lastMonth > 0 && (
+              {(thisMonth > 0 || lastMonth > 0) && (
                 <View style={styles.trendIndicator}>
                   <Image
                     source={monthDiff > 0 ? SYSTEM_ICONS.trendUp : monthDiff < 0 ? SYSTEM_ICONS.trendDown : SYSTEM_ICONS.trendUp}
                     style={[styles.trendIcon, { tintColor: monthDiff > 0 ? '#2bb471' : monthDiff < 0 ? '#bc2d2d' : '#999' }]}
                   />
                   <Text style={[globalStyles.body1, { color: monthDiff > 0 ? '#2bb471' : monthDiff < 0 ? '#bc2d2d' : '#999' }]}>
-                    {monthDiff === 0 ? '0%' : `${Math.round(Math.abs(monthDiff / lastMonth) * 100)}%`}
+                    {monthDiff === 0 ? '0%' : lastMonth === 0 ? 'New' : `${Math.round(Math.abs(monthDiff / lastMonth) * 100)}%`}
                   </Text>
                 </View>
               )}

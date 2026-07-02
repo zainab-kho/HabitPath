@@ -1,5 +1,5 @@
 // app/(tabs)/paths/[id].tsx
-import { BUTTON_COLORS, COLORS } from '@/constants/colors';
+import { BUTTON_COLORS, COLORS, PAGE } from '@/constants/colors';
 import { PATH_COLORS, type PathColorKey } from '@/colors/pathColors';
 import { HABIT_ICONS, SYSTEM_ICONS } from '@/constants/icons';
 import { useAuth } from '@/contexts/AuthContext';
@@ -40,17 +40,6 @@ function completionsOnDate(habits: Habit[], date: string): number {
 /** completions in a date range */
 function completionsInRange(habits: Habit[], days: string[]): number {
   return days.reduce((sum, d) => sum + completionsOnDate(habits, d), 0);
-}
-
-/** N days ending `offset` days ago */
-function daysRange(n: number, offset: number, resetHour = 4, resetMin = 0): string[] {
-  const days: string[] = [];
-  for (let i = n - 1 + offset; i >= offset; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    days.push(getHabitDate(d, resetHour, resetMin));
-  }
-  return days;
 }
 
 // ─── heat map ────────────────────────────────────────────────────────────────
@@ -129,7 +118,6 @@ function HeatMap({
         {/* actual days */}
         {monthDays.map((day, i) => {
           const dayNum = i + 1;
-          const isToday = day === todayStr;
           const isFuture = day > todayStr;
           const count = counts[i];
           const ratio = isFuture || count === 0 ? 0 : count / maxCount;
@@ -301,10 +289,10 @@ export default function PathDetail() {
     return false;
   };
 
-  // Returns a human-readable "next due" label for a habit card.
+  // Returns a "next due" label for a habit card.
   const nextDueLabel = (h: Habit): string | null => {
     const snoozeDay = h.snoozedUntil?.slice(0, 10);
-    if (snoozeDay && snoozeDay > todayStr) return `Snoozed → ${formatDisplayDateString(snoozeDay)}`;
+    if (snoozeDay && snoozeDay > todayStr) return `Snoozed until ${formatDisplayDateString(snoozeDay)}`;
     if (h.keepUntil) return 'Until completed';
     if (!isRecurring(h)) {
       if (h.startDate > todayStr) return formatDisplayDateString(h.startDate);
@@ -621,18 +609,21 @@ export default function PathDetail() {
             const showingSelectedDay = !!selectedDay;
             let displayHabits: (Habit & { dayStatus?: string })[] = [];
 
+            const habitToday = getHabitDate(new Date(), resetHour, resetMin);
+            const isPastDay = showingSelectedDay && selectedDay < habitToday;
+
             if (showingSelectedDay) {
               const selDate = parseLocalDate(selectedDay);
               selDate.setHours(12);
-              const todayStr2 = getHabitDate(new Date(), resetHour, resetMin);
-              const isViewingToday2 = selectedDay === todayStr2;
+              const isViewingToday2 = selectedDay === habitToday;
 
               displayHabits = allPathHabits
                 .filter(h => isHabitActiveToday(h, selDate, resetHour, resetMin))
                 .map(h => ({
                   ...h,
-                  dayStatus: getHabitStatus(h, selectedDay, isViewingToday2, todayStr2, selDate, resetHour, resetMin),
-                }));
+                  dayStatus: getHabitStatus(h, selectedDay, isViewingToday2, habitToday, selDate, resetHour, resetMin),
+                }))
+                .filter(h => h.dayStatus !== 'snoozed');
             }
 
             const selectedDateLabel = showingSelectedDay
@@ -642,53 +633,46 @@ export default function PathDetail() {
             return (
               <>
                 <View style={styles.sectionHeader}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                    <Text style={styles.sectionLabel}>
-                      {showingSelectedDay ? selectedDateLabel!.toUpperCase() : 'HABITS'}
-                    </Text>
-                    {showingSelectedDay && (
-                      <Pressable onPress={() => setSelectedDay(null)} hitSlop={8}>
-                        <Text style={[globalStyles.label, { opacity: 0.5, fontSize: 10 }]}>✕ CLEAR</Text>
-                      </Pressable>
-                    )}
-                  </View>
+                  <Text style={styles.sectionLabel}>
+                    {showingSelectedDay ? selectedDateLabel!.toUpperCase() : 'HABITS'}
+                  </Text>
                   <View style={{ flexDirection: 'row', gap: 8 }}>
-                    {!showingSelectedDay && archivedHabits.length > 0 && (
-                      <Pressable onPress={() => setShowArchived(true)}>
-                        <ShadowBox contentBackgroundColor="#f0f0f0" shadowBorderRadius={15} shadowOffset={{ x: 0, y: 3 }}>
-                          <View style={{ paddingVertical: 6, paddingHorizontal: 14 }}>
-                            <Text style={[globalStyles.body, { textAlign: 'center', fontSize: 13 }]}>📦 Archived</Text>
-                          </View>
+                    {showingSelectedDay ? (
+                      <Pressable onPress={() => setSelectedDay(null)} hitSlop={8}>
+                        <ShadowBox>
+                          <Text style={[globalStyles.body, { fontSize: 10, paddingHorizontal: 10, paddingVertical: 3 }]}>CLEAR</Text>
                         </ShadowBox>
                       </Pressable>
-                    )}
-                    {!showingSelectedDay && (
-                      <Pressable onPress={() => setShowAddHabits(true)}>
-                        <ShadowBox contentBackgroundColor={colorHex} shadowBorderRadius={15} shadowOffset={{ x: 0, y: 3 }}>
-                          <View style={{ paddingVertical: 6, paddingHorizontal: 14 }}>
-                            <Text style={[globalStyles.body, { textAlign: 'center', fontSize: 13 }]}>+ Add</Text>
-                          </View>
-                        </ShadowBox>
-                      </Pressable>
+                    ) : (
+                      <>
+                        {archivedHabits.length > 0 && (
+                          <Pressable onPress={() => setShowArchived(true)}>
+                            <ShadowBox contentBackgroundColor="#f0f0f0" shadowBorderRadius={15} shadowOffset={{ x: 0, y: 3 }}>
+                              <View style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
+                                <Text style={[globalStyles.body1]}>Archived</Text>
+                              </View>
+                            </ShadowBox>
+                          </Pressable>
+                        )}
+                        <Pressable onPress={() => setShowAddHabits(true)}>
+                          <ShadowBox contentBackgroundColor={colorHex} shadowBorderRadius={15} shadowOffset={{ x: 0, y: 3 }}>
+                            <View style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
+                              <Text style={[globalStyles.body1]}>Add</Text>
+                            </View>
+                          </ShadowBox>
+                        </Pressable>
+                      </>
                     )}
                   </View>
                 </View>
 
                 {showingSelectedDay ? (
                   displayHabits.length === 0 ? (
-                    <ShadowBox
-                      contentBackgroundColor="#fff"
-                      shadowBorderRadius={15}
-                      shadowOffset={{ x: 0, y: 5 }}
-                      shadowColor={colorHex}
-                      style={{ marginBottom: 12 }}
-                    >
                       <View style={[styles.card, { alignItems: 'center', paddingVertical: 24 }]}>
                         <Text style={[globalStyles.label, { opacity: 0.5 }]}>
                           No habits scheduled for this day
                         </Text>
                       </View>
-                    </ShadowBox>
                   ) : (
                     displayHabits.map(habit => {
                       const iconFile = habit.icon ? HABIT_ICONS[habit.icon] : null;
@@ -702,9 +686,9 @@ export default function PathDetail() {
                           contentBorderColor="#000"
                           contentBorderWidth={1}
                           shadowBorderRadius={15}
-                          shadowOffset={{ x: 0, y: 5 }}
-                          shadowColor={isDone ? '#000' : colorHex}
-                          style={{ marginBottom: 12, opacity: isSkipped ? 0.5 : 1 }}
+                          shadowOffset={isDone ? { x: 0, y: 0 } : { x: 0, y: 5 }}
+                          shadowColor={colorHex}
+                          style={{ marginBottom: 12 }}
                         >
                           <View style={styles.habitRow}>
                             <View style={styles.habitIconWrap}>
@@ -719,19 +703,21 @@ export default function PathDetail() {
                               <Text style={[globalStyles.body, { fontSize: 15 }]} numberOfLines={1}>
                                 {habit.name}
                               </Text>
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                <View style={[
-                                  globalStyles.bubbleLabel,
-                                  {
-                                    backgroundColor: isDone ? 'rgba(255,255,255,0.3)' : isSkipped ? 'rgba(240,173,78,0.15)' : 'rgba(0,0,0,0.04)',
-                                    borderColor: isDone ? 'rgba(255,255,255,0.5)' : isSkipped ? '#f0ad4e55' : 'rgba(0,0,0,0.1)',
-                                  },
-                                ]}>
-                                  <Text style={[globalStyles.label, { opacity: 1, color: isDone ? '#fff' : isSkipped ? '#f0ad4e' : '#999' }]}>
-                                    {isDone ? '✓ Done' : isSkipped ? 'Skipped' : habit.dayStatus === 'missed' ? 'Missed' : 'Pending'}
-                                  </Text>
+                              {isPastDay && !isDone && (
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                  <View style={[
+                                    globalStyles.bubbleLabel,
+                                    {
+                                      backgroundColor: isSkipped ? '#F6EC6C' : '#97AFB9',
+                                      borderColor: isSkipped ? '#F6EC6C' : '#97AFB9',
+                                    },
+                                  ]}>
+                                    <Text style={[globalStyles.label, { opacity: 1, color: '#000' }]}>
+                                      {isSkipped ? 'Skipped' : 'Missed'}
+                                    </Text>
+                                  </View>
                                 </View>
-                              </View>
+                              )}
                             </View>
                           </View>
                         </ShadowBox>
@@ -797,13 +783,13 @@ export default function PathDetail() {
                                   <Text style={styles.badgeText}>{habit.streak}d</Text>
                                 </View>
                               )}
-                              <View style={[globalStyles.bubbleLabel, { backgroundColor: colorHex + '22', borderColor: colorHex + '55' }]}>
-                                <Text style={[globalStyles.label, { opacity: 1, color: '#444' }]}>
-                                  {isRecurring(habit) ? `↻ ${habit.frequency}` : '1× One-time'}
+                              <View style={[globalStyles.bubbleLabel, { backgroundColor: PAGE.path.primary[0], borderColor: colorHex}]}>
+                                <Text style={globalStyles.label}>
+                                  {isRecurring(habit) ? `↻ ${habit.frequency}` : '1×'}
                                 </Text>
                               </View>
                               {nextDueLabel(habit) && (
-                                <View style={[globalStyles.bubbleLabel, { backgroundColor: 'rgba(0,0,0,0.04)', borderColor: 'rgba(0,0,0,0.1)' }]}>
+                                <View style={[globalStyles.bubbleLabel, { backgroundColor: '#97AFB9', borderColor: colorHex }]}>
                                   <Text style={globalStyles.label}>{nextDueLabel(habit)}</Text>
                                 </View>
                               )}
@@ -834,7 +820,7 @@ export default function PathDetail() {
                     contentBorderWidth={1}
                     shadowBorderRadius={15}
                     shadowOffset={{ x: 0, y: 5 }}
-                    shadowColor="#aaa"
+                    shadowColor={COLORS.Primary}
                     style={{ marginBottom: 12 }}
                   >
                     <View style={styles.habitRow}>
@@ -848,13 +834,13 @@ export default function PathDetail() {
                       <View style={{ flex: 1, gap: 6 }}>
                         <Text style={[globalStyles.body, { fontSize: 15 }]} numberOfLines={1}>{habit.name}</Text>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                          <View style={[globalStyles.bubbleLabel, { backgroundColor: 'rgba(0,0,0,0.04)', borderColor: 'rgba(0,0,0,0.1)' }]}>
+                          <View style={[globalStyles.bubbleLabel, { backgroundColor: PAGE.path.primary[0], borderColor: colorHex }]}>
                             <Text style={globalStyles.label}>
-                              {isRecurring(habit) ? `↻ ${habit.frequency}` : '1× One-time'}
+                              {isRecurring(habit) ? `↻ ${habit.frequency}` : '1×'}
                             </Text>
                           </View>
                           {nextDueLabel(habit) && (
-                            <View style={[globalStyles.bubbleLabel, { backgroundColor: 'rgba(0,0,0,0.04)', borderColor: 'rgba(0,0,0,0.1)' }]}>
+                            <View style={[globalStyles.bubbleLabel, { backgroundColor: '#97AFB9', borderColor: colorHex  }]}>
                               <Text style={globalStyles.label}>{nextDueLabel(habit)}</Text>
                             </View>
                           )}
@@ -866,8 +852,8 @@ export default function PathDetail() {
                           shadowBorderRadius={15}
                           shadowOffset={{ x: 0, y: 3 }}
                         >
-                          <View style={{ paddingVertical: 6, paddingHorizontal: 14 }}>
-                            <Text style={[globalStyles.body, { textAlign: 'center', fontSize: 13 }]}>+ Add</Text>
+                          <View style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
+                            <Text style={[globalStyles.body1]}>Add</Text>
                           </View>
                         </ShadowBox>
                       </Pressable>
@@ -880,35 +866,33 @@ export default function PathDetail() {
 
           {/* action buttons */}
           <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 10, marginTop: 20 }}>
-            <Pressable onPress={handleTogglePause}>
+            <Pressable onPress={handleTogglePause} style={{ flex: 1, maxWidth: 100 }}>
               <ShadowBox
-                contentBackgroundColor={path.paused ? colorHex : '#f0f0f0'}
-                shadowBorderRadius={15}
+                contentBackgroundColor={path.paused ? colorHex : BUTTON_COLORS.Cancel}
+                shadowBorderRadius={20}
               >
-                <View style={{ paddingVertical: 6, paddingHorizontal: 14 }}>
-                  <Text style={[globalStyles.body, { textAlign: 'center', fontSize: 13 }]}>
+                <View style={{ paddingVertical: 5, alignItems: 'center' }}>
+                  <Text style={globalStyles.body}>
                     {path.paused ? 'Unpause' : 'Pause'}
                   </Text>
                 </View>
               </ShadowBox>
             </Pressable>
 
-            <Pressable onPress={handleToggleArchive}>
-              <ShadowBox contentBackgroundColor="#f0f0f0" shadowBorderRadius={15}>
-                <View style={{ paddingVertical: 6, paddingHorizontal: 14 }}>
-                  <Text style={[globalStyles.body, { textAlign: 'center', fontSize: 13 }]}>
+            <Pressable onPress={handleToggleArchive} style={{ flex: 1, maxWidth: 100 }}>
+              <ShadowBox contentBackgroundColor={BUTTON_COLORS.Cancel} shadowBorderRadius={20}>
+                <View style={{ paddingVertical: 5, alignItems: 'center' }}>
+                  <Text style={globalStyles.body}>
                     {path.archived_at ? 'Unarchive' : 'Archive'}
                   </Text>
                 </View>
               </ShadowBox>
             </Pressable>
 
-            <Pressable onPress={handleDeletePath}>
-              <ShadowBox contentBackgroundColor={BUTTON_COLORS.Delete} shadowBorderRadius={15}>
-                <View style={{ paddingVertical: 6, paddingHorizontal: 14 }}>
-                  <Text style={[globalStyles.body, { textAlign: 'center', fontSize: 13 }]}>
-                    Delete
-                  </Text>
+            <Pressable onPress={handleDeletePath} style={{ flex: 1, maxWidth: 100 }}>
+              <ShadowBox contentBackgroundColor={BUTTON_COLORS.Delete} shadowBorderRadius={20}>
+                <View style={{ paddingVertical: 5, alignItems: 'center' }}>
+                  <Text style={globalStyles.body}>Delete</Text>
                 </View>
               </ShadowBox>
             </Pressable>

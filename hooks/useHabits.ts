@@ -15,7 +15,6 @@ import {
   updateAppStreak,
 } from '@/utils/habitUtils';
 import {
-  archiveEndedHabits,
   deleteHabit as deleteHabitService,
   loadHabitsFromSupabase,
   skipHabit as skipHabitService,
@@ -132,11 +131,10 @@ export function useHabits(viewingDate: Date = new Date()) {
       const reset = await getResetTime();
       setResetTime(reset);
 
-      // Fetch everything in parallel — habits, quest goals, archive ended habits
+      // Fetch everything in parallel — habits, quest goals
       const [fresh, questGoals] = await Promise.all([
         loadHabitsFromSupabase(user.id),
         loadQuestGoalsAsHabits(user.id),
-        archiveEndedHabits(user.id).catch(console.error),
       ]);
       const merged = [...fresh, ...questGoals];
 

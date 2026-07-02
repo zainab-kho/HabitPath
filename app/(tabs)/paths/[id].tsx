@@ -75,7 +75,7 @@ function HeatMap({
   const monthName = viewingMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
   const monthDays = Array.from({ length: daysInMonth }, (_, i) => {
-    const d = new Date(year, month, i + 1);
+    const d = new Date(year, month, i + 1, 12);
     return getHabitDate(d, resetHour, resetMin);
   });
 
@@ -265,29 +265,21 @@ export default function PathDetail() {
   const todayStr = getHabitDate(new Date(), resetHour, resetMin);
 
   const isRecurring = (h: Habit) =>
-    h.frequency === 'Daily' || h.frequency === 'Weekly' || h.frequency === 'Monthly';
+    h.frequency === 'Daily' || h.frequency === 'Weekly' || h.frequency === 'Weekly Goal' || h.frequency === 'Monthly';
 
-  // habit is visible if: recurring, snoozed-to-future, today's one-timer (not yet done),
-  // future one-timer, or keepUntil not yet completed.
   const isVisible = (h: Habit): boolean => {
     const snoozeDay = h.snoozedUntil?.slice(0, 10);
-    if (snoozeDay && snoozeDay > todayStr) return true; // snoozed — still pending
-    if (isRecurring(h)) return true;
-    if (h.keepUntil) return (h.completionHistory?.length ?? 0) === 0;
-    if (h.startDate === todayStr) return !h.completionHistory?.includes(todayStr);
-    if (h.startDate > todayStr) return true;
-    return false;
+    if (snoozeDay && snoozeDay > todayStr) return true;
+    return isHabitActiveToday(h, new Date(), resetHour, resetMin);
   };
 
-  // A habit is archived if it's a completed or past one-timer (not recurring, not snoozed).
+  // A habit is archived if it's not active and not snoozed (past one-timers, completed keepUntil, etc.)
   const isArchived = (h: Habit): boolean => {
     const snoozeDay = h.snoozedUntil?.slice(0, 10);
     if (snoozeDay && snoozeDay > todayStr) return false;
-    if (isRecurring(h)) return false;
-    if (h.keepUntil) return (h.completionHistory?.length ?? 0) > 0;
-    if (h.startDate < todayStr) return true;
-    if (h.startDate === todayStr) return !!h.completionHistory?.includes(todayStr);
-    return false;
+    if (isRecurring(h) && h.frequency !== 'Weekly Goal') return false;
+    if (isHabitActiveToday(h, new Date(), resetHour, resetMin)) return false;
+    return true;
   };
 
   // Returns a "next due" label for a habit card.
@@ -303,8 +295,20 @@ export default function PathDetail() {
   };
 
   // Habits in this path (from the full cache, with smart date filtering)
+  // Sort: 1× first, then recurring, then Weekly Goal, then snoozed last
   const pathHabits = path
-    ? allHabitsAll.filter(h => h.path === path.name && isVisible(h))
+    ? allHabitsAll
+        .filter(h => h.path === path.name && isVisible(h))
+        .sort((a, b) => {
+          const order = (h: Habit) => {
+            const snoozeDay = h.snoozedUntil?.slice(0, 10);
+            if (snoozeDay && snoozeDay > todayStr) return 3;
+            if (h.frequency === 'Weekly Goal') return 2;
+            if (isRecurring(h)) return 1;
+            return 0;
+          };
+          return order(a) - order(b);
+        })
     : [];
 
   // all habits in this path (including archived) — used for heatmap history
@@ -506,15 +510,13 @@ export default function PathDetail() {
   const daysIntoWeek = todayDow + 1;
   const thisWeekDays: string[] = [];
   const lastWeekDays: string[] = [];
-  for (let i = 0; i < 7; i++) {
+  for (let i = 0; i < daysIntoWeek; i++) {
+    const thisD = new Date(thisMonday);
+    thisD.setDate(thisMonday.getDate() + i);
+    thisWeekDays.push(getHabitDate(thisD, resetHour, resetMin));
     const lastD = new Date(lastMonday);
     lastD.setDate(lastMonday.getDate() + i);
     lastWeekDays.push(getHabitDate(lastD, resetHour, resetMin));
-    if (i < daysIntoWeek) {
-      const thisD = new Date(thisMonday);
-      thisD.setDate(thisMonday.getDate() + i);
-      thisWeekDays.push(getHabitDate(thisD, resetHour, resetMin));
-    }
   }
   const thisWeek = completionsInRange(allPathHabits, thisWeekDays);
   const lastWeek = completionsInRange(allPathHabits, lastWeekDays);
@@ -664,7 +666,7 @@ export default function PathDetail() {
                         <Pressable onPress={() => setShowAddHabits(true)}>
                           <ShadowBox contentBackgroundColor={colorHex} shadowBorderRadius={15} shadowOffset={{ x: 0, y: 3 }}>
                             <View style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
-                              <Text style={[globalStyles.body1]}>Add</Text>
+                              <Text style={[globalStyles.body1]}>Edit</Text>
                             </View>
                           </ShadowBox>
                         </Pressable>
@@ -749,16 +751,17 @@ export default function PathDetail() {
                   pathHabits.map(habit => {
                     const iconFile = habit.icon ? HABIT_ICONS[habit.icon] : null;
                     const showStreak = (habit.streak ?? 0) >= 3;
+                    const isDoneToday = habit.completionHistory?.includes(habitToday) ?? false;
 
                     return (
                       <ShadowBox
                         key={habit.id}
-                        contentBackgroundColor="#fff"
+                        contentBackgroundColor={isDoneToday ? colorHex : '#fff'}
                         contentBorderColor="#000"
                         contentBorderWidth={1}
                         shadowBorderRadius={15}
-                        shadowOffset={{ x: 0, y: 5 }}
-                        shadowColor={colorHex}
+                        shadowOffset={isDoneToday ? { x: 0, y: 0 } : { x: 0, y: 5 }}
+                        shadowColor={isDoneToday ? '#000' : colorHex}
                         style={{ marginBottom: 12 }}
                       >
                         <View style={styles.habitRow}>
@@ -792,7 +795,7 @@ export default function PathDetail() {
                               )}
                               <View style={[globalStyles.bubbleLabel, { backgroundColor: PAGE.path.primary[0], borderColor: colorHex}]}>
                                 <Text style={globalStyles.label}>
-                                  {isRecurring(habit) ? `↻ ${habit.frequency}` : '1×'}
+                                  {habit.frequency === 'Weekly Goal' ? 'Week Goal' : isRecurring(habit) ? `↻ ${habit.frequency}` : '1×'}
                                 </Text>
                               </View>
                               {nextDueLabel(habit) && (
@@ -843,7 +846,7 @@ export default function PathDetail() {
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                           <View style={[globalStyles.bubbleLabel, { backgroundColor: PAGE.path.primary[0], borderColor: colorHex }]}>
                             <Text style={globalStyles.label}>
-                              {isRecurring(habit) ? `↻ ${habit.frequency}` : '1×'}
+                              {habit.frequency === 'Weekly Goal' ? 'Week Goal' : isRecurring(habit) ? `↻ ${habit.frequency}` : '1×'}
                             </Text>
                           </View>
                           {nextDueLabel(habit) && (
@@ -979,7 +982,7 @@ export default function PathDetail() {
                               )}
                               <View style={[globalStyles.bubbleLabel, { backgroundColor: PAGE.path.primary[0], borderColor: colorHex }]}>
                                 <Text style={globalStyles.label}>
-                                  {isRecurring(habit) ? `↻ ${habit.frequency}` : '1×'}
+                                  {habit.frequency === 'Weekly Goal' ? 'Week Goal' : isRecurring(habit) ? `↻ ${habit.frequency}` : '1×'}
                                 </Text>
                               </View>
                               <View style={[globalStyles.bubbleLabel, { backgroundColor: COLORS.ProgressColor, borderColor: COLORS.ProgressColor }]}>

@@ -1,35 +1,34 @@
 // @/modals/AddHabitsToPathModal.tsx
 import { isHabitActiveToday } from '@/utils/habitUtils';
-import { BUTTON_COLORS } from '@/constants/colors';
+import { BUTTON_COLORS, COLORS, PAGE } from '@/constants/colors';
 import { HABIT_ICONS } from '@/constants/icons';
 import { globalStyles } from '@/styles';
 import { Habit } from '@/types/Habit';
 import ShadowBox from '@/ui/ShadowBox';
-import { getHabitDate } from '@/utils/dateUtils';
+import { getHabitDate, formatDisplayDateString } from '@/utils/dateUtils';
 import React, { useEffect, useState } from 'react';
 import {
     Image,
     Modal,
     Pressable,
-    ScrollView,
+    StyleSheet,
     Text,
     View,
 } from 'react-native';
+import { ScrollView as GHScrollView } from 'react-native-gesture-handler';
 
 const RESET_HOUR = 4;
 const RESET_MINUTE = 0;
 const TODAY = new Date();
-// use getHabitDate so it respects the app's reset time — same as everywhere else
 const TODAY_STR = getHabitDate(TODAY, RESET_HOUR, RESET_MINUTE);
 
 interface AddHabitsToPathModalProps {
     visible: boolean;
     allHabits: Habit[];
-    pathHabitIds: string[];   // habit ids currently in this path
+    pathHabitIds: string[];
     pathColor: string;
     pathName: string;
     onClose: () => void;
-    /** called with final set of habit ids to be in path after save */
     onSave: (habitIds: string[]) => void;
 }
 
@@ -42,79 +41,57 @@ export default function AddHabitsToPathModal({
     onClose,
     onSave,
 }: AddHabitsToPathModalProps) {
-    // local selection state — initialised from pathHabitIds when modal opens
     const [selected, setSelected] = useState<Set<string>>(new Set(pathHabitIds));
 
     useEffect(() => {
         if (visible) setSelected(new Set(pathHabitIds));
     }, [visible, pathHabitIds]);
 
-    // ── helpers ──────────────────────────────────────────────────────────────
     const isRecurring = (h: Habit) =>
         h.frequency === 'Daily' || h.frequency === 'Weekly' || h.frequency === 'Weekly Goal' || h.frequency === 'Monthly';
 
     const isActiveToday = (h: Habit) =>
         isHabitActiveToday(h, TODAY, RESET_HOUR, RESET_MINUTE);
 
-    // ── filtering ────────────────────────────────────────────────────────────
-    // Rules:
-    //   1. already in THIS path → always show (so user can uncheck)
-    //   2. belongs to a DIFFERENT path → hide
-    //   3. non-recurring: only show if startDate === today (not past, not future)
-    //      also hide if already completed today
-    //   4. recurring: show normally
     const availableHabits = allHabits.filter(h => {
-        // 1) always show habits already in this path (so user can uncheck)
         if (h.path === pathName) return true;
-
-        // 2) belongs to a DIFFERENT path → hide
         if (h.path && h.path !== pathName) return false;
-
         const recurring = isRecurring(h);
-
-        // 3) recurring habits: show normally (use your existing scheduling + completion logic elsewhere)
         if (recurring) return true;
-
-        // ---- non-recurring habits below ----
-
-        // snoozed to a future date — still pending, show it
         const snoozeDay = h.snoozedUntil?.slice(0, 10);
         if (snoozeDay && snoozeDay > TODAY_STR) return true;
-
         const everCompleted = (h.completionHistory?.length ?? 0) > 0;
-
-        // 4) keepUntil (boolean): keep showing until EVER completed, then disappear forever
-        if (h.keepUntil === true) {
-            return !everCompleted;
-        }
-
-        // 5) normal one-time: hide past habits; future and today are allowed
+        if (h.keepUntil === true) return !everCompleted;
         if (h.startDate < TODAY_STR) return false;
-        // hide today's if already completed today
         if (h.startDate === TODAY_STR && h.completionHistory?.includes(TODAY_STR)) return false;
-
         return true;
     });
 
-    // ── sorting ──────────────────────────────────────────────────────────────
     const isSnoozed = (h: Habit) => {
         const sd = h.snoozedUntil?.slice(0, 10);
         return !!(sd && sd > TODAY_STR);
     };
-    // 1. snoozed habits (any frequency) — pinned at top so they're not missed
+
+    const nextDueLabel = (h: Habit): string | null => {
+        const snoozeDay = h.snoozedUntil?.slice(0, 10);
+        if (snoozeDay && snoozeDay > TODAY_STR) return 'Snoozed';
+        if (h.keepUntil) return 'Until completed';
+        if (!isRecurring(h)) {
+            if (h.startDate > TODAY_STR) return formatDisplayDateString(h.startDate);
+            return 'Today';
+        }
+        return null;
+    };
+
     const snoozedHabits = availableHabits.filter(isSnoozed);
-    // 2. one-time habits active today (most urgent)
     const oneTimeToday = availableHabits.filter(
         h => !isSnoozed(h) && !isRecurring(h) && isActiveToday(h)
     );
-    // 3. recurring habits (not snoozed)
     const recurring = availableHabits.filter(h => !isSnoozed(h) && isRecurring(h));
-    // 4. future one-time habits (startDate > today, not snoozed)
     const oneTimeFuture = availableHabits.filter(
         h => !isSnoozed(h) && !isRecurring(h) && h.startDate > TODAY_STR
     );
 
-    // ── handlers ─────────────────────────────────────────────────────────────
     const toggle = (id: string) => {
         setSelected(prev => {
             const next = new Set(prev);
@@ -123,9 +100,7 @@ export default function AddHabitsToPathModal({
         });
     };
 
-    const handleSave = () => {
-        onSave(Array.from(selected));
-    };
+    const handleSave = () => onSave(Array.from(selected));
 
     const handleCancel = () => {
         setSelected(new Set(pathHabitIds));
@@ -140,71 +115,53 @@ export default function AddHabitsToPathModal({
         return n;
     })();
 
-    // ── render ────────────────────────────────────────────────────────────────
     const renderHabit = (habit: Habit) => {
         const isChecked = selected.has(habit.id);
+        const inPath = pathHabitIds.includes(habit.id);
         const iconFile = habit.icon ? HABIT_ICONS[habit.icon] : null;
-        const activeToday = isActiveToday(habit);
-
         return (
-            <Pressable key={habit.id} onPress={() => toggle(habit.id)} style={{ marginBottom: 8, marginHorizontal: 2 }}>
+            <Pressable key={habit.id} onPress={() => toggle(habit.id)} style={{ marginBottom: 12 }}>
                 <ShadowBox
-                    contentBackgroundColor={isChecked ? pathColor + '28' : '#fff'}
-                    contentBorderColor={isChecked ? pathColor : 'rgba(0,0,0,0.08)'}
-                    shadowBorderRadius={12}
-                    shadowOffset={{ x: isChecked ? 2 : 1, y: isChecked ? 2 : 1 }}
-                    shadowColor={isChecked ? pathColor : '#000'}
+                    contentBackgroundColor={isChecked ? (inPath ? '#fff' : COLORS.Primary) : '#fff'}
+                    contentBorderColor="#000"
+                    contentBorderWidth={1}
+                    shadowBorderRadius={15}
+                    shadowColor={inPath ? pathColor : '#000'}
                 >
-                    <View style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: 12,
-                        padding: 12,
-                    }}>
-                        {/* icon */}
-                        <View style={{
-                            width: 36,
-                            height: 36,
-                            borderRadius: 10,
-                            backgroundColor: isChecked ? pathColor + '44' : 'rgba(0,0,0,0.05)',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                        }}>
+                    <View style={s.habitRow}>
+                        <View style={s.habitIconWrap}>
                             {iconFile
-                                ? <Image source={iconFile} style={{ width: 22, height: 22 }} />
-                                : <Text style={{ fontSize: 14 }}>✦</Text>
+                                ? <Image source={iconFile} style={s.habitIcon} />
+                                : <Text style={{ fontSize: 24 }}>✦</Text>
                             }
                         </View>
 
-                        {/* name + meta */}
-                        <View style={{ flex: 1, gap: 3 }}>
-                            <Text style={globalStyles.body} numberOfLines={1}>{habit.name}</Text>
-                            <View style={{ flexDirection: 'row', gap: 6 }}>
-                                {/* frequency bubble */}
-                                <View style={[globalStyles.bubbleLabel, { backgroundColor: '#f0f0f0', borderColor: 'transparent' }]}>
-                                    <Text style={globalStyles.label}>{habit.frequency || 'One-time'}</Text>
+                        <View style={{ flex: 1, gap: 6 }}>
+                            <Text style={[globalStyles.body, { fontSize: 15 }]} numberOfLines={1}>{habit.name}</Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                <View style={[globalStyles.bubbleLabel, { backgroundColor: PAGE.path.primary[0], borderColor: COLORS.Primary }]}>
+                                    <Text style={globalStyles.label}>
+                                        {isRecurring(habit) ? `↻ ${habit.frequency}` : '1×'}
+                                    </Text>
                                 </View>
-                                {/* "today" badge */}
-                                {activeToday && (
-                                    <View style={[globalStyles.bubbleLabel, { backgroundColor: pathColor + '33', borderColor: pathColor + '66' }]}>
-                                        <Text style={[globalStyles.label, { color: '#444' }]}>today</Text>
+                                {nextDueLabel(habit) && (
+                                    <View style={[globalStyles.bubbleLabel, { backgroundColor: '#97AFB9', borderColor: COLORS.Primary }]}>
+                                        <Text style={globalStyles.label}>{nextDueLabel(habit)}</Text>
                                     </View>
                                 )}
                             </View>
                         </View>
 
-                        {/* checkbox */}
                         <View style={{
-                            width: 24,
-                            height: 24,
-                            borderRadius: 8,
-                            borderWidth: 1.5,
-                            borderColor: isChecked ? pathColor : 'rgba(0,0,0,0.2)',
-                            backgroundColor: isChecked ? pathColor : 'transparent',
-                            alignItems: 'center',
+                            width: 20,
+                            height: 20,
+                            borderRadius: 10,
+                            backgroundColor: isChecked ? BUTTON_COLORS.Save : 'transparent',
+                            borderWidth: 1,
                             justifyContent: 'center',
+                            alignItems: 'center',
                         }}>
-                            {isChecked && <Text style={{ color: '#fff', fontSize: 13, lineHeight: 16 }}>✓</Text>}
+                            {isChecked && <Text style={{ fontSize: 12, fontWeight: 'bold' }}>✓</Text>}
                         </View>
                     </View>
                 </ShadowBox>
@@ -216,7 +173,7 @@ export default function AddHabitsToPathModal({
         if (habits.length === 0) return null;
         return (
             <View style={{ marginBottom: 16 }}>
-                <Text style={[globalStyles.body, { fontWeight: 'bold', marginBottom: 10, opacity: 0.7 }]}>
+                <Text style={[s.sectionLabel, { marginBottom: 10 }]}>
                     {title} ({habits.length})
                 </Text>
                 {habits.map(renderHabit)}
@@ -237,15 +194,14 @@ export default function AddHabitsToPathModal({
                         backgroundColor: '#fff',
                         borderRadius: 20,
                         borderWidth: 3,
-                        borderColor: pathColor,
+                        borderColor: COLORS.Primary,
                         maxHeight: '75%',
                         width: '90%',
                         alignSelf: 'center',
                     }}
                     onPress={e => e.stopPropagation()}
                 >
-                    {/* header */}
-                    <View style={{ marginTop: 20, marginBottom: 10, paddingHorizontal: 20 }}>
+                    <View style={{ marginTop: 20, marginBottom: 10 }}>
                         <Text style={[globalStyles.h2, { textAlign: 'center', marginBottom: 5 }]}>
                             Add Habits
                         </Text>
@@ -254,9 +210,8 @@ export default function AddHabitsToPathModal({
                         </Text>
                     </View>
 
-                    {/* list */}
-                    <ScrollView style={{ paddingHorizontal: 3 }}>
-                        <View style={{ padding: 20 }}>
+                    <GHScrollView style={{ paddingHorizontal: 3 }}>
+                        <View style={{ padding: 20, paddingTop: 10 }}>
                             <Section title="Snoozed" habits={snoozedHabits} />
                             <Section title="One-time (today)" habits={oneTimeToday} />
                             <Section title="Recurring" habits={recurring} />
@@ -268,10 +223,9 @@ export default function AddHabitsToPathModal({
                                 </Text>
                             )}
                         </View>
-                    </ScrollView>
+                    </GHScrollView>
 
-                    {/* action buttons — same pattern as AddAssignmentToDaySheet */}
-                    <View style={{ flexDirection: 'row', borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.06)', padding: 10, gap: 10 }}>
+                    <View style={{ flexDirection: 'row', borderTopWidth: 1, padding: 10, gap: 10 }}>
                         <Pressable onPress={handleCancel} style={{ flex: 1 }}>
                             <ShadowBox contentBackgroundColor={BUTTON_COLORS.Cancel} shadowBorderRadius={15}>
                                 <View style={{ paddingVertical: 6 }}>
@@ -298,3 +252,30 @@ export default function AddHabitsToPathModal({
         </Modal>
     );
 }
+
+const s = StyleSheet.create({
+    habitRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 15,
+        padding: 12,
+    },
+    habitIconWrap: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    habitIcon: {
+        width: 40,
+        height: 40,
+        resizeMode: 'contain' as const,
+    },
+    sectionLabel: {
+        fontFamily: 'label',
+        fontSize: 11,
+        opacity: 0.6,
+        letterSpacing: 0.5,
+    },
+});

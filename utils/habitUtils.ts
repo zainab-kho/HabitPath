@@ -389,11 +389,12 @@ export function isHabitActiveToday(
     const dateMonday = getWeekDatesForDate(todayStr)[0];
     const startMonday = getWeekDatesForDate(habit.startDate)[0];
     if (dateMonday < startMonday) return false;
-    // endDate check: compare against Monday so the full last week shows
     if (habit.endDate) {
       const endMonday = getWeekDatesForDate(habit.endDate)[0];
       if (dateMonday > endMonday) return false;
     }
+    // non-keepUntil without endDate: one-shot, only show for start week
+    if (!habit.keepUntil && !habit.endDate && dateMonday > startMonday) return false;
     return true;
   }
 

@@ -90,6 +90,12 @@ function isHabitScheduledForDate(
   // Weekly habits
   if (habit.frequency === 'Weekly') {
     const dow = WEEK_DAYS[getHabitDayOfWeek(date, resetHour, resetMinute)];
+    if (habit.tempSelectedDays && habit.tempSelectedDaysWeek) {
+      const dateMonday = getWeekDatesForDate(dateStr)[0];
+      if (dateMonday === habit.tempSelectedDaysWeek) {
+        return habit.tempSelectedDays.includes(dow);
+      }
+    }
     return habit.selectedDays?.includes(dow) ?? false;
   }
 
@@ -378,6 +384,12 @@ export function isHabitActiveToday(
 
     if (habit.startDate < todayStr) {
       const dow = WEEK_DAYS[getHabitDayOfWeek(date, resetHour, resetMinute)];
+      if (habit.tempSelectedDays && habit.tempSelectedDaysWeek) {
+        const dateMonday = getWeekDatesForDate(todayStr)[0];
+        if (dateMonday === habit.tempSelectedDaysWeek) {
+          return habit.tempSelectedDays.includes(dow);
+        }
+      }
       return habit.selectedDays?.includes(dow) ?? false;
     }
 

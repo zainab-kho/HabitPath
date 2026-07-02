@@ -101,3 +101,26 @@ export async function saveTempTimeOfDay(
     throw error;
   }
 }
+
+// ─── day-of-week override (Supabase) ────────────────────────────────────────
+
+export async function saveTempSelectedDays(
+  habitId: string,
+  userId: string,
+  days: string[],
+  weekMonday: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from('habits')
+    .update({
+      temp_selected_days: days,
+      temp_selected_days_week: weekMonday,
+    })
+    .eq('id', habitId)
+    .eq('user_id', userId);
+
+  if (error) {
+    console.error('[useDailyHabitOverrides] saveTempSelectedDays error:', error);
+    throw error;
+  }
+}

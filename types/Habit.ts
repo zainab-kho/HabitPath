@@ -33,6 +33,8 @@ export interface Habit {
   tempTimeOfDayDate?: string;
   tempOrder?: number;
   tempOrderDate?: string;
+  tempSelectedDays?: string[];
+  tempSelectedDaysWeek?: string;
 
   // exceptions
   snoozedFrom?: string; // YYYY-MM-DD date string when the habit was snoozed

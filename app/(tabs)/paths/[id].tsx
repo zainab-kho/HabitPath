@@ -29,6 +29,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import { ScrollView as GHScrollView } from 'react-native-gesture-handler';
 
 // ─── helpers ──────────────────────────────────────────────────────────────────
 
@@ -311,9 +312,15 @@ export default function PathDetail() {
     ? allHabitsAll.filter(h => h.path === path.name)
     : [];
 
-  // Past/completed one-time habits in this path (shown in Archived modal)
+  // Past/completed one-time habits in this path (shown in Archived modal), most recent first
   const archivedHabits = path
-    ? allHabitsAll.filter(h => h.path === path.name && isArchived(h))
+    ? allHabitsAll
+        .filter(h => h.path === path.name && isArchived(h))
+        .sort((a, b) => {
+          const aDate = a.completionHistory?.slice(-1)[0] ?? a.startDate;
+          const bDate = b.completionHistory?.slice(-1)[0] ?? b.startDate;
+          return bDate.localeCompare(aDate);
+        })
     : [];
 
   // Habits with no path assigned, visible per the same rules
@@ -910,68 +917,96 @@ export default function PathDetail() {
         />
 
         {/* ── archived habits modal ── */}
-        <Modal
-          visible={showArchived}
-          transparent
-          animationType="fade"
-          onRequestClose={() => setShowArchived(false)}
-        >
+        <Modal visible={showArchived} transparent animationType="none" onRequestClose={() => setShowArchived(false)}>
           <Pressable
-            style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}
+            style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center' }}
             onPress={() => setShowArchived(false)}
           >
             <Pressable
               style={{
                 backgroundColor: '#fff',
-                borderRadius: 24,
-                borderWidth: 2,
+                borderRadius: 20,
+                borderWidth: 3,
                 borderColor: colorHex,
-                maxHeight: '70%',
-                margin: 12,
+                maxHeight: '75%',
+                width: '90%',
+                alignSelf: 'center',
               }}
-              onPress={e => e.stopPropagation()}
+              onPress={(e) => e.stopPropagation()}
             >
-              <View style={{ paddingHorizontal: 20, paddingTop: 20, paddingBottom: 12 }}>
-                <Text style={[globalStyles.h2, { textAlign: 'center' }]}>Archived</Text>
-                <Text style={[globalStyles.body2, { textAlign: 'center', opacity: 0.5, marginTop: 4 }]}>
+              <View style={{ marginTop: 20, marginBottom: 10 }}>
+                <Text style={[globalStyles.h2, { textAlign: 'center', marginBottom: 5 }]}>Archived</Text>
+                <Text style={[globalStyles.body2, { textAlign: 'center', opacity: 0.6 }]}>
                   Completed or past one-time habits
                 </Text>
               </View>
-              <ScrollView style={{ paddingHorizontal: 16 }} contentContainerStyle={{ paddingBottom: 20 }}>
-                {archivedHabits.map(habit => {
-                  const iconFile = habit.icon ? HABIT_ICONS[habit.icon] : null;
-                  const completedDate = habit.completionHistory?.slice(-1)[0];
-                  return (
-                    <ShadowBox
-                      key={habit.id}
-                      contentBackgroundColor="#fff"
-                      contentBorderColor="#000"
-                      contentBorderWidth={1}
-                      shadowBorderRadius={15}
-                      shadowOffset={{ x: 0, y: 3 }}
-                      shadowColor="#aaa"
-                      style={{ marginBottom: 12 }}
-                    >
-                      <View style={[styles.habitRow, { opacity: 0.7 }]}>
-                        <View style={styles.habitIconWrap}>
-                          {iconFile
-                            ? <Image source={iconFile} style={styles.habitIcon} />
-                            : <Text style={{ fontSize: 24 }}>✦</Text>
-                          }
+
+              <GHScrollView style={{ paddingHorizontal: 3 }}>
+                <View style={{ padding: 20, paddingTop: 10 }}>
+                  {archivedHabits.map(habit => {
+                    const iconFile = habit.icon ? HABIT_ICONS[habit.icon] : null;
+                    const completedDate = habit.completionHistory?.slice(-1)[0];
+                    const isDone = (habit.completionHistory?.length ?? 0) > 0;
+                    return (
+                      <ShadowBox
+                        key={habit.id}
+                        contentBackgroundColor={isDone ? colorHex : '#fff'}
+                        contentBorderColor="#000"
+                        contentBorderWidth={1}
+                        shadowBorderRadius={15}
+                        shadowOffset={isDone ? { x: 0, y: 0 } : { x: 0, y: 5 }}
+                        shadowColor={colorHex}
+                        style={{ marginBottom: 12 }}
+                      >
+                        <View style={styles.habitRow}>
+                          <View style={styles.habitIconWrap}>
+                            {iconFile
+                              ? <Image source={iconFile} style={styles.habitIcon} />
+                              : <Text style={{ fontSize: 24 }}>✦</Text>
+                            }
+                          </View>
+                          <View style={{ flex: 1, gap: 6 }}>
+                            <Text style={[globalStyles.body, { fontSize: 15 }]} numberOfLines={1}>{habit.name}</Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                              {!!habit.rewardPoints && habit.rewardPoints > 0 && (
+                                <View style={styles.badge}>
+                                  <Image
+                                    source={SYSTEM_ICONS.reward}
+                                    style={[styles.badgeIcon, { tintColor: COLORS.Rewards }]}
+                                  />
+                                  <Text style={styles.badgeText}>{habit.rewardPoints}</Text>
+                                </View>
+                              )}
+                              <View style={[globalStyles.bubbleLabel, { backgroundColor: PAGE.path.primary[0], borderColor: colorHex }]}>
+                                <Text style={globalStyles.label}>
+                                  {isRecurring(habit) ? `↻ ${habit.frequency}` : '1×'}
+                                </Text>
+                              </View>
+                              <View style={[globalStyles.bubbleLabel, { backgroundColor: COLORS.ProgressColor, borderColor: COLORS.ProgressColor }]}>
+                                <Text style={[globalStyles.label, { opacity: 1 }]}>
+                                  {completedDate
+                                    ? `${formatDisplayDateString(completedDate)}`
+                                    : formatDisplayDateString(habit.startDate)}
+                                </Text>
+                              </View>
+                            </View>
+                          </View>
                         </View>
-                        <View style={{ flex: 1, gap: 6 }}>
-                          <Text style={[globalStyles.body, { fontSize: 15 }]} numberOfLines={1}>{habit.name}</Text>
-                          <Text style={[globalStyles.label, { opacity: 0.6 }]}>
-                            {completedDate
-                              ? `✓ Completed ${formatDisplayDateString(completedDate)}`
-                              : `Scheduled ${formatDisplayDateString(habit.startDate)}`}
-                          </Text>
-                        </View>
-                      </View>
-                    </ShadowBox>
-                  );
-                })}
-              </ScrollView>
+                      </ShadowBox>
+                    );
+                  })}
+                </View>
+              </GHScrollView>
+
+              <View style={{ flexDirection: 'row', borderTopWidth: 1, padding: 10 }}>
+                <Pressable onPress={() => setShowArchived(false)} style={{ flex: 1 }}>
+                  <ShadowBox contentBackgroundColor={BUTTON_COLORS.Cancel} shadowBorderRadius={15}>
+                    <View style={{ paddingVertical: 6 }}>
+                      <Text style={[globalStyles.body, { textAlign: 'center' }]}>Close</Text>
+                    </View>
+                  </ShadowBox>
+                </Pressable>
+              </View>
             </Pressable>
           </Pressable>
         </Modal>

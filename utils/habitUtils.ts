@@ -179,7 +179,10 @@ export function getHabitCycleStart(
   // For keepUntil habits, find the earliest incomplete scheduled day after the last completion
   if (habit.keepUntil) {
     const history = habit.completionHistory ?? [];
+    const latestRecorded = [...history].sort().at(-1) ?? null;
+    const lastDone = habit.lastCompletedDate ?? null;
     let earliestIncomplete: string | null = null;
+    let coveredByCompletedCycle = false;
 
     for (let i = 0; i < 365; i++) {
       const d = new Date(date);
@@ -198,6 +201,13 @@ export function getHabitCycleStart(
         completed = amt >= goal;
       }
 
+      // scheduled days between the recorded completion (cycle start) and the day
+      // it was actually finished belong to that completed cycle, not a new one
+      if (!completed && lastDone && latestRecorded && dStr > latestRecorded && dStr <= lastDone) {
+        coveredByCompletedCycle = true;
+        break;
+      }
+
       if (completed) {
         break;
       }
@@ -206,6 +216,10 @@ export function getHabitCycleStart(
 
     if (earliestIncomplete) {
       return earliestIncomplete;
+    }
+    // current cycle is the completed carried-over one
+    if (coveredByCompletedCycle && latestRecorded) {
+      return latestRecorded;
     }
   }
 
@@ -457,6 +471,20 @@ export const getHabitStatus = (
   // use < (not <=) so the habit is active ON the snoozedUntil day
   // .slice(0,10) normalizes legacy ISO strings ("2026-02-17T05:00:00Z" → "2026-02-17")
   if (habit.snoozedUntil && dateStr < habit.snoozedUntil.slice(0, 10)) return 'snoozed';
+
+  // weekly goals are week-scoped: a completion anywhere in the viewed week
+  // marks the whole week, no matter which day it was recorded on
+  if (habit.frequency === 'Weekly Goal') {
+    const weekDays = getWeekDatesForDate(dateStr);
+    if (weekDays.some(d => habit.completionHistory?.includes(d))) return 'completed';
+    if (habit.increment) {
+      const amount = weekDays.reduce((s, d) => s + (habit.incrementHistory?.[d] ?? 0), 0);
+      const goal = habit.incrementGoal && habit.incrementGoal > 0
+        ? habit.incrementGoal
+        : (habit.keepUntil ? 1 : 0);
+      if (goal > 0 && amount >= goal) return 'completed';
+    }
+  }
 
   // completed via checkmark
   if (habit.completionHistory?.includes(effectiveDateStr)) return 'completed';

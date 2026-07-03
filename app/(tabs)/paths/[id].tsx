@@ -863,10 +863,11 @@ export default function PathDetail() {
 
               {!weeklyCollapsed && weeklyGoalHabits.map(habit => {
                 const iconFile = habit.icon ? HABIT_ICONS[habit.icon] : null;
-                // weekly goals record completion against the week's monday
-                let isDoneToday = habit.completionHistory?.includes(weekStart) ?? false;
+                // week-scoped: a completion anywhere in the anchor week counts
+                const anchorWeekDays = getWeekDatesForDate(weekAnchor);
+                let isDoneToday = anchorWeekDays.some(d => habit.completionHistory?.includes(d));
                 if (!isDoneToday && habit.increment) {
-                  const amount = habit.incrementHistory?.[weekStart] ?? 0;
+                  const amount = anchorWeekDays.reduce((s, d) => s + (habit.incrementHistory?.[d] ?? 0), 0);
                   const goal = habit.incrementGoal ?? 0;
                   isDoneToday = goal > 0 && amount >= goal;
                 }

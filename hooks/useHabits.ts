@@ -4,7 +4,7 @@ import { unstable_batchedUpdates } from 'react-native';
 
 import { useAuth } from '@/contexts/AuthContext';
 import { Habit } from '@/types/Habit';
-import { formatLocalDate, getHabitDate } from '@/utils/dateUtils';
+import { formatLocalDate, getHabitDate, getWeekDatesForDate } from '@/utils/dateUtils';
 import { getResetTime } from '@/lib/supabase/queries';
 import {
   addStatusToHabits,
@@ -170,13 +170,19 @@ export function useHabits(viewingDate: Date = new Date()) {
       const target = currentHabits.find(h => h.id === habitId);
       if (!target) return;
 
-      // keepUntil / Weekly Goal: use cycle start; snoozed: use snoozedFrom (only while active)
+      // keepUntil: use cycle start; snoozed: use snoozedFrom (only while active)
+      // Weekly Goal: week-scoped — remove an existing record wherever it sits
+      // in the viewed week, otherwise record on the week's monday
       const isSnoozedNow = target.snoozedFrom && target.snoozedUntil && rawDs < target.snoozedUntil.slice(0, 10);
-      const ds = (target.frequency === 'Weekly Goal' || target.keepUntil)
-        ? getHabitCycleStart(target, viewingDate, resetTime.hour, resetTime.minute)
-        : isSnoozedNow
-          ? target.snoozedFrom!
-          : rawDs;
+      let ds: string;
+      if (target.frequency === 'Weekly Goal') {
+        const weekDays = getWeekDatesForDate(rawDs);
+        ds = weekDays.find(d => target.completionHistory?.includes(d)) ?? weekDays[0];
+      } else if (target.keepUntil) {
+        ds = getHabitCycleStart(target, viewingDate, resetTime.hour, resetTime.minute);
+      } else {
+        ds = isSnoozedNow ? target.snoozedFrom! : rawDs;
+      }
 
       const isCurrentlyCompleted = target.completionHistory?.includes(ds) ?? false;
 
@@ -186,7 +192,10 @@ export function useHabits(viewingDate: Date = new Date()) {
           ? { ...h, status: isCurrentlyCompleted ? 'active' : 'completed' as HabitStatus }
           : h
       ));
-      setEarnedPoints(prev => prev + (isCurrentlyCompleted ? -(target.rewardPoints || 0) : (target.rewardPoints || 0)));
+      // weekly goals don't count toward the daily points badge
+      if (target.frequency !== 'Weekly Goal') {
+        setEarnedPoints(prev => prev + (isCurrentlyCompleted ? -(target.rewardPoints || 0) : (target.rewardPoints || 0)));
+      }
 
       try {
         // Quest goals: "worked on it today" visual toggle (not actual completion)
@@ -250,7 +259,7 @@ export function useHabits(viewingDate: Date = new Date()) {
         // Quest goals don't support increment from habits page
         if (target?.isQuestGoal) return;
 
-        const updatedHabits = await updateHabitIncrement(habitId, currentHabits, ds, newAmount, user.id);
+        const updatedHabits = await updateHabitIncrement(habitId, currentHabits, ds, newAmount, user.id, resetTime.hour, resetTime.minute);
         applyHabitsUpdate(updatedHabits, resetTime);
       } catch (err) {
         console.error('Error updating increment:', err);

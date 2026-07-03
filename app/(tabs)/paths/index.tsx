@@ -15,7 +15,7 @@ import EmptyStateView from '@/ui/EmptyStateView';
 import PageContainer from '@/ui/PageContainer';
 import PageHeader from '@/ui/PageHeader';
 import ShadowBox from '@/ui/ShadowBox';
-import { getHabitDate } from '@/utils/dateUtils';
+import { getHabitDate, getWeekDatesForDate } from '@/utils/dateUtils';
 import { useFocusEffect, useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
@@ -73,6 +73,18 @@ interface WeekGridProps {
 }
 
 function isHabitCompletedForDate(h: Habit, dateStr: string, date: Date, resetHour: number, resetMin: number): boolean {
+    // weekly goals are week-scoped: a completion anywhere in the week counts
+    if (h.frequency === 'Weekly Goal') {
+        const weekDays = getWeekDatesForDate(dateStr);
+        if (weekDays.some(d => h.completionHistory?.includes(d))) return true;
+        if (h.increment) {
+            const amount = weekDays.reduce((s, d) => s + (h.incrementHistory?.[d] ?? 0), 0);
+            const goal = h.incrementGoal ?? 0;
+            return goal > 0 && amount >= goal;
+        }
+        return false;
+    }
+
     // keepUntil habits record completion against their cycle start, not the viewed day
     const effectiveDate = h.keepUntil
         ? getHabitCycleStart(h, date, resetHour, resetMin)

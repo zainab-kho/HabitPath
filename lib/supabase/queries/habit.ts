@@ -125,12 +125,25 @@ export async function updateHabitIncrement(
   habits: Habit[],
   dateStr: string,
   newAmount: number,
-  userId: string
+  userId: string,
+  resetHour: number = 4,
+  resetMinute: number = 0
 ): Promise<Habit[]> {
+  const todayStr = getHabitDate(new Date(), resetHour, resetMinute);
+
   const updated = habits.map(habit => {
     if (habit.id !== habitId) return habit;
 
     const incrementHistory = habit.incrementHistory || {};
+
+    // keepUntil increments: track the day the goal was actually reached, since
+    // the increment history sits on the cycle start
+    let lastCompletedDate = habit.lastCompletedDate;
+    if (habit.keepUntil && habit.increment) {
+      const goal = habit.incrementGoal && habit.incrementGoal > 0 ? habit.incrementGoal : 1;
+      if (newAmount >= goal) lastCompletedDate = todayStr;
+      else lastCompletedDate = undefined;
+    }
 
     return {
       ...habit,
@@ -139,6 +152,7 @@ export async function updateHabitIncrement(
         ...incrementHistory,
         [dateStr]: newAmount,
       },
+      lastCompletedDate,
     };
   });
 
@@ -156,6 +170,17 @@ export async function updateHabitIncrement(
 
     if (error) {
       console.error('Supabase increment update failed:', error);
+    }
+
+    // best-effort, separate so a missing column never blocks the increment
+    if (target.keepUntil && target.increment) {
+      try {
+        await supabase
+          .from('habits')
+          .update({ last_completed_date: target.lastCompletedDate ?? null })
+          .eq('id', habitId)
+          .eq('user_id', userId);
+      } catch {}
     }
   }
 

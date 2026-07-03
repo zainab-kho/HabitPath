@@ -22,6 +22,7 @@ import { Habit } from '@/types/Habit';
 import EmptyStateView from '@/ui/EmptyStateView';
 import ShadowBox from '@/ui/ShadowBox';
 import { getHabitDate } from '@/utils/dateUtils';
+import { getGradientForTime } from '@/utils/gradients';
 import * as Haptics from 'expo-haptics';
 
 import { HabitWithStatus } from '@/hooks/useHabits';
@@ -82,6 +83,7 @@ export default function HabitsList({
   const scrollableRef = useAnimatedRef<Animated.ScrollView>();
 
   const [showCompleted, setShowCompleted] = useState(true);
+  const [weeklyCollapsed, setWeeklyCollapsed] = useState(false);
   const [expandedQuestGoals, setExpandedQuestGoals] = useState<Set<string>>(new Set());
 
   // No snapshot needed — `loading` from useHabits is derived (habitsForDate !== dateStr),
@@ -168,6 +170,18 @@ export default function HabitsList({
   const activeHabits = displayHabits;
   const regularActiveHabits = activeHabits.filter(h => !h.isQuestGoal && h.frequency !== 'Weekly Goal');
   const weeklyHabits = activeHabits.filter(h => h.frequency === 'Weekly Goal');
+
+  const weekRangeLabel = useMemo(() => {
+    const today = new Date(dateStr + 'T12:00:00');
+    const dow = today.getDay();
+    const mondayOffset = dow === 0 ? -6 : 1 - dow;
+    const monday = new Date(today);
+    monday.setDate(today.getDate() + mondayOffset);
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    const fmt = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return `${fmt(monday)} – ${fmt(sunday)}`;
+  }, [dateStr]);
   const incompleteCount = regularActiveHabits.filter(h => h.status !== 'completed' && h.status !== 'skipped').length;
   const scheduledHabits = regularActiveHabits;
   const allDoneToday = scheduledHabits.length > 0 && incompleteCount === 0;
@@ -436,34 +450,77 @@ export default function HabitsList({
         />
 
         {visibleWeekly.length > 0 && (
-          <View style={{ marginTop: 15 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 8 }}>
-              <Text style={{ fontSize: 12, fontFamily: 'label', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5, opacity: 0.7 }}>
-                WEEKLY
-              </Text>
-              <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(0,0,0,0.15)' }} />
-            </View>
-            {visibleWeekly.map(habit => (
-              <HabitItem
-                key={habit.id}
-                habit={habit}
-                dateStr={dateStr}
-                currentDate={currentDate}
-                resetTime={resetTime}
-                onToggle={() => onToggleHabit(habit.id)}
-                onPress={() => handleHabitPress(habit)}
-                onIncrementUpdate={onIncrementUpdate}
-                onSkip={() => onSkipHabit?.(habit.id)}
-                onUnskip={() => onUnskipHabit?.(habit.id)}
-                onUnskipAndComplete={() => onUnskipAndCompleteHabit?.(habit.id)}
-                onSnooze={() => onSnoozeHabit?.(habit.id)}
-                onToggleSubtask={handleToggleSubtask}
-                questExpanded={expandedQuestGoals.has(habit.id)}
-                onToggleQuestExpand={() => toggleQuestGoalExpanded(habit.id)}
-                onNavigateToQuest={(questId) => router.push(`/(tabs)/quests/${questId}`)}
-                onOpenTimeLog={handleOpenTimeLog}
+          <View style={{ marginTop: 15, marginBottom: 10 }}>
+          <Text style={{
+            fontSize: 12,
+            fontFamily: 'label',
+            fontWeight: '600',
+            textTransform: 'uppercase',
+            letterSpacing: 0.5,
+            opacity: 0.7,
+            marginBottom: 8,
+          }}>Weekly Goals</Text>
+          <View style={{
+            borderWidth: 1,
+            borderColor: '#000',
+            borderRadius: 15,
+            padding: 10,
+            paddingVertical: 15,
+            backgroundColor: getGradientForTime()[0],
+          }}>
+            <Pressable
+              onPress={() => setWeeklyCollapsed(!weeklyCollapsed)}
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                marginBottom: weeklyCollapsed ? 0 : 10,
+                marginHorizontal: 10
+              }}
+            >
+              <Text style={[globalStyles.body, {}]}>{weekRangeLabel}</Text>
+              <Image
+                source={SYSTEM_ICONS.sort}
+                style={{
+                  width: 20,
+                  height: 20,
+                  tintColor: getGradientForTime()[1],
+                  transform: [{ rotate: weeklyCollapsed ? '0deg' : '180deg' }],
+                }}
               />
-            ))}
+            </Pressable>
+
+            {!weeklyCollapsed && (
+              <View style={{
+                // backgroundColor: getGradientForTime()[1] + 20,
+                // borderRadius: 12,
+                // padding: 10,
+                // paddingBottom: 2,
+              }}>
+                {visibleWeekly.map(habit => (
+                  <HabitItem
+                    key={habit.id}
+                    habit={habit}
+                    dateStr={dateStr}
+                    currentDate={currentDate}
+                    resetTime={resetTime}
+                    onToggle={() => onToggleHabit(habit.id)}
+                    onPress={() => handleHabitPress(habit)}
+                    onIncrementUpdate={onIncrementUpdate}
+                    onSkip={() => onSkipHabit?.(habit.id)}
+                    onUnskip={() => onUnskipHabit?.(habit.id)}
+                    onUnskipAndComplete={() => onUnskipAndCompleteHabit?.(habit.id)}
+                    onSnooze={() => onSnoozeHabit?.(habit.id)}
+                    onToggleSubtask={handleToggleSubtask}
+                    questExpanded={expandedQuestGoals.has(habit.id)}
+                    onToggleQuestExpand={() => toggleQuestGoalExpanded(habit.id)}
+                    onNavigateToQuest={(questId) => router.push(`/(tabs)/quests/${questId}`)}
+                    onOpenTimeLog={handleOpenTimeLog}
+                  />
+                ))}
+              </View>
+            )}
+          </View>
           </View>
         )}
       </AnimatedScrollView>

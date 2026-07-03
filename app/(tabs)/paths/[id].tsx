@@ -287,20 +287,24 @@ export default function PathDetail() {
     return null; // recurring — the frequency badge is enough
   };
 
-  // visible habits in this path, sorted: one-time → recurring → weekly goal → snoozed
+  // visible habits in this path, sorted: one-time → recurring → snoozed
   const pathHabits = path
     ? allHabitsAll
-        .filter(h => h.path === path.name && isVisible(h))
+        .filter(h => h.path === path.name && h.frequency !== 'Weekly Goal' && isVisible(h))
         .sort((a, b) => {
           const order = (h: Habit) => {
             const snoozeDay = h.snoozedUntil?.slice(0, 10);
             if (snoozeDay && snoozeDay > todayStr) return 3;
-            if (h.frequency === 'Weekly Goal') return 2;
             if (isRecurring(h)) return 1;
             return 0;
           };
           return order(a) - order(b);
         })
+    : [];
+
+  // weekly goal habits shown in their own section
+  const weeklyGoalHabits = path
+    ? allHabitsAll.filter(h => h.path === path.name && h.frequency === 'Weekly Goal' && isVisible(h))
     : [];
 
   // all habits in this path (for heatmap + trends)
@@ -790,6 +794,57 @@ export default function PathDetail() {
               </>
             );
           })()}
+
+          {/* weekly goals */}
+          {weeklyGoalHabits.length > 0 && (
+            <View style={{ marginTop: 15 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 8 }}>
+                <Text style={styles.sectionLabel}>WEEKLY</Text>
+                <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(0,0,0,0.15)' }} />
+              </View>
+              {weeklyGoalHabits.map(habit => {
+                const iconFile = habit.icon ? HABIT_ICONS[habit.icon] : null;
+                const isDoneToday = habit.completionHistory?.includes(todayStr) ?? false;
+                return (
+                  <ShadowBox
+                    key={habit.id}
+                    contentBackgroundColor={isDoneToday ? colorHex : '#fff'}
+                    contentBorderColor="#000"
+                    contentBorderWidth={1}
+                    shadowBorderRadius={15}
+                    shadowOffset={isDoneToday ? { x: 0, y: 0 } : { x: 0, y: 5 }}
+                    shadowColor={isDoneToday ? '#000' : colorHex}
+                    style={{ marginBottom: 12 }}
+                  >
+                    <View style={styles.habitRow}>
+                      <View style={styles.habitIconWrap}>
+                        {iconFile ? (
+                          <Image source={iconFile} style={styles.habitIcon} />
+                        ) : (
+                          <Text style={{ fontSize: 24 }}>✦</Text>
+                        )}
+                      </View>
+                      <View style={{ flex: 1, gap: 6 }}>
+                        <Text style={[globalStyles.body, { fontSize: 15 }]} numberOfLines={1}>
+                          {habit.name}
+                        </Text>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                          <View style={[globalStyles.bubbleLabel, { backgroundColor: PAGE.path.primary[0], borderColor: colorHex }]}>
+                            <Text style={globalStyles.label}>Week Goal</Text>
+                          </View>
+                          {nextDueLabel(habit) && (
+                            <View style={[globalStyles.bubbleLabel, { backgroundColor: '#97AFB9', borderColor: colorHex }]}>
+                              <Text style={globalStyles.label}>{nextDueLabel(habit)}</Text>
+                            </View>
+                          )}
+                        </View>
+                      </View>
+                    </View>
+                  </ShadowBox>
+                );
+              })}
+            </View>
+          )}
 
           {/* unassigned habits */}
           {unassignedHabits.length > 0 && (

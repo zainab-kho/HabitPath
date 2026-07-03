@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { Habit } from '@/types/Habit';
+import { getHabitDate } from '@/utils/dateUtils';
 
 
 // ─── LOAD ────────────────────────────────────────────────────────────────────
@@ -39,6 +40,7 @@ export async function loadHabitsFromSupabase(
       selectedDate: row.selected_date,
       rewardPoints: row.reward_points || 0,
       completionHistory: row.completion_history || [],
+      lastCompletedDate: row.last_completed_date ?? undefined,
       snoozedFrom: row.snoozed_from,
       snoozedUntil: row.snoozed_until,
       skippedDates: row.skipped_dates || [],
@@ -73,6 +75,8 @@ export async function toggleHabitCompletion(
   resetMinute: number,
   userId: string
 ): Promise<Habit[]> {
+  const todayStr = getHabitDate(new Date(), resetHour, resetMinute);
+
   const updated = habits.map(habit => {
     if (habit.id !== habitId) return habit;
 
@@ -84,6 +88,9 @@ export async function toggleHabitCompletion(
       completionHistory: completed
         ? history.filter(d => d !== dateStr)
         : [...history, dateStr],
+      // the day the completion actually happened — for keepUntil habits the
+      // history entry sits on the cycle start, which can be days earlier
+      lastCompletedDate: completed ? undefined : todayStr,
     };
   });
 
@@ -99,6 +106,15 @@ export async function toggleHabitCompletion(
     } catch {
       throw new Error('Failed to update habit completion');
     }
+
+    // best-effort: column may not exist yet, never block the completion itself
+    try {
+      await supabase
+        .from('habits')
+        .update({ last_completed_date: target.lastCompletedDate ?? null })
+        .eq('id', habitId)
+        .eq('user_id', userId);
+    } catch {}
   }
 
   return updated;

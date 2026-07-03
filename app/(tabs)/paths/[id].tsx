@@ -14,8 +14,8 @@ import { AppLinearGradient } from '@/ui/AppLinearGradient';
 import PageContainer from '@/ui/PageContainer';
 import PageHeader from '@/ui/PageHeader';
 import ShadowBox from '@/ui/ShadowBox';
-import { getHabitDate, formatDisplayDateString, parseLocalDate } from '@/utils/dateUtils';
-import { isHabitActiveToday, getHabitStatus } from '@/utils/habitUtils';
+import { getHabitDate, formatDisplayDateString, parseLocalDate, getWeekDatesForDate } from '@/utils/dateUtils';
+import { isHabitActiveToday, getHabitStatus, getHabitCycleStart } from '@/utils/habitUtils';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -253,6 +253,7 @@ export default function PathDetail() {
   // all habits (unfiltered, includes archived + future)
   const [allHabitsAll, setAllHabitsAll] = useState<Habit[]>([]);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [weeklyCollapsed, setWeeklyCollapsed] = useState(false);
 
   // helpers
   const todayStr = useMemo(() => getHabitDate(new Date(), resetHour, resetMin), [resetHour, resetMin]);
@@ -302,9 +303,29 @@ export default function PathDetail() {
         })
     : [];
 
-  // weekly goal habits shown in their own section
+  // weekly goals follow the selected day's week; default to the current week
+  const weekAnchor = selectedDay ?? todayStr;
+  const weekStart = getWeekDatesForDate(weekAnchor)[0];
+
+  const weekRangeLabel = useMemo(() => {
+    const monday = parseLocalDate(weekStart);
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    const fmt = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    return `${fmt(monday)} – ${fmt(sunday)}`;
+  }, [weekStart]);
+
+  // weekly goal habits shown in their own section, scoped to the anchor week
   const weeklyGoalHabits = path
-    ? allHabitsAll.filter(h => h.path === path.name && h.frequency === 'Weekly Goal' && isVisible(h))
+    ? allHabitsAll.filter(h => {
+        if (h.path !== path.name || h.frequency !== 'Weekly Goal') return false;
+        if (!selectedDay) return isVisible(h);
+        // for a selected day, show goals that existed during that week
+        const startMonday = getWeekDatesForDate(h.startDate)[0];
+        if (weekStart < startMonday) return false;
+        if (h.endDate && weekStart > getWeekDatesForDate(h.endDate)[0]) return false;
+        return true;
+      })
     : [];
 
   // all habits in this path (for heatmap + trends)
@@ -624,7 +645,7 @@ export default function PathDetail() {
               const isViewingToday2 = selectedDay === habitToday;
 
               displayHabits = allPathHabits
-                .filter(h => isHabitActiveToday(h, selDate, resetHour, resetMin))
+                .filter(h => h.frequency !== 'Weekly Goal' && isHabitActiveToday(h, selDate, resetHour, resetMin))
                 .map(h => ({
                   ...h,
                   dayStatus: getHabitStatus(h, selectedDay, isViewingToday2, habitToday, selDate, resetHour, resetMin),
@@ -747,7 +768,18 @@ export default function PathDetail() {
                 ) : (
                   pathHabits.map(habit => {
                     const iconFile = habit.icon ? HABIT_ICONS[habit.icon] : null;
-                    const isDoneToday = habit.completionHistory?.includes(habitToday) ?? false;
+                    // keepUntil habits record completion against their cycle start, not today
+                    const effectiveDate = habit.keepUntil
+                      ? getHabitCycleStart(habit, new Date(), resetHour, resetMin)
+                      : habitToday;
+                    let isDoneToday = habit.completionHistory?.includes(effectiveDate) ?? false;
+                    if (!isDoneToday && habit.increment) {
+                      const amount = habit.incrementHistory?.[effectiveDate] ?? 0;
+                      const goal = habit.keepUntil
+                        ? (habit.incrementGoal && habit.incrementGoal > 0 ? habit.incrementGoal : 1)
+                        : (habit.incrementGoal ?? 0);
+                      isDoneToday = goal > 0 && amount >= goal;
+                    }
 
                     return (
                       <ShadowBox
@@ -798,13 +830,46 @@ export default function PathDetail() {
           {/* weekly goals */}
           {weeklyGoalHabits.length > 0 && (
             <View style={{ marginTop: 15 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 8 }}>
-                <Text style={styles.sectionLabel}>WEEKLY</Text>
-                <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(0,0,0,0.15)' }} />
-              </View>
-              {weeklyGoalHabits.map(habit => {
+              <Text style={[styles.sectionLabel, { marginBottom: 8 }]}>WEEKLY GOALS</Text>
+              <View style={{
+                borderWidth: 1,
+                borderColor: '#000',
+                borderRadius: 15,
+                padding: 10,
+                paddingVertical: 15,
+                backgroundColor: PAGE.path.background[0],
+              }}>
+              <Pressable
+                onPress={() => setWeeklyCollapsed(!weeklyCollapsed)}
+                style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: weeklyCollapsed ? 0 : 10,
+                  marginHorizontal: 10,
+                }}
+              >
+                <Text style={globalStyles.body}>{weekRangeLabel}</Text>
+                <Image
+                  source={SYSTEM_ICONS.sort}
+                  style={{
+                    width: 20,
+                    height: 20,
+                    tintColor: colorHex,
+                    transform: [{ rotate: weeklyCollapsed ? '0deg' : '180deg' }],
+                  }}
+                />
+              </Pressable>
+
+              {!weeklyCollapsed && weeklyGoalHabits.map(habit => {
                 const iconFile = habit.icon ? HABIT_ICONS[habit.icon] : null;
-                const isDoneToday = habit.completionHistory?.includes(todayStr) ?? false;
+                // weekly goals record completion against the week's monday
+                let isDoneToday = habit.completionHistory?.includes(weekStart) ?? false;
+                if (!isDoneToday && habit.increment) {
+                  const amount = habit.incrementHistory?.[weekStart] ?? 0;
+                  const goal = habit.incrementGoal ?? 0;
+                  isDoneToday = goal > 0 && amount >= goal;
+                }
                 return (
                   <ShadowBox
                     key={habit.id}
@@ -843,6 +908,7 @@ export default function PathDetail() {
                   </ShadowBox>
                 );
               })}
+              </View>
             </View>
           )}
 

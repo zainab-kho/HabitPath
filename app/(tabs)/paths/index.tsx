@@ -1,6 +1,6 @@
 // app/(tabs)/paths/index.tsx
 import { PATH_COLORS, type PathColorKey } from '@/colors/pathColors';
-import { isHabitActiveToday } from '@/utils/habitUtils';
+import { isHabitActiveToday, getHabitCycleStart } from '@/utils/habitUtils';
 import { COLORS, PAGE } from '@/constants/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import { useAuth } from '@/contexts/AuthContext';
@@ -72,14 +72,41 @@ interface WeekGridProps {
     resetMin: number;
 }
 
-function isHabitCompletedForDate(h: Habit, dateStr: string): boolean {
-    if (h.completionHistory?.includes(dateStr)) return true;
+function isHabitCompletedForDate(h: Habit, dateStr: string, date: Date, resetHour: number, resetMin: number): boolean {
+    // keepUntil habits record completion against their cycle start, not the viewed day
+    const effectiveDate = h.keepUntil
+        ? getHabitCycleStart(h, date, resetHour, resetMin)
+        : dateStr;
+    if (h.completionHistory?.includes(effectiveDate)) return true;
+
+    // increment habits count as done once their goal is reached
+    if (h.increment) {
+        const amount = h.incrementHistory?.[effectiveDate] ?? 0;
+        const goal = h.keepUntil
+            ? (h.incrementGoal && h.incrementGoal > 0 ? h.incrementGoal : 1)
+            : (h.incrementGoal ?? 0);
+        if (goal > 0 && amount >= goal) return true;
+    }
+
     const snoozeUntil = h.snoozedUntil?.slice(0, 10);
     const snoozeFrom = h.snoozedFrom?.slice(0, 10);
     if (snoozeUntil && snoozeFrom && dateStr === snoozeUntil) {
         return h.completionHistory?.includes(snoozeFrom) ?? false;
     }
     return false;
+}
+
+function countWeekCompletions(h: Habit, weekSet: Set<string>): number {
+    const history = h.completionHistory ?? [];
+    let hits = history.filter(d => weekSet.has(d)).length;
+    // keepUntil: the latest completion is recorded on its cycle start, which can
+    // predate this week even when the habit was actually finished this week —
+    // lastCompletedDate holds the real completion day
+    if (h.keepUntil && h.lastCompletedDate && weekSet.has(h.lastCompletedDate)) {
+        const latest = [...history].sort().at(-1);
+        if (latest && !weekSet.has(latest)) hits += 1;
+    }
+    return hits;
 }
 
 function WeekGrid({ pathName, habits, color, week, todayStr, now, resetHour, resetMin }: WeekGridProps) {
@@ -99,14 +126,14 @@ function WeekGrid({ pathName, habits, color, week, todayStr, now, resetHour, res
                 const incrementHabits = scheduledHabits.filter(h => h.increment);
 
                 const regularDone = regularHabits.filter(h =>
-                    isHabitCompletedForDate(h, str)
+                    isHabitCompletedForDate(h, str, date, resetHour, resetMin)
                 ).length;
                 const regularSkipped = regularHabits.filter(h =>
                     h.skippedDates?.includes(str)
                 ).length;
                 const emptyCount = regularHabits.length - regularDone - regularSkipped;
                 const total = scheduledHabits.length;
-                const done = scheduledHabits.filter(h => isHabitCompletedForDate(h, str)).length;
+                const done = scheduledHabits.filter(h => isHabitCompletedForDate(h, str, date, resetHour, resetMin)).length;
 
                 const pillOpacity = isFuture ? { opacity: .75 } : {};
 
@@ -151,13 +178,16 @@ function WeekGrid({ pathName, habits, color, week, todayStr, now, resetHour, res
 
                                     {/* increment pills */}
                                     {incrementHabits.map((h, i) => {
-                                        const amount = h.incrementHistory?.[str] ?? 0;
+                                        const effectiveDate = h.keepUntil
+                                            ? getHabitCycleStart(h, date, resetHour, resetMin)
+                                            : str;
+                                        const amount = h.incrementHistory?.[effectiveDate] ?? 0;
                                         const goal = h.incrementGoal && h.incrementGoal > 0
                                             ? h.incrementGoal : 0;
                                         const ratio = goal > 0 ? Math.min(amount / goal, 1) : 0;
                                         const isDone = goal > 0
                                             ? ratio >= 1
-                                            : isHabitCompletedForDate(h, str);
+                                            : isHabitCompletedForDate(h, str, date, resetHour, resetMin);
 
                                         return (
                                             <View key={`inc-${i}`} style={grid.pillWrap}>
@@ -290,16 +320,16 @@ function PathCard({ path, habits, onPress, week, todayStr, now, resetHour, reset
         isHabitActiveToday(h, now, resetHour, resetMin)
     );
     const todayDone = todayScheduled.filter(h =>
-        h.completionHistory?.includes(todayStr)
+        isHabitCompletedForDate(h, todayStr, now, resetHour, resetMin)
     );
 
     const weekSet = new Set(week.map(w => w.str)); // last 7 day strings
 
     // completions this week
-    const weekCompleted = pathHabits.reduce((sum, h) => {
-        const hits = (h.completionHistory ?? []).filter(d => weekSet.has(d)).length;
-        return sum + hits;
-    }, 0);
+    const weekCompleted = pathHabits.reduce(
+        (sum, h) => sum + countWeekCompletions(h, weekSet),
+        0
+    );
 
     const statusText =
         todayScheduled.length === 0
@@ -376,7 +406,7 @@ function DailySummary({
         h =>
             h.path &&
             isHabitActiveToday(h, now, resetHour, resetMin) &&
-            h.completionHistory?.includes(todayStr)
+            isHabitCompletedForDate(h, todayStr, now, resetHour, resetMin)
     ).length;
 
     const progressPercentage =
@@ -404,12 +434,10 @@ function DailySummary({
     }, 0);
 
     // completed this week
+    const weekDaySet = new Set(weekDays.map(w => w.str));
     const doneWeekOccurrences = habits.reduce((sum, h) => {
         if (!h.path) return sum;
-        return (
-            sum +
-            weekDays.filter(({ str }) => h.completionHistory?.includes(str)).length
-        );
+        return sum + countWeekCompletions(h, weekDaySet);
     }, 0);
 
     const fillColor = pctRounded === 100 ? PAGE.habits.primary[0] : PAGE.path.primary[1];

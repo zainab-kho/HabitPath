@@ -33,11 +33,6 @@ export function BottomNav() {
             route: '/(tabs)/profile',
             icon: SYSTEM_ICONS.profile,
         },
-        // {
-        //     name: 'more',
-        //     route: '/',
-        //     icon: SYSTEM_ICONS.more,
-        // },
     ];
 
     return (
@@ -57,7 +52,7 @@ export function BottomNav() {
             }}
         >
             {tabs.map((tab) => {
-                const isActive = pathname === tab.route;
+                const isActive = pathname === tab.route || pathname.startsWith(tab.route + '/');
 
                 return (
                     <Pressable

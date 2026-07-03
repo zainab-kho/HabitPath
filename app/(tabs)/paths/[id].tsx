@@ -31,19 +31,17 @@ import {
 } from 'react-native';
 import { ScrollView as GHScrollView } from 'react-native-gesture-handler';
 
-// ─── helpers ──────────────────────────────────────────────────────────────────
+// helpers
 
-/** how many habits in this path were completed on a given date */
 function completionsOnDate(habits: Habit[], date: string): number {
   return habits.filter(h => h.completionHistory?.includes(date)).length;
 }
 
-/** completions in a date range */
 function completionsInRange(habits: Habit[], days: string[]): number {
   return days.reduce((sum, d) => sum + completionsOnDate(habits, d), 0);
 }
 
-// ─── heat map ────────────────────────────────────────────────────────────────
+// heat map
 
 function HeatMap({
   habits,
@@ -89,7 +87,6 @@ function HeatMap({
 
   return (
     <View>
-      {/* month navigator */}
       <View style={heatmap.monthNav}>
         <Pressable onPress={prevMonth} style={{ padding: 4 }}>
           <Image source={SYSTEM_ICONS.sortLeft} style={{ width: 16, height: 16 }} />
@@ -102,21 +99,18 @@ function HeatMap({
         </Pressable>
       </View>
 
-      {/* M T W T F S S header */}
       <View style={heatmap.headerRow}>
         {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((label, i) => (
           <Text key={i} style={heatmap.dayLabel}>{label}</Text>
         ))}
       </View>
 
-      {/* calendar grid */}
       <View style={heatmap.grid}>
-        {/* invisible placeholders before the 1st */}
+        {/* empty cells before the 1st */}
         {Array.from({ length: startingDayOfWeek }).map((_, i) => (
           <View key={`empty-${i}`} style={[heatmap.cell, { borderWidth: 0, backgroundColor: 'transparent' }]} />
         ))}
 
-        {/* actual days */}
         {monthDays.map((day, i) => {
           const dayNum = i + 1;
           const isFuture = day > todayStr;
@@ -158,7 +152,6 @@ function HeatMap({
 
       </View>
 
-      {/* legend */}
       <View style={heatmap.legend}>
         <Text style={heatmap.legendLabel}>Less</Text>
         {['rgba(0,0,0,0.05)', color + '77', color + 'aa', color + 'dd', color].map((c, i) => (
@@ -238,14 +231,14 @@ const heatmap = StyleSheet.create({
   },
 });
 
-// ─── main page ────────────────────────────────────────────────────────────────
+// path detail page
 
 export default function PathDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuth();
   const router = useRouter();
 
-  // stable date reference
+  // dates
   const today = useMemo(() => new Date(), []);
   const { habits: allHabitsRaw, loadHabits, resetTime } = useHabits(today);
   const allHabits: Habit[] = allHabitsRaw.map(({ completed, ...rest }: any) => rest);
@@ -257,12 +250,12 @@ export default function PathDetail() {
   const [pathLoading, setPathLoading] = useState(true);
   const [showAddHabits, setShowAddHabits] = useState(false);
   const [showArchived, setShowArchived] = useState(false);
-  // all habits from cache — not date-filtered, so we see recurring + future + past
+  // all habits (unfiltered, includes archived + future)
   const [allHabitsAll, setAllHabitsAll] = useState<Habit[]>([]);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
 
-  // ── helpers ──────────────────────────────────────────────────────────────
-  const todayStr = getHabitDate(new Date(), resetHour, resetMin);
+  // helpers
+  const todayStr = useMemo(() => getHabitDate(new Date(), resetHour, resetMin), [resetHour, resetMin]);
 
   const isRecurring = (h: Habit) =>
     h.frequency === 'Daily' || h.frequency === 'Weekly' || h.frequency === 'Weekly Goal' || h.frequency === 'Monthly';
@@ -273,7 +266,7 @@ export default function PathDetail() {
     return isHabitActiveToday(h, new Date(), resetHour, resetMin);
   };
 
-  // A habit is archived if it's not active and not snoozed (past one-timers, completed keepUntil, etc.)
+  // past one-timers, completed keep-until, etc.
   const isArchived = (h: Habit): boolean => {
     const snoozeDay = h.snoozedUntil?.slice(0, 10);
     if (snoozeDay && snoozeDay > todayStr) return false;
@@ -282,7 +275,7 @@ export default function PathDetail() {
     return true;
   };
 
-  // Returns a "next due" label for a habit card.
+  // label like "snoozed until...", "today", etc.
   const nextDueLabel = (h: Habit): string | null => {
     const snoozeDay = h.snoozedUntil?.slice(0, 10);
     if (snoozeDay && snoozeDay > todayStr) return `Snoozed until ${formatDisplayDateString(snoozeDay)}`;
@@ -294,8 +287,7 @@ export default function PathDetail() {
     return null; // recurring — the frequency badge is enough
   };
 
-  // Habits in this path (from the full cache, with smart date filtering)
-  // Sort: 1× first, then recurring, then Weekly Goal, then snoozed last
+  // visible habits in this path, sorted: one-time → recurring → weekly goal → snoozed
   const pathHabits = path
     ? allHabitsAll
         .filter(h => h.path === path.name && isVisible(h))
@@ -311,12 +303,12 @@ export default function PathDetail() {
         })
     : [];
 
-  // all habits in this path (including archived) — used for heatmap history
+  // all habits in this path (for heatmap + trends)
   const allPathHabits = path
     ? allHabitsAll.filter(h => h.path === path.name)
     : [];
 
-  // Past/completed one-time habits in this path (shown in Archived modal), most recent first
+  // archived habits, most recent first
   const archivedHabits = path
     ? allHabitsAll
         .filter(h => h.path === path.name && isArchived(h))
@@ -327,7 +319,7 @@ export default function PathDetail() {
         })
     : [];
 
-  // Habits with no path assigned, visible per the same rules
+  // unassigned habits (no path)
   const unassignedHabits = path
     ? allHabitsAll.filter(h => !h.path && isVisible(h))
     : [];
@@ -370,7 +362,52 @@ export default function PathDetail() {
 
   useEffect(() => { loadPath(); }, [loadPath]);
 
-  // ── render loading ─────────────────────────────────────────────────────────
+  const { thisWeek, lastWeek, weekDiff, thisMonth, lastMonth, monthDiff } = useMemo(() => {
+    if (allPathHabits.length === 0) return { thisWeek: 0, lastWeek: 0, weekDiff: 0, thisMonth: 0, lastMonth: 0, monthDiff: 0 };
+    const todayHabitStr = getHabitDate(new Date(), resetHour, resetMin);
+    const todayDate = new Date(todayHabitStr + 'T12:00:00');
+    const todayDow = (todayDate.getDay() + 6) % 7;
+    const thisMonday = new Date(todayDate);
+    thisMonday.setDate(todayDate.getDate() - todayDow);
+    const lastMonday = new Date(thisMonday);
+    lastMonday.setDate(thisMonday.getDate() - 7);
+
+    const daysIntoWeek = todayDow + 1;
+    const thisWeekDays: string[] = [];
+    const lastWeekDays: string[] = [];
+    for (let i = 0; i < daysIntoWeek; i++) {
+      const thisD = new Date(thisMonday);
+      thisD.setDate(thisMonday.getDate() + i);
+      thisWeekDays.push(getHabitDate(thisD, resetHour, resetMin));
+      const lastD = new Date(lastMonday);
+      lastD.setDate(lastMonday.getDate() + i);
+      lastWeekDays.push(getHabitDate(lastD, resetHour, resetMin));
+    }
+    const tw = completionsInRange(allPathHabits, thisWeekDays);
+    const lw = completionsInRange(allPathHabits, lastWeekDays);
+
+    const todayHabitDate = todayHabitStr;
+    const habitYear = parseInt(todayHabitDate.slice(0, 4));
+    const habitMonth = parseInt(todayHabitDate.slice(5, 7)) - 1;
+    const habitDay = parseInt(todayHabitDate.slice(8, 10));
+    const lastMonthLength = new Date(habitYear, habitMonth, 0).getDate();
+    const thisMonthDays: string[] = [];
+    const lastMonthDays: string[] = [];
+    for (let i = 1; i <= habitDay; i++) {
+      const thisD = new Date(habitYear, habitMonth, i, 12);
+      thisMonthDays.push(getHabitDate(thisD, resetHour, resetMin));
+      if (i <= lastMonthLength) {
+        const lastD = new Date(habitYear, habitMonth - 1, i, 12);
+        lastMonthDays.push(getHabitDate(lastD, resetHour, resetMin));
+      }
+    }
+    const tm = completionsInRange(allPathHabits, thisMonthDays);
+    const lm = completionsInRange(allPathHabits, lastMonthDays);
+
+    return { thisWeek: tw, lastWeek: lw, weekDiff: tw - lw, thisMonth: tm, lastMonth: lm, monthDiff: tm - lm };
+  }, [allPathHabits, resetHour, resetMin]);
+
+  // loading state
 
   if (pathLoading || !path) {
     return (
@@ -417,7 +454,7 @@ export default function PathDetail() {
     }
   };
 
-  // Quick-add a single unassigned habit to this path
+  // add a single habit to this path
   const handleAddHabit = async (habitId: string) => {
     if (!path || !user) return;
     try {
@@ -458,7 +495,6 @@ export default function PathDetail() {
         .eq('id', id)
         .eq('user_id', user.id);
       if (!isArchived) {
-        // navigating back after archiving
         router.back();
       } else {
         setPath({ ...path, archived_at: isArchived ? undefined : new Date().toISOString() });
@@ -499,49 +535,6 @@ export default function PathDetail() {
 
   const pathHabitIds = pathHabits.map(h => h.id);
 
-  const todayHabitStr = getHabitDate(new Date(), resetHour, resetMin);
-  const todayDate = new Date(todayHabitStr + 'T12:00:00');
-  const todayDow = (todayDate.getDay() + 6) % 7; // 0=Mon, 6=Sun
-  const thisMonday = new Date(todayDate);
-  thisMonday.setDate(todayDate.getDate() - todayDow);
-  const lastMonday = new Date(thisMonday);
-  lastMonday.setDate(thisMonday.getDate() - 7);
-
-  const daysIntoWeek = todayDow + 1;
-  const thisWeekDays: string[] = [];
-  const lastWeekDays: string[] = [];
-  for (let i = 0; i < daysIntoWeek; i++) {
-    const thisD = new Date(thisMonday);
-    thisD.setDate(thisMonday.getDate() + i);
-    thisWeekDays.push(getHabitDate(thisD, resetHour, resetMin));
-    const lastD = new Date(lastMonday);
-    lastD.setDate(lastMonday.getDate() + i);
-    lastWeekDays.push(getHabitDate(lastD, resetHour, resetMin));
-  }
-  const thisWeek = completionsInRange(allPathHabits, thisWeekDays);
-  const lastWeek = completionsInRange(allPathHabits, lastWeekDays);
-  const weekDiff = thisWeek - lastWeek;
-
-  const todayHabitDate = getHabitDate(new Date(), resetHour, resetMin);
-  const habitYear = parseInt(todayHabitDate.slice(0, 4));
-  const habitMonth = parseInt(todayHabitDate.slice(5, 7)) - 1;
-  const habitDay = parseInt(todayHabitDate.slice(8, 10));
-  const lastMonthLength = new Date(habitYear, habitMonth, 0).getDate();
-  const thisMonthDays: string[] = [];
-  const lastMonthDays: string[] = [];
-  for (let i = 1; i <= habitDay; i++) {
-    const thisD = new Date(habitYear, habitMonth, i, 12);
-    thisMonthDays.push(getHabitDate(thisD, resetHour, resetMin));
-    if (i <= lastMonthLength) {
-      const lastD = new Date(habitYear, habitMonth - 1, i, 12);
-      lastMonthDays.push(getHabitDate(lastD, resetHour, resetMin));
-    }
-  }
-  const thisMonth = completionsInRange(allPathHabits, thisMonthDays);
-  const lastMonth = completionsInRange(allPathHabits, lastMonthDays);
-  const monthDiff = thisMonth - lastMonth;
-
-
   return (
     <AppLinearGradient variant="path.background">
       <PageContainer showBottomNav>
@@ -552,7 +545,7 @@ export default function PathDetail() {
         />
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
-          {/* ── trend bubbles ── */}
+          {/* trends */}
           <View style={styles.trendRow}>
             <View style={[styles.trendBubble, { backgroundColor: colorHex + '22' }]}>
               <Text style={[globalStyles.body1, { fontSize: 13 }]}>
@@ -588,7 +581,7 @@ export default function PathDetail() {
             </View>
           </View>
 
-          {/* ── 28-day heat map ── */}
+          {/* heat map */}
           <ShadowBox
             shadowColor={colorHex}
             shadowOffset={{ x: 0, y: 5 }}
@@ -613,12 +606,12 @@ export default function PathDetail() {
             </View>
           </ShadowBox>
 
-          {/* ── habits list ── */}
+          {/* habits */}
           {(() => {
             const showingSelectedDay = !!selectedDay;
             let displayHabits: (Habit & { dayStatus?: string })[] = [];
 
-            const habitToday = getHabitDate(new Date(), resetHour, resetMin);
+            const habitToday = todayStr;
             const isPastDay = showingSelectedDay && selectedDay < habitToday;
 
             if (showingSelectedDay) {
@@ -750,7 +743,6 @@ export default function PathDetail() {
                 ) : (
                   pathHabits.map(habit => {
                     const iconFile = habit.icon ? HABIT_ICONS[habit.icon] : null;
-                    const showStreak = (habit.streak ?? 0) >= 3;
                     const isDoneToday = habit.completionHistory?.includes(habitToday) ?? false;
 
                     return (
@@ -778,21 +770,6 @@ export default function PathDetail() {
                               {habit.name}
                             </Text>
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                              {!!habit.rewardPoints && habit.rewardPoints > 0 && (
-                                <View style={styles.badge}>
-                                  <Image
-                                    source={SYSTEM_ICONS.reward}
-                                    style={[styles.badgeIcon, { tintColor: COLORS.Rewards }]}
-                                  />
-                                  <Text style={styles.badgeText}>{habit.rewardPoints}</Text>
-                                </View>
-                              )}
-                              {showStreak && (
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
-                                  <Image source={SYSTEM_ICONS.fire} style={{ width: 16, height: 16 }} />
-                                  <Text style={styles.badgeText}>{habit.streak}d</Text>
-                                </View>
-                              )}
                               <View style={[globalStyles.bubbleLabel, { backgroundColor: PAGE.path.primary[0], borderColor: colorHex}]}>
                                 <Text style={globalStyles.label}>
                                   {habit.frequency === 'Weekly Goal' ? 'Week Goal' : isRecurring(habit) ? `↻ ${habit.frequency}` : '1×'}
@@ -814,7 +791,7 @@ export default function PathDetail() {
             );
           })()}
 
-          {/* ── unassigned habits ── */}
+          {/* unassigned habits */}
           {unassignedHabits.length > 0 && (
             <View style={{ marginTop: 20 }}>
               <View style={styles.sectionHeader}>
@@ -874,7 +851,7 @@ export default function PathDetail() {
             </View>
           )}
 
-          {/* action buttons */}
+          {/* actions */}
           <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 10, marginTop: 20 }}>
             <Pressable onPress={handleTogglePause} style={{ flex: 1, maxWidth: 100 }}>
               <ShadowBox
@@ -915,11 +892,13 @@ export default function PathDetail() {
           pathHabitIds={pathHabitIds}
           pathColor={colorHex}
           pathName={path.name}
+          resetHour={resetHour}
+          resetMin={resetMin}
           onClose={() => setShowAddHabits(false)}
           onSave={handleSaveHabits}
         />
 
-        {/* ── archived habits modal ── */}
+        {/* archived habits modal */}
         <Modal visible={showArchived} transparent animationType="none" onRequestClose={() => setShowArchived(false)}>
           <Pressable
             style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center' }}
@@ -971,15 +950,6 @@ export default function PathDetail() {
                           <View style={{ flex: 1, gap: 6 }}>
                             <Text style={[globalStyles.body, { fontSize: 15 }]} numberOfLines={1}>{habit.name}</Text>
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                              {!!habit.rewardPoints && habit.rewardPoints > 0 && (
-                                <View style={styles.badge}>
-                                  <Image
-                                    source={SYSTEM_ICONS.reward}
-                                    style={[styles.badgeIcon, { tintColor: COLORS.Rewards }]}
-                                  />
-                                  <Text style={styles.badgeText}>{habit.rewardPoints}</Text>
-                                </View>
-                              )}
                               <View style={[globalStyles.bubbleLabel, { backgroundColor: PAGE.path.primary[0], borderColor: colorHex }]}>
                                 <Text style={globalStyles.label}>
                                   {habit.frequency === 'Weekly Goal' ? 'Week Goal' : isRecurring(habit) ? `↻ ${habit.frequency}` : '1×'}
@@ -1019,7 +989,7 @@ export default function PathDetail() {
 }
 
 
-// ─── styles ───────────────────────────────────────────────────────────────────
+// styles
 
 const styles = StyleSheet.create({
   trendRow: {
@@ -1047,23 +1017,21 @@ const styles = StyleSheet.create({
     width: 14,
     height: 14,
   },
-  // trendPct: {
-  //   fontFamily: 'label',
-  //   fontSize: 11,
-  // },
   card: {
     padding: 16,
   },
   sectionHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     justifyContent: 'space-between',
     marginBottom: 10,
   },
   sectionLabel: {
     fontFamily: 'label',
-    fontSize: 11,
-    opacity: 0.6,
+    fontSize: 12,
+    fontWeight: '600' as const,
+    textTransform: 'uppercase' as const,
+    opacity: 0.7,
     letterSpacing: 0.5,
   },
   habitRow: {
@@ -1083,24 +1051,5 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     resizeMode: 'contain' as const,
-  },
-  badge: {
-    flexDirection: 'row' as const,
-    alignItems: 'center' as const,
-    gap: 5,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-    borderWidth: 1,
-    backgroundColor: COLORS.RewardsBackground,
-    borderColor: COLORS.RewardsAccent,
-  },
-  badgeIcon: {
-    width: 12,
-    height: 12,
-  },
-  badgeText: {
-    fontSize: 10,
-    fontFamily: 'label',
   },
 });

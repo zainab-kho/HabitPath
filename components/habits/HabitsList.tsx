@@ -471,6 +471,8 @@ export default function HabitsList({
       <HabitDetailModal
         visible={modalVisible}
         habit={selectedHabit}
+        resetHour={resetTime.hour}
+        resetMin={resetTime.minute}
         onClose={() => setModalVisible(false)}
         onUpdate={handleModalUpdate}
         onUndoIncrement={handleUndoIncrement}

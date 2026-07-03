@@ -22,6 +22,8 @@ import { getWeekDatesForDate, getHabitDate } from '@/utils/dateUtils';
 interface HabitDetailModalProps {
     visible: boolean;
     habit: HabitWithStatus | null;
+    resetHour: number;
+    resetMin: number;
     onClose: () => void;
     onUpdate: () => void;
     onUndoIncrement?: (habitId: string) => void;
@@ -76,7 +78,7 @@ const DAY_ABBREV: Record<string, string> = {
     Monday: 'M', Tuesday: 'T', Wednesday: 'W', Thursday: 'Th', Friday: 'F', Saturday: 'Sa', Sunday: 'Su',
 };
 
-export default function HabitDetailModal({ visible, habit, onClose, onUpdate, onUndoIncrement }: HabitDetailModalProps) {
+export default function HabitDetailModal({ visible, habit, resetHour, resetMin, onClose, onUpdate, onUndoIncrement }: HabitDetailModalProps) {
     const { user } = useAuth();
     const router = useRouter();
     const [showMore, setShowMore] = useState(false);
@@ -169,7 +171,7 @@ export default function HabitDetailModal({ visible, habit, onClose, onUpdate, on
                     }}
                     onPress={(e) => e.stopPropagation()}
                 >
-                    {/* Header: name + frequency */}
+                    {/* header */}
                     <View style={{ paddingTop: 20, paddingBottom: 12, paddingHorizontal: 20 }}>
                         <Text style={[globalStyles.h2, { textAlign: 'center', marginBottom: 4 }]}>
                             {habit.name}
@@ -179,10 +181,9 @@ export default function HabitDetailModal({ visible, habit, onClose, onUpdate, on
                         </Text>
                     </View>
 
-                    {/* Divider */}
                     <View style={{ height: 1, backgroundColor: 'rgba(0,0,0,0.1)', marginHorizontal: 20 }} />
 
-                    {/* Stats row - only show for repeating habits */}
+                    {/* stats (recurring habits only) */}
                     {habit.frequency !== 'None' && habit.frequency && (
                         <>
                             <View style={{
@@ -199,17 +200,14 @@ export default function HabitDetailModal({ visible, habit, onClose, onUpdate, on
                                 borderColor: '#000',
                                 backgroundColor: COLORS.PrimaryLight,
                             }}>
-                                {/* Streak */}
                                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
                                     <Image source={SYSTEM_ICONS.fire} style={{ width: 18, height: 18 }} />
                                     <Text style={{ fontSize: 12, fontFamily: 'label' }}>{habit.streak ?? 0}d</Text>
                                 </View>
-                                {/* Best streak */}
                                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
                                     <Image source={SYSTEM_ICONS.fireBlue} style={{ width: 18, height: 18 }} />
                                     <Text style={{ fontSize: 12, fontFamily: 'label' }}>{habit.bestStreak ?? 0}d</Text>
                                 </View>
-                                {/* Points */}
                                 <View style={{
                                     flexDirection: 'row',
                                     alignItems: 'center',
@@ -224,7 +222,6 @@ export default function HabitDetailModal({ visible, habit, onClose, onUpdate, on
                                     <Image source={SYSTEM_ICONS.reward} style={{ width: 14, height: 14, tintColor: COLORS.Rewards }} />
                                     <Text style={{ fontSize: 12, fontFamily: 'label' }}>{habit.rewardPoints ?? 0}</Text>
                                 </View>
-                                {/* Completed count */}
                                 <View style={{
                                     flexDirection: 'row',
                                     alignItems: 'center',
@@ -243,23 +240,20 @@ export default function HabitDetailModal({ visible, habit, onClose, onUpdate, on
                         </>
                     )}
 
-                    {/* Info rows */}
+                    {/* details */}
                     <View style={{ paddingHorizontal: 20, paddingVertical: 14, gap: 12 }}>
-                        {/* Last completed */}
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                             <Image source={SYSTEM_ICONS.stats} style={{ width: ICON_SIZE, height: ICON_SIZE, tintColor: ICON_TINT }} />
                             <Text style={[globalStyles.body, { fontSize: 14, opacity: 0.7 }]}>
                                 {formatLastCompleted(habit.completionHistory?.length ? [...habit.completionHistory].sort().at(-1) : undefined)}
                             </Text>
                         </View>
-                        {/* Next assigned */}
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                             <Image source={SYSTEM_ICONS.calendar} style={{ width: ICON_SIZE, height: ICON_SIZE, tintColor: ICON_TINT }} />
                             <Text style={[globalStyles.body, { fontSize: 14, opacity: 0.7 }]}>
                                 {habit.keepUntil ? 'Keep until finished' : getNextAssignedDate(habit)}
                             </Text>
                         </View>
-                        {/* Frequency + days */}
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                             <Image source={SYSTEM_ICONS.repeat} style={{ width: ICON_SIZE, height: ICON_SIZE, tintColor: ICON_TINT }} />
                             <Text style={[globalStyles.body, { fontSize: 14, opacity: 0.7 }]}>
@@ -271,7 +265,7 @@ export default function HabitDetailModal({ visible, habit, onClose, onUpdate, on
                         </View>
                     </View>
 
-                    {/* Undo increment (if applicable) */}
+                    {/* undo increment */}
                     {habit.increment && onUndoIncrement && (
                         <View style={{ paddingHorizontal: 20, marginBottom: 10 }}>
                             <ShadowBox
@@ -289,7 +283,7 @@ export default function HabitDetailModal({ visible, habit, onClose, onUpdate, on
                         </View>
                     )}
 
-                    {/* More options toggle */}
+                    {/* more options */}
                     <Pressable
                         onPress={() => setShowMore(!showMore)}
                         style={{ alignSelf: 'center', paddingVertical: 8, marginBottom: showMore ? 15 : 0 }}
@@ -299,7 +293,7 @@ export default function HabitDetailModal({ visible, habit, onClose, onUpdate, on
                         </Text>
                     </Pressable>
 
-                    {/* Action icons row */}
+                    {/* actions */}
                     {showMore && (
                         <View style={{
                             flexDirection: 'row',
@@ -363,7 +357,7 @@ export default function HabitDetailModal({ visible, habit, onClose, onUpdate, on
                         </View>
                     )}
 
-                    {/* Move this week — only for Weekly habits, inside more options */}
+                    {/* move to a different day this week (weekly habits only) */}
                     {showMore && habit.frequency === 'Weekly' && (
                         <View style={{ paddingHorizontal: 20, paddingTop: 10, paddingBottom: 4 }}>
                             {!movingDay ? (
@@ -388,7 +382,7 @@ export default function HabitDetailModal({ visible, habit, onClose, onUpdate, on
                                     <View style={{ flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 8 }}>
                                         {ALL_DAYS.map(day => {
                                             const isOriginal = habit.selectedDays?.includes(day);
-                                            const todayStr = getHabitDate(new Date(), 4, 0);
+                                            const todayStr = getHabitDate(new Date(), resetHour, resetMin);
                                             const currentMonday = getWeekDatesForDate(todayStr)[0];
                                             const isOverride = habit.tempSelectedDays?.includes(day) && habit.tempSelectedDaysWeek === currentMonday;
                                             const selected = isOverride || false;
@@ -442,7 +436,6 @@ export default function HabitDetailModal({ visible, habit, onClose, onUpdate, on
                         </View>
                     )}
 
-                    {/* Bottom padding */}
                     <View style={{ height: 12 }} />
                 </Pressable>
             </Pressable>

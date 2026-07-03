@@ -17,10 +17,6 @@ import {
 } from 'react-native';
 import { ScrollView as GHScrollView } from 'react-native-gesture-handler';
 
-const RESET_HOUR = 4;
-const RESET_MINUTE = 0;
-const TODAY = new Date();
-const TODAY_STR = getHabitDate(TODAY, RESET_HOUR, RESET_MINUTE);
 
 const isRecurringHabit = (h: Habit) =>
     h.frequency === 'Daily' || h.frequency === 'Weekly' || h.frequency === 'Weekly Goal' || h.frequency === 'Monthly';
@@ -41,12 +37,13 @@ interface HabitCardProps {
     isChecked: boolean;
     inPath: boolean;
     pathColor: string;
+    todayStr: string;
     onToggle: (id: string) => void;
 }
 
-const HabitCard = React.memo(function HabitCard({ habit, isChecked, inPath, pathColor, onToggle }: HabitCardProps) {
+const HabitCard = React.memo(function HabitCard({ habit, isChecked, inPath, pathColor, todayStr, onToggle }: HabitCardProps) {
     const iconFile = habit.icon ? HABIT_ICONS[habit.icon] : null;
-    const dueLabel = getNextDueLabel(habit, TODAY_STR);
+    const dueLabel = getNextDueLabel(habit, todayStr);
     return (
         <Pressable onPress={() => onToggle(habit.id)} style={{ marginBottom: 12 }}>
             <ShadowBox
@@ -103,6 +100,8 @@ interface AddHabitsToPathModalProps {
     pathHabitIds: string[];
     pathColor: string;
     pathName: string;
+    resetHour: number;
+    resetMin: number;
     onClose: () => void;
     onSave: (habitIds: string[]) => void;
 }
@@ -113,17 +112,22 @@ export default function AddHabitsToPathModal({
     pathHabitIds,
     pathColor,
     pathName,
+    resetHour,
+    resetMin,
     onClose,
     onSave,
 }: AddHabitsToPathModalProps) {
     const [selected, setSelected] = useState<Set<string>>(new Set(pathHabitIds));
+
+    const TODAY = useMemo(() => new Date(), []);
+    const TODAY_STR = useMemo(() => getHabitDate(TODAY, resetHour, resetMin), [TODAY, resetHour, resetMin]);
 
     useEffect(() => {
         if (visible) setSelected(new Set(pathHabitIds));
     }, [visible, pathHabitIds]);
 
     const isActiveToday = (h: Habit) =>
-        isHabitActiveToday(h, TODAY, RESET_HOUR, RESET_MINUTE);
+        isHabitActiveToday(h, TODAY, resetHour, resetMin);
 
     const availableHabits = allHabits.filter(h => {
         if (h.path === pathName) return true;
@@ -192,6 +196,7 @@ export default function AddHabitsToPathModal({
                         isChecked={selected.has(h.id)}
                         inPath={pathHabitIdSet.has(h.id)}
                         pathColor={pathColor}
+                        todayStr={TODAY_STR}
                         onToggle={toggle}
                     />
                 ))}

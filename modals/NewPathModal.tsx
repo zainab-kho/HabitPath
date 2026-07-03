@@ -7,7 +7,6 @@ import { globalStyles, uiStyles } from '@/styles';
 import ShadowBox from '@/ui/ShadowBox';
 import React, { useState } from 'react';
 import {
-    ActivityIndicator,
     Modal,
     Pressable,
     StyleSheet,
@@ -15,21 +14,6 @@ import {
     TextInput,
     View,
 } from 'react-native';
-
-const PATH_COLORS = [
-    '#FFD6E0', // rose
-    '#FFE8C8', // peach
-    '#FFF3B0', // lemon
-    '#C8F0D8', // mint
-    '#C8E8FF', // sky
-    '#E0D0FF', // lavender
-    '#FFD0F0', // pink
-    '#D0F0F0', // aqua
-    '#F5C6A0', // terracotta
-    '#D8FFD0', // lime
-    '#F0D0D0', // dusty rose
-    '#C8D8FF', // periwinkle
-];
 
 interface NewPathModalProps {
     visible: boolean;
@@ -40,7 +24,8 @@ interface NewPathModalProps {
 export default function NewPathModal({ visible, onClose, onCreated }: NewPathModalProps) {
     const { user } = useAuth();
     const [name, setName] = useState('');
-    const [selectedColor, setSelectedColor] = useState<PathColorKey>('green'); const [isSaving, setIsSaving] = useState(false);
+    const [selectedColor, setSelectedColor] = useState<PathColorKey>('green');
+    const [isSaving, setIsSaving] = useState(false);
 
     const handleClose = () => {
         setName('');
@@ -53,18 +38,19 @@ export default function NewPathModal({ visible, onClose, onCreated }: NewPathMod
 
         setIsSaving(true);
         try {
-            const { error } = await supabase.from('paths').insert({
+            const { data, error } = await supabase.from('paths').insert({
                 user_id: user.id,
                 name: name.trim(),
                 color: selectedColor,
                 created_date: new Date().toISOString(),
-            });
+            }).select();
 
             if (error) throw error;
 
             handleClose();
-            // **TODO: re-render paths list and navigate to new path's detail page**
-
+            if (data?.[0]?.id) {
+                onCreated(data[0].id);
+            }
         } catch (err) {
             console.error('Error creating path:', err);
         } finally {
@@ -79,8 +65,6 @@ export default function NewPathModal({ visible, onClose, onCreated }: NewPathMod
             <Pressable style={styles.overlay} onPress={handleClose}>
                 <Pressable style={styles.card} onPress={(e) => e.stopPropagation()}>
 
-
-                    {/* title */}
                     <View style={{ marginTop: 20 }}>
                         <Text style={[globalStyles.h3, { textAlign: 'center', marginBottom: 20 }]}>
                             New Path
@@ -89,7 +73,6 @@ export default function NewPathModal({ visible, onClose, onCreated }: NewPathMod
 
                     <View style={{ paddingHorizontal: 3 }}>
                         <View style={{ paddingHorizontal: 20 }}>
-                            {/* name input */}
                             <Text style={[globalStyles.label, { marginBottom: 8 }]}>NAME</Text>
                             <View style={[uiStyles.inputField, { marginBottom: 24 }]}>
                                 <TextInput
@@ -102,23 +85,20 @@ export default function NewPathModal({ visible, onClose, onCreated }: NewPathMod
                                 />
                             </View>
 
-                            {/* color picker */}
                             <Text style={[globalStyles.label, { marginBottom: 12 }]}>COLOR</Text>
                             <View style={styles.colorGrid}>
-                                <View style={styles.colorGrid}>
-                                    {PATH_COLOR_OPTIONS.map(({ name, hex }) => (
-                                        <ShadowBox
-                                            key={name}
-                                            contentBackgroundColor={selectedColor === name ? hex : '#fff'}
-                                            shadowColor={selectedColor === name ? '#000' : hex}
-                                        >
-                                            <Pressable
-                                                onPress={() => setSelectedColor(name)}
-                                                style={styles.colorSwatch}
-                                            />
-                                        </ShadowBox>
-                                    ))}
-                                </View>
+                                {PATH_COLOR_OPTIONS.map(({ name, hex }) => (
+                                    <ShadowBox
+                                        key={name}
+                                        contentBackgroundColor={selectedColor === name ? hex : '#fff'}
+                                        shadowColor={selectedColor === name ? '#000' : hex}
+                                    >
+                                        <Pressable
+                                            onPress={() => setSelectedColor(name)}
+                                            style={styles.colorSwatch}
+                                        />
+                                    </ShadowBox>
+                                ))}
                             </View>
                         </View>
                     </View>
@@ -132,7 +112,7 @@ export default function NewPathModal({ visible, onClose, onCreated }: NewPathMod
                             </ShadowBox>
                         </Pressable>
 
-                        <Pressable onPress={handleSave} style={{ flex: 1 }}>
+                        <Pressable onPress={canSave ? handleSave : undefined} style={{ flex: 1, opacity: canSave ? 1 : 0.5 }}>
                             <ShadowBox
                                 contentBackgroundColor={BUTTON_COLORS.Save}
                                 shadowBorderRadius={15}
@@ -177,41 +157,5 @@ const styles = StyleSheet.create({
     colorSwatch: {
         width: 30,
         height: 30,
-    },
-    colorSwatchSelected: {
-        borderColor: '#000',
-        borderWidth: 2.5,
-        shadowColor: '#000',
-        shadowOffset: { width: 1, height: 1 },
-        shadowOpacity: 1,
-        shadowRadius: 0,
-        elevation: 3,
-    },
-    previewChip: {
-        alignSelf: 'flex-start',
-        paddingHorizontal: 14,
-        paddingVertical: 6,
-        borderRadius: 20,
-        borderWidth: 1,
-        borderColor: 'rgba(0,0,0,0.15)',
-        marginBottom: 24,
-    },
-    previewText: {
-        fontFamily: 'p2',
-        fontSize: 13,
-        color: '#333',
-    },
-    actions: {
-        flexDirection: 'row',
-        gap: 10,
-    },
-    btn: {
-        flex: 1,
-        paddingVertical: 12,
-        borderRadius: 12,
-        borderWidth: 1,
-        borderColor: 'rgba(0,0,0,0.12)',
-        alignItems: 'center',
-        justifyContent: 'center',
     },
 });

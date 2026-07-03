@@ -24,19 +24,13 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, { useAnimatedRef } from 'react-native-reanimated';
 import Sortable from 'react-native-sortables';
 
-// ─── date helpers ─────────────────────────────────────────────────────────────
+// date helpers
 
-// Mon through Sun labels
 const DAY_LABELS_WEEK = ['M', 'T', 'W', 'T', 'F', 'S', 'S'] as const;
 
-/**
- * Build current Mon→Sun week, reset-time-aware.
- * Uses getHabitDate so dates before reset time still belong to the previous day.
- * Future days are flagged with isFuture so the grid can fade them.
- */
+// builds mon→sun for the current week, respecting reset time
 function buildWeek(now: Date, resetHour: number, resetMin: number) {
     const todayStr = getHabitDate(now, resetHour, resetMin);
-    // parse the reset-adjusted "today" at noon to get the correct day-of-week
     const todayDate = new Date(todayStr + 'T12:00:00');
     const dow = todayDate.getDay(); // 0=Sun, 1=Mon…6=Sat
     const daysFromMon = dow === 0 ? 6 : dow - 1;
@@ -55,9 +49,7 @@ function buildWeek(now: Date, resetHour: number, resetMin: number) {
     });
 }
 
-// ─── skipped pill ─────────────────────────────────────────────────────────────
-
-/* faint gray pill for skipped habits */
+// skipped pill
 function SkippedPill({ opacity }: { opacity?: { opacity: number } | {} }) {
     return (
         <View style={[grid.pill, {
@@ -67,7 +59,7 @@ function SkippedPill({ opacity }: { opacity?: { opacity: number } | {} }) {
     );
 }
 
-// ─── week grid ────────────────────────────────────────────────────────────────
+// week grid
 
 interface WeekGridProps {
     pathName: string;
@@ -102,7 +94,7 @@ function WeekGrid({ pathName, habits, color, week, todayStr, now, resetHour, res
                     isHabitActiveToday(h, date, resetHour, resetMin)
                 );
 
-                // split into regular vs increment so we can layer them correctly
+                // separate regular and increment habits for layered rendering
                 const regularHabits = scheduledHabits.filter(h => !h.increment);
                 const incrementHabits = scheduledHabits.filter(h => h.increment);
 
@@ -126,7 +118,7 @@ function WeekGrid({ pathName, habits, color, week, todayStr, now, resetHour, res
                         isToday && grid.todayCol,
                         allDone && !isFuture && { backgroundColor: color + '12', borderRadius: 8 },
                     ]}>
-                        {/* pill stack — renders top→bottom: empty | skipped | increment | filled */}
+                        {/* pill stack: empty → skipped → increment → filled */}
                         <View style={grid.pills}>
                             {total === 0 ? (
                                 <View style={[
@@ -136,7 +128,7 @@ function WeekGrid({ pathName, habits, color, week, todayStr, now, resetHour, res
                                 ]} />
                             ) : (
                                 <>
-                                    {/* ① empty regular pills — top */}
+                                    {/* empty pills */}
                                     {Array.from({ length: emptyCount }, (_, i) => (
                                         <View
                                             key={`empty-${i}`}
@@ -152,12 +144,12 @@ function WeekGrid({ pathName, habits, color, week, todayStr, now, resetHour, res
                                         />
                                     ))}
 
-                                    {/* skipped regular pills */}
+                                    {/* skipped pills */}
                                     {Array.from({ length: regularSkipped }, (_, i) => (
                                         <SkippedPill key={`skip-${i}`} opacity={pillOpacity} />
                                     ))}
 
-                                    {/* ② increment pills — sits at the boundary */}
+                                    {/* increment pills */}
                                     {incrementHabits.map((h, i) => {
                                         const amount = h.incrementHistory?.[str] ?? 0;
                                         const goal = h.incrementGoal && h.incrementGoal > 0
@@ -196,7 +188,7 @@ function WeekGrid({ pathName, habits, color, week, todayStr, now, resetHour, res
                                         );
                                     })}
 
-                                    {/* ③ filled regular pills — bottom */}
+                                    {/* completed pills */}
                                     {Array.from({ length: regularDone }, (_, i) => (
                                         <View
                                             key={`filled-${i}`}
@@ -211,7 +203,6 @@ function WeekGrid({ pathName, habits, color, week, todayStr, now, resetHour, res
                             )}
                         </View>
 
-                        {/* day label */}
                         <Text style={[
                             grid.dayLabel,
                             isToday && { color, fontFamily: 'p2', opacity: 1 },
@@ -232,12 +223,6 @@ const grid = StyleSheet.create({
         flexDirection: 'row',
         marginTop: 10,
         gap: 4,
-    },
-    emptyRow: {
-        flexDirection: 'row',
-        marginTop: 10,
-        gap: 4,
-        opacity: 0.4,
     },
     col: {
         flex: 1,
@@ -265,14 +250,6 @@ const grid = StyleSheet.create({
         borderRadius: 3,
         borderWidth: 1.5,
     },
-    ghostPill: {
-        width: 14,
-        height: 6,
-        borderRadius: 3,
-        borderWidth: 1.5,
-        borderColor: 'rgba(0,0,0,0.12)',
-        borderStyle: 'dashed',
-    },
     pillWrap: {
         alignItems: 'center',
     },
@@ -289,14 +266,9 @@ const grid = StyleSheet.create({
         backgroundColor: 'rgba(0,0,0,0.08)',
         marginTop: 2,
     },
-    check: {
-        fontSize: 8,
-        fontFamily: 'p2',
-        marginTop: 1,
-    },
 });
 
-// ─── path card ────────────────────────────────────────────────────────────────
+// path card
 
 interface PathCardProps {
     path: Path;
@@ -310,7 +282,6 @@ interface PathCardProps {
 }
 
 function PathCard({ path, habits, onPress, week, todayStr, now, resetHour, resetMin }: PathCardProps) {
-    // convert color key -> hex
     const colorHex = PATH_COLORS[path.color as PathColorKey] ?? '#999';
 
     const pathHabits = habits.filter(h => h.path === path.name);
@@ -324,7 +295,7 @@ function PathCard({ path, habits, onPress, week, todayStr, now, resetHour, reset
 
     const weekSet = new Set(week.map(w => w.str)); // last 7 day strings
 
-    // total completions across this path in that 7-day window
+    // completions this week
     const weekCompleted = pathHabits.reduce((sum, h) => {
         const hits = (h.completionHistory ?? []).filter(d => weekSet.has(d)).length;
         return sum + hits;
@@ -347,10 +318,8 @@ function PathCard({ path, habits, onPress, week, todayStr, now, resetHour, reset
                 style={{ marginBottom: 18 }}
             >
                 <View style={styles.card}>
-                    {/* color strip */}
 
                     <View style={styles.cardContent}>
-                        {/* header row */}
                         <View style={styles.cardHeader}>
                             <Text style={globalStyles.h4} numberOfLines={1}>
                                 {path.name}
@@ -365,7 +334,7 @@ function PathCard({ path, habits, onPress, week, todayStr, now, resetHour, reset
                             </View>
                         </View>
 
-                        {/* 7-day week grid */}
+                        {/* week grid */}
                         <WeekGrid
                             pathName={path.name}
                             habits={habits}
@@ -383,7 +352,7 @@ function PathCard({ path, habits, onPress, week, todayStr, now, resetHour, reset
     );
 }
 
-// ─── daily summary ────────────────────────────────────────────────────────────
+// daily summary
 
 function DailySummary({
     habits,
@@ -398,7 +367,7 @@ function DailySummary({
     resetHour: number;
     resetMin: number;
 }) {
-    // ----- today progress (for the bar + message) -----
+    // today's progress
     const totalToday = habits.filter(
         h => h.path && isHabitActiveToday(h, now, resetHour, resetMin)
     ).length;
@@ -415,7 +384,7 @@ function DailySummary({
 
     const pctRounded = Math.round(progressPercentage);
 
-    // ----- week progress (for the subtext) -----
+    // week progress
     const weekDays = Array.from({ length: 7 }, (_, i) => {
         const d = new Date(now);
         d.setDate(now.getDate() - (6 - i));
@@ -425,7 +394,7 @@ function DailySummary({
         };
     });
 
-    // total scheduled "occurrences" in last 7 days
+    // total scheduled this week
     const totalWeekOccurrences = habits.reduce((sum, h) => {
         if (!h.path) return sum;
         return (
@@ -434,7 +403,7 @@ function DailySummary({
         );
     }, 0);
 
-    // completed "occurrences" in last 7 days
+    // completed this week
     const doneWeekOccurrences = habits.reduce((sum, h) => {
         if (!h.path) return sum;
         return (
@@ -443,7 +412,6 @@ function DailySummary({
         );
     }, 0);
 
-    // pick a fill color
     const fillColor = pctRounded === 100 ? PAGE.habits.primary[0] : PAGE.path.primary[1];
 
     return (
@@ -468,24 +436,19 @@ function DailySummary({
     );
 }
 
-// ─── main page ────────────────────────────────────────────────────────────────
+// paths list page
 
 export default function Paths() {
     const { user } = useAuth();
     const router = useRouter();
 
-    // stable date reference for the hook
     const today = useMemo(() => new Date(), []);
     const { habits: allHabitsRaw, allHabits: allHabitsUnfiltered, loading: habitsLoading, loadHabits, resetTime } = useHabits(today);
-
-    // use the user's actual reset time, falling back to 4am default
     const resetHour = resetTime.hour;
     const resetMin = resetTime.minute;
 
-    // today-filtered habits (for DailySummary)
+    // filtered for today vs unfiltered for the week grid
     const habits: Habit[] = allHabitsRaw.map(({ status, ...rest }) => rest);
-
-    // unfiltered habits for WeekGrid — isHabitActiveToday handles archived visibility per-day
     const weekHabits: Habit[] = allHabitsUnfiltered;
 
     const [paths, setPaths] = useState<Path[]>([]);
@@ -522,7 +485,7 @@ export default function Paths() {
         }, [loadPaths, loadHabits])
     );
 
-    // show spinner only on the very first load, and only until both paths + habits are ready
+    // only show spinner on first load
     const loading = !hasLoadedOnce.current && (pathsLoading || habitsLoading);
     if (!loading && !hasLoadedOnce.current) {
         hasLoadedOnce.current = true;
@@ -557,7 +520,7 @@ export default function Paths() {
         await Promise.all(updates);
     }, []);
 
-    // "live" date values for display + scheduling logic
+    // current date values used for display
     const now = new Date();
     const todayStr = getHabitDate(now, resetHour, resetMin);
     const week = buildWeek(now, resetHour, resetMin);
@@ -689,40 +652,15 @@ export default function Paths() {
     );
 }
 
-// ─── styles ───────────────────────────────────────────────────────────────────
+// styles
 
 const styles = StyleSheet.create({
-    summary: {
-        marginBottom: 18,
-        gap: 8,
-    },
-    summaryText: {
-        fontFamily: 'p1',
-        fontSize: 13,
-        color: '#444',
-        textAlign: 'center',
-    },
-    progressTrack: {
-        height: 6,
-        backgroundColor: 'rgba(255,255,255,0.5)',
-        borderRadius: 3,
-        overflow: 'hidden',
-    },
-    progressFill: {
-        height: '100%',
-        backgroundColor: '#fff',
-        borderRadius: 3,
-    },
     card: {
         flexDirection: 'row',
         alignItems: 'stretch',
         borderRadius: 25,
         overflow: 'hidden',
         minHeight: 90,
-    },
-    colorStrip: {
-        width: 8,
-        alignSelf: 'stretch',
     },
     cardContent: {
         flex: 1,
@@ -735,58 +673,11 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         justifyContent: 'space-between',
     },
-    statusText: {
-        fontFamily: 'label',
-        fontSize: 11,
-    },
 });
 
 const summaryStyles = StyleSheet.create({
     wrap: {
         marginBottom: 18,
         gap: 6,
-    },
-    barOuter: {
-        justifyContent: 'center',
-    },
-    bar: {
-        height: 30,
-        borderRadius: 18,
-        overflow: 'hidden',
-        backgroundColor: '#fff',
-        position: 'relative',
-    },
-    fill: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        bottom: 0,
-    },
-    centerText: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    pctText: {
-        fontSize: 12,
-        fontFamily: 'label',
-        color: '#000',
-        fontWeight: '600',
-    },
-    message: {
-        fontFamily: 'p1',
-        fontSize: 13,
-        color: '#444',
-        textAlign: 'center',
-    },
-    sub: {
-        fontFamily: 'label',
-        fontSize: 11,
-        opacity: 0.55,
-        textAlign: 'center',
     },
 });

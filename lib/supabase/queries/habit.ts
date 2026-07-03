@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { Habit } from '@/types/Habit';
-import { formatLocalDate } from '@/utils/dateUtils';
+
 
 // ─── LOAD ────────────────────────────────────────────────────────────────────
 
@@ -294,36 +294,3 @@ export async function deleteHabit(
   return habits.filter(h => h.id !== habitId);
 }
 
-export async function archiveStaleHabits(
-  userId: string,
-  daysThreshold = 14
-): Promise<void> {
-  const cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - daysThreshold);
-  const cutoffStr = cutoff.toISOString().split('T')[0];
-
-  const { error } = await supabase
-    .from('habits')
-    .update({ archived_at: new Date().toISOString() })
-    .eq('user_id', userId)
-    .eq('frequency', 'None')
-    .eq('keep_until', false)
-    .is('archived_at', null)
-    .lt('start_date', cutoffStr);
-
-  if (error) throw error;
-}
-
-export async function archiveEndedHabits(userId: string): Promise<void> {
-  const todayStr = formatLocalDate(new Date());
-
-  const { error } = await supabase
-    .from('habits')
-    .update({ archived_at: new Date().toISOString() })
-    .eq('user_id', userId)
-    .is('archived_at', null)
-    .not('end_date', 'is', null)
-    .lt('end_date', todayStr);
-
-  if (error) throw error;
-}

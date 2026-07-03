@@ -357,33 +357,47 @@ export default function HabitsList({
   return (
     <Sortable.PortalProvider>
     <GestureHandlerRootView style={styles.container}>
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 }}>
-        <View>
-          <Text style={globalStyles.body}>You have {incompleteCount} goals left today!</Text>
-        </View>
-        <View style={styles.toggleContainer}>
-          <Pressable onPress={() => saveToggleState()}>
-            <Image
-              source={showCompleted ? SYSTEM_ICONS.show : SYSTEM_ICONS.hide}
-              style={styles.toggleIcon}
-            />
-          </Pressable>
-        </View>
-      </View>
-
-      {allDoneToday && (
-        <View style={{ marginTop: 12, alignItems: 'center', gap: 10 }}>
-          <Text style={[globalStyles.body, { opacity: 0.7, textAlign: 'center' }]}>
-            🎉 Good job — you finished everything for today!
-          </Text>
-        </View>
-      )}
-
       <AnimatedScrollView
         ref={scrollableRef}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.contentContainer}
       >
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 10 }}>
+          <View>
+            <Text style={globalStyles.body}>You have {incompleteCount} goals left today!</Text>
+          </View>
+          <View style={styles.toggleContainer}>
+            <Pressable onPress={() => saveToggleState()}>
+              <Image
+                source={showCompleted ? SYSTEM_ICONS.show : SYSTEM_ICONS.hide}
+                style={styles.toggleIcon}
+              />
+            </Pressable>
+          </View>
+        </View>
+
+        {allDoneToday && (
+          <View style={{marginBottom: 20}}>
+          <ShadowBox
+            contentBackgroundColor={COLORS.PrimaryLight}
+            shadowColor={COLORS.Primary}
+            shadowOffset={{x: 0, y: 5}}
+          >
+            <View style={{ paddingVertical: 14, paddingHorizontal: 20, alignItems: 'center', gap: 6 }}>
+              <Image
+                source={SYSTEM_ICONS.star}
+                style={{ width: 24, height: 24, tintColor: COLORS.Star, opacity: 0.8 }}
+              />
+              <Text style={[globalStyles.body, { fontWeight: '600', textAlign: 'center' }]}>
+                All done for today!
+              </Text>
+              <Text style={[globalStyles.body, { fontSize: 13, opacity: 0.6, textAlign: 'center' }]}>
+                {scheduledHabits.length} habit{scheduledHabits.length !== 1 ? 's' : ''} completed
+              </Text>
+            </View>
+          </ShadowBox>
+          </View>
+        )}
         <Sortable.Grid
           data={flatList}
           columns={1}

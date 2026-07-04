@@ -679,7 +679,7 @@ export default function Paths() {
                                 <View
                                     style={{ width: 40, height: 40, justifyContent: 'center', alignItems: 'center' }}
                                 >
-                                    <Text style={{ fontSize: 20, textAlign: 'center' }}>+</Text>
+                                    <Image source={SYSTEM_ICONS.plus} style={{ width: 20, height: 20 }} />
                                 </View>
                             </ShadowBox>
                         </Pressable>

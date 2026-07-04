@@ -1,17 +1,18 @@
 import { BUTTON_COLORS, COLORS, PAGE, PRESET_COLORS } from '@/constants/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import { useAuth } from '@/contexts/AuthContext';
-import { addReward, getExchangeRate, uploadRewardPhoto } from '@/services/rewards/rewards';
+import { addReward, deleteRewardPhoto, getExchangeRate, updateReward, uploadRewardPhoto } from '@/services/rewards/rewards';
 import { Reward } from '@/types/Reward';
 import { AppLinearGradient } from '@/ui/AppLinearGradient';
 import PageContainer from '@/ui/PageContainer';
 import PageHeader from '@/ui/PageHeader';
 import ShadowBox from '@/ui/ShadowBox';
 import * as ImagePicker from 'expo-image-picker';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Alert,
+  Dimensions,
   Image,
   Keyboard,
   Pressable,
@@ -27,23 +28,42 @@ import { lightenColor } from '@/utils';
 
 const PRESET_TAGS = ['Food', 'Fun', 'Self-Care', 'Shopping', 'Entertainment', 'Travel', 'Fitness', 'Learning'];
 
+// same width the wishlist grid produces on the rewards page:
+// page content is 90% of screen, grid pads 10 per side, items take 45%
+const REWARD_CARD_WIDTH = (Dimensions.get('window').width * 0.9 - 20) * 0.45;
+
 export default function NewRewardItem() {
   const router = useRouter();
   const { user } = useAuth();
   const scrollRef = useRef<KeyboardAwareScrollView>(null);
 
-  const [name, setName] = useState('');
-  const [costPoints, setCostPoints] = useState('');
-  const [notes, setNotes] = useState('');
-  const [backgroundColor, setBackgroundColor] = useState<string>(PRESET_COLORS[0]);
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [rewardPrice, setRewardPrice] = useState('');
-  const [rewardPoints, setRewardPoints] = useState('');
-  const [pointsOverridden, setPointsOverridden] = useState(false);
+  // edit mode: reward passed from RewardDetailModal, mirrors the habit edit flow
+  const params = useLocalSearchParams<{ editData?: string }>();
+  const editReward: Reward | null = params.editData ? JSON.parse(params.editData as string) : null;
+  const isEditMode = !!editReward;
+
+  // points count as manually overridden only when they don't match the
+  // price-derived formula (dollars × 10) — keeps price ↔ points linked otherwise
+  const editPointsOverridden = !!editReward &&
+    !(Number.isInteger(editReward.costDollars) && editReward.costPoints === editReward.costDollars * 10);
+
+  const [name, setName] = useState(editReward?.name ?? '');
+  const [notes, setNotes] = useState(editReward?.notes ?? '');
+  const [backgroundColor, setBackgroundColor] = useState<string>(editReward?.backgroundColor ?? PRESET_COLORS[0]);
+  const [selectedTags, setSelectedTags] = useState<string[]>(editReward?.tags ?? []);
+  const [rewardPrice, setRewardPrice] = useState(
+    editReward && editReward.costDollars > 0 ? String(editReward.costDollars) : ''
+  );
+  const [rewardPoints, setRewardPoints] = useState(editReward ? String(editReward.costPoints) : '');
+  const [pointsOverridden, setPointsOverridden] = useState(editPointsOverridden);
   const [exchangeRate, setExchangeRate] = useState(10);
-  const [photoUri, setPhotoUri] = useState<string | undefined>(undefined);
+  const [photoUri, setPhotoUri] = useState<string | undefined>(editReward?.photoUri);
   const [saving, setSaving] = useState(false);
-  const [recurring, setRecurring] = useState(false);
+  const [recurring, setRecurring] = useState(editReward?.recurring ?? false);
+  const [link, setLink] = useState(editReward?.link ?? '');
+  const [moreOptions, setMoreOptions] = useState(
+    !!(editReward?.link || editReward?.notes || editReward?.tags?.length || editReward?.recurring)
+  );
 
   useEffect(() => {
     getExchangeRate().then(rate => {
@@ -118,20 +138,41 @@ export default function NewRewardItem() {
         }
       }
 
-      const newReward: Reward = {
-        id: Date.now().toString(),
-        name: name.trim(),
-        costPoints: finalPoints,
-        costDollars,
-        backgroundColor,
-        photoUri: resolvedPhotoUri,
-        tags: selectedTags,
-        notes: notes.trim() || undefined,
-        recurring,
-        dateAdded: new Date().toISOString().split('T')[0],
-        isClaimed: false,
-      };
-      await addReward(newReward, user.id);
+      if (isEditMode && editReward) {
+        // photo was replaced or removed — clean up the old stored one
+        if (editReward.photoUri && editReward.photoUri !== resolvedPhotoUri) {
+          deleteRewardPhoto(editReward.photoUri);
+        }
+        // keep identity + claim state, update everything editable
+        await updateReward({
+          ...editReward,
+          name: name.trim(),
+          costPoints: finalPoints,
+          costDollars,
+          backgroundColor,
+          photoUri: resolvedPhotoUri,
+          tags: selectedTags,
+          notes: notes.trim() || undefined,
+          link: link.trim() || undefined,
+          recurring,
+        }, user.id);
+      } else {
+        const newReward: Reward = {
+          id: Date.now().toString(),
+          name: name.trim(),
+          costPoints: finalPoints,
+          costDollars,
+          backgroundColor,
+          photoUri: resolvedPhotoUri,
+          tags: selectedTags,
+          notes: notes.trim() || undefined,
+          link: link.trim() || undefined,
+          recurring,
+          dateAdded: new Date().toISOString().split('T')[0],
+          isClaimed: false,
+        };
+        await addReward(newReward, user.id);
+      }
       router.back();
     } catch (err: any) {
       console.error('handleSave error:', err?.message ?? err);
@@ -144,7 +185,7 @@ export default function NewRewardItem() {
   return (
     <AppLinearGradient variant="rewards.background">
       <PageContainer>
-        <PageHeader title="New Reward" showBackButton />
+        <PageHeader title={isEditMode ? 'Edit Reward' : 'New Reward'} showBackButton />
 
         <KeyboardAwareScrollView
           ref={scrollRef}
@@ -166,88 +207,111 @@ export default function NewRewardItem() {
                 gap: 20,
               }}>
 
-                {/* REWARD NAME */}
-                <View style={{ gap: 10 }}>
-                  <Text style={globalStyles.label}>REWARD NAME</Text>
-                  <TextInput
-                    style={[uiStyles.inputField, { borderColor: '#000' }]}
-                    placeholder="e.g. Coffee shop treat"
-                    placeholderTextColor={COLORS.PlaceHolder}
-                    value={name}
-                    onChangeText={setName}
-                    cursorColor={PAGE.rewards.primary[0]}
-                    selectionColor={PAGE.rewards.primary[0]}
-                    onFocus={e => scrollRef.current?.scrollToFocusedInput(e.nativeEvent.target)}
-                  />
+                {/* photo + name — mirrors the icon + name row on the new habit page */}
+                <View style={{ gap: 6 }}>
+                  <View style={{ marginBottom: 10 }}>
+                    <TextInput
+                      style={[
+                        globalStyles.body,
+                        {
+                          flex: 1,
+                          borderBottomWidth: 1,
+                          borderBottomColor: PAGE.rewards.primary[0],
+                          paddingVertical: 10,
+                        },
+                      ]}
+                      placeholder="Enter reward name..."
+                      placeholderTextColor="rgba(0,0,0,0.4)"
+                      value={name}
+                      onChangeText={setName}
+                      cursorColor={PAGE.rewards.primary[0]}
+                      selectionColor={PAGE.rewards.primary[0]}
+                      onFocus={e => scrollRef.current?.scrollToFocusedInput(e.nativeEvent.target)}
+                    />
+                  </View>
+
+                  <View style={{ gap: 10 }}>
+                    <Text style={globalStyles.label}>ADD A PHOTO</Text>
+
+                    {photoUri ? (
+                      <View style={{ alignItems: 'center', gap: 10, backgroundColor: PAGE.rewards.primary[0] + '95', paddingVertical: 15, borderRadius: 15 }}>
+                        <Pressable
+                          onPress={handlePickPhoto}
+                          style={{ width: 150, height: 150, borderWidth: 1 }}
+                        >
+                          <Image source={{ uri: photoUri }} style={{ width: '100%', height: '100%' }} />
+                        </Pressable>
+
+                        <Pressable onPress={() => setPhotoUri(undefined)}>
+                          <ShadowBox
+                            contentBackgroundColor={BUTTON_COLORS.Delete}
+                            style={{ width: 55, alignContent: 'center' }}>
+                            <Text style={[globalStyles.body, { fontSize: 10, paddingHorizontal: 10, paddingVertical: 3, textAlign: 'center' }]}>CLEAR</Text>
+                          </ShadowBox>
+                        </Pressable>
+                      </View>
+                    ) : (
+                      /* same button style as the end date button on the new habit page */
+                      <Pressable onPress={handlePickPhoto}>
+                        <ShadowBox
+                          contentBackgroundColor={PAGE.rewards.primary[0]}
+                          contentBorderRadius={10}
+                        >
+                          <View style={{
+                            flexDirection: 'row',
+                            alignItems: 'center',
+                            gap: 10,
+                            paddingVertical: 5,
+                            paddingHorizontal: 15,
+                          }}>
+                            <Image source={SYSTEM_ICONS.photo} style={{ width: 17, height: 17 }} />
+                            <Text style={globalStyles.body1}>Choose a photo</Text>
+                          </View>
+                        </ShadowBox>
+                      </Pressable>
+                    )}
+                  </View>
                 </View>
 
-                <View style={{ gap: 30 }}>
+                {/* cost of reward */}
+                <View style={{ gap: 10 }}>
                   <Text style={globalStyles.label}>COST OF REWARD</Text>
 
-                  <View style={{ flexDirection: 'row', alignSelf: 'center', gap: 10 }}>
-                    <ShadowBox
-                      contentBorderColor={PAGE.rewards.primary[0]}
-                      shadowColor={PAGE.rewards.primary[0]}
-                      shadowBorderColor={PAGE.rewards.primary[0]}
-                    >
-                      {/* minus button */}
+                  <View style={{ flexDirection: 'row', alignSelf: 'center', gap: 10, marginTop: 10 }}>
+                    <ShadowBox shadowColor={PAGE.rewards.primary[0]}>
                       <Pressable
                         onPress={() => setRewardPrice(prev => Math.max(0, parseInt(prev) - 1).toString())}
-                        style={{
-                          width: 30,
-                          height: 30,
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}>
-                        <Text style={globalStyles.body1}>-</Text>
+                        style={{ paddingVertical: 3, paddingHorizontal: 8, alignItems: 'center', justifyContent: 'center' }}
+                      >
+                        <Text style={globalStyles.body}>-</Text>
                       </Pressable>
                     </ShadowBox>
 
-                    {/* input field */}
-                    <ShadowBox
-                      contentBorderColor={PAGE.rewards.primary[0]}
-                      shadowColor={PAGE.rewards.primary[0]}
-                      shadowBorderColor={PAGE.rewards.primary[0]}>
-                      <View style={{
-                        height: 30,
-                        width: 100,
-                        borderRadius: 20,
-                        justifyContent: 'center',
-                      }}>
+                    <ShadowBox shadowColor={PAGE.rewards.primary[0]}>
+                      <View style={{ paddingVertical: 2, width: 100, borderRadius: 20, justifyContent: 'center' }}>
                         <TextInput
-                          style={[globalStyles.body1, { textAlign: 'center' }]}
+                          style={[globalStyles.body, { textAlign: 'center' }]}
                           keyboardType="number-pad"
                           placeholder='$0'
                           placeholderTextColor={COLORS.PlaceHolder}
-                          value={price > 0 ? `$${rewardPrice}` : ''} // show $ prefix in input
+                          value={price > 0 ? `$${rewardPrice}` : ''}
                           onChangeText={text => setRewardPrice(text.replace('$', ''))}
                           onFocus={(e) => scrollRef.current?.scrollToFocusedInput(e.nativeEvent.target)}
                         />
                       </View>
                     </ShadowBox>
 
-                    {/* plus button */}
-                    <ShadowBox
-                      contentBorderColor={PAGE.rewards.primary[0]}
-                      shadowColor={PAGE.rewards.primary[0]}
-                      shadowBorderColor={PAGE.rewards.primary[0]}
-                    >
+                    <ShadowBox shadowColor={PAGE.rewards.primary[0]}>
                       <Pressable
                         onPress={() =>
                           setRewardPrice((prev) => {
-                            if (prev === '' || isNaN(Number(prev))) {
-                              return '1';
-                            }
+                            if (prev === '' || isNaN(Number(prev))) return '1';
                             return (Number(prev) + 1).toString();
                           })
                         }
-                        style={{
-                          width: 30,
-                          height: 30,
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}>
-                        <Text style={globalStyles.body1}>+</Text>
+                        style={{ paddingVertical: 3, paddingHorizontal: 8, alignItems: 'center', justifyContent: 'center' }}
+                      >
+                        <Text style={globalStyles.body}>+</Text>
                       </Pressable>
                     </ShadowBox>
                   </View>
@@ -259,7 +323,6 @@ export default function NewRewardItem() {
                       borderRadius: 10,
                       width: 200,
                       alignSelf: 'center',
-                      marginTop: -10,
                     }]}>
                       <Text style={[globalStyles.body1, { fontSize: 12, textAlign: 'center' }]}>
                         {price}
@@ -272,44 +335,29 @@ export default function NewRewardItem() {
                   )}
                 </View>
 
-                <View style={{ gap: 30 }}>
+                {/* reward points */}
+                <View style={{ gap: 10 }}>
                   <Text style={globalStyles.label}>REWARD POINTS</Text>
 
-                  <View style={{ flexDirection: 'row', alignSelf: 'center', gap: 10 }}>
-                    <ShadowBox
-                      contentBorderColor={PAGE.rewards.primary[1]}
-                      shadowColor={PAGE.rewards.primary[1]}
-                      shadowBorderColor={PAGE.rewards.primary[1]}>
+                  <View style={{ flexDirection: 'row', alignSelf: 'center', gap: 10, marginTop: 10 }}>
+                    <ShadowBox shadowColor={PAGE.rewards.primary[1]}>
                       <Pressable
                         onPress={() => {
                           setPointsOverridden(true);
                           setRewardPoints(prev => Math.max(0, parseInt(prev) - 1).toString());
                         }}
-                        style={{
-                          width: 30,
-                          height: 30,
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}>
-                        <Text style={globalStyles.body1}>-</Text>
+                        style={{ paddingVertical: 3, paddingHorizontal: 8, alignItems: 'center', justifyContent: 'center' }}
+                      >
+                        <Text style={globalStyles.body}>-</Text>
                       </Pressable>
                     </ShadowBox>
 
-                    <ShadowBox
-                      contentBorderColor={PAGE.rewards.primary[1]}
-                      shadowColor={PAGE.rewards.primary[1]}
-                      shadowBorderColor={PAGE.rewards.primary[1]}
-                    >
-                      <View style={{
-                        height: 30,
-                        width: 100,
-                        borderRadius: 20,
-                        justifyContent: 'center',
-                      }}>
+                    <ShadowBox shadowColor={PAGE.rewards.primary[1]}>
+                      <View style={{ paddingVertical: 2, width: 100, borderRadius: 20, justifyContent: 'center' }}>
                         <TextInput
-                          style={[globalStyles.body1, { textAlign: 'center' }]}
+                          style={[globalStyles.body, { textAlign: 'center' }]}
                           keyboardType="number-pad"
-                          value={points > 0 ? `${rewardPoints} pts` : ''} // show pts suffix in input
+                          value={points > 0 ? `${rewardPoints} pts` : ''}
                           placeholder='0 pts'
                           placeholderTextColor={COLORS.PlaceHolder}
                           onChangeText={text => {
@@ -321,82 +369,27 @@ export default function NewRewardItem() {
                       </View>
                     </ShadowBox>
 
-                    <ShadowBox
-                      contentBorderColor={PAGE.rewards.primary[1]}
-                      shadowColor={PAGE.rewards.primary[1]}
-                      shadowBorderColor={PAGE.rewards.primary[1]}>
+                    <ShadowBox shadowColor={PAGE.rewards.primary[1]}>
                       <Pressable
                         onPress={() => {
                           setPointsOverridden(true);
                           setRewardPoints((prev) => {
-                            if (prev === '' || isNaN(Number(prev))) {
-                              return '1';
-                            }
+                            if (prev === '' || isNaN(Number(prev))) return '1';
                             return (Number(prev) + 1).toString();
                           });
                         }}
-                        style={{
-                          width: 30,
-                          height: 30,
-                          alignItems: 'center',
-                          justifyContent: 'center'
-                        }}>
-                        <Text style={globalStyles.body1}>+</Text>
+                        style={{ paddingVertical: 3, paddingHorizontal: 8, alignItems: 'center', justifyContent: 'center' }}
+                      >
+                        <Text style={globalStyles.body}>+</Text>
                       </Pressable>
                     </ShadowBox>
                   </View>
                 </View>
 
-
-                {/* "Use points only" */}
-
-                {/* PHOTO */}
-                <View style={{ gap: 10 }}>
-                  <Text style={globalStyles.label}>PHOTO (OPTIONAL)</Text>
-                  <Pressable onPress={handlePickPhoto}>
-                    <ShadowBox
-                    >
-                      <View style={{
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        gap: 12,
-                        paddingVertical: 10,
-                        paddingHorizontal: 15,
-                        overflow: 'hidden',
-                      }}>
-                        {photoUri ? (
-                          <>
-                            <Image
-                              source={{ uri: photoUri }}
-                              style={{ width: 44, height: 44, borderRadius: 6, borderWidth: 1, borderColor: '#000' }}
-                            />
-                            <Text style={globalStyles.body1}>Photo selected</Text>
-                            <Pressable
-                              onPress={() => setPhotoUri(undefined)}
-                              style={{ marginLeft: 'auto' }}
-                            >
-                              <Text style={[globalStyles.label, { color: '#FF5656', fontSize: 12, opacity: 1 }]}>
-                                Remove
-                              </Text>
-                            </Pressable>
-                          </>
-                        ) : (
-                          <>
-                            <Image source={SYSTEM_ICONS.photo} style={{ width: 15, height: 15 }} />
-                            <Text style={[globalStyles.body1, { color: 'rgba(0,0,0,0.5)' }]}>
-                              Add a photo
-                            </Text>
-                          </>
-                        )}
-                      </View>
-                    </ShadowBox>
-                  </Pressable>
-                </View>
-
                 {/* CARD COLOR */}
                 <View style={{ gap: 10 }}>
                   <Text style={globalStyles.label}>CARD COLOR</Text>
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, padding: 15, backgroundColor: PAGE.rewards.primary[1] + 95, borderRadius: 15 }}>
                     {PRESET_COLORS.map(color => {
                       const isSelected = backgroundColor === color;
                       return (
@@ -421,52 +414,100 @@ export default function NewRewardItem() {
                   </View>
                 </View>
 
-                {/* TAGS */}
-                <View style={{ gap: 10 }}>
-                  <Text style={globalStyles.label}>TAGS</Text>
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                    {PRESET_TAGS.map(tag => {
-                      const isSelected = selectedTags.includes(tag);
-                      return (
-                        <Pressable key={tag} onPress={() => toggleTag(tag)}>
-                          <ShadowBox
-                            contentBackgroundColor={isSelected ? PAGE.rewards.primary[0] : '#fff'}
-                            contentBorderColor={isSelected ? '#000' : PAGE.rewards.primary[0]}
-                            shadowBorderColor={isSelected ? '#000' : PAGE.rewards.primary[0]}
-                            shadowColor={isSelected ? '#000' : PAGE.rewards.primary[0]}
-                            contentBorderRadius={100}
-                            shadowBorderRadius={100}
-                          >
-                            <View style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
-                              <Text style={globalStyles.body1}>{tag}</Text>
-                            </View>
-                          </ShadowBox>
-                        </Pressable>
-                      );
-                    })}
-                  </View>
-                </View>
+                {/* more options — tags, link, notes, recurring */}
+                <Pressable
+                  onPress={() => setMoreOptions(!moreOptions)}
+                  style={{
+                    margin: 15,
+                    alignSelf: 'center',
+                    opacity: 0.6,
+                  }}>
+                  <Text style={globalStyles.label}>{moreOptions ? 'Less options' : 'More options'}</Text>
+                </Pressable>
 
-                {/* NOTES */}
-                <View style={{ gap: 10 }}>
-                  <Text style={globalStyles.label}>NOTES (OPTIONAL)</Text>
-                  <TextInput
-                    style={[uiStyles.inputField, {
-                      borderColor: '#000',
-                      height: 80,
-                      textAlignVertical: 'top',
-                    }]}
-                    placeholder="Any extra details..."
-                    placeholderTextColor="rgba(0,0,0,0.4)"
-                    multiline
-                    numberOfLines={3}
-                    value={notes}
-                    onChangeText={setNotes}
-                    cursorColor={PAGE.rewards.primary[0]}
-                    selectionColor={PAGE.rewards.primary[0]}
-                    onFocus={e => scrollRef.current?.scrollToFocusedInput(e.nativeEvent.target)}
-                  />
-                </View>
+                {moreOptions && (
+                  <View style={{ gap: 20 }}>
+                    {/* tags */}
+                    <View style={{ gap: 10 }}>
+                      <Text style={globalStyles.label}>TAGS</Text>
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                        {PRESET_TAGS.map(tag => {
+                          const isSelected = selectedTags.includes(tag);
+                          return (
+                            <Pressable key={tag} onPress={() => toggleTag(tag)}>
+                              <ShadowBox
+                                contentBackgroundColor={isSelected ? PAGE.rewards.primary[0] : '#fff'}
+                                contentBorderColor={isSelected ? '#000' : PAGE.rewards.primary[0]}
+                                shadowBorderColor={isSelected ? '#000' : PAGE.rewards.primary[0]}
+                                shadowColor={isSelected ? '#000' : PAGE.rewards.primary[0]}
+                              >
+                                <View style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
+                                  <Text style={globalStyles.body1}>{tag}</Text>
+                                </View>
+                              </ShadowBox>
+                            </Pressable>
+                          );
+                        })}
+                      </View>
+                    </View>
+
+                    {/* link */}
+                    <View style={{ gap: 10 }}>
+                      <Text style={globalStyles.label}>LINK (OPTIONAL)</Text>
+                      <TextInput
+                        style={[uiStyles.inputField, { borderColor: '#000' }]}
+                        placeholder="https://..."
+                        placeholderTextColor="rgba(0,0,0,0.4)"
+                        value={link}
+                        onChangeText={setLink}
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                        keyboardType="url"
+                        cursorColor={PAGE.rewards.primary[0]}
+                        selectionColor={PAGE.rewards.primary[0]}
+                        onFocus={e => scrollRef.current?.scrollToFocusedInput(e.nativeEvent.target)}
+                      />
+                    </View>
+
+                    {/* notes */}
+                    <View style={{ gap: 10 }}>
+                      <Text style={globalStyles.label}>NOTES (OPTIONAL)</Text>
+                      <TextInput
+                        style={[uiStyles.inputField, {
+                          borderColor: '#000',
+                          height: 80,
+                          textAlignVertical: 'top',
+                        }]}
+                        placeholder="Any extra details..."
+                        placeholderTextColor="rgba(0,0,0,0.4)"
+                        multiline
+                        numberOfLines={3}
+                        value={notes}
+                        onChangeText={setNotes}
+                        cursorColor={PAGE.rewards.primary[0]}
+                        selectionColor={PAGE.rewards.primary[0]}
+                        onFocus={e => scrollRef.current?.scrollToFocusedInput(e.nativeEvent.target)}
+                      />
+                    </View>
+
+                    {/* recurring toggle — same switch row style as the new habit page */}
+                    <View style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      paddingVertical: 4,
+                      paddingHorizontal: 2,
+                    }}>
+                      <Text style={globalStyles.body1}>Recurring?</Text>
+                      <Switch
+                        value={recurring}
+                        onValueChange={setRecurring}
+                        trackColor={{ false: '#ddd', true: PAGE.rewards.primary[0] }}
+                        thumbColor="#fff"
+                      />
+                    </View>
+                  </View>
+                )}
 
                 {/* LIVE PREVIEW */}
                 <View style={{ gap: 10 }}>
@@ -479,15 +520,34 @@ export default function NewRewardItem() {
                       contentBorderRadius={15}
                       shadowBorderRadius={15}
                     >
+                      {/* same layout as the wishlist card: badge → image → name → tags */}
                       <View style={{
-                        backgroundColor,
-                        borderColor: '#000',
                         borderRadius: 15,
                         padding: 12,
-                        width: 140,
-                        height: 200,
+                        width: REWARD_CARD_WIDTH,
+                        minHeight: 200,
                         alignItems: 'center',
                       }}>
+                        {/* pts badge */}
+                        <View style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 3,
+                          backgroundColor: 'rgba(255,243,220,0.8)',
+                          paddingHorizontal: 8,
+                          paddingVertical: 3,
+                          borderRadius: 8,
+                          borderWidth: 1,
+                          borderColor: 'rgba(255,213,137,0.8)',
+                          alignSelf: 'center',
+                          marginBottom: 10,
+                        }}>
+                          <Image source={SYSTEM_ICONS.reward} style={{ width: 11, height: 11, tintColor: COLORS.Rewards }} />
+                          <Text style={[globalStyles.label, { fontSize: 9, opacity: 1 }]}>
+                            {finalPoints > 0 ? `${finalPoints} pts` : '0 pts'}
+                          </Text>
+                        </View>
+
                         {/* image / placeholder */}
                         <View style={{
                           width: 100,
@@ -511,32 +571,12 @@ export default function NewRewardItem() {
                           )}
                         </View>
 
-                        {/* name */}
-                        <Text style={[globalStyles.body1, { textAlign: 'center', marginBottom: 5 }]} numberOfLines={2}>
+                        {/* name — same font as the real wishlist card */}
+                        <Text style={{ fontFamily: 'p2', fontSize: 13, textAlign: 'center', marginBottom: 5 }} numberOfLines={1}>
                           {name || 'Reward Name'}
                         </Text>
 
-                        {/* pts badge */}
-                        <View style={{
-                          flexDirection: 'row',
-                          alignItems: 'center',
-                          gap: 3,
-                          backgroundColor: 'rgba(255,243,220,0.8)',
-                          paddingHorizontal: 8,
-                          paddingVertical: 3,
-                          borderRadius: 8,
-                          borderWidth: 1,
-                          borderColor: 'rgba(255,213,137,0.8)',
-                          marginBottom: selectedTags.length > 0 ? 6 : 0,
-                        }}>
-                          <Image source={SYSTEM_ICONS.reward} style={{ width: 11, height: 11, tintColor: COLORS.Rewards }} />
-                          <Text style={[globalStyles.label, { fontSize: 9, opacity: 1 }]}>
-                            {price > 0 ? `${price} pts` : '0 pts'}
-                          </Text>
-                        </View>
-
                         {/* tags */}
-                        {/* {selectedTags.length > 0 && ( */}
                         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 3, justifyContent: 'center' }}>
                           {selectedTags.slice(0, 2).map(tag => (
                             <View key={tag} style={{
@@ -549,31 +589,10 @@ export default function NewRewardItem() {
                             </View>
                           ))}
                         </View>
-                        {/* )} */}
                       </View>
                     </ShadowBox>
                   </View>
                 </View>
-
-                {/* Recurring Toggle */}
-                <View style={{
-                  flexDirection: 'row',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginBottom: 10,
-                }}>
-                  <Text style={globalStyles.body}>Recurring?</Text>
-                  <Switch
-                    trackColor={{ true: PAGE.rewards.primary[0] }}
-                    value={recurring}
-                    onValueChange={setRecurring}
-                  />
-                </View>
-
-
-
-
-
 
                 {/* CANCEL / SAVE */}
                 <View style={{ flexDirection: 'row', gap: 10, marginTop: 10, justifyContent: 'center' }}>

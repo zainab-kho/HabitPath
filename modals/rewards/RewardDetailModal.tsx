@@ -1,14 +1,15 @@
 import { globalStyles } from '@/styles';
 import { BUTTON_COLORS, COLORS, PAGE } from '@/constants/colors';
 import { lightenColor } from '@/utils';
-import React from 'react';
-import { Alert, Dimensions, Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { Alert, Dimensions, Image, Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 // RN's ScrollView doesn't scroll inside these modals — use gesture-handler's
 import { ScrollView } from 'react-native-gesture-handler';
 import { Reward } from '@/types/Reward';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import ShadowBox from '@/ui/ShadowBox';
 import { parseLocalDate } from '@/utils/dateUtils';
+import { useRouter } from 'expo-router';
 
 // same width the wishlist grid produces on the rewards page:
 // page content is 90% of screen, grid pads 10 per side, items take 45%
@@ -29,9 +30,34 @@ interface Props {
 }
 
 export default function RewardDetailModal({ visible, onClose, reward, onDelete }: Props) {
+  const router = useRouter();
+  const [moreOptions, setMoreOptions] = useState(false);
+
+  // collapse the options section every time the modal opens
+  useEffect(() => {
+    if (visible) setMoreOptions(false);
+  }, [visible]);
+
   if (!reward) return null;
 
   const bgColor = reward.backgroundColor || '#FFF3D0';
+
+  const handleEdit = () => {
+    onClose();
+    router.push({
+      pathname: '/(tabs)/more/rewards/NewRewardItem',
+      params: { editData: JSON.stringify(reward) },
+    } as any);
+  };
+
+  const handleOpenLink = () => {
+    if (!reward.link) return;
+    // prepend https:// if the user typed a bare domain
+    const url = reward.link.startsWith('http') ? reward.link : `https://${reward.link}`;
+    Linking.openURL(url).catch(() => {
+      Alert.alert('Could not open link', url);
+    });
+  };
 
   const handleDelete = () => {
     Alert.alert(
@@ -115,6 +141,32 @@ export default function RewardDetailModal({ visible, onClose, reward, onDelete }
               </ShadowBox>
             </View>
 
+            {/* link */}
+            {reward.link && (
+              <View style={{ marginBottom: 20 }}>
+                <Text style={[globalStyles.label, { marginBottom: 8 }]}>LINK</Text>
+                <Pressable onPress={handleOpenLink}>
+                  <ShadowBox contentBackgroundColor="#fff" contentBorderRadius={10}>
+                    <View style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 10,
+                      paddingVertical: 8,
+                      paddingHorizontal: 15,
+                    }}>
+                      <Image source={SYSTEM_ICONS.link} style={{ width: 15, height: 15 }} />
+                      <Text
+                        style={[globalStyles.label, { fontSize: 13, opacity: 1, color: '#2563EB', textDecorationLine: 'underline', flex: 1 }]}
+                        numberOfLines={1}
+                      >
+                        {reward.link}
+                      </Text>
+                    </View>
+                  </ShadowBox>
+                </Pressable>
+              </View>
+            )}
+
             {/* notes */}
             {reward.notes && (
               <View style={{ marginBottom: 20 }}>
@@ -147,17 +199,38 @@ export default function RewardDetailModal({ visible, onClose, reward, onDelete }
                 </View>
               )}
             </View>
+
+            {/* more options — edit / delete */}
+            <Pressable
+              onPress={() => setMoreOptions(!moreOptions)}
+              style={{ marginVertical: 20, alignSelf: 'center', opacity: 0.6 }}
+              hitSlop={8}
+            >
+              <Text style={globalStyles.label}>{moreOptions ? 'Less options' : 'More options'}</Text>
+            </Pressable>
+
+            {moreOptions && (
+              <View style={{ flexDirection: 'row', gap: 10, marginVertical: 10 }}>
+                <Pressable onPress={handleEdit} style={{ flex: 1 }}>
+                  <ShadowBox contentBackgroundColor={BUTTON_COLORS.Edit} shadowBorderRadius={15}>
+                    <View style={{ paddingVertical: 6 }}>
+                      <Text style={[globalStyles.body, { textAlign: 'center' }]}>Edit</Text>
+                    </View>
+                  </ShadowBox>
+                </Pressable>
+
+                <Pressable onPress={handleDelete} style={{ flex: 1 }}>
+                  <ShadowBox contentBackgroundColor={BUTTON_COLORS.Delete} shadowBorderRadius={15}>
+                    <View style={{ paddingVertical: 6 }}>
+                      <Text style={[globalStyles.body, { textAlign: 'center' }]}>Delete</Text>
+                    </View>
+                  </ShadowBox>
+                </Pressable>
+              </View>
+            )}
           </ScrollView>
 
           <View style={{ flexDirection: 'row', borderTopWidth: 1, padding: 10, gap: 10 }}>
-            <Pressable onPress={handleDelete} style={{ flex: 1 }}>
-              <ShadowBox contentBackgroundColor={BUTTON_COLORS.Delete} shadowBorderRadius={15}>
-                <View style={{ paddingVertical: 6 }}>
-                  <Text style={[globalStyles.body, { textAlign: 'center' }]}>Delete</Text>
-                </View>
-              </ShadowBox>
-            </Pressable>
-
             <Pressable onPress={onClose} style={{ flex: 1 }}>
               <ShadowBox contentBackgroundColor={BUTTON_COLORS.Done} shadowBorderRadius={15}>
                 <View style={{ paddingVertical: 6 }}>

@@ -26,7 +26,7 @@ import { Reward } from '@/types/Reward';
 import { AppLinearGradient } from '@/ui/AppLinearGradient';
 import PageContainer from '@/ui/PageContainer';
 import PageHeader from '@/ui/PageHeader';
-import { buttonStyles, globalStyles } from '@/styles';
+import { globalStyles } from '@/styles';
 import ShadowBox from '@/ui/ShadowBox';
 import EmptyStateView from '@/ui/EmptyStateView';
 import { lightenColor } from '@/utils';
@@ -86,8 +86,6 @@ export default function RewardsPage() {
 
         // Only count completions strictly after the reset date (pre-reset toggles don't affect balance)
         const totalEarned = computeTotalPointsFromHabits(habitsArr, resetDate ?? undefined);
-
-
         setTotalEarnedAllTime(totalEarned);
 
         // Available = totalEarned - redeemed
@@ -204,77 +202,6 @@ export default function RewardsPage() {
                         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', marginTop: 150 }}>
                             <ActivityIndicator size="small" color={PAGE.rewards.primary[0]} />
                         </View>
-                    ) : (unclaimedRewards.length === 0 ? (
-                        <View>
-                            {/* points summary card */}
-                            <ShadowBox shadowColor={PAGE.rewards.primary[0]}>
-                                <View style={s.statsCard}>
-
-                                    <Text style={[globalStyles.body, { marginBottom: 15, alignSelf: 'center' }]}>
-                                        Points Summary
-                                    </Text>
-                                    <View style={{ flexDirection: 'row', justifyContent: 'space-around' }}>
-
-                                        {/* available */}
-                                        <Pressable style={s.statItem} onPress={() => openHistory('available')}>
-                                            <ShadowBox
-                                                shadowBorderColor='#FFD581'
-                                                shadowColor='#FFD581'
-                                                contentBorderColor='#FFD581'
-                                            >
-                                                <View style={[s.statBadge]}>
-                                                    <Image source={SYSTEM_ICONS.reward} style={{ width: 15, height: 15, tintColor: COLORS.Rewards }} />
-                                                    <Text style={globalStyles.body}>{availablePoints}</Text>
-                                                </View>
-                                            </ShadowBox>
-
-                                            <Text style={[globalStyles.label, { fontSize: 11 }]}>AVAILABLE</Text>
-                                        </Pressable>
-
-                                        {/* total */}
-                                        <Pressable style={s.statItem} onPress={() => openHistory('total')}>
-                                            <ShadowBox
-                                                shadowBorderColor={COLORS.RewardsAccent}
-                                                shadowColor={COLORS.RewardsAccent}
-                                                contentBorderColor={COLORS.RewardsAccent}
-                                            >
-                                                <View style={[s.statBadge]}>
-                                                    <Image source={SYSTEM_ICONS.reward} style={{ width: 15, height: 15, tintColor: COLORS.Rewards }} />
-                                                    <Text style={globalStyles.body}>{totalEarnedAllTime}</Text>
-                                                </View>
-                                            </ShadowBox>
-                                            <Text style={[globalStyles.label, { fontSize: 11 }]}>TOTAL</Text>
-                                        </Pressable>
-
-                                        {/* redeemed */}
-                                        <Pressable style={s.statItem} onPress={() => openHistory('redeemed')}>
-                                            <ShadowBox
-                                                shadowBorderColor={COLORS.Rewards}
-                                                shadowColor={COLORS.Rewards}
-                                                contentBorderColor={COLORS.Rewards}
-                                            >
-                                                <View style={[s.statBadge]}>
-                                                    <Image source={SYSTEM_ICONS.reward} style={{ width: 15, height: 15, tintColor: COLORS.Rewards }} />
-                                                    <Text style={globalStyles.body}>{redeemedPoints}</Text>
-                                                </View>
-                                            </ShadowBox>
-                                            <Text style={[globalStyles.label, { fontSize: 11 }]}>REDEEMED</Text>
-                                        </Pressable>
-                                    </View>
-                                </View>
-                            </ShadowBox>
-
-                            <EmptyStateView
-                                icon={SYSTEM_ICONS.gift}
-                                iconTintColor={COLORS.Rewards}
-                                title="No Items in Wishlist Yet!"
-                                description="Add things you'd like to reward yourself with after completing habits!"
-                                buttonText="Add Item"
-                                buttonAction={() => router.push('/(tabs)/more/rewards/NewRewardItem')}
-                                buttonColor={PAGE.rewards.primary[0]}
-                                containerStyle={{ marginTop: 30 }}
-                            />
-                        </View>
                     ) : (
                         <View>
                             {/* points summary card */}
@@ -334,11 +261,25 @@ export default function RewardsPage() {
                                     </View>
                                 </View>
                             </ShadowBox>
+
+                            {unclaimedRewards.length === 0 ? (
+                                <EmptyStateView
+                                    icon={SYSTEM_ICONS.gift}
+                                    iconTintColor={COLORS.Rewards}
+                                    title="No Items in Wishlist Yet!"
+                                    description="Add things you'd like to reward yourself with after completing habits!"
+                                    buttonText="Add Item"
+                                    buttonAction={() => router.push('/(tabs)/more/rewards/NewRewardItem')}
+                                    buttonColor={PAGE.rewards.primary[0]}
+                                    containerStyle={{ marginTop: 30 }}
+                                />
+                            ) : (
+                                <>
                             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginVertical: 15 }}>
                                 <Text style={globalStyles.body}>My Wishlist ({unclaimedRewards.length})</Text>
                             </View>
 
-                            <View>
+                            <View style={{marginBottom: 50}}>
                                 {/* 2-column grid */}
                                 <View style={s.grid}>
                                     {unclaimedRewards.map(reward => {
@@ -425,9 +366,9 @@ export default function RewardsPage() {
                                     })}
                                 </View>
                             </View>
+                                </>
+                            )}
                         </View>
-                    )
-
                     )}
 
 
@@ -444,7 +385,7 @@ export default function RewardsPage() {
                                 shadowOffset={{ x: 1, y: 1 }}
                             >
                                 <View style={{ width: 40, height: 40, justifyContent: 'center', alignItems: 'center' }}>
-                                    <Image source={SYSTEM_ICONS.gift} style={{ width: 20, height: 20 }} />
+                                    <Image source={SYSTEM_ICONS.plus} style={{ width: 20, height: 20 }} />
                                 </View>
                             </ShadowBox>
                         </Pressable>
@@ -529,18 +470,5 @@ const s = StyleSheet.create({
         paddingHorizontal: 5,
         paddingVertical: 2,
         borderRadius: 8,
-    },
-    recurringBadge: {
-        backgroundColor: COLORS.RewardsBackground,
-        borderColor: COLORS.RewardsAccent,
-        borderWidth: 1,
-        paddingHorizontal: 6,
-        paddingVertical: 2,
-        borderRadius: 8,
-        marginBottom: 5,
-    },
-    recurringBadgeText: {
-        fontSize: 9,
-        fontFamily: 'label',
     },
 });

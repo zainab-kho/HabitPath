@@ -30,6 +30,12 @@ interface Props {
   pointsResetDate?: string | null;
 }
 
+// One redemption of a reward — recurring rewards produce one entry per claim
+interface ClaimEntry {
+  reward: Reward;
+  date: string | null; // claim date; null for legacy claimed rewards without one
+}
+
 // One entry per unique habit after dedup + post-reset aggregation
 interface HabitEntry {
   habit: Habit;
@@ -66,16 +72,25 @@ export default function PointsHistoryModal({
     setShowAllTime(false);
   }, [type]);
 
-  // Include recurring rewards that have been claimed at least once (dateClaimed is set)
-  // even though their isClaimed stays false so they remain in the wishlist
-  const claimedRewards = rewards.filter(r => r.isClaimed || !!r.dateClaimed);
+  // one entry per redemption — recurring rewards claimed N times show up N times.
+  // includes recurring rewards whose isClaimed stays false so they remain in the
+  // wishlist; falls back to dateClaimed for rewards claimed before claimHistory existed
+  const claimEntries: ClaimEntry[] = rewards
+    .filter(r => r.isClaimed || !!r.dateClaimed)
+    .flatMap(r => {
+      const dates: (string | null)[] = r.claimHistory?.length
+        ? r.claimHistory
+        : r.dateClaimed ? [r.dateClaimed] : [null];
+      return dates.map(date => ({ reward: r, date }));
+    })
+    .sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''));
 
   // split into current period vs before the last points reset
   const currentClaimed = pointsResetDate
-    ? claimedRewards.filter(r => r.dateClaimed && r.dateClaimed > pointsResetDate)
-    : claimedRewards;
+    ? claimEntries.filter(e => e.date && e.date > pointsResetDate)
+    : claimEntries;
   const pastClaimed = pointsResetDate
-    ? claimedRewards.filter(r => !r.dateClaimed || r.dateClaimed <= pointsResetDate)
+    ? claimEntries.filter(e => !e.date || e.date <= pointsResetDate)
     : [];
 
   // Dedup by habit.id, aggregate post-reset completions, sort newest-first
@@ -380,10 +395,10 @@ export default function PointsHistoryModal({
   };
 
   // one wishlist-style card + claimed-date bubble, used by both redeemed sections
-  const renderClaimedCard = (reward: Reward) => {
+  const renderClaimedCard = ({ reward, date }: ClaimEntry, index: number) => {
     const bgColor = reward.backgroundColor || '#FFF3D0';
     return (
-      <View key={reward.id} style={s.gridItem}>
+      <View key={`${reward.id}-${date ?? 'legacy'}-${index}`} style={s.gridItem}>
         <ShadowBox
           contentBackgroundColor={bgColor}
           contentBorderColor="#000"
@@ -434,10 +449,10 @@ export default function PointsHistoryModal({
         </ShadowBox>
 
         {/* claimed date bubble under the card */}
-        {reward.dateClaimed && (
+        {date && (
           <View style={[s.badge, s.dateBadge, { alignSelf: 'center', marginTop: 8 }]}>
             <Text style={[globalStyles.label, { fontSize: 9, opacity: 1 }]}>
-              {reward.recurring ? '↻ ' : ''}{formatDateHeader(parseLocalDate(reward.dateClaimed)).toUpperCase()}
+              {reward.recurring ? '↻ ' : ''}{formatDateHeader(parseLocalDate(date)).toUpperCase()}
             </Text>
           </View>
         )}

@@ -12,4 +12,5 @@ export interface Reward {
   dateAdded: string;
   isClaimed: boolean;
   dateClaimed?: string;
+  claimHistory?: string[];
 }

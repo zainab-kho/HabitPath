@@ -29,6 +29,7 @@ function rowToReward(row: any): Reward {
     dateAdded: row.date_added,
     isClaimed: row.is_claimed,
     dateClaimed: row.date_claimed ?? undefined,
+    claimHistory: row.claim_history ?? [],
   };
 }
 
@@ -47,6 +48,7 @@ function rewardToRow(reward: Reward, userId: string) {
     date_added: reward.dateAdded,
     is_claimed: reward.isClaimed,
     date_claimed: reward.dateClaimed ?? null,
+    claim_history: reward.claimHistory ?? [],
   };
 }
 

@@ -129,12 +129,15 @@ export default function RewardsPage() {
                     text: 'Yes, Claim It!',
                     onPress: async () => {
                         try {
+                            // local date, not UTC — evening claims should count as today
+                            const claimDate = formatLocalDate(new Date());
                             const claimedReward = {
                                 ...reward,
                                 // Recurring rewards stay unclaimed so they remain in the wishlist
                                 isClaimed: reward.recurring ? false : true,
-                                // local date, not UTC — evening claims should count as today
-                                dateClaimed: formatLocalDate(new Date()),
+                                dateClaimed: claimDate,
+                                // every redemption is kept so recurring rewards show up once per claim
+                                claimHistory: [...(reward.claimHistory ?? []), claimDate],
                             };
                             await updateReward(claimedReward, user!.id);
                             await addRedeemedPoints(reward.costPoints);

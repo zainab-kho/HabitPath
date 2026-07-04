@@ -114,26 +114,43 @@ export async function resetPointsBalance(resetHour: number = 4, resetMinute: num
 
 /**
  * Uploads a local file:// URI to the `reward-photos` Supabase Storage bucket
- * and returns the public https:// URL.
- *
- * Requires a public bucket named `reward-photos` in your Supabase project.
+ * and returns the public https:// URL. Requires a public bucket named
+ * `reward-photos` in the Supabase project.
  */
-// export async function uploadRewardPhoto(localUri: string, userId: string): Promise<string> {
-//   const response = await fetch(localUri);
-//   const blob = await response.blob();
+export async function uploadRewardPhoto(localUri: string, userId: string): Promise<string> {
+  const arrayBuffer = await fetch(localUri).then(res => res.arrayBuffer());
 
-//   const ext = localUri.split('.').pop()?.toLowerCase() ?? 'jpg';
-//   const path = `${userId}/${Date.now()}.${ext}`;
+  const ext = localUri.split('.').pop()?.toLowerCase() ?? 'jpg';
+  const contentType = ext === 'png' ? 'image/png' : 'image/jpeg';
+  const path = `${userId}/${Date.now()}.${ext}`;
 
-//   const { error } = await supabase.storage
-//     .from('reward-photos')
-//     .upload(path, blob, { contentType: `image/${ext}`, upsert: false });
+  const { error } = await supabase.storage
+    .from('reward-photos')
+    .upload(path, arrayBuffer, { contentType, upsert: false });
 
-//   if (error) throw error;
+  if (error) {
+    console.error('[uploadRewardPhoto] upload error:', error.message ?? error);
+    throw error;
+  }
 
-//   const { data } = supabase.storage.from('reward-photos').getPublicUrl(path);
-//   return data.publicUrl;
-// }
+  const { data } = supabase.storage.from('reward-photos').getPublicUrl(path);
+  return data.publicUrl;
+}
+
+/**
+ * Best-effort removal of a reward photo from storage. Only acts on URLs that
+ * live in the reward-photos bucket; local file:// URIs are ignored.
+ */
+export async function deleteRewardPhoto(photoUri: string | undefined): Promise<void> {
+  if (!photoUri) return;
+  const marker = '/reward-photos/';
+  const idx = photoUri.indexOf(marker);
+  if (idx === -1) return;
+  const path = photoUri.slice(idx + marker.length);
+  try {
+    await supabase.storage.from('reward-photos').remove([path]);
+  } catch {}
+}
 
 // ─── redeemed points ──────────────────────────────────────────────────────────
 

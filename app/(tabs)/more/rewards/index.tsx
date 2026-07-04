@@ -11,6 +11,7 @@ import {
     addRedeemedPoints,
     computeTotalPointsFromHabits,
     deleteReward,
+    deleteRewardPhoto,
     getExchangeRate,
     getPointsResetDate,
     getRedeemedPoints,
@@ -156,7 +157,10 @@ export default function RewardsPage() {
 
     const handleDeleteReward = async (id: string) => {
         try {
+            const target = rewards.find(r => r.id === id);
             await deleteReward(id, user!.id);
+            // best-effort: remove the stored photo too
+            deleteRewardPhoto(target?.photoUri);
             setRewards(prev => prev.filter(r => r.id !== id));
         } catch (err) {
             Alert.alert('Error', 'Failed to delete reward.');

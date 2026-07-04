@@ -1,7 +1,7 @@
 import { BUTTON_COLORS, COLORS, PAGE, PRESET_COLORS } from '@/constants/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import { useAuth } from '@/contexts/AuthContext';
-import { addReward, getExchangeRate } from '@/services/rewards/rewards';
+import { addReward, getExchangeRate, uploadRewardPhoto } from '@/services/rewards/rewards';
 import { Reward } from '@/types/Reward';
 import { AppLinearGradient } from '@/ui/AppLinearGradient';
 import PageContainer from '@/ui/PageContainer';
@@ -104,8 +104,19 @@ export default function NewRewardItem() {
 
     setSaving(true);
     try {
-      // upload local image to Supabase Storage if one was selected
+      // upload local image to Supabase Storage so the photo follows the account
       let resolvedPhotoUri = photoUri;
+      if (photoUri && !photoUri.startsWith('http')) {
+        try {
+          resolvedPhotoUri = await uploadRewardPhoto(photoUri, user.id);
+        } catch (uploadErr) {
+          console.error('Photo upload failed, keeping local copy:', uploadErr);
+          Alert.alert(
+            'Photo Upload Failed',
+            'The reward was saved, but the photo could only be stored on this device.'
+          );
+        }
+      }
 
       const newReward: Reward = {
         id: Date.now().toString(),

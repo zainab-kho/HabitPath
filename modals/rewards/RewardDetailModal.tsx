@@ -1,9 +1,23 @@
-import { globalStyles, buttonStyles } from '@/styles';
-import { BUTTON_COLORS } from '@/constants/colors';
+import { globalStyles } from '@/styles';
+import { BUTTON_COLORS, COLORS, PAGE } from '@/constants/colors';
+import { lightenColor } from '@/utils';
 import React from 'react';
-import { Alert, Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, TouchableWithoutFeedback, View } from 'react-native';
+import { Alert, Dimensions, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { Reward } from '@/types/Reward';
 import { SYSTEM_ICONS } from '@/constants/icons';
+import ShadowBox from '@/ui/ShadowBox';
+import { parseLocalDate } from '@/utils/dateUtils';
+
+// same width the wishlist grid produces on the rewards page:
+// page content is 90% of screen, grid pads 10 per side, items take 45%
+const REWARD_CARD_WIDTH = (Dimensions.get('window').width * 0.9 - 20) * 0.45;
+
+// "2026-06-04" → "Fri, Jun 4 2026"
+const formatRewardDate = (dateStr: string): string => {
+  const d = parseLocalDate(dateStr);
+  const base = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+  return `${base} ${d.getFullYear()}`;
+};
 
 interface Props {
   visible: boolean;
@@ -14,6 +28,8 @@ interface Props {
 
 export default function RewardDetailModal({ visible, onClose, reward, onDelete }: Props) {
   if (!reward) return null;
+
+  const bgColor = reward.backgroundColor || '#FFF3D0';
 
   const handleDelete = () => {
     Alert.alert(
@@ -34,193 +50,191 @@ export default function RewardDetailModal({ visible, onClose, reward, onDelete }
   };
 
   return (
-    <Modal visible={visible} animationType="fade" transparent>
-      <TouchableWithoutFeedback onPress={onClose}>
-        <View style={s.overlay}>
-          <TouchableWithoutFeedback onPress={() => {}}>
-            <View style={s.modal}>
-          {/* Header */}
-          <View style={s.header}>
-            <Text style={globalStyles.h3}>Reward Details</Text>
-            <TouchableOpacity onPress={onClose} style={s.closeButton}>
-              <Text style={{ fontSize: 22, color: '#666' }}>✕</Text>
-            </TouchableOpacity>
+    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
+      <Pressable style={styles.overlay} onPress={onClose}>
+        <Pressable style={styles.card} onPress={(e) => e.stopPropagation()}>
+
+          <View style={{ marginTop: 20 }}>
+            <Text style={[globalStyles.h3, { textAlign: 'center', marginBottom: 20 }]}>
+              Reward Details
+            </Text>
           </View>
 
-          <ScrollView contentContainerStyle={{ padding: 20 }}>
-            {/* Preview Card */}
-            <View style={[s.previewCard, { backgroundColor: reward.backgroundColor || '#FFF3D0' }]}>
-              <View style={s.imageContainer}>
-                {reward.photoUri ? (
-                  <Image source={{ uri: reward.photoUri }} style={s.cardImage} />
-                ) : (
-                  <View style={[s.cardImage, { justifyContent: 'center', alignItems: 'center', backgroundColor: reward.backgroundColor || '#FFF3D0' }]}>
+          <ScrollView contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 10 }}>
+            {/* preview card — mirrors the wishlist card on the rewards page */}
+            <View style={{ alignSelf: 'center', width: REWARD_CARD_WIDTH, marginBottom: 24 }}>
+              <ShadowBox
+                contentBackgroundColor={bgColor}
+                contentBorderColor="#000"
+                shadowColor={PAGE.rewards.primary[0]}
+                contentBorderRadius={15}
+                shadowBorderRadius={15}
+              >
+                <View style={styles.rewardCard}>
+                  <View style={styles.pointsBadge}>
                     <Image
-                      source={SYSTEM_ICONS.gift}
-                      style={{ width: 60, height: 60, tintColor: '#FFD581' }}
+                      source={SYSTEM_ICONS.reward}
+                      style={{ width: 11, height: 11, tintColor: COLORS.Rewards }}
                     />
+                    <Text style={[globalStyles.label, { fontSize: 9, opacity: 1 }]}>
+                      {reward.costPoints} pts
+                    </Text>
                   </View>
-                )}
-              </View>
 
-              <Text style={[globalStyles.h4, { textAlign: 'center', marginBottom: 8 }]}>{reward.name}</Text>
+                  <View style={styles.imageContainer}>
+                    {reward.photoUri ? (
+                      <Image source={{ uri: reward.photoUri }} style={styles.cardImage} />
+                    ) : (
+                      <View style={[styles.cardImage, {
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        backgroundColor: lightenColor(bgColor, 0.15),
+                      }]}>
+                        <Image
+                          source={SYSTEM_ICONS.gift}
+                          style={{ width: 40, height: 40, tintColor: COLORS.Rewards }}
+                        />
+                      </View>
+                    )}
+                  </View>
 
-              <View style={s.pointsBadge}>
-                <Image
-                  source={SYSTEM_ICONS.reward}
-                  style={{ width: 14, height: 14 }}
-                />
-                <Text style={[globalStyles.label, { color: 'black', fontSize: 12, opacity: 1 }]}>
-                  {reward.costPoints} pts (${reward.costDollars.toFixed(2)})
-                </Text>
-              </View>
+                  <Text style={styles.cardName} numberOfLines={1}>
+                    {reward.name}
+                  </Text>
 
-              {reward.tags && reward.tags.length > 0 && (
-                <View style={s.tagsContainer}>
-                  {reward.tags.map(tag => (
-                    <View key={tag} style={s.tag}>
-                      <Text style={{ fontSize: 10, fontFamily: 'label' }}>{tag}</Text>
-                    </View>
-                  ))}
+                  <View style={styles.tagsContainer}>
+                    {(reward.tags ?? []).slice(0, 2).map(tag => (
+                      <View key={tag} style={styles.tag}>
+                        <Text style={{ fontSize: 8, fontFamily: 'label' }}>{tag}</Text>
+                      </View>
+                    ))}
+                  </View>
                 </View>
-              )}
+              </ShadowBox>
             </View>
 
-            {/* Notes */}
+            {/* notes */}
             {reward.notes && (
               <View style={{ marginBottom: 20 }}>
-                <Text style={[globalStyles.body1, { marginBottom: 8 }]}>Notes</Text>
-                <View style={s.notesBox}>
-                  <Text style={[globalStyles.label, { fontSize: 13, lineHeight: 20, opacity: 1 }]}>{reward.notes}</Text>
+                <Text style={[globalStyles.label, { marginBottom: 8 }]}>NOTES</Text>
+                <View style={styles.notesBox}>
+                  <Text style={[globalStyles.label, { fontSize: 13, lineHeight: 20, opacity: 1 }]}>
+                    {reward.notes}
+                  </Text>
                 </View>
               </View>
             )}
 
-            {/* Details */}
-            <View style={{ marginBottom: 20 }}>
-              <Text style={[globalStyles.body1, { marginBottom: 8 }]}>Details</Text>
-              <View style={s.detailRow}>
-                <Text style={[globalStyles.label, { fontSize: 13, color: '#666' }]}>Added:</Text>
-                <Text style={[globalStyles.label, { fontSize: 13, opacity: 1 }]}>{reward.dateAdded}</Text>
+            {/* details */}
+            <View style={{ marginBottom: 10 }}>
+              <Text style={[globalStyles.label, { marginBottom: 8 }]}>DETAILS</Text>
+              <View style={styles.detailRow}>
+                <Text style={[globalStyles.label, { fontSize: 13 }]}>Added</Text>
+                <Text style={[globalStyles.label, { fontSize: 13, opacity: 1 }]}>{formatRewardDate(reward.dateAdded)}</Text>
               </View>
-              <View style={s.detailRow}>
-                <Text style={[globalStyles.label, { fontSize: 13, color: '#666' }]}>Cost:</Text>
+              <View style={styles.detailRow}>
+                <Text style={[globalStyles.label, { fontSize: 13 }]}>Cost</Text>
                 <Text style={[globalStyles.label, { fontSize: 13, opacity: 1 }]}>
                   ${reward.costDollars.toFixed(2)} ({reward.costPoints} points)
                 </Text>
               </View>
               {reward.isClaimed && reward.dateClaimed && (
-                <View style={s.detailRow}>
-                  <Text style={[globalStyles.label, { fontSize: 13, color: '#666' }]}>Claimed:</Text>
-                  <Text style={[globalStyles.label, { fontSize: 13, opacity: 1 }]}>{reward.dateClaimed}</Text>
+                <View style={styles.detailRow}>
+                  <Text style={[globalStyles.label, { fontSize: 13 }]}>Claimed</Text>
+                  <Text style={[globalStyles.label, { fontSize: 13, opacity: 1 }]}>{formatRewardDate(reward.dateClaimed)}</Text>
                 </View>
               )}
             </View>
-
-            {/* Delete */}
-            <TouchableOpacity onPress={handleDelete} style={s.deleteButton}>
-              <Text style={[globalStyles.body, { color: '#fff' }]}>Delete Reward</Text>
-            </TouchableOpacity>
           </ScrollView>
 
-          <View style={{ borderTopWidth: 1, borderTopColor: '#000' }}>
-            <TouchableOpacity onPress={onClose} style={s.doneButton}>
-              <Text style={globalStyles.body}>Done</Text>
-            </TouchableOpacity>
+          <View style={{ flexDirection: 'row', borderTopWidth: 1, padding: 10, gap: 10 }}>
+            <Pressable onPress={handleDelete} style={{ flex: 1 }}>
+              <ShadowBox contentBackgroundColor={BUTTON_COLORS.Delete} shadowBorderRadius={15}>
+                <View style={{ paddingVertical: 6 }}>
+                  <Text style={[globalStyles.body, { textAlign: 'center' }]}>Delete</Text>
+                </View>
+              </ShadowBox>
+            </Pressable>
+
+            <Pressable onPress={onClose} style={{ flex: 1 }}>
+              <ShadowBox contentBackgroundColor={BUTTON_COLORS.Done} shadowBorderRadius={15}>
+                <View style={{ paddingVertical: 6 }}>
+                  <Text style={[globalStyles.body, { textAlign: 'center' }]}>Done</Text>
+                </View>
+              </ShadowBox>
+            </Pressable>
           </View>
-            </View>
-          </TouchableWithoutFeedback>
-        </View>
-      </TouchableWithoutFeedback>
+
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }
 
-const s = StyleSheet.create({
+const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.45)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
   },
-  modal: {
+  card: {
     backgroundColor: '#fff',
     borderRadius: 20,
-    maxHeight: '85%',
-    width: '100%',
-    maxWidth: 400,
-    borderWidth: 1,
-    borderColor: '#000',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#000',
-  },
-  closeButton: {
-    width: 30,
-    height: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  previewCard: {
-    borderWidth: 1,
-    borderColor: '#000',
-    borderRadius: 15,
-    padding: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 3, height: 3 },
-    shadowOpacity: 1,
-    shadowRadius: 0,
-    elevation: 5,
-    alignItems: 'center',
-    marginBottom: 20,
-    width: 160,
+    borderWidth: 3,
+    borderColor: PAGE.rewards.primary[0],
+    maxHeight: '75%',
+    width: '90%',
     alignSelf: 'center',
   },
+  // card styles below mirror the wishlist card on the rewards index page —
+  // keep them in sync if that card changes
+  rewardCard: {
+    borderRadius: 15,
+    padding: 12,
+    alignItems: 'center',
+    minHeight: 200,
+  },
   imageContainer: {
-    shadowColor: '#000',
-    shadowOffset: { width: 2, height: 2 },
-    shadowOpacity: 1,
-    shadowRadius: 0,
-    marginBottom: 12,
-    elevation: 4,
+    marginBottom: 8,
   },
   cardImage: {
-    height: 100,
     width: 100,
+    height: 100,
     borderColor: 'black',
     borderWidth: 1,
     borderRadius: 4,
   },
+  cardName: {
+    fontFamily: 'p2',
+    fontSize: 13,
+    textAlign: 'center',
+    marginBottom: 5,
+  },
   pointsBadge: {
     backgroundColor: 'rgba(255, 243, 220, 0.8)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: 8,
     borderWidth: 1,
     borderColor: 'rgba(255, 213, 137, 0.8)',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    marginTop: 4,
+    gap: 3,
+    alignSelf: 'center',
+    marginBottom: 10,
   },
   tagsContainer: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginTop: 12,
+    gap: 3,
     justifyContent: 'center',
+    flexWrap: 'wrap',
   },
   tag: {
     backgroundColor: 'rgba(0,0,0,0.1)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 10,
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 8,
   },
   notesBox: {
     backgroundColor: '#F5F5F5',
@@ -235,37 +249,5 @@ const s = StyleSheet.create({
     paddingVertical: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#F0F0F0',
-  },
-  deleteButton: {
-    backgroundColor: BUTTON_COLORS.Delete,
-    padding: 10,
-    borderRadius: 100,
-    borderWidth: 1,
-    borderColor: '#000',
-    alignSelf: 'center',
-    alignItems: 'center',
-    minWidth: 180,
-    shadowColor: '#000',
-    shadowOffset: { width: 2, height: 2 },
-    shadowOpacity: 1,
-    shadowRadius: 0,
-    elevation: 3,
-    marginTop: 8,
-  },
-  doneButton: {
-    backgroundColor: '#FFD581',
-    width: 200,
-    padding: 8,
-    margin: 20,
-    borderRadius: 100,
-    borderWidth: 1,
-    borderColor: '#000',
-    alignSelf: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 3, height: 3 },
-    shadowOpacity: 1,
-    shadowRadius: 0,
-    elevation: 5,
   },
 });

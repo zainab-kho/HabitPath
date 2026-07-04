@@ -86,15 +86,29 @@ export default function PointsHistoryModal({
       const history = h.completionHistory ?? [];
 
       // Filter to only post-reset dates, then derive the most recent from the array directly
-      // (habit.lastCompletedDate is a separate cached field that may not be reliably set)
       const postResetDates = pointsResetDate
         ? history.filter(d => d > pointsResetDate)
         : [...history];
-      if (postResetDates.length === 0) continue;
 
-      const postResetCount = postResetDates.length;
+      // keepUntil habits file completions on their cycle start, which can predate
+      // the reset even when actually finished after it — credit the latest entry
+      // when habit.lastCompletedDate shows a post-reset finish (mirrors
+      // computeTotalPointsFromHabits)
+      let carriedOverCredit = 0;
+      if (pointsResetDate && h.keepUntil && h.lastCompletedDate && h.lastCompletedDate > pointsResetDate) {
+        const latest = [...history].sort().at(-1);
+        if (latest && latest <= pointsResetDate) {
+          carriedOverCredit = 1;
+        }
+      }
+
+      if (postResetDates.length === 0 && carriedOverCredit === 0) continue;
+
+      const postResetCount = postResetDates.length + carriedOverCredit;
       // YYYY-MM-DD strings sort lexicographically = chronologically, so the last sorted entry is newest
-      const lastCompletedDate = [...postResetDates].sort().at(-1) ?? null;
+      const lastCompletedDate = carriedOverCredit
+        ? h.lastCompletedDate!
+        : [...postResetDates].sort().at(-1) ?? null;
 
       if (habitMap.has(h.id)) {
         // Combine if somehow the same habit appears more than once in the list

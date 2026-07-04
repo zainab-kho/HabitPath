@@ -56,13 +56,9 @@ export default function RewardsPage() {
     );
 
     const loadData = async () => {
-        // **LOG
-        console.log('[**LOG rewards page] loadData start — user:', user?.email)
 
         // Check if exchange rate has been set; if not, prompt
         const rate = await getExchangeRate();
-        // **LOG
-        console.log('[**LOG rewards page] exchange rate:', rate)
         if (rate === null) {
             setShowExchangeModal(true);
         }
@@ -82,32 +78,24 @@ export default function RewardsPage() {
 
         // Load reset date and redeemed points from Supabase
         const redeemed = await getRedeemedPoints();
-        // **LOG
-        console.log('[**LOG rewards page] redeemed from DB:', redeemed)
         setRedeemedPoints(redeemed);
 
         const resetDate = await getPointsResetDate();
-        // **LOG
-        console.log('[**LOG rewards page] points reset date from DB:', resetDate)
         setPointsResetDate(resetDate);
 
         // Only count completions strictly after the reset date (pre-reset toggles don't affect balance)
         const totalEarned = computeTotalPointsFromHabits(habitsArr, resetDate ?? undefined);
-        // **LOG
-        console.log('[**LOG rewards page] totalEarned (since reset):', totalEarned, '| habit count:', habitsArr.length, '| resetDate:', resetDate)
+
+
         setTotalEarnedAllTime(totalEarned);
 
         // Available = totalEarned - redeemed
         const available = Math.max(0, totalEarned - redeemed);
         setAvailablePoints(available);
-        // **LOG
-        console.log('[**LOG rewards page] available:', available)
 
         // Load rewards from Supabase
         if (user) {
             const loadedRewards = await getRewards(user.id);
-            // **LOG
-            console.log('[**LOG rewards page] rewards loaded from DB:', loadedRewards.length)
             setRewards(loadedRewards);
         }
         setLoading(false);

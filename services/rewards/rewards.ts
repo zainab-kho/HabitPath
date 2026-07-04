@@ -87,17 +87,11 @@ export async function deleteReward(rewardId: string, userId: string): Promise<vo
 }
 
 export async function clearWishlist(userId: string): Promise<void> {
-  // **LOG
-  console.log('[**LOG rewards] clearWishlist → deleting all rewards for user_id:', userId)
   const { error } = await supabase
     .from('rewards')
     .delete()
     .eq('user_id', userId);
-  // **LOG
-  console.log('[**LOG rewards] clearWishlist → delete error:', error)
   if (error) throw error;
-  // **LOG
-  console.log('[**LOG rewards] clearWishlist → done')
 }
 
 export async function resetPointsBalance(resetHour: number = 4, resetMinute: number = 0): Promise<void> {
@@ -195,9 +189,25 @@ export async function getPointsResetDate(): Promise<string | null> {
 export function computeTotalPointsFromHabits(habits: Habit[], resetDate?: string): number {
   return habits.reduce((sum, h) => {
     const history = h.completionHistory ?? [];
-    const completions = resetDate
+    let completions = resetDate
       ? history.filter(date => date > resetDate).length
       : history.length;
+
+    // keepUntil habits file completions on their cycle start, which can predate
+    // the reset even when the habit was actually finished after it — credit the
+    // latest entry when lastCompletedDate shows it was finished post-reset
+    if (
+      resetDate &&
+      h.keepUntil &&
+      h.lastCompletedDate &&
+      h.lastCompletedDate > resetDate
+    ) {
+      const latest = [...history].sort().at(-1);
+      if (latest && latest <= resetDate) {
+        completions += 1;
+      }
+    }
+
     return sum + completions * (h.rewardPoints ?? 0);
   }, 0);
 }

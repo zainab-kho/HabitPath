@@ -30,6 +30,7 @@ import { globalStyles } from '@/styles';
 import ShadowBox from '@/ui/ShadowBox';
 import EmptyStateView from '@/ui/EmptyStateView';
 import { lightenColor } from '@/utils';
+import { formatLocalDate } from '@/utils/dateUtils';
 
 export default function RewardsPage() {
     const router = useRouter();
@@ -132,7 +133,8 @@ export default function RewardsPage() {
                                 ...reward,
                                 // Recurring rewards stay unclaimed so they remain in the wishlist
                                 isClaimed: reward.recurring ? false : true,
-                                dateClaimed: new Date().toISOString().split('T')[0],
+                                // local date, not UTC — evening claims should count as today
+                                dateClaimed: formatLocalDate(new Date()),
                             };
                             await updateReward(claimedReward, user!.id);
                             await addRedeemedPoints(reward.costPoints);

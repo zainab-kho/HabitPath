@@ -186,6 +186,12 @@ export default function RewardDetailModal({ visible, onClose, reward, onDelete }
                 <Text style={[globalStyles.label, { fontSize: 13 }]}>Added</Text>
                 <Text style={[globalStyles.label, { fontSize: 13, opacity: 1 }]}>{formatRewardDate(reward.dateAdded)}</Text>
               </View>
+              {reward.recurring && reward.dateClaimed && (
+                <View style={styles.detailRow}>
+                  <Text style={[globalStyles.label, { fontSize: 13 }]}>Last redeemed</Text>
+                  <Text style={[globalStyles.label, { fontSize: 13, opacity: 1 }]}>{formatRewardDate(reward.dateClaimed)}</Text>
+                </View>
+              )}
               <View style={styles.detailRow}>
                 <Text style={[globalStyles.label, { fontSize: 13 }]}>Cost</Text>
                 <Text style={[globalStyles.label, { fontSize: 13, opacity: 1 }]}>

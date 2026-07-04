@@ -25,6 +25,7 @@ import {
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import { globalStyles, uiStyles } from '@/styles';
 import { lightenColor } from '@/utils';
+import { formatLocalDate } from '@/utils/dateUtils';
 
 const PRESET_TAGS = ['Food', 'Fun', 'Self-Care', 'Shopping', 'Entertainment', 'Travel', 'Fitness', 'Learning'];
 
@@ -168,7 +169,8 @@ export default function NewRewardItem() {
           notes: notes.trim() || undefined,
           link: link.trim() || undefined,
           recurring,
-          dateAdded: new Date().toISOString().split('T')[0],
+          // local date, not UTC — evening adds should count as today
+          dateAdded: formatLocalDate(new Date()),
           isClaimed: false,
         };
         await addReward(newReward, user.id);

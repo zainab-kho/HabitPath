@@ -16,7 +16,7 @@ import { Habit } from '@/types/Habit';
 import { Reward } from '@/types/Reward';
 import { HABIT_ICONS, SYSTEM_ICONS } from '@/constants/icons';
 import ShadowBox from '@/ui/ShadowBox';
-import { formatDateHeader } from '@/utils/dateUtils';
+import { formatDateHeader, parseLocalDate } from '@/utils/dateUtils';
 import { lightenColor } from '@/utils';
 
 interface Props {
@@ -189,7 +189,7 @@ export default function PointsHistoryModal({
               {lastCompletedDate && (
                 <View style={[s.badge, s.dateBadge]}>
                   <Text style={[globalStyles.label, { fontSize: 10, marginTop: 1, opacity: 1 }]}>
-                    {formatDateHeader(new Date(lastCompletedDate)).toUpperCase()}
+                    {formatDateHeader(parseLocalDate(lastCompletedDate)).toUpperCase()}
                   </Text>
                 </View>
               )}
@@ -283,7 +283,7 @@ export default function PointsHistoryModal({
               <View style={[s.badge, s.dateBadge]}>
                 <Text style={[globalStyles.label, { fontSize: 11, opacity: 1 }]}>
                   {pointsResetDate
-                    ? formatDateHeader(new Date(pointsResetDate)).toUpperCase()
+                    ? formatDateHeader(parseLocalDate(pointsResetDate)).toUpperCase()
                     : 'NEVER RESET'}
                 </Text>
               </View>
@@ -437,7 +437,7 @@ export default function PointsHistoryModal({
         {reward.dateClaimed && (
           <View style={[s.badge, s.dateBadge, { alignSelf: 'center', marginTop: 8 }]}>
             <Text style={[globalStyles.label, { fontSize: 9, opacity: 1 }]}>
-              {reward.recurring ? '↻ ' : ''}{formatDateHeader(new Date(reward.dateClaimed)).toUpperCase()}
+              {reward.recurring ? '↻ ' : ''}{formatDateHeader(parseLocalDate(reward.dateClaimed)).toUpperCase()}
             </Text>
           </View>
         )}

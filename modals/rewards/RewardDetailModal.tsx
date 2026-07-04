@@ -2,7 +2,9 @@ import { globalStyles } from '@/styles';
 import { BUTTON_COLORS, COLORS, PAGE } from '@/constants/colors';
 import { lightenColor } from '@/utils';
 import React from 'react';
-import { Alert, Dimensions, Image, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Dimensions, Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+// RN's ScrollView doesn't scroll inside these modals — use gesture-handler's
+import { ScrollView } from 'react-native-gesture-handler';
 import { Reward } from '@/types/Reward';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import ShadowBox from '@/ui/ShadowBox';

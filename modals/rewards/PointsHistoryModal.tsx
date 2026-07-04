@@ -1,24 +1,23 @@
 import { globalStyles } from '@/styles';
-import { BUTTON_COLORS, COLORS } from '@/constants/colors';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { BUTTON_COLORS, COLORS, PAGE } from '@/constants/colors';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  Animated,
-  FlatList,
   Image,
   Modal,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
-  TouchableWithoutFeedback,
   View,
 } from 'react-native';
+// RN's ScrollView/FlatList don't scroll inside these modals — use gesture-handler's
+import { FlatList, ScrollView } from 'react-native-gesture-handler';
 import { Habit } from '@/types/Habit';
 import { Reward } from '@/types/Reward';
 import { HABIT_ICONS, SYSTEM_ICONS } from '@/constants/icons';
 import ShadowBox from '@/ui/ShadowBox';
 import { formatDateHeader } from '@/utils/dateUtils';
+import { lightenColor } from '@/utils';
 
 interface Props {
   visible: boolean;
@@ -51,31 +50,33 @@ export default function PointsHistoryModal({
   recentHabits = [],
   pointsResetDate,
 }: Props) {
-  const slideAnim = useRef(new Animated.Value(500)).current;
   const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+  const [showAllTime, setShowAllTime] = useState(false);
 
   useEffect(() => {
     if (visible) {
       setVisibleCount(PAGE_SIZE); // reset pagination every time modal opens
-      Animated.spring(slideAnim, {
-        toValue: 0,
-        useNativeDriver: true,
-        tension: 65,
-        friction: 10,
-      }).start();
-    } else {
-      slideAnim.setValue(500);
+      setShowAllTime(false);
     }
   }, [visible]);
 
   // Also reset pagination when the user switches tabs (available / total / redeemed)
   useEffect(() => {
     setVisibleCount(PAGE_SIZE);
+    setShowAllTime(false);
   }, [type]);
 
   // Include recurring rewards that have been claimed at least once (dateClaimed is set)
   // even though their isClaimed stays false so they remain in the wishlist
   const claimedRewards = rewards.filter(r => r.isClaimed || !!r.dateClaimed);
+
+  // split into current period vs before the last points reset
+  const currentClaimed = pointsResetDate
+    ? claimedRewards.filter(r => r.dateClaimed && r.dateClaimed > pointsResetDate)
+    : claimedRewards;
+  const pastClaimed = pointsResetDate
+    ? claimedRewards.filter(r => !r.dateClaimed || r.dateClaimed <= pointsResetDate)
+    : [];
 
   // Dedup by habit.id, aggregate post-reset completions, sort newest-first
   const allHabitsWithPoints = useMemo<HabitEntry[]>(() => {
@@ -153,8 +154,6 @@ export default function PointsHistoryModal({
   const renderHabitItem = useCallback(({ item }: { item: HabitEntry }) => {
     const { habit, postResetCount, totalEarned, lastCompletedDate } = item;
     const showStreak = (habit.streak ?? 0) >= 3;
-
-    console.log(lastCompletedDate, habit.lastCompletedDate, habit.completionHistory);
 
     return (
       <ShadowBox
@@ -308,82 +307,12 @@ export default function PointsHistoryModal({
     if (type === 'redeemed') {
       return (
         <View>
-          {claimedRewards.length === 0 ? (
-            <View style={s.emptyBox}>
-              <Text style={globalStyles.body}>No rewards redeemed yet!</Text>
-              <Text style={[globalStyles.body1, { color: '#666', textAlign: 'center', marginTop: 5, fontSize: 12 }]}>
-                Complete habits to earn points, then redeem them for rewards.
-              </Text>
-            </View>
-          ) : (
-            <View>
-              {claimedRewards.map((reward) => {
-                const bgColor = reward.backgroundColor || '#FFF3D0';
-                return (
-                  <ShadowBox
-                    key={reward.id}
-                    shadowBorderRadius={15}
-                    contentBorderRadius={15}
-                    contentBorderColor="#000"
-                    contentBackgroundColor={bgColor}
-                    shadowColor={COLORS.Rewards}
-                    shadowOffset={{ x: 0, y: 3 }}
-                    style={{ marginBottom: 12 }}
-                  >
-                    <View style={s.claimedCard}>
-                      {/* image */}
-                      <View style={s.miniImageContainer}>
-                        {reward.photoUri ? (
-                          <Image source={{ uri: reward.photoUri }} style={s.miniImage} />
-                        ) : (
-                          <View style={[s.miniImage, { justifyContent: 'center', alignItems: 'center', backgroundColor: bgColor }]}>
-                            <Image source={SYSTEM_ICONS.gift} style={{ width: 28, height: 28, tintColor: '#FFD581' }} />
-                          </View>
-                        )}
-                      </View>
-
-                      {/* content */}
-                      <View style={{ flex: 1, gap: 6 }}>
-                        <Text style={[globalStyles.body1, { fontSize: 14 }]} numberOfLines={1}>{reward.name}</Text>
-                        <View style={s.badgesRow}>
-                          {reward.recurring && (
-                            <View style={[s.badge, s.dateBadge]}>
-                              <Text style={[globalStyles.label, { fontSize: 9, opacity: 1 }]}>↻ Recurring</Text>
-                            </View>
-                          )}
-                          <View style={[s.badge, s.pointsBadge]}>
-                            <Image source={SYSTEM_ICONS.reward} style={{ width: 12, height: 12, tintColor: COLORS.Rewards }} />
-                            <Text style={s.badgeText}>-{reward.costPoints} pts</Text>
-                          </View>
-                          {reward.dateClaimed && (
-                            <View style={[s.badge, s.dateBadge]}>
-                              <Text style={[globalStyles.label, { fontSize: 10, opacity: 1, marginTop: 1 }]}>
-                                {formatDateHeader(new Date(reward.dateClaimed)).toUpperCase()}
-                              </Text>
-                            </View>
-                          )}
-                        </View>
-                        {reward.tags && reward.tags.length > 0 && (
-                          <View style={s.badgesRow}>
-                            {reward.tags.slice(0, 3).map(tag => (
-                              <View key={tag} style={s.miniTag}>
-                                <Text style={{ fontSize: 8, fontFamily: 'label' }}>{tag}</Text>
-                              </View>
-                            ))}
-                          </View>
-                        )}
-                      </View>
-                    </View>
-                  </ShadowBox>
-                );
-              })}
-            </View>
-          )}
+          {/* total redeemed summary */}
           <ShadowBox
             contentBorderColor="#000"
             shadowColor={COLORS.Rewards}
             shadowOffset={{ x: 0, y: 3 }}
-            style={{ marginTop: 4 }}
+            style={{ marginBottom: 20 }}
           >
             <View style={{ padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
               <Text style={globalStyles.body1}>Total redeemed</Text>
@@ -393,6 +322,56 @@ export default function PointsHistoryModal({
               </View>
             </View>
           </ShadowBox>
+
+          {currentClaimed.length === 0 && pastClaimed.length === 0 ? (
+            <View style={s.emptyBox}>
+              <Text style={globalStyles.body}>No rewards redeemed yet!</Text>
+              <Text style={[globalStyles.body1, { color: '#666', textAlign: 'center', marginTop: 5, fontSize: 12 }]}>
+                Complete habits to earn points, then redeem them for rewards.
+              </Text>
+            </View>
+          ) : (
+            <>
+              {currentClaimed.length === 0 ? (
+                <Text style={[globalStyles.label, { textAlign: 'center', marginBottom: 15 }]}>
+                  Nothing redeemed since the last reset
+                </Text>
+              ) : (
+                <View style={s.grid}>
+                  {currentClaimed.map(renderClaimedCard)}
+                </View>
+              )}
+
+              {/* rewards claimed before the last reset, hidden behind a toggle */}
+              {pastClaimed.length > 0 && (
+                <>
+                  <Pressable
+                    onPress={() => setShowAllTime(!showAllTime)} hitSlop={8}
+                    style={{
+                      margin: 15,
+                      alignSelf: 'center',
+                      opacity: 0.6,
+                    }}>
+                    <Text style={globalStyles.label}>
+                      {showAllTime ? 'Hide past rewards' : `Show all time (${pastClaimed.length} more)`}
+                    </Text>
+                  </Pressable>
+
+                  {showAllTime && (
+                    <>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12, gap: 8 }}>
+                        <Text style={[globalStyles.label, { fontSize: 10 }]}>BEFORE LAST RESET</Text>
+                        <View style={{ flex: 1, height: 1, backgroundColor: 'rgba(0,0,0,0.15)' }} />
+                      </View>
+                      <View style={s.grid}>
+                        {pastClaimed.map(renderClaimedCard)}
+                      </View>
+                    </>
+                  )}
+                </>
+              )}
+            </>
+          )}
         </View>
       );
     }
@@ -400,64 +379,123 @@ export default function PointsHistoryModal({
     return null;
   };
 
+  // one wishlist-style card + claimed-date bubble, used by both redeemed sections
+  const renderClaimedCard = (reward: Reward) => {
+    const bgColor = reward.backgroundColor || '#FFF3D0';
+    return (
+      <View key={reward.id} style={s.gridItem}>
+        <ShadowBox
+          contentBackgroundColor={bgColor}
+          contentBorderColor="#000"
+          shadowColor={PAGE.rewards.primary[0]}
+          contentBorderRadius={15}
+          shadowBorderRadius={15}
+        >
+          <View style={s.rewardCard}>
+            <View style={s.cardPointsBadge}>
+              <Image
+                source={SYSTEM_ICONS.reward}
+                style={{ width: 11, height: 11, tintColor: COLORS.Rewards }}
+              />
+              <Text style={[globalStyles.label, { fontSize: 9, opacity: 1 }]}>
+                {reward.costPoints} pts
+              </Text>
+            </View>
+
+            <View style={{ marginBottom: 8 }}>
+              {reward.photoUri ? (
+                <Image source={{ uri: reward.photoUri }} style={s.cardImage} />
+              ) : (
+                <View style={[s.cardImage, {
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  backgroundColor: lightenColor(bgColor, 0.15),
+                }]}>
+                  <Image
+                    source={SYSTEM_ICONS.gift}
+                    style={{ width: 40, height: 40, tintColor: COLORS.Rewards }}
+                  />
+                </View>
+              )}
+            </View>
+
+            <Text style={s.cardName} numberOfLines={1}>
+              {reward.name}
+            </Text>
+
+            <View style={s.cardTagsContainer}>
+              {(reward.tags ?? []).slice(0, 2).map(tag => (
+                <View key={tag} style={s.cardTag}>
+                  <Text style={{ fontSize: 8, fontFamily: 'label' }}>{tag}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        </ShadowBox>
+
+        {/* claimed date bubble under the card */}
+        {reward.dateClaimed && (
+          <View style={[s.badge, s.dateBadge, { alignSelf: 'center', marginTop: 8 }]}>
+            <Text style={[globalStyles.label, { fontSize: 9, opacity: 1 }]}>
+              {reward.recurring ? '↻ ' : ''}{formatDateHeader(new Date(reward.dateClaimed)).toUpperCase()}
+            </Text>
+          </View>
+        )}
+      </View>
+    );
+  };
+
   // ─── Render ──────────────────────────────────────────────────────────────────
   return (
-    <Modal visible={visible} animationType="none" transparent>
-      <TouchableWithoutFeedback onPress={onClose}>
-        <View style={s.overlay}>
-          <TouchableWithoutFeedback onPress={() => { }}>
-            <Animated.View style={[s.modal, { transform: [{ translateY: slideAnim }] }]}>
+    <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
+      <Pressable style={s.overlay} onPress={onClose}>
+        <Pressable style={s.card} onPress={(e) => e.stopPropagation()}>
 
-              {/* header */}
-              <View style={s.header}>
-                <Text style={globalStyles.h3}>{getTitle()}</Text>
-                <Pressable onPress={onClose} style={s.closeButton}>
-                  <Text style={[globalStyles.h3, { color: '#666' }]}>✕</Text>
-                </Pressable>
-              </View>
+          <View style={{ marginTop: 20 }}>
+            <Text style={[globalStyles.h3, { textAlign: 'center', marginBottom: 20 }]}>
+              {getTitle()}
+            </Text>
+          </View>
 
-              {/* content — FlatList for 'available' (lazy), ScrollView for everything else */}
-              {type === 'available' ? (
-                <FlatList
-                  data={visibleHabits}
-                  renderItem={renderHabitItem}
-                  keyExtractor={({ habit }) => habit.id}
-                  onEndReached={handleLoadMore}
-                  onEndReachedThreshold={0.3}
-                  contentContainerStyle={{ padding: 20, paddingBottom: 10 }}
-                  ListEmptyComponent={renderAvailableEmpty}
-                  ListFooterComponent={
-                    visibleCount < allHabitsWithPoints.length
-                      ? <ActivityIndicator size="small" color={COLORS.Primary} style={{ marginVertical: 10 }} />
-                      : null
-                  }
-                />
-              ) : (
-                <ScrollView contentContainerStyle={{ padding: 20 }}>
-                  {renderNonAvailableContent()}
-                </ScrollView>
-              )}
+          {/* content — FlatList for 'available' (lazy), ScrollView for everything else */}
+          {type === 'available' ? (
+            <FlatList
+              data={visibleHabits}
+              renderItem={renderHabitItem}
+              keyExtractor={({ habit }) => habit.id}
+              onEndReached={handleLoadMore}
+              onEndReachedThreshold={0.3}
+              contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 10 }}
+              showsVerticalScrollIndicator={false}
+              ListEmptyComponent={renderAvailableEmpty}
+              ListFooterComponent={
+                visibleCount < allHabitsWithPoints.length
+                  ? <ActivityIndicator size="small" color={COLORS.Primary} style={{ marginVertical: 10 }} />
+                  : null
+              }
+            />
+          ) : (
+            <ScrollView
+              contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 10 }}
+              showsVerticalScrollIndicator={false}
+            >
+              {renderNonAvailableContent()}
+            </ScrollView>
+          )}
 
-              {/* footer */}
-              <View style={{ flexDirection: 'row', borderTopWidth: 1, padding: 20, gap: 10, justifyContent: 'center' }}>
-                <Pressable style={{ flex: 1, maxWidth: 100, alignSelf: 'center' }} onPress={onClose}>
-                  <ShadowBox
-                    contentBackgroundColor={BUTTON_COLORS.Done}
-                    shadowBorderRadius={15}
-                  >
-                    <View style={{ paddingVertical: 6 }}>
-                      <Text style={[globalStyles.body, { textAlign: 'center' }]}>
-                        Done
-                      </Text>
-                    </View>
-                  </ShadowBox>
-                </Pressable>
-              </View>
+          {/* footer */}
+          <View style={{ flexDirection: 'row', borderTopWidth: 1, padding: 10, gap: 10 }}>
+            <Pressable style={{ flex: 1 }} onPress={onClose}>
+              <ShadowBox contentBackgroundColor={BUTTON_COLORS.Done} shadowBorderRadius={15}>
+                <View style={{ paddingVertical: 6 }}>
+                  <Text style={[globalStyles.body, { textAlign: 'center' }]}>Done</Text>
+                </View>
+              </ShadowBox>
+            </Pressable>
+          </View>
 
-            </Animated.View>
-          </TouchableWithoutFeedback>
-        </View>
-      </TouchableWithoutFeedback>
+        </Pressable>
+      </Pressable>
     </Modal>
   );
 }
@@ -465,30 +503,18 @@ export default function PointsHistoryModal({
 const s = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
-  },
-  modal: {
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '80%',
-    borderWidth: 1,
-    borderColor: '#000',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 15,
-    borderBottomWidth: 1,
-    borderBottomColor: '#000',
-  },
-  closeButton: {
-    width: 30,
-    height: 30,
+    backgroundColor: 'rgba(0,0,0,0.45)',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  card: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    borderWidth: 3,
+    borderColor: PAGE.rewards.primary[0],
+    maxHeight: '75%',
+    width: '90%',
+    alignSelf: 'center',
   },
   // ─── Habit card ──────────────────────────────────────────────────────────────
   habitCard: {
@@ -529,8 +555,8 @@ const s = StyleSheet.create({
     fontFamily: 'label',
   },
   dateBadge: {
-    backgroundColor: '#FAFAEE',
-    borderColor: '#FFC7A0',
+    backgroundColor: '#f7cec8',
+    borderColor: '#ff8a36',
   },
   pointsBadge: {
     backgroundColor: COLORS.RewardsBackground,
@@ -540,77 +566,68 @@ const s = StyleSheet.create({
     backgroundColor: COLORS.XPAccent,
     borderColor: COLORS.Star,
   },
-  countBadge: {
-    backgroundColor: '#f0f0f0',
-    borderColor: '#ccc',
-  },
   streakBadge: {
     backgroundColor: 'rgba(255,107,53,0.2)',
     borderColor: '#FF6B35',
-  },
-  pointsBubble: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#FFF3D0',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#FFD581',
-  },
-  // ─── Total tab ───────────────────────────────────────────────────────────────
-  bigNumber: {
-    fontFamily: 'p2',
-    fontSize: 48,
-    color: '#000',
   },
   // ─── Redeemed tab ────────────────────────────────────────────────────────────
   emptyBox: {
     padding: 30,
     alignItems: 'center',
   },
-  claimedCard: {
+  // grid + card styles mirror the wishlist card on the rewards index page —
+  // keep them in sync if that card changes
+  grid: {
     flexDirection: 'row',
-    alignItems: 'center',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  gridItem: {
+    width: '47%',
+    marginBottom: 15,
+  },
+  rewardCard: {
+    borderRadius: 15,
     padding: 12,
-    gap: 12,
+    alignItems: 'center',
+    minHeight: 200,
   },
-  miniImageContainer: {
-    shadowColor: '#000',
-    shadowOffset: { width: 1, height: 1 },
-    shadowOpacity: 1,
-    shadowRadius: 0,
-    elevation: 2,
-  },
-  miniImage: {
-    width: 55,
-    height: 55,
+  cardImage: {
+    width: 100,
+    height: 100,
     borderColor: 'black',
     borderWidth: 1,
     borderRadius: 4,
   },
-  miniTag: {
+  cardName: {
+    fontFamily: 'p2',
+    fontSize: 13,
+    textAlign: 'center',
+    marginBottom: 5,
+  },
+  cardPointsBadge: {
+    backgroundColor: 'rgba(255, 243, 220, 0.8)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 213, 137, 0.8)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    alignSelf: 'center',
+    marginBottom: 10,
+  },
+  cardTagsContainer: {
+    flexDirection: 'row',
+    gap: 3,
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+  },
+  cardTag: {
     backgroundColor: 'rgba(0,0,0,0.1)',
-    paddingHorizontal: 6,
+    paddingHorizontal: 5,
     paddingVertical: 2,
     borderRadius: 8,
-  },
-  // ─── Footer ──────────────────────────────────────────────────────────────────
-  doneButton: {
-    backgroundColor: '#FFD581',
-    width: 200,
-    padding: 8,
-    margin: 20,
-    borderRadius: 100,
-    borderWidth: 1,
-    borderColor: '#000',
-    alignSelf: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 3, height: 3 },
-    shadowOpacity: 1,
-    shadowRadius: 0,
-    elevation: 5,
   },
 });

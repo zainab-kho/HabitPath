@@ -4,13 +4,20 @@ import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { PAGE } from '@/constants/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
-import { SongData } from '@/modals/SongPickerModal';
+import { MediaType, SongData } from '@/modals/SongPickerModal';
 import ShadowBox from '@/ui/ShadowBox';
+
+const MEDIA_LABELS: Record<MediaType, { note: string; icon: keyof typeof SYSTEM_ICONS }> = {
+    song: { note: 'Listening to...', icon: 'headphones' },
+    book: { note: 'Reading...', icon: 'journal' },
+    show: { note: 'Watching...', icon: 'show' },
+};
 
 interface SongCardProps {
     song: SongData;
     onRemove?: () => void;
     lessContrast?: true;
+    type?: MediaType;
 }
 
 // soft pastel palette for music
@@ -35,7 +42,8 @@ function hashColor(str: string): string {
     return SONG_PALETTE[hash % SONG_PALETTE.length];
 }
 
-export default function SongCard({ song, onRemove, lessContrast }: SongCardProps) {
+export default function SongCard({ song, onRemove, lessContrast, type = 'song' }: SongCardProps) {
+    const { note, icon } = MEDIA_LABELS[type];
     const bgColor = hashColor(song.title + song.artist);
 
     return (
@@ -54,8 +62,8 @@ export default function SongCard({ song, onRemove, lessContrast }: SongCardProps
 
                 <View style={styles.textBlock}>
                     <View style={{ flexDirection: 'row', gap: 7, alignItems: 'center' }}>
-                        <Image source={SYSTEM_ICONS.headphones} style={{ width: 10, height: 10, tintColor: PAGE.journal.primary[0] }} />
-                        <Text style={styles.note}>Listening to...</Text>
+                        <Image source={SYSTEM_ICONS[icon]} style={{ width: 10, height: 10, tintColor: PAGE.journal.primary[0] }} />
+                        <Text style={styles.note}>{note}</Text>
                     </View>
                     <Text style={styles.title} numberOfLines={1}>{song.title}</Text>
                     <Text style={styles.artist} numberOfLines={1}>{song.artist}</Text>

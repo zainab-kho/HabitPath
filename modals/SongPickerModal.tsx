@@ -23,23 +23,83 @@ export interface SongData {
     album?: string;
 }
 
+export type MediaType = 'song' | 'book' | 'show';
+
+// songs + books use the iTunes search API; shows use TVMaze (better fuzzy
+// matching and one result per show instead of one per season)
+const MEDIA_CONFIG: Record<MediaType, {
+    title: string;
+    placeholder: string;
+    emptyPrompt: string;
+}> = {
+    song: {
+        title: 'Add a song',
+        placeholder: 'Search for a song or artist...',
+        emptyPrompt: 'What are you listening to?',
+    },
+    book: {
+        title: 'Add a book',
+        placeholder: 'Search for a book or author...',
+        emptyPrompt: 'What are you reading?',
+    },
+    show: {
+        title: 'Add a show',
+        placeholder: 'Search for a TV show...',
+        emptyPrompt: 'What are you watching?',
+    },
+};
+
 interface SongPickerModalProps {
     visible: boolean;
     onClose: () => void;
     onSelect: (song: SongData) => void;
+    mediaType?: MediaType;
 }
 
-interface ItunesResult {
-    trackId: number;
-    trackName: string;
-    artistName: string;
-    collectionName: string;
-    artworkUrl100: string;
+// normalized result shape shared by both APIs
+interface SearchResult {
+    id: string;
+    title: string;
+    subtitle: string;
+    extra?: string;        // album (songs only)
+    listArtworkUrl: string;   // small image for the results list
+    savedArtworkUrl: string;  // larger image stored on the entry
 }
 
-export default function SongPickerModal({ visible, onClose, onSelect }: SongPickerModalProps) {
+function mapItunesResults(data: any, mediaType: MediaType): SearchResult[] {
+    return (data.results ?? [])
+        .filter((item: any) => item.artworkUrl100)
+        .map((item: any) => ({
+            id: String(item.trackId ?? item.collectionId),
+            title: item.trackName ?? item.collectionName ?? '',
+            subtitle: item.artistName ?? '',
+            extra: mediaType === 'song' ? item.collectionName : undefined,
+            listArtworkUrl: item.artworkUrl100,
+            savedArtworkUrl: item.artworkUrl100.replace('100x100', '300x300'),
+        }));
+}
+
+function mapTvMazeResults(data: any): SearchResult[] {
+    return (data ?? [])
+        .filter((item: any) => item.show?.image?.medium)
+        .map((item: any) => {
+            const show = item.show;
+            const year = show.premiered ? show.premiered.slice(0, 4) : null;
+            const network = show.network?.name ?? show.webChannel?.name ?? null;
+            return {
+                id: String(show.id),
+                title: show.name,
+                subtitle: [year, network].filter(Boolean).join(' · '),
+                listArtworkUrl: show.image.medium,
+                savedArtworkUrl: show.image.original ?? show.image.medium,
+            };
+        });
+}
+
+export default function SongPickerModal({ visible, onClose, onSelect, mediaType = 'song' }: SongPickerModalProps) {
+    const config = MEDIA_CONFIG[mediaType];
     const [query, setQuery] = useState('');
-    const [results, setResults] = useState<ItunesResult[]>([]);
+    const [results, setResults] = useState<SearchResult[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [hasSearched, setHasSearched] = useState(false);
     const debounceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -67,18 +127,25 @@ export default function SongPickerModal({ visible, onClose, onSelect }: SongPick
 
         try {
             const encoded = encodeURIComponent(searchQuery.trim());
-            const response = await fetch(
-                `https://itunes.apple.com/search?term=${encoded}&entity=song&limit=10&media=music`
-            );
-            const data = await response.json();
-            setResults(data.results || []);
+            if (mediaType === 'show') {
+                const response = await fetch(`https://api.tvmaze.com/search/shows?q=${encoded}`);
+                const data = await response.json();
+                setResults(mapTvMazeResults(data).slice(0, 10));
+            } else {
+                const params = mediaType === 'book' ? 'entity=ebook&media=ebook' : 'entity=song&media=music';
+                const response = await fetch(
+                    `https://itunes.apple.com/search?term=${encoded}&limit=10&${params}`
+                );
+                const data = await response.json();
+                setResults(mapItunesResults(data, mediaType));
+            }
         } catch (error) {
-            console.error('iTunes search error:', error);
+            console.error('Media search error:', error);
             setResults([]);
         } finally {
             setIsLoading(false);
         }
-    }, []);
+    }, [mediaType]);
 
     const handleQueryChange = (text: string) => {
         setQuery(text);
@@ -87,33 +154,31 @@ export default function SongPickerModal({ visible, onClose, onSelect }: SongPick
         debounceTimer.current = setTimeout(() => searchSongs(text), 400);
     };
 
-    const handleSelect = (item: ItunesResult) => {
-        // upgrade artwork to 300x300
-        const artworkUrl = item.artworkUrl100.replace('100x100', '300x300');
+    const handleSelect = (item: SearchResult) => {
         onSelect({
-            title: item.trackName,
-            artist: item.artistName,
-            album: item.collectionName,
-            artworkUrl,
+            title: item.title,
+            artist: item.subtitle,
+            album: item.extra,
+            artworkUrl: item.savedArtworkUrl,
         });
         onClose();
     };
 
-    const renderResult = (item: ItunesResult) => (
+    const renderResult = (item: SearchResult) => (
         <Pressable
-            key={item.trackId}
+            key={item.id}
             onPress={() => handleSelect(item)}
             style={({ pressed }) => [styles.resultRow, { opacity: pressed ? 0.7 : 1 }]}
         >
             <Image
-                source={{ uri: item.artworkUrl100 }}
+                source={{ uri: item.listArtworkUrl }}
                 style={styles.artwork}
             />
             <View style={styles.resultText}>
-                <Text style={styles.songTitle} numberOfLines={1}>{item.trackName}</Text>
-                <Text style={styles.songArtist} numberOfLines={1}>{item.artistName}</Text>
-                {item.collectionName ? (
-                    <Text style={styles.songAlbum} numberOfLines={1}>{item.collectionName}</Text>
+                <Text style={styles.songTitle} numberOfLines={1}>{item.title}</Text>
+                <Text style={styles.songArtist} numberOfLines={1}>{item.subtitle}</Text>
+                {item.extra ? (
+                    <Text style={styles.songAlbum} numberOfLines={1}>{item.extra}</Text>
                 ) : null}
             </View>
             <Text style={styles.addIcon}>+</Text>
@@ -132,7 +197,7 @@ export default function SongPickerModal({ visible, onClose, onSelect }: SongPick
 
                     {/* header */}
                     <View style={styles.header}>
-                        <Text style={[globalStyles.h3, { fontSize: 18 }]}>Add a song</Text>
+                        <Text style={[globalStyles.h3, { fontSize: 18 }]}>{config.title}</Text>
                         <Pressable onPress={onClose} hitSlop={10}>
                             <Text style={styles.closeBtn}>✕</Text>
                         </Pressable>
@@ -155,7 +220,7 @@ export default function SongPickerModal({ visible, onClose, onSelect }: SongPick
                                 ref={inputRef}
                                 value={query}
                                 onChangeText={handleQueryChange}
-                                placeholder="Search for a song or artist..."
+                                placeholder={config.placeholder}
                                 placeholderTextColor="#aaa"
                                 style={[globalStyles.body1, styles.searchInput]}
                                 returnKeyType="search"
@@ -183,7 +248,7 @@ export default function SongPickerModal({ visible, onClose, onSelect }: SongPick
                                 </View>
                             ) : (
                                 <View style={styles.centeredState}>
-                                    <Text style={[globalStyles.body1, { color: '#999' }]}>What are you listening to?</Text>
+                                    <Text style={[globalStyles.body1, { color: '#999' }]}>{config.emptyPrompt}</Text>
                                 </View>
                             )}
                         </View>

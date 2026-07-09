@@ -66,7 +66,10 @@ export default function JournalPage() {
     const [extraMood, setExtraMood] =
         useState<keyof typeof MOOD_COLORS | null>(null);
     const [song, setSong] = useState<SongData | null>(null);
-    const [songPickerOpen, setSongPickerOpen] = useState(false);
+    const [book, setBook] = useState<SongData | null>(null);
+    const [show, setShow] = useState<SongData | null>(null);
+    // which media picker is open (they share one modal)
+    const [mediaPicker, setMediaPicker] = useState<'song' | 'book' | 'show' | null>(null);
 
     const locationRef = useRef<TextInput>(null);
     const inputRef = useRef<TextInput>(null);
@@ -127,7 +130,7 @@ export default function JournalPage() {
     };
 
     const handleSave = async () => {
-        if (!selectedMood && !location && !entry && !song) {
+        if (!selectedMood && !location && !entry && !song && !book && !show) {
             console.log('Nothing to save!');
             return;
         }
@@ -153,6 +156,8 @@ export default function JournalPage() {
                 location: location || undefined,
                 entry: entry || undefined,
                 song: song || undefined,
+                book: book || undefined,
+                show: show || undefined,
             };
 
             // save to AsyncStorage
@@ -181,6 +186,8 @@ export default function JournalPage() {
                         entry: entry || null,
                         is_locked: lock,
                         song: song || null,
+                        book: book || null,
+                        show: show || null,
                         created_at: now.toISOString(),
                     }
                 ]);
@@ -316,11 +323,25 @@ export default function JournalPage() {
                     {/* journal */}
                     <Text style={[globalStyles.body, { marginBottom: 10 }]}>Journal</Text>
 
-                    {/* song card preview above the text box */}
+                    {/* media card previews above the text box */}
                     {song && (
                         <SongCard
                             song={song}
                             onRemove={() => setSong(null)}
+                        />
+                    )}
+                    {book && (
+                        <SongCard
+                            song={book}
+                            type="book"
+                            onRemove={() => setBook(null)}
+                        />
+                    )}
+                    {show && (
+                        <SongCard
+                            song={show}
+                            type="show"
+                            onRemove={() => setShow(null)}
                         />
                     )}
 
@@ -355,25 +376,45 @@ export default function JournalPage() {
                             gap: 16,
                         }}>
                             <Pressable
-                                onPress={() => setSongPickerOpen(true)}
+                                onPress={() => setMediaPicker('song')}
                                 style={({ pressed }) => ({ opacity: pressed ? 0.4 : 1, flexDirection: 'row', alignItems: 'center', gap: 5 })}
                             >
                                 <Image
                                     source={SYSTEM_ICONS.musicNote}
                                     style={{ width: 14, height: 14 }}
                                 />
-                                <Text style={{ fontFamily: 'p1', fontSize: 12, color: 'rgba(0,0,0,0.3)' }}>
+                                <Text style={{ fontFamily: 'p1', fontSize: 12, color: 'rgba(0,0,0,0.3)' }} numberOfLines={1}>
                                     {song ? song.title : 'add song'}
                                 </Text>
                             </Pressable>
 
-                            {/* **TODO: implement add images feature */}
-                            {/* <Pressable
-                                style={({ pressed }) => ({ opacity: pressed ? 0.4 : 1, flexDirection: 'row', alignItems: 'center', gap: 5 })}
+                            <Pressable
+                                onPress={() => setMediaPicker('book')}
+                                style={({ pressed }) => ({ opacity: pressed ? 0.4 : 1, flexDirection: 'row', alignItems: 'center', gap: 5, flexShrink: 1 })}
                             >
-                                <Text style={{ fontSize: 14 }}>🖼️</Text>
-                                <Text style={{ fontFamily: 'p1', fontSize: 12, color: 'rgba(0,0,0,0.3)' }}>add image</Text>
-                            </Pressable> */}
+                                <Image
+                                    source={SYSTEM_ICONS.journal}
+                                    style={{ width: 14, height: 14, opacity: 0.4 }}
+                                />
+                                <Text style={{ fontFamily: 'p1', fontSize: 12, color: 'rgba(0,0,0,0.3)' }} numberOfLines={1}>
+                                    {book ? book.title : 'add book'}
+                                </Text>
+                            </Pressable>
+
+                            <Pressable
+                                onPress={() => setMediaPicker('show')}
+                                style={({ pressed }) => ({ opacity: pressed ? 0.4 : 1, flexDirection: 'row', alignItems: 'center', gap: 5, flexShrink: 1 })}
+                            >
+                                <Image
+                                    source={SYSTEM_ICONS.show}
+                                    style={{ width: 14, height: 14, opacity: 0.4 }}
+                                />
+                                <Text style={{ fontFamily: 'p1', fontSize: 12, color: 'rgba(0,0,0,0.3)' }} numberOfLines={1}>
+                                    {show ? show.title : 'add show'}
+                                </Text>
+                            </Pressable>
+
+                            {/* **TODO: implement add images feature */}
                         </View>
                     </View>
 
@@ -406,9 +447,15 @@ export default function JournalPage() {
             />
 
             <SongPickerModal
-                visible={songPickerOpen}
-                onClose={() => setSongPickerOpen(false)}
-                onSelect={(s) => setSong(s)}
+                visible={mediaPicker !== null}
+                mediaType={mediaPicker ?? 'song'}
+                onClose={() => setMediaPicker(null)}
+                onSelect={(s) => {
+                    // one media log at a time — picking a new type replaces the old one
+                    setSong(mediaPicker === 'song' ? s : null);
+                    setBook(mediaPicker === 'book' ? s : null);
+                    setShow(mediaPicker === 'show' ? s : null);
+                }}
             />
 
             {/* date + time picker for the entry */}

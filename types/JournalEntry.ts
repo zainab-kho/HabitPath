@@ -12,4 +12,14 @@ export interface JournalEntry {
         artist: string;
         artworkUrl: string;
     },
+    book?: {
+        title: string;
+        artist: string; // author
+        artworkUrl: string;
+    },
+    show?: {
+        title: string;
+        artist: string; // show name (title is the season)
+        artworkUrl: string;
+    },
 }

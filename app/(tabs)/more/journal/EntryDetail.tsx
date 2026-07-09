@@ -84,6 +84,8 @@ export default function EntryDetail() {
                         location: data.location || undefined,
                         entry: data.entry || undefined,
                         song: data.song || undefined,
+                        book: data.book || undefined,
+                        show: data.show || undefined,
                     };
 
                     setEntry(freshEntry);
@@ -246,6 +248,12 @@ export default function EntryDetail() {
                             <View style={[entryDetailStyle.card, { marginHorizontal: 3, backgroundColor: bgColor }]}>
                                 {entry.song && (
                                     <SongCard song={entry.song} />
+                                )}
+                                {entry.book && (
+                                    <SongCard song={entry.book} type="book" />
+                                )}
+                                {entry.show && (
+                                    <SongCard song={entry.show} type="show" />
                                 )}
 
                                 <Text style={entryDetailStyle.date}>

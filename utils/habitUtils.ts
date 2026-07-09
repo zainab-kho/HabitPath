@@ -361,6 +361,22 @@ export function isHabitActiveToday(
     }
   }
 
+  // weekly goal + keepUntil: carries week to week until completed once,
+  // then disappears after the week it was finished
+  if (habit.frequency === 'Weekly Goal' && habit.keepUntil) {
+    const thisMonday = getWeekDatesForDate(todayStr)[0];
+    const startMonday = getWeekDatesForDate(habit.startDate)[0];
+    if (thisMonday < startMonday) return false;
+
+    const latestCompletion = habit.lastCompletedDate
+      ?? [...(habit.completionHistory ?? [])].sort().at(-1)
+      ?? null;
+    if (latestCompletion) {
+      return thisMonday <= getWeekDatesForDate(latestCompletion)[0];
+    }
+    return true;
+  }
+
   // For repeating keepUntil habits, check if there's incomplete work carrying over
   if (habit.keepUntil) {
     const cycleStart = getHabitCycleStart(habit, date, resetHour, resetMinute);

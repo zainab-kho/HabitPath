@@ -36,7 +36,8 @@ export async function loadHabitsFromSupabase(
       tempOrderDate: row.temp_order_date ?? undefined,
       tempSelectedDays: row.temp_selected_days ?? undefined,
       tempSelectedDaysWeek: row.temp_selected_days_week ?? undefined,
-      startDate: row.start_date,
+      // empty = inbox habit: not scheduled anywhere until the user picks a date
+      startDate: row.start_date ?? '',
       selectedDate: row.selected_date,
       rewardPoints: row.reward_points || 0,
       completionHistory: row.completion_history || [],
@@ -56,6 +57,8 @@ export async function loadHabitsFromSupabase(
       pathColor: row.path_color,
       customType: row.custom_type ?? undefined,
       customInterval: row.custom_interval ?? undefined,
+      monthlyWeek: row.monthly_week ?? undefined,
+      monthlyWeekday: row.monthly_weekday ?? undefined,
       endDate: row.end_date ?? undefined,
       created_at: row.created_at,
     })) as Habit[];

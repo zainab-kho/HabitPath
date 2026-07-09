@@ -64,6 +64,21 @@ export async function updateAppStreak(
 ============================================================================ */
 
 /**
+ * True when dateStr is the nth occurrence of a weekday in its month
+ * (week 5 = last occurrence, whether that's the 4th or 5th).
+ */
+export function matchesNthWeekday(dateStr: string, week: number, weekday: string): boolean {
+  const d = parseLocalDate(dateStr);
+  if (WEEK_DAYS[d.getDay()] !== weekday) return false;
+  if (week === 5) {
+    const next = new Date(d);
+    next.setDate(d.getDate() + 7);
+    return next.getMonth() !== d.getMonth();
+  }
+  return Math.ceil(d.getDate() / 7) === week;
+}
+
+/**
  * Check if a habit was scheduled for a specific date (ignoring completion)
  */
 function isHabitScheduledForDate(
@@ -73,6 +88,9 @@ function isHabitScheduledForDate(
   resetMinute: number
 ): boolean {
   const dateStr = getHabitDate(date, resetHour, resetMinute);
+
+  // inbox habits (no start date) are never scheduled
+  if (!habit.startDate) return false;
 
   // Not started yet
   if (dateStr < habit.startDate) return false;
@@ -108,6 +126,9 @@ function isHabitScheduledForDate(
 
   // Monthly habits
   if (habit.frequency === 'Monthly') {
+    if (habit.monthlyWeek && habit.monthlyWeekday) {
+      return matchesNthWeekday(dateStr, habit.monthlyWeek, habit.monthlyWeekday);
+    }
     const startDay = parseInt(habit.startDate.split('-')[2], 10);
     const thisDay = parseInt(dateStr.split('-')[2], 10);
     return startDay === thisDay;
@@ -254,6 +275,18 @@ export function getHabitCycleStart(
 
   // Monthly habits (repeat on same day-of-month as startDate)
   if (habit.frequency === 'Monthly') {
+    // nth-weekday mode: walk back to the most recent scheduled day
+    if (habit.monthlyWeek && habit.monthlyWeekday) {
+      for (let i = 0; i < 62; i++) {
+        const d = new Date(date);
+        d.setDate(date.getDate() - i);
+        const dStr = getHabitDate(d, resetHour, resetMinute);
+        if (dStr < startStr) break;
+        if (matchesNthWeekday(dStr, habit.monthlyWeek, habit.monthlyWeekday)) return dStr;
+      }
+      return startStr;
+    }
+
     const startDay = parseInt(startStr.split('-')[2], 10);
     const todayDay = parseInt(todayStr.split('-')[2], 10);
 
@@ -306,6 +339,9 @@ export function isHabitActiveToday(
   resetHour: number,
   resetMinute: number
 ): boolean {
+  // inbox habits (no start date) are never active
+  if (!habit.startDate) return false;
+
   const todayStr = getHabitDate(date, resetHour, resetMinute);
   const actualTodayStr = getHabitDate(new Date(), resetHour, resetMinute);
   const isViewingToday = todayStr === actualTodayStr;
@@ -444,6 +480,9 @@ export function isHabitActiveToday(
   if (habit.frequency === 'Monthly') {
     if (habit.startDate > todayStr) return false;
 
+    if (habit.monthlyWeek && habit.monthlyWeekday) {
+      return matchesNthWeekday(todayStr, habit.monthlyWeek, habit.monthlyWeekday);
+    }
     const startDay = parseInt(habit.startDate.split('-')[2], 10);
     const todayDay = parseInt(todayStr.split('-')[2], 10);
     return startDay === todayDay;

@@ -3,13 +3,17 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import {
     Alert,
+    Modal,
     Pressable,
+    StyleSheet,
     Text,
     TextInput,
     View,
     Image
 } from 'react-native';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+// RN's ScrollView doesn't scroll inside these modals — use gesture-handler's
+import { ScrollView as GHScrollView } from 'react-native-gesture-handler';
 
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -26,14 +30,31 @@ import { buttonStyles, globalStyles, journalStyle } from '@/styles';
 import { AppLinearGradient } from '@/ui/AppLinearGradient';
 import PageContainer from '@/ui/PageContainer';
 import PageHeader from '@/ui/PageHeader';
+import ShadowBox from '@/ui/ShadowBox';
+import SimpleCalendar from '@/ui/SimpleCalendar';
+import { TimeWheel, pickerStyles } from '@/ui/TimeWheel';
 import ToggleRow from '@/ui/ToggleRow';
+import { BUTTON_COLORS } from '@/constants/colors';
+
+const HOURS = Array.from({ length: 12 }, (_, i) => String(i + 1));
+const MINUTES = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0'));
+const MERIDIEM = ['AM', 'PM'];
 
 
 export default function JournalPage() {
     const router = useRouter();
     const { user } = useAuth();
-    const [localDate, setLocalDate] = useState('');
-    const [localTime, setLocalTime] = useState('');
+    // the entry's date + time — defaults to now, editable via the pill at the top
+    const [entryDateTime, setEntryDateTime] = useState<Date>(() => new Date());
+    const localDate = formatDisplayDate(entryDateTime);
+    const localTime = formatDisplayTime(entryDateTime);
+
+    // date/time picker modal state (temp values until Save)
+    const [dateTimeModalOpen, setDateTimeModalOpen] = useState(false);
+    const [tempDate, setTempDate] = useState<Date>(() => new Date());
+    const [tempHour, setTempHour] = useState('12');
+    const [tempMinute, setTempMinute] = useState('00');
+    const [tempMeridiem, setTempMeridiem] = useState<'AM' | 'PM'>('AM');
     const [selectedMood, setSelectedMood] =
         useState<keyof typeof MOOD_COLORS | null>(null);
     const [lock, setLock] = useState(false);
@@ -78,11 +99,32 @@ export default function JournalPage() {
     };
 
     useEffect(() => {
-        const now = new Date();
-        setLocalDate(formatDisplayDate(now));
-        setLocalTime(formatDisplayTime(now));
         inputRef.current?.focus();
     }, []);
+
+    // open the picker prefilled with the entry's current date + time
+    const openDateTimeModal = () => {
+        setTempDate(entryDateTime);
+        const hours = entryDateTime.getHours();
+        const isPM = hours >= 12;
+        const hour12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+        setTempHour(String(hour12));
+        setTempMinute(String(entryDateTime.getMinutes()).padStart(2, '0'));
+        setTempMeridiem(isPM ? 'PM' : 'AM');
+        setDateTimeModalOpen(true);
+    };
+
+    const handleSaveDateTime = () => {
+        const hour24 =
+            tempMeridiem === 'AM'
+                ? tempHour === '12' ? 0 : Number(tempHour)
+                : tempHour === '12' ? 12 : Number(tempHour) + 12;
+
+        const combined = new Date(tempDate);
+        combined.setHours(hour24, Number(tempMinute), 0, 0);
+        setEntryDateTime(combined);
+        setDateTimeModalOpen(false);
+    };
 
     const handleSave = async () => {
         if (!selectedMood && !location && !entry && !song) {
@@ -100,11 +142,12 @@ export default function JournalPage() {
         try {
             const now = new Date();
             const id = now.toISOString();
-            const localDateString = formatLocalDate(now);
+            // the entry is filed under the user-picked date + time, not save time
+            const localDateString = formatLocalDate(entryDateTime);
 
             const newEntry: JournalEntry = {
                 id,
-                date: now,
+                date: entryDateTime,
                 time: localTime,
                 mood: selectedMood || undefined,
                 location: location || undefined,
@@ -168,8 +211,9 @@ export default function JournalPage() {
             <PageContainer>
                 <PageHeader title="New Entry" showBackButton />
 
-                {/* date / time pill */}
-                <View
+                {/* date / time pill — tap to change */}
+                <Pressable
+                    onPress={openDateTimeModal}
                     style={{
                         paddingHorizontal: 12,
                         paddingVertical: 6,
@@ -184,7 +228,7 @@ export default function JournalPage() {
                     <Text style={[globalStyles.body2, { fontSize: 13 }]}>
                         {localDate}  •  {localTime}
                     </Text>
-                </View>
+                </Pressable>
 
                 <KeyboardAwareScrollView
                     enableOnAndroid={true}
@@ -366,6 +410,87 @@ export default function JournalPage() {
                 onClose={() => setSongPickerOpen(false)}
                 onSelect={(s) => setSong(s)}
             />
+
+            {/* date + time picker for the entry */}
+            <Modal
+                visible={dateTimeModalOpen}
+                transparent
+                animationType="none"
+                onRequestClose={() => setDateTimeModalOpen(false)}
+            >
+                <Pressable style={dtStyles.overlay} onPress={() => setDateTimeModalOpen(false)}>
+                    <Pressable style={dtStyles.card} onPress={(e) => e.stopPropagation()}>
+
+                        <View style={{ marginTop: 20 }}>
+                            <Text style={[globalStyles.h3, { textAlign: 'center', marginBottom: 16 }]}>
+                                Entry Date & Time
+                            </Text>
+                        </View>
+
+                        <GHScrollView
+                            contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 10, gap: 16 }}
+                            showsVerticalScrollIndicator={false}
+                        >
+                            <ShadowBox>
+                                <SimpleCalendar
+                                    selectedDate={tempDate}
+                                    onSelectDate={setTempDate}
+                                    selectedDateColor={PAGE.journal.border[0]}
+                                />
+                            </ShadowBox>
+
+                            <View style={pickerStyles.container}>
+                                <View style={{ flexDirection: 'row', justifyContent: 'center' }}>
+                                    <TimeWheel data={HOURS} selected={tempHour} onSelect={setTempHour} />
+                                    <TimeWheel data={MINUTES} selected={tempMinute} onSelect={setTempMinute} />
+                                    <TimeWheel
+                                        data={MERIDIEM}
+                                        selected={tempMeridiem}
+                                        onSelect={(value) => setTempMeridiem(value as 'AM' | 'PM')}
+                                    />
+                                </View>
+                            </View>
+                        </GHScrollView>
+
+                        <View style={{ flexDirection: 'row', borderTopWidth: 1, padding: 10, gap: 10 }}>
+                            <Pressable onPress={() => setDateTimeModalOpen(false)} style={{ flex: 1 }}>
+                                <ShadowBox contentBackgroundColor={BUTTON_COLORS.Cancel} shadowBorderRadius={15}>
+                                    <View style={{ paddingVertical: 6 }}>
+                                        <Text style={[globalStyles.body, { textAlign: 'center' }]}>Cancel</Text>
+                                    </View>
+                                </ShadowBox>
+                            </Pressable>
+
+                            <Pressable onPress={handleSaveDateTime} style={{ flex: 1 }}>
+                                <ShadowBox contentBackgroundColor={BUTTON_COLORS.Save} shadowBorderRadius={15}>
+                                    <View style={{ paddingVertical: 6 }}>
+                                        <Text style={[globalStyles.body, { textAlign: 'center' }]}>Save</Text>
+                                    </View>
+                                </ShadowBox>
+                            </Pressable>
+                        </View>
+
+                    </Pressable>
+                </Pressable>
+            </Modal>
         </AppLinearGradient>
     );
 }
+
+const dtStyles = StyleSheet.create({
+    overlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.45)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    card: {
+        backgroundColor: '#fff',
+        borderRadius: 20,
+        borderWidth: 3,
+        borderColor: PAGE.journal.border[0],
+        maxHeight: '85%',
+        width: '90%',
+        alignSelf: 'center',
+    },
+});

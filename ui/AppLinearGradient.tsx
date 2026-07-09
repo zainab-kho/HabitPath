@@ -6,7 +6,6 @@ import { StyleProp, ViewStyle } from 'react-native';
 
 type GradientPath =
   | 'auth.background'
-  | 'habitsPage.background'
   | 'newHabit.background'
   | 'path.background'
   | 'quest.background'

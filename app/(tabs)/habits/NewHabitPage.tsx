@@ -107,14 +107,19 @@ export default function NewHabitPage() {
     });
     const [showCalendar, setShowCalendar] = useState(() => {
         if (!editHabit) return false;
+        if (!editHabit.startDate) return false; // inbox habit — no date picked yet
         if (editFreq === 'Weekly Goal') return true;
         return editHabit.startDate !== habitToday && editHabit.startDate !== habitTomorrowStr;
     });
     const [isWeeklyGoal, setIsWeeklyGoal] = useState(editFreq === 'Weekly Goal');
 
+    // inbox habit: created without a start date, lives on the inbox page until scheduled
+    const [noStartDate, setNoStartDate] = useState(!!editHabit && !editHabit.startDate);
+
     const startDateStr = formatLocalDate(startDate);
-    const startDateOption: 'today' | 'tomorrow' | 'custom' =
-        startDateStr === habitToday ? 'today'
+    const startDateOption: 'today' | 'tomorrow' | 'custom' | 'none' =
+        noStartDate ? 'none'
+        : startDateStr === habitToday ? 'today'
         : startDateStr === habitTomorrowStr ? 'tomorrow'
         : 'custom';
 
@@ -129,6 +134,13 @@ export default function NewHabitPage() {
     // custom frequency
     const [customType, setCustomType] = useState<'daily' | 'weekly' | 'monthly'>(editHabit?.customType ?? 'daily');
     const [customInterval, setCustomInterval] = useState(editHabit?.customInterval ?? 2);
+
+    // monthly repeat: on the start date's day of month, or the nth weekday (e.g. 1st Sunday)
+    const [monthlyMode, setMonthlyMode] = useState<'dayOfMonth' | 'nthWeekday'>(
+        editHabit?.monthlyWeek && editHabit?.monthlyWeekday ? 'nthWeekday' : 'dayOfMonth'
+    );
+    const [monthlyWeek, setMonthlyWeek] = useState<number>(editHabit?.monthlyWeek ?? 1);
+    const [monthlyWeekday, setMonthlyWeekday] = useState<string>(editHabit?.monthlyWeekday ?? 'Sunday');
 
     // end date
     const [endDate, setEndDate] = useState<Date | null>(() => {
@@ -277,7 +289,8 @@ export default function NewHabitPage() {
             if (!user) throw new Error('No user logged in');
 
             const resetTime = await getResetTime();
-            const habitStartDate = formatLocalDate(startDate); // e.g., "2026-01-30"
+            // null = inbox habit, scheduled later from the inbox page
+            const habitStartDate = noStartDate ? null : formatLocalDate(startDate);
 
             const selectedDateLabel = (() => {
                 const now = new Date();
@@ -338,6 +351,8 @@ export default function NewHabitPage() {
                 path_ids: selectedPathId ? [selectedPathId] : [],
                 custom_type: finalFrequency === 'Custom' ? customType : null,
                 custom_interval: finalFrequency === 'Custom' ? customInterval : null,
+                monthly_week: finalFrequency === 'Monthly' && monthlyMode === 'nthWeekday' ? monthlyWeek : null,
+                monthly_weekday: finalFrequency === 'Monthly' && monthlyMode === 'nthWeekday' ? monthlyWeekday : null,
                 end_date: endDate ? formatLocalDate(endDate) : null,
             };
 
@@ -449,10 +464,11 @@ export default function NewHabitPage() {
                                     <Text style={[globalStyles.label]}>START DATE</Text>
 
                                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                                        {(['today', 'tomorrow', 'custom'] as const).map((option) => {
+                                        {(['today', 'tomorrow', 'custom', 'none'] as const).map((option) => {
                                             const isSelected = startDateOption === option;
                                             const label = option === 'today' ? 'Today'
                                                 : option === 'tomorrow' ? 'Tomorrow'
+                                                : option === 'none' ? 'No date'
                                                 : startDateOption === 'custom' ? getCustomDateLabel(startDate)
                                                 : 'Custom';
 
@@ -461,6 +477,7 @@ export default function NewHabitPage() {
                                                     key={option}
                                                     onPress={() => {
                                                         if (option === 'today') {
+                                                            setNoStartDate(false);
                                                             setStartDate(parseLocalDate(habitToday));
                                                             setShowCalendar(false);
                                                             if (isWeeklyGoal) {
@@ -468,13 +485,23 @@ export default function NewHabitPage() {
                                                                 setEndDate(null);
                                                             }
                                                         } else if (option === 'tomorrow') {
+                                                            setNoStartDate(false);
                                                             setStartDate(parseLocalDate(habitTomorrowStr));
                                                             setShowCalendar(false);
                                                             if (isWeeklyGoal) {
                                                                 setIsWeeklyGoal(false);
                                                                 setEndDate(null);
                                                             }
+                                                        } else if (option === 'none') {
+                                                            // inbox habit — schedule it later
+                                                            setNoStartDate(true);
+                                                            setShowCalendar(false);
+                                                            if (isWeeklyGoal) {
+                                                                setIsWeeklyGoal(false);
+                                                                setEndDate(null);
+                                                            }
                                                         } else {
+                                                            setNoStartDate(false);
                                                             setShowCalendar(!showCalendar);
                                                         }
                                                     }}
@@ -681,6 +708,87 @@ export default function NewHabitPage() {
                                             </Pressable>
                                         ))}
                                     </View>
+
+                                    {/* monthly repeat mode: day of month vs nth weekday */}
+                                    {selectedFrequency === 'Monthly' && (
+                                        <>
+                                            <Text style={globalStyles.label}>REPEATS ON</Text>
+                                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                                                {([
+                                                    { mode: 'dayOfMonth' as const, label: `Day ${startDate.getDate()}` },
+                                                    { mode: 'nthWeekday' as const, label: 'Day of week' },
+                                                ]).map(({ mode, label }) => {
+                                                    const isSelected = monthlyMode === mode;
+                                                    return (
+                                                        <Pressable key={mode} onPress={() => setMonthlyMode(mode)}>
+                                                            <ShadowBox
+                                                                contentBackgroundColor={isSelected ? COLORS.Frequency : '#fff'}
+                                                                contentBorderColor={isSelected ? '#000' : COLORS.Frequency}
+                                                                shadowBorderColor={isSelected ? '#000' : COLORS.Frequency}
+                                                                shadowColor={isSelected ? '#000' : COLORS.Frequency}
+                                                            >
+                                                                <View style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
+                                                                    <Text style={globalStyles.body1}>{label}</Text>
+                                                                </View>
+                                                            </ShadowBox>
+                                                        </Pressable>
+                                                    );
+                                                })}
+                                            </View>
+
+                                            {monthlyMode === 'nthWeekday' && (
+                                                <>
+                                                    <Text style={globalStyles.label}>WHICH WEEK</Text>
+                                                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                                                        {[
+                                                            { week: 1, label: '1st' },
+                                                            { week: 2, label: '2nd' },
+                                                            { week: 3, label: '3rd' },
+                                                            { week: 4, label: '4th' },
+                                                            { week: 5, label: 'Last' },
+                                                        ].map(({ week, label }) => {
+                                                            const isSelected = monthlyWeek === week;
+                                                            return (
+                                                                <Pressable key={week} onPress={() => setMonthlyWeek(week)}>
+                                                                    <ShadowBox
+                                                                        contentBackgroundColor={isSelected ? COLORS.Frequency : '#fff'}
+                                                                        contentBorderColor={isSelected ? '#000' : COLORS.Frequency}
+                                                                        shadowBorderColor={isSelected ? '#000' : COLORS.Frequency}
+                                                                        shadowColor={isSelected ? '#000' : COLORS.Frequency}
+                                                                    >
+                                                                        <View style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
+                                                                            <Text style={globalStyles.body1}>{label}</Text>
+                                                                        </View>
+                                                                    </ShadowBox>
+                                                                </Pressable>
+                                                            );
+                                                        })}
+                                                    </View>
+
+                                                    <Text style={globalStyles.label}>WHICH DAY</Text>
+                                                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                                                        {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((day) => {
+                                                            const isSelected = monthlyWeekday === day;
+                                                            return (
+                                                                <Pressable key={day} onPress={() => setMonthlyWeekday(day)}>
+                                                                    <ShadowBox
+                                                                        contentBackgroundColor={isSelected ? COLORS.Frequency : '#fff'}
+                                                                        contentBorderColor={isSelected ? '#000' : COLORS.Frequency}
+                                                                        shadowBorderColor={isSelected ? '#000' : COLORS.Frequency}
+                                                                        shadowColor={isSelected ? '#000' : COLORS.Frequency}
+                                                                    >
+                                                                        <View style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
+                                                                            <Text style={globalStyles.body1}>{day.slice(0, 3)}</Text>
+                                                                        </View>
+                                                                    </ShadowBox>
+                                                                </Pressable>
+                                                            );
+                                                        })}
+                                                    </View>
+                                                </>
+                                            )}
+                                        </>
+                                    )}
 
                                     {/* custom frequency sub-type */}
                                     {selectedFrequency === 'Custom' && (

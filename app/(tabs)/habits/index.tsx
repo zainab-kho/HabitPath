@@ -39,6 +39,7 @@ export default function HabitsPage() {
   // use the habits hook to get all data
   const {
     habits,
+    allHabits,
     loading,
     resetTime,
     appStreak,
@@ -103,6 +104,15 @@ export default function HabitsPage() {
   );
 
   const dateStr = getHabitDate(viewingDate, resetTime.hour, resetTime.minute);
+
+  // habits snoozed away from the viewing date + unscheduled inbox habits —
+  // both live on the inbox page, counted for the button badge
+  const snoozedHabits = allHabits.filter(h => {
+    const from = h.snoozedFrom?.slice(0, 10);
+    const until = h.snoozedUntil?.slice(0, 10);
+    return from && until && dateStr >= from && dateStr < until;
+  });
+  const inboxCount = allHabits.filter(h => !h.startDate && !h.archivedAt).length;
 
   // calculate totals for points badge (unchanged)
   const totalActivePoints = activeHabits.reduce(
@@ -231,6 +241,8 @@ export default function HabitsPage() {
         {/* habits list */}
         <HabitsList
           habits={habits}
+          snoozedHabits={snoozedHabits}
+          inboxCount={inboxCount}
           loading={loading}
           viewingDate={viewingDate}
           resetTime={resetTime}

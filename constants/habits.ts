@@ -15,6 +15,7 @@ export const FREQUENCIES = [
   'None',
   'Daily',
   'Weekly',
+  'Monthly',
   'Custom'
 ] as const;
 

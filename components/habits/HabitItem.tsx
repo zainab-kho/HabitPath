@@ -31,6 +31,10 @@ interface HabitItemProps {
   onToggleQuestExpand?: () => void;
   onNavigateToQuest?: (questId: string) => void;
   onOpenTimeLog?: (habit: HabitWithStatus) => void;
+  // replaces the checkbox on the right (e.g. "Do today" on the inbox page)
+  rightAction?: React.ReactNode;
+  // extra badge in the badges row (e.g. "until Jul 10" for snoozed habits)
+  statusBadge?: string;
 }
 
 const AUTO_COMPLETE_ON_GOAL = false;
@@ -52,6 +56,8 @@ export default function HabitItem({
   onToggleQuestExpand,
   onNavigateToQuest,
   onOpenTimeLog,
+  rightAction,
+  statusBadge,
 }: HabitItemProps) {
   const swipeableRef = useRef<Swipeable>(null);
   const habitIconFile = HABIT_ICONS[habit.icon];
@@ -560,6 +566,17 @@ export default function HabitItem({
                 </Text>
 
                 <View style={styles.badgesRow}>
+                  {/* status badge (e.g. snoozed-until on the inbox page) */}
+                  {statusBadge && (
+                    <View style={[styles.badge, { backgroundColor: COLORS.PrimaryLight, borderColor: COLORS.Primary }]}>
+                      <Image
+                        source={SYSTEM_ICONS.snooze}
+                        style={styles.badgeIcon}
+                      />
+                      <Text style={styles.badgeText}>{statusBadge}</Text>
+                    </View>
+                  )}
+
                   {/* points badge */}
                   {!!habit.rewardPoints && habit.rewardPoints > 0 && (
                     <View style={[styles.badge, styles.pointsBadge]}>
@@ -625,7 +642,10 @@ export default function HabitItem({
               </View>
             </View>
 
-            {/* right-side action */}
+            {/* right-side action — custom replacement (e.g. "Do today") or the checkbox */}
+            {rightAction ? (
+              <View style={{ paddingLeft: 10 }}>{rightAction}</View>
+            ) : (
             <Pressable
               onPress={handleRightAction}
               onLongPress={undefined}
@@ -658,6 +678,7 @@ export default function HabitItem({
                 </View>
               </ShadowBox>
             </Pressable>
+            )}
           </View>
         </Pressable>
       </ShadowBox>

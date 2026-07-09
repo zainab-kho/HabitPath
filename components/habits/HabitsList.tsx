@@ -34,6 +34,8 @@ import {
 
 interface HabitsListProps {
   habits: HabitWithStatus[];
+  snoozedHabits?: Habit[];
+  inboxCount?: number;
   loading?: boolean;
   viewingDate: Date | null;
   resetTime: { hour: number; minute: number };
@@ -65,6 +67,8 @@ function getSection(habit: Pick<Habit, 'selectedTimeOfDay' | 'tempTimeOfDay' | '
 
 export default function HabitsList({
   habits,
+  snoozedHabits = [],
+  inboxCount = 0,
   loading,
   viewingDate,
   resetTime,
@@ -184,6 +188,13 @@ export default function HabitsList({
     const fmt = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     return `${fmt(monday)} – ${fmt(sunday)}`;
   }, [dateStr]);
+
+  // points earned vs available across this week's goals (for the collapsed card)
+  const weeklyTotalPoints = weeklyHabits.reduce((sum, h) => sum + (h.rewardPoints ?? 0), 0);
+  const weeklyEarnedPoints = weeklyHabits.reduce(
+    (sum, h) => h.status === 'completed' ? sum + (h.rewardPoints ?? 0) : sum,
+    0
+  );
   const incompleteCount = regularActiveHabits.filter(h => h.status !== 'completed' && h.status !== 'skipped').length;
   const scheduledHabits = regularActiveHabits;
   const allDoneToday = scheduledHabits.length > 0 && incompleteCount === 0;
@@ -346,7 +357,7 @@ export default function HabitsList({
     );
   }
 
-  if (scheduledHabits.length === 0 && weeklyHabits.length === 0) {
+  if (scheduledHabits.length === 0 && weeklyHabits.length === 0 && snoozedHabits.length === 0) {
     return (
       <View style={{ marginTop: 20, alignItems: 'center', gap: 20 }}>
         <Text style={[globalStyles.body, { opacity: 0.7 }]}>You have no habits today! Add a habit?</Text>
@@ -489,43 +500,85 @@ export default function HabitsList({
             opacity: 0.7,
             marginBottom: 8,
           }}>Weekly Goals</Text>
-          <View style={{
-            borderWidth: 1,
-            borderColor: '#000',
-            borderRadius: 15,
-            padding: 10,
-            paddingVertical: 15,
-            backgroundColor: getGradientForTime()[0],
-          }}>
-            <Pressable
-              onPress={toggleWeeklyCollapsed}
-              style={{
-                flexDirection: 'row',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: weeklyCollapsed ? 0 : 10,
-                marginHorizontal: 10
-              }}
-            >
-              <Text style={[globalStyles.body, {}]}>{weekRangeLabel}</Text>
-              <Image
-                source={SYSTEM_ICONS.sort}
-                style={{
-                  width: 20,
-                  height: 20,
-                  tintColor: getGradientForTime()[1],
-                  transform: [{ rotate: weeklyCollapsed ? '0deg' : '180deg' }],
-                }}
-              />
-            </Pressable>
 
-            {!weeklyCollapsed && (
-              <View style={{
-                // backgroundColor: getGradientForTime()[1] + 20,
-                // borderRadius: 12,
-                // padding: 10,
-                // paddingBottom: 2,
-              }}>
+          {weeklyCollapsed ? (
+            // collapsed: same shape as a habit card, with the week's points progress
+            <ShadowBox
+              contentBackgroundColor="#fff"
+              contentBorderColor="#000"
+              shadowColor={getGradientForTime()[0]}
+              contentBorderWidth={1}
+              shadowBorderRadius={15}
+              shadowOffset={{ x: 0, y: 5 }}
+            >
+              <Pressable
+                onPress={toggleWeeklyCollapsed}
+                style={{ padding: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
+              >
+                <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 12 }}>
+                  <View style={{ width: 40, height: 40, justifyContent: 'center', alignItems: 'center' }}>
+                    <Image source={SYSTEM_ICONS.calendar} style={{ width: 30, height: 30 }} />
+                  </View>
+                  <View style={{ gap: 6 }}>
+                    <Text style={[globalStyles.body, { fontSize: 15 }]}>{weekRangeLabel}</Text>
+                    <View style={{
+                      flexDirection: 'row',
+                      alignItems: 'center',
+                      gap: 5,
+                      paddingHorizontal: 8,
+                      paddingVertical: 3,
+                      borderRadius: 8,
+                      borderWidth: 1,
+                      backgroundColor: COLORS.RewardsBackground,
+                      borderColor: COLORS.RewardsAccent,
+                      alignSelf: 'flex-start',
+                    }}>
+                      <Image source={SYSTEM_ICONS.reward} style={{ width: 12, height: 12, tintColor: COLORS.Rewards }} />
+                      <Text style={{ fontSize: 10, fontFamily: 'label' }}>
+                        {weeklyEarnedPoints}/{weeklyTotalPoints}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+                <Image
+                  source={SYSTEM_ICONS.sort}
+                  style={{ width: 20, height: 20, tintColor: getGradientForTime()[1], marginRight: 5 }}
+                />
+              </Pressable>
+            </ShadowBox>
+          ) : (
+            // open: bordered container with the week's habits
+            <View style={{
+              borderWidth: 1,
+              borderColor: '#000',
+              borderRadius: 15,
+              padding: 10,
+              paddingVertical: 15,
+              backgroundColor: getGradientForTime()[0],
+            }}>
+              <Pressable
+                onPress={toggleWeeklyCollapsed}
+                style={{
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: 10,
+                  marginHorizontal: 10,
+                }}
+              >
+                <Text style={globalStyles.body}>{weekRangeLabel}</Text>
+                <Image
+                  source={SYSTEM_ICONS.sort}
+                  style={{
+                    width: 20,
+                    height: 20,
+                    tintColor: getGradientForTime()[1],
+                    transform: [{ rotate: '180deg' }],
+                  }}
+                />
+              </Pressable>
+
+              <View>
                 {visibleWeekly.map(habit => (
                   <HabitItem
                     key={habit.id}
@@ -548,10 +601,25 @@ export default function HabitsList({
                   />
                 ))}
               </View>
-            )}
-          </View>
+            </View>
+          )}
           </View>
         )}
+
+        {/* inbox + snoozed habits live on their own page */}
+        <Pressable
+          onPress={() => router.push('/(tabs)/habits/InboxPage')}
+          style={{ marginTop: 15, marginBottom: 10, alignSelf: 'center' }}
+        >
+          <ShadowBox contentBackgroundColor={getGradientForTime()[0]} shadowBorderRadius={20}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 5, paddingHorizontal: 14 }}>
+              <Image source={SYSTEM_ICONS.snooze} style={{ width: 15, height: 15 }} />
+              <Text style={globalStyles.body}>
+                Inbox & Snoozed{inboxCount + snoozedHabits.length > 0 ? ` (${inboxCount + snoozedHabits.length})` : ''}
+              </Text>
+            </View>
+          </ShadowBox>
+        </Pressable>
       </AnimatedScrollView>
 
       <HabitDetailModal

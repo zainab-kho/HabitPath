@@ -18,6 +18,7 @@ import { globalStyles } from '@/styles';
 import { HabitWithStatus } from '@/hooks/useHabits';
 import { saveTempSelectedDays } from '@/hooks/useDailyHabitOverrides';
 import { getWeekDatesForDate, getHabitDate, parseLocalDate, formatLocalDate } from '@/utils/dateUtils';
+import { matchesNthWeekday } from '@/utils/habitUtils';
 
 interface HabitDetailModalProps {
     visible: boolean;
@@ -48,11 +49,16 @@ function formatSelectedDays(days?: string[]): string {
     return days.map(d => abbrev[d] || d).join(', ');
 }
 
+const WEEK_ORDINALS: Record<number, string> = { 1: '1st', 2: '2nd', 3: '3rd', 4: '4th', 5: 'last' };
+
 function getFrequencyLabel(habit: HabitWithStatus): string {
     if (habit.frequency === 'Weekly Goal') return 'Weekly Goal';
     if (habit.frequency === 'Weekly') return 'Weekly';
     if (habit.frequency === 'Daily') return 'Daily';
     if (habit.frequency === 'Custom') return `Every ${habit.customInterval ?? 1} ${habit.customType ?? 'days'}`;
+    if (habit.frequency === 'Monthly' && habit.monthlyWeek && habit.monthlyWeekday) {
+        return `Monthly · ${WEEK_ORDINALS[habit.monthlyWeek]} ${habit.monthlyWeekday}`;
+    }
     return habit.frequency || 'One-time';
 }
 
@@ -74,6 +80,17 @@ function getNextAssignedDate(habit: HabitWithStatus, resetHour: number, resetMin
     const habitToday = parseLocalDate(todayStr);
 
     if (habit.frequency === 'Monthly') {
+        // nth-weekday mode: scan forward for the next matching day
+        if (habit.monthlyWeek && habit.monthlyWeekday) {
+            for (let i = 1; i <= 62; i++) {
+                const next = new Date(habitToday);
+                next.setDate(habitToday.getDate() + i);
+                if (matchesNthWeekday(formatLocalDate(next), habit.monthlyWeek, habit.monthlyWeekday)) {
+                    return fmt(next);
+                }
+            }
+            return 'N/A';
+        }
         const startDay = parseInt(habit.startDate.split('-')[2], 10);
         const next = new Date(habitToday.getFullYear(), habitToday.getMonth(), startDay);
         if (formatLocalDate(next) <= todayStr) next.setMonth(next.getMonth() + 1);

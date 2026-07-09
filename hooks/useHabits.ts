@@ -340,6 +340,36 @@ export function useHabits(viewingDate: Date = new Date()) {
   );
 
   /**
+   * Bring a snoozed habit back so it's due today — retargets the snooze arrival
+   * to today while keeping the original source date, instead of clearing the
+   * snooze (which would send the habit back to its original schedule).
+   */
+  const unsnoozeToToday = useCallback(
+    async (habitId: string) => {
+      if (!user) return;
+      const currentHabits = rawHabitsRef.current;
+      const target = currentHabits.find(h => h.id === habitId);
+      if (!target) return;
+
+      try {
+        const todayStr = getHabitDate(new Date(), resetTime.hour, resetTime.minute);
+        const updatedHabits = await snoozeHabitService(
+          habitId,
+          currentHabits,
+          todayStr,
+          user.id,
+          target.snoozedFrom?.slice(0, 10)
+        );
+        applyHabitsUpdate(updatedHabits, resetTime);
+      } catch (err) {
+        console.error('Error unsnoozing habit:', err);
+        loadHabits();
+      }
+    },
+    [resetTime, user, applyHabitsUpdate, loadHabits]
+  );
+
+  /**
    * Skip a habit for the current viewing date.
    * - Repeating habits: adds date to skippedDates array
    * - One-time habits: archives the habit
@@ -473,6 +503,7 @@ export function useHabits(viewingDate: Date = new Date()) {
     toggleHabit,
     updateIncrement,
     snoozeHabit,
+    unsnoozeToToday,
     skipHabit,
     unskipHabit,
     unskipAndCompleteHabit,

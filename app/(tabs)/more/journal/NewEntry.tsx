@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
     Alert,
     Modal,
@@ -101,9 +101,6 @@ export default function JournalPage() {
         }
     };
 
-    useEffect(() => {
-        inputRef.current?.focus();
-    }, []);
 
     // open the picker prefilled with the entry's current date + time
     const openDateTimeModal = () => {
@@ -242,6 +239,7 @@ export default function JournalPage() {
                     enableAutomaticScroll={true}
                     extraScrollHeight={20}
                     keyboardShouldPersistTaps="handled"
+                    keyboardDismissMode="interactive"
                     showsVerticalScrollIndicator={false}
                     contentContainerStyle={{ paddingBottom: 40 }}
                 >
@@ -381,7 +379,7 @@ export default function JournalPage() {
                             >
                                 <Image
                                     source={SYSTEM_ICONS.musicNote}
-                                    style={{ width: 14, height: 14 }}
+                                    style={{ width: 14, height: 14, opacity: 0.4 }}
                                 />
                                 <Text style={{ fontFamily: 'p1', fontSize: 12, color: 'rgba(0,0,0,0.3)' }} numberOfLines={1}>
                                     {song ? song.title : 'add song'}

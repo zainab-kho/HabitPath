@@ -724,6 +724,9 @@ export const getProgressUnitsForDay = (
   for (const h of habits) {
     if (h.frequency === 'Weekly Goal') continue;
 
+    // quest goals track "worked on it" separately — they don't gate the daily bar
+    if (h.isQuestGoal) continue;
+
     if (h.status === 'skipped' || h.status === 'snoozed') {
       progressSkipped += 1;
       continue;

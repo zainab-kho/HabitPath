@@ -148,7 +148,7 @@ export default function InboxPage() {
                   'Do today',
                   PAGE.habits.button[0],
                   () => handleDoToday(habit.id),
-                  `until ${formatDisplayDateString(habit.snoozedUntil?.slice(0, 10))}`
+                  `${formatDisplayDateString(habit.snoozedUntil?.slice(0, 10))}`
                 )
               )
             )}

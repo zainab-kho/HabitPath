@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
     Alert,
     Modal,
@@ -73,6 +73,15 @@ export default function JournalPage() {
 
     const locationRef = useRef<TextInput>(null);
     const inputRef = useRef<TextInput>(null);
+
+    // while blurred the journal input ignores touches (so drags scroll the page);
+    // a deliberate tap on the wrapper re-focuses it
+    const [entryFocused, setEntryFocused] = useState(false);
+
+    // autofocus for quick logging
+    useEffect(() => {
+        inputRef.current?.focus();
+    }, []);
 
     // base 5 main moods
     const BASE_MOODS = Object.keys(MAIN_MOOD_COLORS) as (keyof typeof MAIN_MOOD_COLORS)[];
@@ -344,25 +353,37 @@ export default function JournalPage() {
                     )}
 
                     <View style={journalStyle.journalCard}>
-                        <TextInput
-                            ref={inputRef}
-                            style={[
-                                globalStyles.body,
-                                journalStyle.textArea,
-                                {
-                                    lineHeight: 20,
-                                    minHeight: 200,
-                                }
-                            ]}
-                            placeholder="What are your thoughts?"
-                            multiline
-                            textAlignVertical="top"
-                            cursorColor={PAGE.journal.border[0]}
-                            selectionColor={PAGE.journal.border[0]}
-                            placeholderTextColor="rgba(0,0,0,0.5)"
-                            value={entry}
-                            onChangeText={setEntry}
-                        />
+                        <View>
+                            <TextInput
+                                ref={inputRef}
+                                style={[
+                                    globalStyles.body,
+                                    journalStyle.textArea,
+                                    {
+                                        lineHeight: 20,
+                                        minHeight: 200,
+                                    }
+                                ]}
+                                placeholder="What are your thoughts?"
+                                multiline
+                                textAlignVertical="top"
+                                cursorColor={PAGE.journal.border[0]}
+                                selectionColor={PAGE.journal.border[0]}
+                                placeholderTextColor="rgba(0,0,0,0.5)"
+                                value={entry}
+                                onChangeText={setEntry}
+                                onFocus={() => setEntryFocused(true)}
+                                onBlur={() => setEntryFocused(false)}
+                            />
+                            {/* while blurred, this invisible layer catches touches so
+                                drags scroll the page — only a real tap re-focuses */}
+                            {!entryFocused && (
+                                <Pressable
+                                    style={StyleSheet.absoluteFill}
+                                    onPress={() => inputRef.current?.focus()}
+                                />
+                            )}
+                        </View>
 
                         {/* faint action row */}
                         <View style={{

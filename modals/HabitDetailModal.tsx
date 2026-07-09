@@ -17,7 +17,7 @@ import ShadowBox from '@/ui/ShadowBox';
 import { globalStyles } from '@/styles';
 import { HabitWithStatus } from '@/hooks/useHabits';
 import { saveTempSelectedDays } from '@/hooks/useDailyHabitOverrides';
-import { getWeekDatesForDate, getHabitDate } from '@/utils/dateUtils';
+import { getWeekDatesForDate, getHabitDate, parseLocalDate, formatLocalDate } from '@/utils/dateUtils';
 
 interface HabitDetailModalProps {
     visible: boolean;
@@ -56,18 +56,43 @@ function getFrequencyLabel(habit: HabitWithStatus): string {
     return habit.frequency || 'One-time';
 }
 
-function getNextAssignedDate(habit: HabitWithStatus): string {
+function getNextAssignedDate(habit: HabitWithStatus, resetHour: number, resetMin: number): string {
+    const fmt = (d: Date) => d.toLocaleDateString('en-US', { weekday: 'short', month: 'long', day: 'numeric' });
+    const todayStr = getHabitDate(new Date(), resetHour, resetMin);
+
+    // one-time habits are only due on their start date
+    if (!habit.frequency || habit.frequency === 'None') {
+        if (habit.completionHistory?.length) return 'Completed';
+        if (habit.startDate === todayStr) return 'Today';
+        if (habit.startDate > todayStr) return fmt(parseLocalDate(habit.startDate));
+        return `Was due ${fmt(parseLocalDate(habit.startDate))}`;
+    }
+
+    if (habit.frequency === 'Weekly Goal') return 'This week';
+
+    // base all "next" math on the habit day (reset-time aware), not the wall clock
+    const habitToday = parseLocalDate(todayStr);
+
+    if (habit.frequency === 'Monthly') {
+        const startDay = parseInt(habit.startDate.split('-')[2], 10);
+        const next = new Date(habitToday.getFullYear(), habitToday.getMonth(), startDay);
+        if (formatLocalDate(next) <= todayStr) next.setMonth(next.getMonth() + 1);
+        return fmt(next);
+    }
+
+    // daily (or weekly with every day selected)
     if (!habit.selectedDays || habit.selectedDays.length === 0 || habit.selectedDays.length === 7) {
         return 'Tomorrow';
     }
+
+    // weekly / custom-weekly: next selected day
     const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const today = new Date();
     for (let i = 1; i <= 7; i++) {
-        const next = new Date(today);
-        next.setDate(today.getDate() + i);
+        const next = new Date(habitToday);
+        next.setDate(habitToday.getDate() + i);
         const dayName = dayNames[next.getDay()];
         if (habit.selectedDays.includes(dayName)) {
-            return next.toLocaleDateString('en-US', { weekday: 'short', month: 'long', day: 'numeric' });
+            return fmt(next);
         }
     }
     return 'N/A';
@@ -251,7 +276,7 @@ export default function HabitDetailModal({ visible, habit, resetHour, resetMin, 
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                             <Image source={SYSTEM_ICONS.calendar} style={{ width: ICON_SIZE, height: ICON_SIZE, tintColor: ICON_TINT }} />
                             <Text style={[globalStyles.body, { fontSize: 14, opacity: 0.7 }]}>
-                                {habit.keepUntil ? 'Keep until finished' : getNextAssignedDate(habit)}
+                                {habit.keepUntil ? 'Keep until finished' : getNextAssignedDate(habit, resetHour, resetMin)}
                             </Text>
                         </View>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>

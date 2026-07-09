@@ -6,6 +6,7 @@ export const STORAGE_KEYS = {
   HABITS_DIRTY: '@habits_dirty',
 
   TOGGLE_STATE: '@habits_toggle',
+  WEEKLY_COLLAPSED: '@habits_weekly_collapsed',
 
   JOURNAL_CACHE: '@journal_cache',
   JOURNAL_DIRTY: '@journal_dirty',

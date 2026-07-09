@@ -239,7 +239,9 @@ export function useHabits(viewingDate: Date = new Date()) {
       const rawDs = getHabitDate(viewingDate, resetTime.hour, resetTime.minute);
       const currentHabits = rawHabitsRef.current;
       const target = currentHabits.find(h => h.id === habitId);
-      const isSnoozedNow = target?.snoozedFrom && target?.snoozedUntil && rawDs < target.snoozedUntil.slice(0, 10);
+      // increments include the snooze arrival day (<=) so new progress merges
+      // with what was logged before snoozing
+      const isSnoozedNow = target?.snoozedFrom && target?.snoozedUntil && rawDs <= target.snoozedUntil.slice(0, 10);
       const ds = (target?.frequency === 'Weekly Goal' || target?.keepUntil)
         ? getHabitCycleStart(target, viewingDate, resetTime.hour, resetTime.minute)
         : isSnoozedNow

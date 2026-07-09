@@ -456,8 +456,11 @@ export const getHabitStatus = (
   resetHour?: number,
   resetMinute?: number,
 ): HabitStatus => {
-  // keepUntil: use cycle start; Weekly Goal: use Monday; snoozed: use snoozedFrom (only while active)
-  const isSnoozedNow = habit.snoozedFrom && habit.snoozedUntil && dateStr < habit.snoozedUntil.slice(0, 10);
+  // keepUntil: use cycle start; Weekly Goal: use Monday; snoozed: use snoozedFrom
+  // (only while active — increment habits include the arrival day so progress follows)
+  const snoozeDay = habit.snoozedUntil?.slice(0, 10);
+  const isSnoozedNow = habit.snoozedFrom && snoozeDay &&
+    (habit.increment ? dateStr <= snoozeDay : dateStr < snoozeDay);
   const effectiveDateStr =
     (habit.keepUntil && viewingDate && resetHour !== undefined && resetMinute !== undefined)
       ? getHabitCycleStart(habit, viewingDate, resetHour, resetMinute)

@@ -107,9 +107,11 @@ export default function HabitsList({
     const habit = activeHabits.find(h => h.id === habitId);
     if (!habit?.increment) return;
 
+    // snoozed increments live on snoozedFrom through the arrival day (<=)
+    const snoozeDay = habit.snoozedUntil?.slice(0, 10);
     const effectiveDate = (habit.keepUntil || habit.frequency === 'Weekly Goal')
       ? getHabitCycleStart(habit, currentDate, resetTime.hour, resetTime.minute)
-      : habit.snoozedFrom && habit.increment
+      : habit.snoozedFrom && snoozeDay && dateStr <= snoozeDay
         ? habit.snoozedFrom
         : dateStr;
 
@@ -195,6 +197,15 @@ export default function HabitsList({
     );
   };
 
+  const toggleWeeklyCollapsed = async () => {
+    const nextValue = !weeklyCollapsed;
+    setWeeklyCollapsed(nextValue);
+    await AsyncStorage.setItem(
+      STORAGE_KEYS.WEEKLY_COLLAPSED,
+      nextValue ? '1' : '0'
+    );
+  };
+
   // Order comes directly from Supabase (tempOrder/tempOrderDate on each habit)
   const orderedHabits = useMemo(
     () => applyDailyOrder(activeHabits ?? [], dateStr),
@@ -206,6 +217,10 @@ export default function HabitsList({
       const stored = await AsyncStorage.getItem(STORAGE_KEYS.TOGGLE_STATE);
       if (stored !== null) {
         setShowCompleted(stored === '1');
+      }
+      const weekly = await AsyncStorage.getItem(STORAGE_KEYS.WEEKLY_COLLAPSED);
+      if (weekly !== null) {
+        setWeeklyCollapsed(weekly === '1');
       }
     })();
   }, []);
@@ -483,7 +498,7 @@ export default function HabitsList({
             backgroundColor: getGradientForTime()[0],
           }}>
             <Pressable
-              onPress={() => setWeeklyCollapsed(!weeklyCollapsed)}
+              onPress={toggleWeeklyCollapsed}
               style={{
                 flexDirection: 'row',
                 justifyContent: 'space-between',

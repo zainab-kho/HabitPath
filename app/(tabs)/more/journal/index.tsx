@@ -131,6 +131,8 @@ export default function JournalPage() {
         lock: row.is_locked ?? undefined,
         entry: row.entry ?? undefined,
         song: row.song ?? undefined,
+        book: row.book ?? undefined,
+        show: row.show ?? undefined,
       }));
 
       await AsyncStorage.setItem('@journal_entries', JSON.stringify(fresh));
@@ -256,10 +258,20 @@ export default function JournalPage() {
                           )}
                         </Pressable>
 
-                        {/* song card */}
+                        {/* media cards */}
                         {entry.song && canShowEntry && (
                           <View style={{ marginTop: 10, marginHorizontal: -10, }}>
                             <SongCard lessContrast song={entry.song} />
+                          </View>
+                        )}
+                        {entry.book && canShowEntry && (
+                          <View style={{ marginTop: 10, marginHorizontal: -10, }}>
+                            <SongCard lessContrast song={entry.book} type="book" />
+                          </View>
+                        )}
+                        {entry.show && canShowEntry && (
+                          <View style={{ marginTop: 10, marginHorizontal: -10, }}>
+                            <SongCard lessContrast song={entry.show} type="show" />
                           </View>
                         )}
 

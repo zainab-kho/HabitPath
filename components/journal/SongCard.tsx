@@ -57,7 +57,8 @@ export default function SongCard({ song, onRemove, lessContrast, type = 'song' }
             <View style={styles.container}>
                 <Image
                     source={{ uri: song.artworkUrl }}
-                    style={styles.artwork}
+                    // album art is square; book covers and show posters are portrait
+                    style={[styles.artwork, type !== 'song' && styles.artworkPortrait]}
                 />
 
                 <View style={styles.textBlock}>
@@ -96,6 +97,10 @@ const styles = StyleSheet.create({
         borderRadius: 10,
         borderWidth: 1,
         borderColor: 'rgba(0,0,0,0.08)',
+    },
+    artworkPortrait: {
+        width: 56,
+        height: 84, // ~2:3, matches book covers and show posters
     },
     textBlock: {
         flex: 1,

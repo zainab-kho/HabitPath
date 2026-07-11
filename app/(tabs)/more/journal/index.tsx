@@ -125,15 +125,6 @@ export default function JournalPage() {
   const scrollRef = useRef<ScrollView>(null);
   const monthPositions = useRef<Record<string, number>>({});
 
-  const jumpToMonth = useCallback((month: string) => {
-    setFilterOpen(false);
-    // small delay so the modal closes before scrolling
-    setTimeout(() => {
-      const y = monthPositions.current[month];
-      if (y !== undefined) scrollRef.current?.scrollTo({ y, animated: true });
-    }, 150);
-  }, []);
-
   const toggleExpanded = useCallback((id: string) => {
     setExpandedIds(prev => ({ ...prev, [id]: !prev[id] }));
   }, []);
@@ -317,6 +308,62 @@ export default function JournalPage() {
     return out;
   }, [filteredByMonth, sortOrder]);
 
+  // progressive rendering: only the first N entries mount, more load on scroll —
+  // keeps star/search interactions snappy with a large journal
+  const [visibleCount, setVisibleCount] = useState(10);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  // start over when the view fundamentally changes (not on simple entry edits)
+  useEffect(() => {
+    setVisibleCount(10);
+  }, [query, filterMoods, filterYear, starredOnly, sortOrder]);
+
+  const { limitedByMonth, totalShownableCount } = useMemo(() => {
+    let remaining = visibleCount;
+    let total = 0;
+    const out: Record<string, JournalEntry[]> = {};
+    for (const [month, entries] of Object.entries(displayedByMonth)) {
+      total += entries.length;
+      if (remaining > 0) {
+        const slice = entries.slice(0, remaining);
+        out[month] = slice;
+        remaining -= slice.length;
+      }
+    }
+    return { limitedByMonth: out, totalShownableCount: total };
+  }, [displayedByMonth, visibleCount]);
+
+  const hasMore = visibleCount < totalShownableCount;
+
+  const handleScroll = useCallback((e: any) => {
+    if (!hasMore || loadingMore) return;
+    const { contentOffset, layoutMeasurement, contentSize } = e.nativeEvent;
+    if (contentOffset.y + layoutMeasurement.height > contentSize.height - 600) {
+      setLoadingMore(true);
+      // brief tick so the spinner is visible before the next batch mounts
+      setTimeout(() => {
+        setVisibleCount(c => c + 15);
+        setLoadingMore(false);
+      }, 150);
+    }
+  }, [hasMore, loadingMore]);
+
+  const jumpToMonth = useCallback((month: string) => {
+    setFilterOpen(false);
+    // make sure everything up to and including that month is rendered
+    let needed = 0;
+    for (const [m, entries] of Object.entries(displayedByMonth)) {
+      needed += entries.length;
+      if (m === month) break;
+    }
+    setVisibleCount(c => Math.max(c, needed));
+    // small delay so the modal closes and the batch mounts before scrolling
+    setTimeout(() => {
+      const y = monthPositions.current[month];
+      if (y !== undefined) scrollRef.current?.scrollTo({ y, animated: true });
+    }, 300);
+  }, [displayedByMonth]);
+
   // filter modal options, derived from what actually exists in the journal
   const moodsInUse = useMemo(
     () => [...new Set(allEntries.map(e => e.mood).filter(Boolean))] as string[],
@@ -391,23 +438,6 @@ export default function JournalPage() {
             </View>
           ) : (
             <>
-              {/* starred only */}
-              <Pressable onPress={() => setStarredOnly(prev => !prev)}>
-                <ShadowBox
-                  contentBackgroundColor={starredOnly ? '#FFD581' : PAGE.journal.foreground[0]}
-                  contentBorderRadius={30}
-                  shadowBorderRadius={30}
-                  shadowOffset={{ x: 1, y: 1 }}
-                >
-                  <View style={{ width: 36, height: 36, justifyContent: 'center', alignItems: 'center' }}>
-                    <Image
-                      source={SYSTEM_ICONS.star}
-                      style={{ width: 17, height: 17, tintColor: starredOnly ? '#B8860B' : undefined }}
-                    />
-                  </View>
-                </ShadowBox>
-              </Pressable>
-
               {/* sort toggle — sticks across sessions */}
               <Pressable onPress={toggleSort}>
                 <ShadowBox
@@ -446,6 +476,23 @@ export default function JournalPage() {
                 </ShadowBox>
               </Pressable>
 
+              {/* starred only */}
+              <Pressable onPress={() => setStarredOnly(prev => !prev)}>
+                <ShadowBox
+                  contentBackgroundColor={starredOnly ? '#FFD581' : PAGE.journal.foreground[0]}
+                  contentBorderRadius={30}
+                  shadowBorderRadius={30}
+                  shadowOffset={{ x: 1, y: 1 }}
+                >
+                  <View style={{ width: 32, height: 32, justifyContent: 'center', alignItems: 'center' }}>
+                    <Image
+                      source={SYSTEM_ICONS.star}
+                      style={{ width: 15, height: 15, tintColor: starredOnly ? '#B8860B' : undefined }}
+                    />
+                  </View>
+                </ShadowBox>
+              </Pressable>
+
               {/* search */}
               <Pressable onPress={toggleSearch}>
                 <ShadowBox
@@ -469,6 +516,8 @@ export default function JournalPage() {
           style={{ flex: 1 }}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
+          onScroll={handleScroll}
+          scrollEventThrottle={100}
         >
           <View style={{ overflow: 'visible' }}>
             {/* Mood preview — hidden while searching */}
@@ -482,7 +531,7 @@ export default function JournalPage() {
             )}
 
             {/* Monthly entries list */}
-            {Object.entries(displayedByMonth).map(([month, entries]) => (
+            {Object.entries(limitedByMonth).map(([month, entries]) => (
               <View
                 key={month}
                 style={{ marginBottom: 25 }}
@@ -602,6 +651,13 @@ export default function JournalPage() {
                 })}
               </View>
             ))}
+
+            {/* loading more spinner */}
+            {hasMore && (
+              <View style={{ paddingVertical: 15, alignItems: 'center' }}>
+                <ActivityIndicator size="small" color={PAGE.journal.primary[0]} />
+              </View>
+            )}
 
             {/* empty state */}
             {!isLoading && allEntries.length === 0 && (

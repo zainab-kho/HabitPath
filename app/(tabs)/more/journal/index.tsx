@@ -2,7 +2,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Image, LayoutAnimation, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import MoodPreview from '@/components/journal/MoodPreview';
 import SongCard from '@/components/journal/SongCard';
@@ -21,6 +21,10 @@ import { parseLocalDate } from '@/utils/dateUtils';
 
 const JOURNAL_UNLOCK_KEY = '@journal_pin_unlocked';
 
+function escapeRegExp(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 export default function JournalPage() {
   const router = useRouter();
   const { user } = useAuth();
@@ -30,6 +34,19 @@ export default function JournalPage() {
   const [isUnlocked, setIsUnlocked] = useState(false);
 
   const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({});
+
+  // inline search — expands from the search button, filters + highlights
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const query = searchQuery.trim().toLowerCase();
+
+  const toggleSearch = useCallback(() => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setSearchOpen(prev => {
+      if (prev) setSearchQuery('');
+      return !prev;
+    });
+  }, []);
 
   const toggleExpanded = useCallback((id: string) => {
     setExpandedIds(prev => ({ ...prev, [id]: !prev[id] }));
@@ -171,6 +188,41 @@ export default function JournalPage() {
 
   const allEntries = useMemo(() => Object.values(entriesByMonth).flat(), [entriesByMonth]);
 
+  // entries matching the search — locked entries are excluded while locked so
+  // their content can't leak through search results
+  const filteredByMonth = useMemo(() => {
+    if (!query) return entriesByMonth;
+
+    const matches = (e: JournalEntry) => {
+      if (e.lock && !isUnlocked) return false;
+      const haystack = [
+        e.entry, e.location, e.mood,
+        e.song?.title, e.song?.artist,
+        e.book?.title, e.book?.artist,
+        e.show?.title, e.show?.artist,
+      ].filter(Boolean).join(' ').toLowerCase();
+      return haystack.includes(query);
+    };
+
+    const out: Record<string, JournalEntry[]> = {};
+    for (const [month, entries] of Object.entries(entriesByMonth)) {
+      const found = entries.filter(matches);
+      if (found.length > 0) out[month] = found;
+    }
+    return out;
+  }, [entriesByMonth, query, isUnlocked]);
+
+  // wraps matched substrings in a highlight so they pop in the results
+  const renderHighlighted = useCallback((text: string) => {
+    if (!query) return text;
+    const parts = text.split(new RegExp(`(${escapeRegExp(searchQuery.trim())})`, 'ig'));
+    return parts.map((part, i) =>
+      part.toLowerCase() === query
+        ? <Text key={i} style={{ backgroundColor: '#FFE066' }}>{part}</Text>
+        : part
+    );
+  }, [query, searchQuery]);
+
   if (isLoading) {
     return (
       <AppLinearGradient variant="journal.background">
@@ -201,16 +253,61 @@ export default function JournalPage() {
           onNavigatePress={handleHeaderLockPress}
         />
 
+        {/* search — button expands into an inline bar */}
+        <View style={{ flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: 3, marginBottom: 10 }}>
+          {searchOpen ? (
+            <View style={styles.searchBar}>
+              <Image source={SYSTEM_ICONS.search} style={{ width: 15, height: 15, opacity: 0.5 }} />
+              <TextInput
+                style={styles.searchInput}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                placeholder="Search entries..."
+                placeholderTextColor="rgba(0,0,0,0.35)"
+                autoFocus
+                autoCorrect={false}
+                cursorColor={PAGE.journal.border[0]}
+                selectionColor={PAGE.journal.border[0]}
+              />
+              <Pressable onPress={toggleSearch} hitSlop={8}>
+                <Text style={{ fontSize: 15, color: '#888' }}>✕</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <Pressable onPress={toggleSearch}>
+              <ShadowBox
+                contentBackgroundColor={PAGE.journal.foreground[0]}
+                contentBorderRadius={30}
+                shadowBorderRadius={30}
+                shadowOffset={{ x: 1, y: 1 }}
+              >
+                <View style={{ width: 36, height: 36, justifyContent: 'center', alignItems: 'center' }}>
+                  <Image source={SYSTEM_ICONS.search} style={{ width: 17, height: 17 }} />
+                </View>
+              </ShadowBox>
+            </Pressable>
+          )}
+        </View>
+
         <ScrollView
           contentContainerStyle={{ paddingHorizontal: 3, paddingBottom: 65 }}
           style={{ flex: 1 }}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
         >
           <View style={{ overflow: 'visible' }}>
-            {/* Mood preview */}
-            {allEntries.length > 0 && <MoodPreview entries={allEntries} />}
+            {/* Mood preview — hidden while searching */}
+            {allEntries.length > 0 && !query && <MoodPreview entries={allEntries} />}
+
+            {/* no matches */}
+            {query.length > 0 && Object.keys(filteredByMonth).length === 0 && (
+              <Text style={{ fontFamily: 'label', fontSize: 13, opacity: 0.5, textAlign: 'center', marginTop: 30 }}>
+                No entries match "{searchQuery.trim()}"
+              </Text>
+            )}
 
             {/* Monthly entries list */}
-            {Object.entries(entriesByMonth).map(([month, entries]) => (
+            {Object.entries(filteredByMonth).map(([month, entries]) => (
               <View key={month} style={{ marginBottom: 25 }}>
                 <Text style={styles.monthHeader}>{month}</Text>
 
@@ -250,7 +347,7 @@ export default function JournalPage() {
                                   source={SYSTEM_ICONS.location}
                                   style={{ width: 15, height: 15, tintColor: COLORS.Secondary, marginRight: 5, marginBottom: 7 }}
                                 />
-                                <Text style={styles.entryLocation}>{entry.location}</Text>
+                                <Text style={styles.entryLocation}>{renderHighlighted(entry.location)}</Text>
                               </View>
                             ) : null
                           ) : (
@@ -275,15 +372,15 @@ export default function JournalPage() {
                           </View>
                         )}
 
-                        {/* body */}
+                        {/* body — expanded while searching so highlights are visible */}
                         {entry.entry && canShowEntry && (() => {
-                          const isExpanded = !!expandedIds[entry.id];
+                          const isExpanded = !!expandedIds[entry.id] || query.length > 0;
                           const previewLines = isExpanded ? 999 : 6;
 
                           return (
                             <View style={{ marginTop: 10 }}>
                               <Text style={styles.entryText} numberOfLines={previewLines}>
-                                {entry.entry}
+                                {renderHighlighted(entry.entry)}
                               </Text>
 
                               {/* only show toggle if it's long */}
@@ -346,6 +443,25 @@ export default function JournalPage() {
 }
 
 const styles = StyleSheet.create({
+  searchBar: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderWidth: 2,
+    borderColor: PAGE.journal.border[0],
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontFamily: 'p3',
+    fontSize: 14,
+    color: '#333',
+    padding: 0,
+  },
   monthHeader: {
     fontFamily: 'p2',
     fontSize: 19,

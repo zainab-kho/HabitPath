@@ -1,8 +1,10 @@
 // @/app/(tabs)/more/journal/index.tsx
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect, useRouter } from 'expo-router';
-import React, { useCallback, useMemo, useState } from 'react';
-import { ActivityIndicator, Image, LayoutAnimation, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { ActivityIndicator, Image, LayoutAnimation, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+// gesture-handler scroll + root view so scrolling works inside the filter modal
+import { GestureHandlerRootView, ScrollView as GHScrollView } from 'react-native-gesture-handler';
 
 import MoodPreview from '@/components/journal/MoodPreview';
 import SongCard from '@/components/journal/SongCard';
@@ -20,6 +22,7 @@ import ShadowBox from '@/ui/ShadowBox';
 import { parseLocalDate } from '@/utils/dateUtils';
 
 const JOURNAL_UNLOCK_KEY = '@journal_pin_unlocked';
+const JOURNAL_SORT_KEY = '@journal_sort_order';
 
 function escapeRegExp(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -46,6 +49,89 @@ export default function JournalPage() {
       if (prev) setSearchQuery('');
       return !prev;
     });
+  }, []);
+
+  // filter modal — moods + year narrow the list, month jump scrolls to a section
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [filterMoods, setFilterMoods] = useState<string[]>([]);
+  const [filterYear, setFilterYear] = useState<number | null>(null);
+
+  // starred-only toggle (the star button in the controls row)
+  const [starredOnly, setStarredOnly] = useState(false);
+  const filtersActive = filterMoods.length > 0 || filterYear !== null || starredOnly;
+
+  const toggleStar = useCallback(async (entryId: string) => {
+    let newValue = false;
+
+    // optimistic local update
+    setEntriesByMonth(prev => {
+      const out: Record<string, JournalEntry[]> = {};
+      for (const [month, entries] of Object.entries(prev)) {
+        out[month] = entries.map(e => {
+          if (e.id !== entryId) return e;
+          newValue = !e.starred;
+          return { ...e, starred: newValue };
+        });
+      }
+      return out;
+    });
+
+    try {
+      if (user) {
+        await supabase
+          .from('journal_entries')
+          .update({ is_starred: newValue })
+          .eq('id', entryId)
+          .eq('user_id', user.id);
+      }
+
+      const cached = await AsyncStorage.getItem('@journal_entries');
+      if (cached) {
+        const entries: any[] = JSON.parse(cached);
+        await AsyncStorage.setItem(
+          '@journal_entries',
+          JSON.stringify(entries.map(e => e.id === entryId ? { ...e, starred: newValue } : e))
+        );
+      }
+    } catch (err) {
+      console.error('Failed to save star:', err);
+    }
+  }, [user]);
+
+  // sort order — persisted so it sticks across sessions
+  const [sortOrder, setSortOrder] = useState<'latest' | 'earliest'>('latest');
+
+  useEffect(() => {
+    AsyncStorage.getItem(JOURNAL_SORT_KEY).then(stored => {
+      if (stored === 'earliest' || stored === 'latest') setSortOrder(stored);
+    });
+  }, []);
+
+  const toggleSort = useCallback(() => {
+    setSortOrder(prev => {
+      const next = prev === 'latest' ? 'earliest' : 'latest';
+      AsyncStorage.setItem(JOURNAL_SORT_KEY, next);
+      return next;
+    });
+  }, []);
+
+  const toggleFilterMood = useCallback((mood: string) => {
+    setFilterMoods(prev =>
+      prev.includes(mood) ? prev.filter(m => m !== mood) : [...prev, mood]
+    );
+  }, []);
+
+  // month section positions for jump-to-month scrolling
+  const scrollRef = useRef<ScrollView>(null);
+  const monthPositions = useRef<Record<string, number>>({});
+
+  const jumpToMonth = useCallback((month: string) => {
+    setFilterOpen(false);
+    // small delay so the modal closes before scrolling
+    setTimeout(() => {
+      const y = monthPositions.current[month];
+      if (y !== undefined) scrollRef.current?.scrollTo({ y, animated: true });
+    }, 150);
   }, []);
 
   const toggleExpanded = useCallback((id: string) => {
@@ -150,6 +236,7 @@ export default function JournalPage() {
         song: row.song ?? undefined,
         book: row.book ?? undefined,
         show: row.show ?? undefined,
+        starred: row.is_starred ?? false,
       }));
 
       await AsyncStorage.setItem('@journal_entries', JSON.stringify(fresh));
@@ -188,12 +275,13 @@ export default function JournalPage() {
 
   const allEntries = useMemo(() => Object.values(entriesByMonth).flat(), [entriesByMonth]);
 
-  // entries matching the search — locked entries are excluded while locked so
-  // their content can't leak through search results
+  // entries matching search + filters — locked entries are excluded from search
+  // while locked so their content can't leak through results
   const filteredByMonth = useMemo(() => {
-    if (!query) return entriesByMonth;
+    if (!query && !filtersActive) return entriesByMonth;
 
-    const matches = (e: JournalEntry) => {
+    const matchesSearch = (e: JournalEntry) => {
+      if (!query) return true;
       if (e.lock && !isUnlocked) return false;
       const haystack = [
         e.entry, e.location, e.mood,
@@ -204,13 +292,41 @@ export default function JournalPage() {
       return haystack.includes(query);
     };
 
+    const matchesFilters = (e: JournalEntry) => {
+      if (starredOnly && !e.starred) return false;
+      if (filterMoods.length > 0 && (!e.mood || !filterMoods.includes(e.mood))) return false;
+      if (filterYear !== null && new Date(e.date).getFullYear() !== filterYear) return false;
+      return true;
+    };
+
     const out: Record<string, JournalEntry[]> = {};
     for (const [month, entries] of Object.entries(entriesByMonth)) {
-      const found = entries.filter(matches);
+      const found = entries.filter(e => matchesSearch(e) && matchesFilters(e));
       if (found.length > 0) out[month] = found;
     }
     return out;
-  }, [entriesByMonth, query, isUnlocked]);
+  }, [entriesByMonth, query, isUnlocked, filterMoods, filterYear, starredOnly, filtersActive]);
+
+  // earliest-first flips both the month order and the entries inside each month
+  const displayedByMonth = useMemo(() => {
+    if (sortOrder === 'latest') return filteredByMonth;
+    const out: Record<string, JournalEntry[]> = {};
+    for (const [month, entries] of Object.entries(filteredByMonth).reverse()) {
+      out[month] = [...entries].reverse();
+    }
+    return out;
+  }, [filteredByMonth, sortOrder]);
+
+  // filter modal options, derived from what actually exists in the journal
+  const moodsInUse = useMemo(
+    () => [...new Set(allEntries.map(e => e.mood).filter(Boolean))] as string[],
+    [allEntries]
+  );
+  const yearsInUse = useMemo(
+    () => [...new Set(allEntries.map(e => new Date(e.date).getFullYear()))].sort((a, b) => b - a),
+    [allEntries]
+  );
+  const monthKeys = useMemo(() => Object.keys(displayedByMonth), [displayedByMonth]);
 
   // wraps matched substrings in a highlight so they pop in the results
   const renderHighlighted = useCallback((text: string) => {
@@ -253,8 +369,8 @@ export default function JournalPage() {
           onNavigatePress={handleHeaderLockPress}
         />
 
-        {/* search — button expands into an inline bar */}
-        <View style={{ flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: 3, marginBottom: 10 }}>
+        {/* search / filter / sort row */}
+        <View style={{ flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 10, paddingHorizontal: 3, marginBottom: 10 }}>
           {searchOpen ? (
             <View style={styles.searchBar}>
               <Image source={SYSTEM_ICONS.search} style={{ width: 15, height: 15, opacity: 0.5 }} />
@@ -274,22 +390,81 @@ export default function JournalPage() {
               </Pressable>
             </View>
           ) : (
-            <Pressable onPress={toggleSearch}>
-              <ShadowBox
-                contentBackgroundColor={PAGE.journal.foreground[0]}
-                contentBorderRadius={30}
-                shadowBorderRadius={30}
-                shadowOffset={{ x: 1, y: 1 }}
-              >
-                <View style={{ width: 36, height: 36, justifyContent: 'center', alignItems: 'center' }}>
-                  <Image source={SYSTEM_ICONS.search} style={{ width: 17, height: 17 }} />
-                </View>
-              </ShadowBox>
-            </Pressable>
+            <>
+              {/* starred only */}
+              <Pressable onPress={() => setStarredOnly(prev => !prev)}>
+                <ShadowBox
+                  contentBackgroundColor={starredOnly ? '#FFD581' : PAGE.journal.foreground[0]}
+                  contentBorderRadius={30}
+                  shadowBorderRadius={30}
+                  shadowOffset={{ x: 1, y: 1 }}
+                >
+                  <View style={{ width: 36, height: 36, justifyContent: 'center', alignItems: 'center' }}>
+                    <Image
+                      source={SYSTEM_ICONS.star}
+                      style={{ width: 17, height: 17, tintColor: starredOnly ? '#B8860B' : undefined }}
+                    />
+                  </View>
+                </ShadowBox>
+              </Pressable>
+
+              {/* sort toggle — sticks across sessions */}
+              <Pressable onPress={toggleSort}>
+                <ShadowBox
+                  contentBackgroundColor={PAGE.journal.foreground[0]}
+                  contentBorderRadius={20}
+                  shadowBorderRadius={20}
+                  shadowOffset={{ x: 1, y: 1 }}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 8, paddingHorizontal: 12 }}>
+                    <Text style={{ fontFamily: 'p1', fontSize: 12 }}>
+                      {sortOrder === 'latest' ? 'Latest' : 'Earliest'}
+                    </Text>
+                    <Image
+                      source={SYSTEM_ICONS.sort}
+                      style={{
+                        width: 12,
+                        height: 12,
+                        transform: [{ rotate: sortOrder === 'latest' ? '0deg' : '180deg' }],
+                      }}
+                    />
+                  </View>
+                </ShadowBox>
+              </Pressable>
+
+              {/* filter */}
+              <Pressable onPress={() => setFilterOpen(true)}>
+                <ShadowBox
+                  contentBackgroundColor={filtersActive ? PAGE.journal.primary[0] : PAGE.journal.foreground[0]}
+                  contentBorderRadius={30}
+                  shadowBorderRadius={30}
+                  shadowOffset={{ x: 1, y: 1 }}
+                >
+                  <View style={{ width: 36, height: 36, justifyContent: 'center', alignItems: 'center' }}>
+                    <Image source={SYSTEM_ICONS.list} style={{ width: 17, height: 17 }} />
+                  </View>
+                </ShadowBox>
+              </Pressable>
+
+              {/* search */}
+              <Pressable onPress={toggleSearch}>
+                <ShadowBox
+                  contentBackgroundColor={PAGE.journal.foreground[0]}
+                  contentBorderRadius={30}
+                  shadowBorderRadius={30}
+                  shadowOffset={{ x: 1, y: 1 }}
+                >
+                  <View style={{ width: 36, height: 36, justifyContent: 'center', alignItems: 'center' }}>
+                    <Image source={SYSTEM_ICONS.search} style={{ width: 17, height: 17 }} />
+                  </View>
+                </ShadowBox>
+              </Pressable>
+            </>
           )}
         </View>
 
         <ScrollView
+          ref={scrollRef}
           contentContainerStyle={{ paddingHorizontal: 3, paddingBottom: 65 }}
           style={{ flex: 1 }}
           keyboardShouldPersistTaps="handled"
@@ -300,15 +475,19 @@ export default function JournalPage() {
             {allEntries.length > 0 && !query && <MoodPreview entries={allEntries} />}
 
             {/* no matches */}
-            {query.length > 0 && Object.keys(filteredByMonth).length === 0 && (
+            {(query.length > 0 || filtersActive) && Object.keys(displayedByMonth).length === 0 && (
               <Text style={{ fontFamily: 'label', fontSize: 13, opacity: 0.5, textAlign: 'center', marginTop: 30 }}>
-                No entries match "{searchQuery.trim()}"
+                {query.length > 0 ? `No entries match "${searchQuery.trim()}"` : 'No entries match the filters'}
               </Text>
             )}
 
             {/* Monthly entries list */}
-            {Object.entries(filteredByMonth).map(([month, entries]) => (
-              <View key={month} style={{ marginBottom: 25 }}>
+            {Object.entries(displayedByMonth).map(([month, entries]) => (
+              <View
+                key={month}
+                style={{ marginBottom: 25 }}
+                onLayout={(e) => { monthPositions.current[month] = e.nativeEvent.layout.y; }}
+              >
                 <Text style={styles.monthHeader}>{month}</Text>
 
                 {entries.map(entry => {
@@ -334,9 +513,19 @@ export default function JournalPage() {
                           onPress={() => router.push(`/(tabs)/more/journal/${entry.id}`)}
                           style={{ gap: 8 }}
                         >
-                          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                            <Text style={styles.entryDate}>{formattedDate}</Text>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                            <Text style={[styles.entryDate, { flex: 1 }]}>{formattedDate}</Text>
                             {entry.time && <Text style={styles.entryTime}>{entry.time}</Text>}
+                            <Pressable onPress={() => toggleStar(entry.id)} hitSlop={8}>
+                              <Image
+                                source={SYSTEM_ICONS.star}
+                                style={{
+                                  width: 16,
+                                  height: 16,
+                                  tintColor: entry.starred ? undefined : 'rgba(0,0,0,0.18)',
+                                }}
+                              />
+                            </Pressable>
                           </View>
 
                           {/* location OR lock icon */}
@@ -387,11 +576,21 @@ export default function JournalPage() {
                               {isLong && (
                                 <Pressable
                                   onPress={() => toggleExpanded(entry.id)}
-                                  style={{ alignSelf: 'flex-start', marginTop: 8 }}
+                                  style={{ alignSelf: 'flex-start', marginTop: 8, flexDirection: 'row', alignItems: 'center', gap: 4 }}
                                 >
                                   <Text style={styles.readMore}>
-                                    {isExpanded ? 'Read less ←' : 'Read more →'}
+                                    {isExpanded ? 'Read less' : 'Read more'}
                                   </Text>
+                                  <Image
+                                    source={SYSTEM_ICONS.right}
+                                    style={{
+                                      width: 11,
+                                      height: 11,
+                                      marginTop: 8,
+                                      tintColor: COLORS.ReadMore,
+                                      transform: [{ rotate: isExpanded ? '180deg' : '0deg' }],
+                                    }}
+                                  />
                                 </Pressable>
                               )}
                             </View>
@@ -437,6 +636,116 @@ export default function JournalPage() {
             </Pressable>
           </View>
         </View>
+
+        {/* filter modal */}
+        <Modal
+          visible={filterOpen}
+          transparent
+          animationType="none"
+          onRequestClose={() => setFilterOpen(false)}
+        >
+          <GestureHandlerRootView style={{ flex: 1 }}>
+            <Pressable style={styles.filterOverlay} onPress={() => setFilterOpen(false)}>
+              <Pressable style={styles.filterCard} onPress={(e) => e.stopPropagation()}>
+
+                <View style={{ marginTop: 20 }}>
+                  <Text style={{ fontFamily: 'p2', fontSize: 18, textAlign: 'center', marginBottom: 16 }}>
+                    Filter Entries
+                  </Text>
+                </View>
+
+                <GHScrollView
+                  contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 10, gap: 20 }}
+                  showsVerticalScrollIndicator={false}
+                >
+                  {/* moods */}
+                  {moodsInUse.length > 0 && (
+                    <View style={{ gap: 10 }}>
+                      <Text style={styles.filterLabel}>MOODS</Text>
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                        {moodsInUse.map(mood => {
+                          const color = MOOD_COLORS[mood as keyof typeof MOOD_COLORS] ?? '#ccc';
+                          const isSelected = filterMoods.includes(mood);
+                          return (
+                            <Pressable key={mood} onPress={() => toggleFilterMood(mood)}>
+                              <View style={[
+                                styles.filterChip,
+                                { borderColor: isSelected ? '#000' : color, backgroundColor: isSelected ? color : '#fff' },
+                              ]}>
+                                <View style={{ width: 10, height: 10, borderRadius: 4, backgroundColor: color, borderWidth: 1, borderColor: 'rgba(0,0,0,0.25)' }} />
+                                <Text style={styles.filterChipText}>{mood}</Text>
+                              </View>
+                            </Pressable>
+                          );
+                        })}
+                      </View>
+                    </View>
+                  )}
+
+                  {/* years */}
+                  {yearsInUse.length > 1 && (
+                    <View style={{ gap: 10 }}>
+                      <Text style={styles.filterLabel}>YEAR</Text>
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                        {yearsInUse.map(year => {
+                          const isSelected = filterYear === year;
+                          return (
+                            <Pressable key={year} onPress={() => setFilterYear(isSelected ? null : year)}>
+                              <View style={[
+                                styles.filterChip,
+                                { borderColor: isSelected ? '#000' : PAGE.journal.border[0], backgroundColor: isSelected ? PAGE.journal.border[0] : '#fff' },
+                              ]}>
+                                <Text style={styles.filterChipText}>{year}</Text>
+                              </View>
+                            </Pressable>
+                          );
+                        })}
+                      </View>
+                    </View>
+                  )}
+
+                  {/* jump to month */}
+                  {monthKeys.length > 0 && (
+                    <View style={{ gap: 10 }}>
+                      <Text style={styles.filterLabel}>JUMP TO MONTH</Text>
+                      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                        {monthKeys.map(month => (
+                          <Pressable key={month} onPress={() => jumpToMonth(month)}>
+                            <View style={[styles.filterChip, { borderColor: PAGE.journal.primary[0], backgroundColor: '#fff' }]}>
+                              <Text style={styles.filterChipText}>{month}</Text>
+                            </View>
+                          </Pressable>
+                        ))}
+                      </View>
+                    </View>
+                  )}
+                </GHScrollView>
+
+                <View style={{ flexDirection: 'row', borderTopWidth: 1, padding: 10, gap: 10, marginTop: 10 }}>
+                  <Pressable
+                    onPress={() => { setFilterMoods([]); setFilterYear(null); }}
+                    style={{ flex: 1 }}
+                  >
+                    <ShadowBox contentBackgroundColor="#f0f0f0" shadowBorderRadius={15}>
+                      <View style={{ paddingVertical: 6 }}>
+                        <Text style={{ fontFamily: 'p2', fontSize: 14, textAlign: 'center' }}>Clear</Text>
+                      </View>
+                    </ShadowBox>
+                  </Pressable>
+
+                  <Pressable onPress={() => setFilterOpen(false)} style={{ flex: 1 }}>
+                    <ShadowBox contentBackgroundColor={PAGE.journal.border[0]} shadowBorderRadius={15}>
+                      <View style={{ paddingVertical: 6 }}>
+                        <Text style={{ fontFamily: 'p2', fontSize: 14, textAlign: 'center' }}>Done</Text>
+                      </View>
+                    </ShadowBox>
+                  </Pressable>
+                </View>
+
+              </Pressable>
+            </Pressable>
+          </GestureHandlerRootView>
+        </Modal>
       </PageContainer>
     </AppLinearGradient>
   );
@@ -461,6 +770,40 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#333',
     padding: 0,
+  },
+  filterOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  filterCard: {
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    borderWidth: 3,
+    borderColor: PAGE.journal.border[0],
+    maxHeight: '80%',
+    width: '90%',
+    alignSelf: 'center',
+  },
+  filterLabel: {
+    fontFamily: 'label',
+    fontSize: 11,
+    opacity: 0.6,
+    letterSpacing: 0.5,
+  },
+  filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 15,
+    borderWidth: 1,
+  },
+  filterChipText: {
+    fontFamily: 'p1',
+    fontSize: 12,
   },
   monthHeader: {
     fontFamily: 'p2',

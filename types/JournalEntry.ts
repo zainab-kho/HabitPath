@@ -6,6 +6,7 @@ export interface JournalEntry {
     mood?: string,
     location?: string,
     lock?: string,
+    starred?: boolean,
     entry?: string,
     song?: {
         title: string;

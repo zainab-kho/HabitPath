@@ -3,7 +3,7 @@ import { MOOD_COLORS, PAGE } from '@/constants/colors';
 import { globalStyles } from '@/styles';
 import { JournalEntry } from '@/types/JournalEntry';
 import ShadowBox from '@/ui/ShadowBox';
-import { formatLocalDate } from '@/utils/dateUtils';
+import { formatLocalDate, getWeekStartDow } from '@/utils/dateUtils';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React from 'react';
@@ -109,8 +109,8 @@ export default function MoodPreview({ entries }: MoodPreviewProps) {
             const year = monthDate.getFullYear();
             const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
 
-            // Get the day of week for the 1st of the month (0 = Sunday, 6 = Saturday)
-            const firstDayOfWeek = new Date(year, monthIndex, 1).getDay();
+            // offset of the 1st relative to the user's configured week start day
+            const firstDayOfWeek = (new Date(year, monthIndex, 1).getDay() - getWeekStartDow() + 7) % 7;
 
             const monthName = monthDate.toLocaleDateString('en-US', { month: 'short' });
 
@@ -187,7 +187,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     gap: 1,
-    maxWidth: 90,
+    // exactly 7 columns: 7 cells + 6 gaps
+    width: 7 * CELL_SIZE + 6,
   },
   emptyCell: {
     width: CELL_SIZE,

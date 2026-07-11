@@ -1,7 +1,9 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useFocusEffect, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
-import { Alert, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
+import { Alert, Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
+// gesture-handler scroll + root view so scrolling works inside the course modal
+import { GestureHandlerRootView, ScrollView as GHScrollView } from 'react-native-gesture-handler';
 
 import { ASSIGNMENT_PROGRESS, ASSIGNMENT_TYPE_COLORS, ASSIGNMENT_TYPES, PROGRESS_COLORS } from '@/constants';
 import { BUTTON_COLORS, PAGE } from '@/constants/colors';
@@ -136,15 +138,17 @@ export default function NewAssignment() {
             <PageContainer>
                 <PageHeader title="New Assignment" showBackButton />
 
-                <View style={{
-                    flex: 1,
-                    borderRadius: 20,
-                    marginHorizontal: 30,
-                    marginBottom: 50,
-                }}>
-                    <ScrollView
-                        showsVerticalScrollIndicator={false}
-                        style={{ paddingHorizontal: 2 }}>
+                <ScrollView
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={{ flexGrow: 1, paddingBottom: 50 }}
+                >
+                    {/* main card — same outline as the new habit page */}
+                    <View style={{
+                        backgroundColor: '#fff',
+                        borderWidth: 1,
+                        borderRadius: 20,
+                        padding: 30,
+                    }}>
                         <Text style={[globalStyles.label, { marginBottom: 10 }]}>
                             ASSIGNMENT NAME
                         </Text>
@@ -187,62 +191,25 @@ export default function NewAssignment() {
                             </Pressable>
                     </>
                     ) : (
-                    <View style={{ position: 'relative', zIndex: 10 }}>
-                        <ShadowBox
-                            contentBackgroundColor={selectedCourse ? PAGE.assignments.primary[1] : '#fff'}
-                            style={{ marginBottom: 10, width: '100%', alignSelf: 'center' }}
+                    <ShadowBox
+                        contentBackgroundColor={selectedCourse ? PAGE.assignments.primary[1] : '#fff'}
+                        style={{ marginBottom: 10 }}
+                    >
+                        <Pressable
+                            onPress={() => showCourseDropdown(true)}
+                            style={{ paddingVertical: 6, paddingHorizontal: 12, alignItems: 'center' }}
                         >
-                            <Pressable
-                                onPress={() => showCourseDropdown(prev => !prev)}
-                                style={{ paddingVertical: 6, paddingHorizontal: 12, alignItems: 'center' }}
+                            <Text
+                                numberOfLines={1}
+                                ellipsizeMode="tail"
+                                style={globalStyles.body}
                             >
-                                <Text
-                                    numberOfLines={1}
-                                    ellipsizeMode="tail"
-                                    style={globalStyles.body}
-                                >
-                                    {selectedCourse
-                                        ? `${selectedCourse.course_number}`
-                                        : 'Select course'}
-                                </Text>
-                            </Pressable>
-                        </ShadowBox>
-
-                        {courseDropdown && (
-                            <View style={{
-                                position: 'absolute',
-                                top: 50,
-                                left: '15%',
-                                right: '15%',
-                                zIndex: 1000,
-                            }}>
-                                <ShadowBox>
-                                    <View style={{ gap: 10, padding: 10, maxHeight: 200 }}>
-                                        <ScrollView showsVerticalScrollIndicator={false}>
-                                            {courses.map((course) => (
-                                                <Pressable
-                                                    key={course.id}
-                                                    onPress={() => {
-                                                        setSelectedCourse(course);
-                                                        showCourseDropdown(false);
-                                                    }}
-                                                    style={{ marginBottom: 10 }}
-                                                >
-                                                    <Text
-                                                        numberOfLines={1}
-                                                        ellipsizeMode="tail"
-                                                        style={globalStyles.body2}
-                                                    >
-                                                        {course.course_number} - {course.course_name}
-                                                    </Text>
-                                                </Pressable>
-                                            ))}
-                                        </ScrollView>
-                                    </View>
-                                </ShadowBox>
-                            </View>
-                        )}
-                    </View>
+                                {selectedCourse
+                                    ? `${selectedCourse.course_number}`
+                                    : 'Select course'}
+                            </Text>
+                        </Pressable>
+                    </ShadowBox>
                         )}
 
                     {/* TYPE DROPDOWN */}
@@ -424,9 +391,81 @@ export default function NewAssignment() {
                             </ShadowBox>
                         </Pressable>
                     </View>
+                    </View>
                 </ScrollView>
-            </View>
-        </PageContainer>
-        </AppLinearGradient >
+
+                {/* course picker modal — tap a course to select, tap outside to dismiss */}
+                <Modal
+                    visible={courseDropdown}
+                    transparent
+                    animationType="none"
+                    onRequestClose={() => showCourseDropdown(false)}
+                >
+                    <GestureHandlerRootView style={{ flex: 1 }}>
+                        <Pressable style={pickerModal.overlay} onPress={() => showCourseDropdown(false)}>
+                            <Pressable style={pickerModal.card} onPress={(e) => e.stopPropagation()}>
+
+                                <View style={{ marginTop: 20 }}>
+                                    <Text style={[globalStyles.h3, { textAlign: 'center', marginBottom: 16 }]}>
+                                        Select Course
+                                    </Text>
+                                </View>
+
+                                <GHScrollView
+                                    contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 20 }}
+                                    showsVerticalScrollIndicator={false}
+                                >
+                                    {courses.map((course) => {
+                                        const isSelected = selectedCourse?.id === course.id;
+                                        return (
+                                            <Pressable
+                                                key={course.id}
+                                                onPress={() => {
+                                                    setSelectedCourse(course);
+                                                    showCourseDropdown(false);
+                                                }}
+                                                style={{ marginBottom: 10 }}
+                                            >
+                                                <ShadowBox
+                                                    contentBackgroundColor={isSelected ? PAGE.assignments.primary[1] : '#fff'}
+                                                    contentBorderColor={isSelected ? '#000' : PAGE.assignments.primary[1]}
+                                                    shadowBorderColor={isSelected ? '#000' : PAGE.assignments.primary[1]}
+                                                    shadowColor={isSelected ? '#000' : PAGE.assignments.primary[1]}
+                                                >
+                                                    <View style={{ paddingVertical: 8, paddingHorizontal: 12 }}>
+                                                        <Text numberOfLines={1} ellipsizeMode="tail" style={globalStyles.body1}>
+                                                            {course.course_number} - {course.course_name}
+                                                        </Text>
+                                                    </View>
+                                                </ShadowBox>
+                                            </Pressable>
+                                        );
+                                    })}
+                                </GHScrollView>
+
+                            </Pressable>
+                        </Pressable>
+                    </GestureHandlerRootView>
+                </Modal>
+            </PageContainer>
+        </AppLinearGradient>
     );
 }
+
+const pickerModal = StyleSheet.create({
+    overlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0,0,0,0.45)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    card: {
+        backgroundColor: '#fff',
+        borderRadius: 20,
+        borderWidth: 3,
+        borderColor: PAGE.assignments.primary[1],
+        maxHeight: '60%',
+        width: '90%',
+        alignSelf: 'center',
+    },
+});

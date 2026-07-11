@@ -197,7 +197,7 @@ export default function Assignments() {
 
                 <ScrollView
                     ref={scrollViewRef}
-                    style={{ flex: 1 }}
+                    style={{ flex: 1, marginBottom: 30 }}
                     showsVerticalScrollIndicator={false}
                     contentContainerStyle={{ paddingBottom: 40 }}
                 >

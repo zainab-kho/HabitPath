@@ -104,14 +104,16 @@ export default function NewCourse() {
             <PageContainer>
                 <PageHeader title="New Course" showBackButton />
 
-                <View style={{
-                    flex: 1,
-                    borderRadius: 20,
-                    marginHorizontal: 30,
-                    marginBottom: 50,
-                }}>
-                    <ScrollView style={{
-                        paddingHorizontal: 2,
+                <ScrollView
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={{ flexGrow: 1, paddingBottom: 50 }}
+                >
+                    {/* main card — same outline as the new habit page */}
+                    <View style={{
+                        backgroundColor: '#fff',
+                        borderWidth: 1,
+                        borderRadius: 20,
+                        padding: 30,
                     }}>
                         <Text style={[globalStyles.label, {
                             marginBottom: 10,
@@ -329,8 +331,8 @@ export default function NewCourse() {
                                 </ShadowBox>
                             </Pressable>
                         </View>
-                    </ScrollView>
-                </View>
+                    </View>
+                </ScrollView>
             </PageContainer>
         </AppLinearGradient>
     );

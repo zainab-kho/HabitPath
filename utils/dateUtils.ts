@@ -10,7 +10,7 @@ import { STORAGE_KEYS } from '@/storage/keys';
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 // module-level so the sync week helpers below can use it everywhere
-let weekStartDow = 1; // Monday default
+let weekStartDow = 0; // Sunday default
 
 export function setWeekStartDay(day: string) {
   const idx = DAY_NAMES.indexOf(day);

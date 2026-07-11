@@ -37,7 +37,7 @@ export default function SettingsPage() {
     const [showTimePicker, setShowTimePicker] = useState(false);
 
     // which day the user's week starts on (weekly goals, week views, etc.)
-    const [weekStartDay, setWeekStartDayState] = useState('Monday');
+    const [weekStartDay, setWeekStartDayState] = useState('Sunday');
     const [showWeekStartPicker, setShowWeekStartPicker] = useState(false);
 
     // load saved time on mount

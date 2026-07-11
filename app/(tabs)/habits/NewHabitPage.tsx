@@ -20,7 +20,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { STORAGE_KEYS } from '@/storage/keys';
 import { Habit } from '@/types/Habit';
-import { formatDisplayDate, formatLocalDate, getHabitDate, parseLocalDate } from '@/utils/dateUtils';
+import { formatDisplayDate, formatLocalDate, getHabitDate, getWeekDatesForDate, parseLocalDate } from '@/utils/dateUtils';
 import { getResetTime } from '@/lib/supabase/queries';
 
 import { getIconFile } from '@/components/habits/iconUtils';
@@ -230,18 +230,15 @@ export default function NewHabitPage() {
         });
     };
 
+    // week boundaries respect the user's configured week start day
     const snapToMonday = (date: Date): Date => {
-        const d = new Date(date);
-        const day = d.getDay();
-        const diff = day === 0 ? -6 : 1 - day;
-        d.setDate(d.getDate() + diff);
-        return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12);
+        const start = parseLocalDate(getWeekDatesForDate(formatLocalDate(date))[0]);
+        return new Date(start.getFullYear(), start.getMonth(), start.getDate(), 12);
     };
 
-    const getSundayOfWeek = (monday: Date): Date => {
-        const d = new Date(monday);
-        d.setDate(d.getDate() + 6);
-        return new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12);
+    const getSundayOfWeek = (weekStart: Date): Date => {
+        const end = parseLocalDate(getWeekDatesForDate(formatLocalDate(weekStart))[6]);
+        return new Date(end.getFullYear(), end.getMonth(), end.getDate(), 12);
     };
 
     const handleFrequencyChange = (freq: Frequency) => {

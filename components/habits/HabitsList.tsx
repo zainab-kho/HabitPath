@@ -21,7 +21,7 @@ import { globalStyles } from '@/styles';
 import { Habit } from '@/types/Habit';
 import EmptyStateView from '@/ui/EmptyStateView';
 import ShadowBox from '@/ui/ShadowBox';
-import { getHabitDate } from '@/utils/dateUtils';
+import { getHabitDate, getWeekDatesForDate } from '@/utils/dateUtils';
 import { getGradientForTime } from '@/utils/gradients';
 import * as Haptics from 'expo-haptics';
 
@@ -178,15 +178,12 @@ export default function HabitsList({
   const weeklyHabits = activeHabits.filter(h => h.frequency === 'Weekly Goal');
 
   const weekRangeLabel = useMemo(() => {
-    const today = new Date(dateStr + 'T12:00:00');
-    const dow = today.getDay();
-    const mondayOffset = dow === 0 ? -6 : 1 - dow;
-    const monday = new Date(today);
-    monday.setDate(today.getDate() + mondayOffset);
-    const sunday = new Date(monday);
-    sunday.setDate(monday.getDate() + 6);
+    // respects the user's configured week start day
+    const weekDates = getWeekDatesForDate(dateStr);
+    const first = new Date(weekDates[0] + 'T12:00:00');
+    const last = new Date(weekDates[6] + 'T12:00:00');
     const fmt = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-    return `${fmt(monday)} – ${fmt(sunday)}`;
+    return `${fmt(first)} – ${fmt(last)}`;
   }, [dateStr]);
 
   // points earned vs available across this week's goals (for the collapsed card)

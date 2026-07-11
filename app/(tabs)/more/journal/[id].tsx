@@ -1,11 +1,12 @@
 // app/(tabs)/more/journal/[id].tsx
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Image,
+  Modal,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -13,25 +14,37 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
+// RN's ScrollView doesn't scroll inside these modals — use gesture-handler's
+import { ScrollView as GHScrollView } from 'react-native-gesture-handler';
 
 import SongCard from '@/components/journal/SongCard';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import MoodPickerModal from '@/modals/MoodPickerModal';
+import SongPickerModal, { SongData } from '@/modals/SongPickerModal';
 import { JournalEntry } from '@/types/JournalEntry';
 
-import { BUTTON_COLORS, COLORS, MOOD_COLORS, PAGE } from '@/constants/colors';
+import { BUTTON_COLORS, COLORS, MAIN_MOOD_COLORS, MOOD_COLORS, PAGE } from '@/constants/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import { AppLinearGradient } from '@/ui/AppLinearGradient';
 import PageContainer from '@/ui/PageContainer';
 import PageHeader from '@/ui/PageHeader';
 import ShadowBox from '@/ui/ShadowBox';
-import { formatLocalDate, parseLocalDate } from '@/utils/dateUtils';
-import { globalStyles, journalStyle } from '@/styles';
+import SimpleCalendar from '@/ui/SimpleCalendar';
+import { TimeWheel, pickerStyles } from '@/ui/TimeWheel';
+import ToggleRow from '@/ui/ToggleRow';
+import {
+  formatDisplayDate as formatPillDate,
+  formatDisplayTime,
+  formatLocalDate,
+  parseLocalDate,
+} from '@/utils/dateUtils';
+import { buttonStyles, globalStyles, journalStyle } from '@/styles';
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
-function formatDisplayDate(date: Date): string {
+function formatLongDate(date: Date): string {
   return date.toLocaleDateString('en-US', {
     weekday: 'long',
     month: 'long',
@@ -40,20 +53,18 @@ function formatDisplayDate(date: Date): string {
   });
 }
 
-function generateTimeOptions(): string[] {
-  const times: string[] = [];
-  for (let h = 0; h < 24; h++) {
-    for (let m = 0; m < 60; m += 15) {
-      const hour = h % 12 === 0 ? 12 : h % 12;
-      const minute = m.toString().padStart(2, '0');
-      const period = h < 12 ? 'AM' : 'PM';
-      times.push(`${hour}:${minute} ${period}`);
-    }
-  }
-  return times;
+// "3:45 PM" → hours/minutes; falls back to noon for unparseable strings
+function parseTimeString(time: string | undefined): { hour: number; minute: number } {
+  const match = time?.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+  if (!match) return { hour: 12, minute: 0 };
+  let hour = Number(match[1]) % 12;
+  if (match[3]?.toUpperCase() === 'PM') hour += 12;
+  return { hour, minute: Number(match[2]) };
 }
 
-const TIME_OPTIONS = generateTimeOptions();
+const HOURS = Array.from({ length: 12 }, (_, i) => String(i + 1));
+const MINUTES = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0'));
+const MERIDIEM = ['AM', 'PM'];
 
 // ─── main page ────────────────────────────────────────────────────────────────
 
@@ -67,21 +78,54 @@ export default function JournalEntryDetail() {
   const [isSaving, setIsSaving] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
 
-  // edit state
+  // edit state — mirrors the new entry page
+  const [editDateTime, setEditDateTime] = useState<Date>(() => new Date());
   const [editedEntry, setEditedEntry] = useState('');
-  const [editedMood, setEditedMood] = useState<string | null>(null);
+  const [editedMood, setEditedMood] = useState<keyof typeof MOOD_COLORS | null>(null);
+  const [extraMood, setExtraMood] = useState<keyof typeof MOOD_COLORS | null>(null);
   const [editedLocation, setEditedLocation] = useState('');
-  const [editedDate, setEditedDate] = useState<Date>(new Date());
-  const [editedTime, setEditedTime] = useState('');
   const [editedLock, setEditedLock] = useState(false);
-  const [editedSong, setEditedSong] = useState<any>(null);
+  const [editedSong, setEditedSong] = useState<SongData | null>(null);
+  const [editedBook, setEditedBook] = useState<SongData | null>(null);
+  const [editedShow, setEditedShow] = useState<SongData | null>(null);
 
   // UI state
-  const [showMoodPicker, setShowMoodPicker] = useState(false);
-  const [showTimePicker, setShowTimePicker] = useState(false);
-  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [moodModalOpen, setMoodModalOpen] = useState(false);
+  const [mediaPicker, setMediaPicker] = useState<'song' | 'book' | 'show' | null>(null);
+
+  // date/time picker modal state (temp values until Save)
+  const [dateTimeModalOpen, setDateTimeModalOpen] = useState(false);
+  const [tempDate, setTempDate] = useState<Date>(() => new Date());
+  const [tempHour, setTempHour] = useState('12');
+  const [tempMinute, setTempMinute] = useState('00');
+  const [tempMeridiem, setTempMeridiem] = useState<'AM' | 'PM'>('AM');
+
+  // journal input scroll/focus handling (same as new entry page)
+  const inputRef = useRef<TextInput>(null);
+  const [entryFocused, setEntryFocused] = useState(false);
+
+  const BASE_MOODS = Object.keys(MAIN_MOOD_COLORS) as (keyof typeof MAIN_MOOD_COLORS)[];
+  const displayedMoods: (keyof typeof MOOD_COLORS)[] = extraMood
+    ? [BASE_MOODS[0], BASE_MOODS[1], extraMood, BASE_MOODS[3], BASE_MOODS[4]]
+    : BASE_MOODS;
 
   // ── load ──────────────────────────────────────────────────────────────────
+
+  const populateEditState = (e: JournalEntry) => {
+    const { hour, minute } = parseTimeString(e.time);
+    const dt = new Date(e.date);
+    dt.setHours(hour, minute, 0, 0);
+    setEditDateTime(dt);
+    setEditedEntry(e.entry ?? '');
+    const mood = (e.mood as keyof typeof MOOD_COLORS) ?? null;
+    setEditedMood(mood);
+    setExtraMood(mood && !BASE_MOODS.includes(mood as keyof typeof MAIN_MOOD_COLORS) ? mood : null);
+    setEditedLocation(e.location ?? '');
+    setEditedLock(!!e.lock);
+    setEditedSong(e.song ?? null);
+    setEditedBook(e.book ?? null);
+    setEditedShow(e.show ?? null);
+  };
 
   const loadEntry = useCallback(async () => {
     if (!user || !id) return;
@@ -122,6 +166,8 @@ export default function JournalEntryDetail() {
         lock: data.is_locked ? '1' : undefined,
         entry: data.entry ?? undefined,
         song: data.song ?? undefined,
+        book: data.book ?? undefined,
+        show: data.show ?? undefined,
       } as JournalEntry;
 
       setEntry(fresh);
@@ -135,14 +181,45 @@ export default function JournalEntryDetail() {
 
   useEffect(() => { loadEntry(); }, [loadEntry]);
 
-  const populateEditState = (e: JournalEntry) => {
-    setEditedEntry(e.entry ?? '');
-    setEditedMood(e.mood ?? null);
-    setEditedLocation(e.location ?? '');
-    setEditedDate(new Date(e.date));
-    setEditedTime(e.time ?? '');
-    setEditedLock(!!e.lock);
-    setEditedSong((e as any).song ?? null);
+  // ── mood handlers (same behavior as new entry page) ───────────────────────
+
+  const handleMoodPress = (mood: keyof typeof MOOD_COLORS) => {
+    setEditedMood(editedMood === mood ? null : mood);
+  };
+
+  const handleMoodModalSelect = (mood: keyof typeof MOOD_COLORS) => {
+    setEditedMood(mood);
+    setMoodModalOpen(false);
+    if (BASE_MOODS.includes(mood as keyof typeof MAIN_MOOD_COLORS)) {
+      setExtraMood(null);
+    } else {
+      setExtraMood(mood);
+    }
+  };
+
+  // ── date/time modal ───────────────────────────────────────────────────────
+
+  const openDateTimeModal = () => {
+    setTempDate(editDateTime);
+    const hours = editDateTime.getHours();
+    const isPM = hours >= 12;
+    const hour12 = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+    setTempHour(String(hour12));
+    setTempMinute(String(editDateTime.getMinutes()).padStart(2, '0'));
+    setTempMeridiem(isPM ? 'PM' : 'AM');
+    setDateTimeModalOpen(true);
+  };
+
+  const handleSaveDateTime = () => {
+    const hour24 =
+      tempMeridiem === 'AM'
+        ? tempHour === '12' ? 0 : Number(tempHour)
+        : tempHour === '12' ? 12 : Number(tempHour) + 12;
+
+    const combined = new Date(tempDate);
+    combined.setHours(hour24, Number(tempMinute), 0, 0);
+    setEditDateTime(combined);
+    setDateTimeModalOpen(false);
   };
 
   // ── save ──────────────────────────────────────────────────────────────────
@@ -152,18 +229,21 @@ export default function JournalEntryDetail() {
     setIsSaving(true);
 
     try {
-      const dateStr = formatLocalDate(editedDate);
+      const dateStr = formatLocalDate(editDateTime);
+      const timeStr = formatDisplayTime(editDateTime);
 
       const { error } = await supabase
         .from('journal_entries')
         .update({
           date: dateStr,
-          time: editedTime,
+          time: timeStr,
           mood: editedMood ?? null,
           location: editedLocation.trim() || null,
           entry: editedEntry.trim() || null,
           is_locked: editedLock,
           song: editedSong ?? null,
+          book: editedBook ?? null,
+          show: editedShow ?? null,
         })
         .eq('id', entry.id)
         .eq('user_id', user.id);
@@ -179,12 +259,14 @@ export default function JournalEntryDetail() {
             ? {
                 ...e,
                 date: dateStr,
-                time: editedTime,
+                time: timeStr,
                 mood: editedMood ?? undefined,
                 location: editedLocation.trim() || undefined,
                 entry: editedEntry.trim() || undefined,
                 lock: editedLock ? '1' : undefined,
                 song: editedSong ?? undefined,
+                book: editedBook ?? undefined,
+                show: editedShow ?? undefined,
               }
             : e
         );
@@ -194,13 +276,15 @@ export default function JournalEntryDetail() {
       // reflect changes locally
       setEntry(prev => prev ? {
         ...prev,
-        date: editedDate,
-        time: editedTime,
+        date: editDateTime,
+        time: timeStr,
         mood: editedMood ?? undefined,
         location: editedLocation.trim() || undefined,
         entry: editedEntry.trim() || undefined,
         lock: editedLock ? '1' : undefined,
         song: editedSong ?? undefined,
+        book: editedBook ?? undefined,
+        show: editedShow ?? undefined,
       } as JournalEntry : prev);
 
       setIsEditMode(false);
@@ -278,10 +362,6 @@ export default function JournalEntryDetail() {
     ? MOOD_COLORS[entry.mood as keyof typeof MOOD_COLORS]
     : PAGE.journal.foreground[0];
 
-  const editedMoodColor = editedMood
-    ? MOOD_COLORS[editedMood as keyof typeof MOOD_COLORS]
-    : PAGE.journal.foreground[0];
-
   // ── view mode ─────────────────────────────────────────────────────────────
 
   if (!isEditMode) {
@@ -305,7 +385,7 @@ export default function JournalEntryDetail() {
                 {/* date + time row */}
                 <View style={styles.headerRow}>
                   <Text style={styles.dateText}>
-                    {formatDisplayDate(new Date(entry.date))}
+                    {formatLongDate(new Date(entry.date))}
                   </Text>
                   {entry.time && (
                     <Text style={styles.timeText}>{entry.time}</Text>
@@ -343,10 +423,20 @@ export default function JournalEntryDetail() {
                   </View>
                 )}
 
-                {/* song */}
-                {(entry as any).song && (
+                {/* media cards */}
+                {entry.song && (
                   <View style={{ marginTop: 12, marginHorizontal: -10 }}>
-                    <SongCard lessContrast song={(entry as any).song} />
+                    <SongCard lessContrast song={entry.song} />
+                  </View>
+                )}
+                {entry.book && (
+                  <View style={{ marginTop: 12, marginHorizontal: -10 }}>
+                    <SongCard lessContrast song={entry.book} type="book" />
+                  </View>
+                )}
+                {entry.show && (
+                  <View style={{ marginTop: 12, marginHorizontal: -10 }}>
+                    <SongCard lessContrast song={entry.show} type="show" />
                   </View>
                 )}
 
@@ -401,400 +491,335 @@ export default function JournalEntryDetail() {
     );
   }
 
-  // ── edit mode ─────────────────────────────────────────────────────────────
+  // ── edit mode: identical layout to the new entry page ─────────────────────
 
   return (
     <AppLinearGradient variant="journal.background">
       <PageContainer>
         <PageHeader title="Edit Entry" showBackButton />
 
-        <ScrollView
-          contentContainerStyle={{ paddingHorizontal: 3, paddingBottom: 100 }}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
+        {/* date / time pill — tap to change */}
+        <Pressable
+          onPress={openDateTimeModal}
+          style={{
+            paddingHorizontal: 12,
+            paddingVertical: 6,
+            borderRadius: 12,
+            borderWidth: 1,
+            borderColor: '#000',
+            backgroundColor: COLORS.PrimaryLight,
+            alignSelf: 'center',
+            marginBottom: 10,
+          }}
         >
+          <Text style={[globalStyles.body2, { fontSize: 13 }]}>
+            {formatPillDate(editDateTime)}  •  {formatDisplayTime(editDateTime)}
+          </Text>
+        </Pressable>
 
-          {/* ── date ── */}
-          <Text style={styles.sectionLabel}>DATE</Text>
-          <Pressable onPress={() => setShowDatePicker(!showDatePicker)}>
-            <ShadowBox
-              contentBackgroundColor={PAGE.journal.foreground[0]}
-              shadowColor={PAGE.journal.border[0]}
-              style={{ marginBottom: 12 }}
+        <KeyboardAwareScrollView
+          enableOnAndroid={true}
+          enableAutomaticScroll={true}
+          extraScrollHeight={20}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="interactive"
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 40 }}
+        >
+          {/* lock entry */}
+          <ToggleRow
+            label="Lock entry?"
+            value={editedLock}
+            onValueChange={setEditedLock}
+            trackColorTrue={PAGE.journal.border[0]}
+          />
+
+          {/* mood */}
+          <Text style={[globalStyles.body, { marginBottom: 10 }]}>Mood</Text>
+
+          <View style={journalStyle.card}>
+            <View style={journalStyle.moodRow}>
+              {displayedMoods.map((mood) => {
+                const color = MOOD_COLORS[mood];
+                return (
+                  <View key={mood} style={journalStyle.moodItem}>
+                    <Pressable
+                      onPress={() => handleMoodPress(mood)}
+                      style={[
+                        journalStyle.moodBox,
+                        { borderColor: color, shadowColor: color },
+                        editedMood === mood && {
+                          backgroundColor: color,
+                          shadowColor: '#000',
+                          borderColor: '#000',
+                        },
+                      ]}
+                    />
+                    <Text style={journalStyle.moodLabel}>{mood}</Text>
+                  </View>
+                );
+              })}
+            </View>
+          </View>
+
+          <Pressable onPress={() => setMoodModalOpen(true)}>
+            <Text
+              style={[
+                globalStyles.label,
+                {
+                  textAlign: 'center',
+                  opacity: 0.5,
+                  fontSize: 11,
+                  margin: 10,
+                },
+              ]}
             >
-              <View style={styles.row}>
-                <Image source={SYSTEM_ICONS.calendar} style={styles.rowIcon} />
-                <Text style={globalStyles.body}>{formatDisplayDate(editedDate)}</Text>
-                <Image source={SYSTEM_ICONS.sort} style={styles.chevron} />
-              </View>
-            </ShadowBox>
+              More
+            </Text>
           </Pressable>
 
-          {/* inline month calendar */}
-          {showDatePicker && (
-            <ShadowBox
-              contentBackgroundColor="#fff"
-              shadowColor={PAGE.journal.border[0]}
-              style={{ marginBottom: 12 }}
-            >
-              <View style={{ padding: 12 }}>
-                <InlineCalendar
-                  selectedDate={editedDate}
-                  onSelect={(d) => {
-                    setEditedDate(d);
-                    setShowDatePicker(false);
-                  }}
-                />
-              </View>
-            </ShadowBox>
+          {/* location */}
+          <Text style={[globalStyles.body, { marginBottom: 10 }]}>Location</Text>
+          <View style={journalStyle.locationCard}>
+            <TextInput
+              style={[
+                globalStyles.body,
+                {
+                  paddingHorizontal: 10,
+                  paddingVertical: 10,
+                  lineHeight: 18,
+                },
+              ]}
+              placeholder="Where are you right now?"
+              placeholderTextColor="rgba(0,0,0,0.5)"
+              value={editedLocation}
+              onChangeText={setEditedLocation}
+              cursorColor={PAGE.journal.border[0]}
+              selectionColor={PAGE.journal.border[0]}
+            />
+          </View>
+
+          {/* journal */}
+          <Text style={[globalStyles.body, { marginBottom: 10 }]}>Journal</Text>
+
+          {/* media card previews above the text box */}
+          {editedSong && (
+            <SongCard
+              song={editedSong}
+              onRemove={() => setEditedSong(null)}
+            />
+          )}
+          {editedBook && (
+            <SongCard
+              song={editedBook}
+              type="book"
+              onRemove={() => setEditedBook(null)}
+            />
+          )}
+          {editedShow && (
+            <SongCard
+              song={editedShow}
+              type="show"
+              onRemove={() => setEditedShow(null)}
+            />
           )}
 
-          {/* ── time ── */}
-          <Text style={styles.sectionLabel}>TIME</Text>
-          <Pressable onPress={() => setShowTimePicker(!showTimePicker)}>
-            <ShadowBox
-              contentBackgroundColor={PAGE.journal.foreground[0]}
-              shadowColor={PAGE.journal.border[0]}
-              style={{ marginBottom: 4 }}
-            >
-              <View style={styles.row}>
-                <Image source={SYSTEM_ICONS.clock} style={styles.rowIcon} />
-                <Text style={globalStyles.body}>{editedTime || 'No time set'}</Text>
-                <Image source={SYSTEM_ICONS.sort} style={styles.chevron} />
-              </View>
-            </ShadowBox>
-          </Pressable>
-
-          {showTimePicker && (
-            <ShadowBox
-              contentBackgroundColor="#fff"
-              shadowColor={PAGE.journal.border[0]}
-              style={{ marginBottom: 12 }}
-            >
-              <ScrollView
-                style={{ maxHeight: 180 }}
-                showsVerticalScrollIndicator={false}
-              >
-                {TIME_OPTIONS.map(t => (
-                  <Pressable
-                    key={t}
-                    onPress={() => {
-                      setEditedTime(t);
-                      setShowTimePicker(false);
-                    }}
-                    style={[
-                      styles.timeOption,
-                      t === editedTime && { backgroundColor: PAGE.journal.border[0] + '33' },
-                    ]}
-                  >
-                    <Text style={[globalStyles.body, t === editedTime && { fontFamily: 'p2' }]}>
-                      {t}
-                    </Text>
-                  </Pressable>
-                ))}
-              </ScrollView>
-            </ShadowBox>
-          )}
-
-          {/* ── mood ── */}
-          <Text style={styles.sectionLabel}>MOOD</Text>
-          <Pressable onPress={() => setShowMoodPicker(true)}>
-            <ShadowBox
-              contentBackgroundColor={editedMoodColor}
-              shadowColor={PAGE.journal.border[0]}
-              style={{ marginBottom: 12 }}
-            >
-              <View style={styles.row}>
-                <View
-                  style={[
-                    styles.moodDot,
-                    {
-                      backgroundColor: editedMoodColor,
-                      borderColor: '#000',
-                      shadowColor: '#000',
-                      shadowOffset: { width: 1, height: 1 },
-                      shadowOpacity: 1,
-                      shadowRadius: 0,
-                    },
-                  ]}
-                />
-                <Text style={globalStyles.body}>{editedMood ?? 'No mood set'}</Text>
-                {editedMood && (
-                  <Pressable
-                    onPress={() => setEditedMood(null)}
-                    style={{ marginLeft: 'auto' }}
-                    hitSlop={8}
-                  >
-                    <Text style={styles.clearBtn}>✕</Text>
-                  </Pressable>
-                )}
-                {!editedMood && (
-                  <Image source={SYSTEM_ICONS.sort} style={styles.chevron} />
-                )}
-              </View>
-            </ShadowBox>
-          </Pressable>
-
-          {/* ── location ── */}
-          <Text style={styles.sectionLabel}>LOCATION</Text>
-          <ShadowBox
-            contentBackgroundColor={PAGE.journal.foreground[0]}
-            shadowColor={PAGE.journal.border[0]}
-            style={{ marginBottom: 12 }}
-          >
-            <View style={styles.row}>
-              <Image source={SYSTEM_ICONS.location} style={[styles.rowIcon, { tintColor: COLORS.Secondary }]} />
+          <View style={journalStyle.journalCard}>
+            <View>
               <TextInput
-                style={[globalStyles.body, { flex: 1 }]}
-                value={editedLocation}
-                onChangeText={setEditedLocation}
-                placeholder="Add location..."
-                placeholderTextColor="rgba(0,0,0,0.3)"
+                ref={inputRef}
+                style={[
+                  globalStyles.body,
+                  journalStyle.textArea,
+                  {
+                    lineHeight: 20,
+                    minHeight: 200,
+                  }
+                ]}
+                placeholder="What are your thoughts?"
+                multiline
+                textAlignVertical="top"
+                cursorColor={PAGE.journal.border[0]}
+                selectionColor={PAGE.journal.border[0]}
+                placeholderTextColor="rgba(0,0,0,0.5)"
+                value={editedEntry}
+                onChangeText={setEditedEntry}
+                onFocus={() => setEntryFocused(true)}
+                onBlur={() => setEntryFocused(false)}
               />
-              {editedLocation.length > 0 && (
-                <Pressable onPress={() => setEditedLocation('')} hitSlop={8}>
-                  <Text style={styles.clearBtn}>✕</Text>
-                </Pressable>
+              {/* while blurred, this invisible layer catches touches so
+                  drags scroll the page — only a real tap re-focuses */}
+              {!entryFocused && (
+                <Pressable
+                  style={StyleSheet.absoluteFill}
+                  onPress={() => inputRef.current?.focus()}
+                />
               )}
             </View>
-          </ShadowBox>
 
-          {/* ── song ── */}
-          {editedSong && (
-            <>
-              <Text style={styles.sectionLabel}>SONG</Text>
-              <View style={{ marginBottom: 12 }}>
-                <SongCard song={editedSong} />
-                <Pressable
-                  onPress={() => setEditedSong(null)}
-                  style={{ alignSelf: 'flex-end', marginTop: 6 }}
-                >
-                  <Text style={styles.removeText}>Remove song</Text>
-                </Pressable>
-              </View>
-            </>
-          )}
-
-          {/* ── lock ── */}
-          <Text style={styles.sectionLabel}>PRIVACY</Text>
-          <Pressable onPress={() => setEditedLock(prev => !prev)}>
-            <ShadowBox
-              contentBackgroundColor={editedLock ? PAGE.journal.border[0] + '33' : PAGE.journal.foreground[0]}
-              shadowColor={PAGE.journal.border[0]}
-              style={{ marginBottom: 12 }}
-            >
-              <View style={styles.row}>
+            {/* faint action row */}
+            <View style={{
+              flexDirection: 'row',
+              borderTopWidth: 1,
+              borderTopColor: 'rgba(0,0,0,0.06)',
+              paddingVertical: 10,
+              paddingHorizontal: 10,
+              gap: 16,
+            }}>
+              <Pressable
+                onPress={() => setMediaPicker('song')}
+                style={({ pressed }) => ({ opacity: pressed ? 0.4 : 1, flexDirection: 'row', alignItems: 'center', gap: 5 })}
+              >
                 <Image
-                  source={editedLock ? SYSTEM_ICONS.padlock : SYSTEM_ICONS.lock}
-                  style={styles.rowIcon}
+                  source={SYSTEM_ICONS.musicNote}
+                  style={{ width: 14, height: 14 }}
                 />
-                <Text style={globalStyles.body}>{editedLock ? 'Locked' : 'Unlocked'}</Text>
-                <View style={[styles.toggle, { backgroundColor: editedLock ? PAGE.journal.border[0] : '#ccc' }]}>
-                  <View style={[styles.toggleThumb, editedLock && styles.toggleThumbOn]} />
-                </View>
-              </View>
-            </ShadowBox>
-          </Pressable>
+                <Text style={{ fontFamily: 'p1', fontSize: 12, color: 'rgba(0,0,0,0.3)' }} numberOfLines={1}>
+                  {editedSong ? editedSong.title : 'add song'}
+                </Text>
+              </Pressable>
 
-          {/* ── journal entry ── */}
-          <Text style={styles.sectionLabel}>ENTRY</Text>
-          <ShadowBox
-            contentBackgroundColor="#fff"
-            shadowColor={PAGE.journal.border[0]}
-            style={{ marginBottom: 20 }}
-          >
-            <TextInput
-              style={[journalStyle.textArea]}
-              value={editedEntry}
-              onChangeText={setEditedEntry}
-              multiline
-              placeholder="What's on your mind?"
-              placeholderTextColor="rgba(0,0,0,0.3)"
-              textAlignVertical="top"
-            />
-          </ShadowBox>
+              <Pressable
+                onPress={() => setMediaPicker('book')}
+                style={({ pressed }) => ({ opacity: pressed ? 0.4 : 1, flexDirection: 'row', alignItems: 'center', gap: 5, flexShrink: 1 })}
+              >
+                <Image
+                  source={SYSTEM_ICONS.journal}
+                  style={{ width: 14, height: 14, opacity: 0.4 }}
+                />
+                <Text style={{ fontFamily: 'p1', fontSize: 12, color: 'rgba(0,0,0,0.3)' }} numberOfLines={1}>
+                  {editedBook ? editedBook.title : 'add book'}
+                </Text>
+              </Pressable>
 
-        </ScrollView>
+              <Pressable
+                onPress={() => setMediaPicker('show')}
+                style={({ pressed }) => ({ opacity: pressed ? 0.4 : 1, flexDirection: 'row', alignItems: 'center', gap: 5, flexShrink: 1 })}
+              >
+                <Image
+                  source={SYSTEM_ICONS.show}
+                  style={{ width: 14, height: 14, opacity: 0.4 }}
+                />
+                <Text style={{ fontFamily: 'p1', fontSize: 12, color: 'rgba(0,0,0,0.3)' }} numberOfLines={1}>
+                  {editedShow ? editedShow.title : 'add show'}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
 
-        {/* save / cancel buttons */}
-        <View style={styles.bottomBar}>
-          <Pressable onPress={handleCancelEdit} style={{ flex: 1 }}>
-            <ShadowBox contentBackgroundColor={BUTTON_COLORS.Cancel} shadowBorderRadius={14}>
-              <View style={styles.bottomBtn}>
-                <Text style={globalStyles.body}>Cancel</Text>
-              </View>
-            </ShadowBox>
-          </Pressable>
-
-          <Pressable onPress={handleSave} style={{ flex: 1 }} disabled={isSaving}>
-            <ShadowBox
-              contentBackgroundColor={isSaving ? BUTTON_COLORS.Disabled : PAGE.journal.border[0]}
-              shadowBorderRadius={14}
+          {/* cancel / save */}
+          <View style={{ flexDirection: 'row', gap: 12, margin: 20, justifyContent: 'center' }}>
+            <Pressable
+              style={[buttonStyles.button, { backgroundColor: BUTTON_COLORS.Cancel }]}
+              onPress={handleCancelEdit}
             >
-              <View style={styles.bottomBtn}>
-                {isSaving
-                  ? <ActivityIndicator size="small" color="#fff" />
-                  : <Text style={globalStyles.body}>Save</Text>
-                }
-              </View>
-            </ShadowBox>
-          </Pressable>
-        </View>
+              <Text style={globalStyles.body}>Cancel</Text>
+            </Pressable>
+            <Pressable
+              style={[
+                buttonStyles.button,
+                {
+                  backgroundColor: PAGE.journal.border[0],
+                  opacity: isSaving ? 0.6 : 1,
+                },
+              ]}
+              onPress={handleSave}
+              disabled={isSaving}
+            >
+              <Text style={globalStyles.body}>
+                {isSaving ? 'Saving...' : 'Save'}
+              </Text>
+            </Pressable>
+          </View>
+        </KeyboardAwareScrollView>
 
         {/* mood picker modal */}
         <MoodPickerModal
-          visible={showMoodPicker}
-          selectedMood={editedMood as any}
-          onClose={() => setShowMoodPicker(false)}
-          onSelect={(mood) => {
-            setEditedMood(mood);
-            setShowMoodPicker(false);
+          visible={moodModalOpen}
+          selectedMood={editedMood}
+          onClose={() => setMoodModalOpen(false)}
+          onSelect={handleMoodModalSelect}
+        />
+
+        {/* media picker (song / book / show) */}
+        <SongPickerModal
+          visible={mediaPicker !== null}
+          mediaType={mediaPicker ?? 'song'}
+          onClose={() => setMediaPicker(null)}
+          onSelect={(s) => {
+            // one media log at a time — picking a new type replaces the old one
+            setEditedSong(mediaPicker === 'song' ? s : null);
+            setEditedBook(mediaPicker === 'book' ? s : null);
+            setEditedShow(mediaPicker === 'show' ? s : null);
           }}
         />
+
+        {/* date + time picker for the entry */}
+        <Modal
+          visible={dateTimeModalOpen}
+          transparent
+          animationType="none"
+          onRequestClose={() => setDateTimeModalOpen(false)}
+        >
+          <Pressable style={dtStyles.overlay} onPress={() => setDateTimeModalOpen(false)}>
+            <Pressable style={dtStyles.card} onPress={(e) => e.stopPropagation()}>
+
+              <View style={{ marginTop: 20 }}>
+                <Text style={[globalStyles.h3, { textAlign: 'center', marginBottom: 16 }]}>
+                  Entry Date & Time
+                </Text>
+              </View>
+
+              <GHScrollView
+                contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 10, gap: 16 }}
+                showsVerticalScrollIndicator={false}
+              >
+                <ShadowBox>
+                  <SimpleCalendar
+                    selectedDate={tempDate}
+                    onSelectDate={setTempDate}
+                    selectedDateColor={PAGE.journal.border[0]}
+                  />
+                </ShadowBox>
+
+                <View style={pickerStyles.container}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'center' }}>
+                    <TimeWheel data={HOURS} selected={tempHour} onSelect={setTempHour} />
+                    <TimeWheel data={MINUTES} selected={tempMinute} onSelect={setTempMinute} />
+                    <TimeWheel
+                      data={MERIDIEM}
+                      selected={tempMeridiem}
+                      onSelect={(value) => setTempMeridiem(value as 'AM' | 'PM')}
+                    />
+                  </View>
+                </View>
+              </GHScrollView>
+
+              <View style={{ flexDirection: 'row', borderTopWidth: 1, padding: 10, gap: 10 }}>
+                <Pressable onPress={() => setDateTimeModalOpen(false)} style={{ flex: 1 }}>
+                  <ShadowBox contentBackgroundColor={BUTTON_COLORS.Cancel} shadowBorderRadius={15}>
+                    <View style={{ paddingVertical: 6 }}>
+                      <Text style={[globalStyles.body, { textAlign: 'center' }]}>Cancel</Text>
+                    </View>
+                  </ShadowBox>
+                </Pressable>
+
+                <Pressable onPress={handleSaveDateTime} style={{ flex: 1 }}>
+                  <ShadowBox contentBackgroundColor={BUTTON_COLORS.Save} shadowBorderRadius={15}>
+                    <View style={{ paddingVertical: 6 }}>
+                      <Text style={[globalStyles.body, { textAlign: 'center' }]}>Save</Text>
+                    </View>
+                  </ShadowBox>
+                </Pressable>
+              </View>
+
+            </Pressable>
+          </Pressable>
+        </Modal>
       </PageContainer>
     </AppLinearGradient>
   );
 }
-
-// ─── inline calendar ─────────────────────────────────────────────────────────
-
-function InlineCalendar({
-  selectedDate,
-  onSelect,
-}: {
-  selectedDate: Date;
-  onSelect: (date: Date) => void;
-}) {
-  const [viewMonth, setViewMonth] = useState(new Date(selectedDate));
-
-  const year = viewMonth.getFullYear();
-  const month = viewMonth.getMonth();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const startDow = new Date(year, month, 1).getDay();
-  const monthLabel = viewMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-
-  const isSelected = (day: number) =>
-    selectedDate.getFullYear() === year &&
-    selectedDate.getMonth() === month &&
-    selectedDate.getDate() === day;
-
-  const isToday = (day: number) => {
-    const t = new Date();
-    return t.getFullYear() === year && t.getMonth() === month && t.getDate() === day;
-  };
-
-  return (
-    <View>
-      {/* header */}
-      <View style={cal.header}>
-        <Pressable
-          onPress={() => setViewMonth(new Date(year, month - 1))}
-          hitSlop={10}
-        >
-          <Image source={SYSTEM_ICONS.sortLeft} style={cal.navIcon} />
-        </Pressable>
-        <Text style={globalStyles.body}>{monthLabel}</Text>
-        <Pressable
-          onPress={() => setViewMonth(new Date(year, month + 1))}
-          hitSlop={10}
-        >
-          <Image source={SYSTEM_ICONS.sortRight} style={cal.navIcon} />
-        </Pressable>
-      </View>
-
-      {/* day labels */}
-      <View style={cal.dayRow}>
-        {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((d, i) => (
-          <Text key={i} style={cal.dayLabel}>{d}</Text>
-        ))}
-      </View>
-
-      {/* grid */}
-      <View style={cal.grid}>
-        {Array.from({ length: startDow }).map((_, i) => (
-          <View key={`e-${i}`} style={cal.cell} />
-        ))}
-        {Array.from({ length: daysInMonth }).map((_, i) => {
-          const day = i + 1;
-          const sel = isSelected(day);
-          const tod = isToday(day);
-          return (
-            <Pressable
-              key={day}
-              style={cal.cell}
-              onPress={() => onSelect(new Date(year, month, day))}
-            >
-              <View
-                style={[
-                  cal.dayCircle,
-                  sel && { backgroundColor: PAGE.journal.border[0] },
-                  !sel && tod && { borderWidth: 1.5, borderColor: PAGE.journal.border[0] },
-                ]}
-              >
-                <Text
-                  style={[
-                    cal.dayText,
-                    sel && { color: '#fff', fontFamily: 'p2' },
-                    !sel && tod && { color: PAGE.journal.border[0], fontFamily: 'p2' },
-                  ]}
-                >
-                  {day}
-                </Text>
-              </View>
-            </Pressable>
-          );
-        })}
-      </View>
-    </View>
-  );
-}
-
-const cal = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 10,
-  },
-  navIcon: {
-    width: 18,
-    height: 18,
-    opacity: 0.6,
-  },
-  dayRow: {
-    flexDirection: 'row',
-    marginBottom: 4,
-  },
-  dayLabel: {
-    width: '14.28%',
-    textAlign: 'center',
-    fontFamily: 'label',
-    fontSize: 11,
-    opacity: 0.45,
-  },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-  cell: {
-    width: '14.28%',
-    aspectRatio: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dayCircle: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  dayText: {
-    fontFamily: 'p1',
-    fontSize: 13,
-    opacity: 0.8,
-  },
-});
 
 // ─── styles ───────────────────────────────────────────────────────────────────
 
@@ -868,78 +893,22 @@ const styles = StyleSheet.create({
     width: 20,
     height: 20,
   },
-  sectionLabel: {
-    fontFamily: 'label',
-    fontSize: 11,
-    opacity: 0.5,
-    letterSpacing: 0.5,
-    marginBottom: 6,
-    marginTop: 4,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    padding: 14,
-  },
-  rowIcon: {
-    width: 18,
-    height: 18,
-    opacity: 0.7,
-  },
-  chevron: {
-    width: 14,
-    height: 14,
-    marginLeft: 'auto',
-    opacity: 0.4,
-  },
-  clearBtn: {
-    fontSize: 14,
-    opacity: 0.4,
-    marginLeft: 'auto',
-    paddingHorizontal: 4,
-  },
-  removeText: {
-    fontFamily: 'label',
-    fontSize: 12,
-    color: BUTTON_COLORS.Delete,
-    opacity: 0.8,
-  },
-  toggle: {
-    width: 40,
-    height: 22,
-    borderRadius: 11,
-    marginLeft: 'auto',
+});
+
+const dtStyles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
     justifyContent: 'center',
-    padding: 2,
+    alignItems: 'center',
   },
-  toggleThumb: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
+  card: {
     backgroundColor: '#fff',
-  },
-  toggleThumbOn: {
-    alignSelf: 'flex-end',
-  },
-  timeOption: {
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(0,0,0,0.08)',
-  },
-  bottomBar: {
-    position: 'absolute',
-    bottom: 20,
-    left: 3,
-    right: 3,
-    flexDirection: 'row',
-    gap: 10,
-    zIndex: 5,
-  },
-  bottomBtn: {
-    paddingVertical: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderRadius: 20,
+    borderWidth: 3,
+    borderColor: PAGE.journal.border[0],
+    maxHeight: '85%',
+    width: '90%',
+    alignSelf: 'center',
   },
 });

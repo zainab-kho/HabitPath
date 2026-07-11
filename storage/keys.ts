@@ -12,6 +12,7 @@ export const STORAGE_KEYS = {
   JOURNAL_DIRTY: '@journal_dirty',
 
   USER_SETTINGS: '@user_settings',
+  USER_DAY_OF_WEEK_CHOICE: '@user_day_of_week_choice',
   ONBOARDING_COMPLETE: '@onboarding_complete',
 
   REWARDS: '@rewards',

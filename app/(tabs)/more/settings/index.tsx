@@ -15,6 +15,10 @@ import { TimeWheel, pickerStyles } from '@/ui/TimeWheel';
 import { getResetTime } from '@/lib/supabase/queries';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { clearWishlist, resetPointsBalance } from '@/services/rewards/rewards';
+import { STORAGE_KEYS } from '@/storage/keys';
+import { setWeekStartDay } from '@/utils/dateUtils';
+
+const WEEK_DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 
 export default function SettingsPage() {
@@ -31,6 +35,10 @@ export default function SettingsPage() {
     const [minute, setMinute] = useState('00');
     const [meridiem, setMeridiem] = useState<'AM' | 'PM'>('AM');
     const [showTimePicker, setShowTimePicker] = useState(false);
+
+    // which day the user's week starts on (weekly goals, week views, etc.)
+    const [weekStartDay, setWeekStartDayState] = useState('Monday');
+    const [showWeekStartPicker, setShowWeekStartPicker] = useState(false);
 
     // load saved time on mount
     useEffect(() => {
@@ -49,8 +57,52 @@ export default function SettingsPage() {
             setHour(String(hour12));
             setMinute(String(minute).padStart(2, '0'));
             setMeridiem(isPM ? 'PM' : 'AM');
+
+            // week start day: local cache first, then supabase
+            const cachedDay = await AsyncStorage.getItem(STORAGE_KEYS.USER_DAY_OF_WEEK_CHOICE);
+            if (cachedDay) setWeekStartDayState(cachedDay);
+
+            const { data } = await supabase
+                .from('user_settings')
+                .select('week_start_day')
+                .eq('user_id', user.id)
+                .single();
+            if (data?.week_start_day) {
+                setWeekStartDayState(data.week_start_day);
+                setWeekStartDay(data.week_start_day); // apply to week calculations
+                await AsyncStorage.setItem(STORAGE_KEYS.USER_DAY_OF_WEEK_CHOICE, data.week_start_day);
+            }
         })();
     }, [user]);
+
+    const onSelectWeekStart = async (day: string) => {
+        setWeekStartDayState(day);
+        setShowWeekStartPicker(false);
+        // apply immediately to all week calculations
+        setWeekStartDay(day);
+
+        try {
+            await AsyncStorage.setItem(STORAGE_KEYS.USER_DAY_OF_WEEK_CHOICE, day);
+
+            if (user) {
+                // include the reset-time fields so a first-time insert satisfies
+                // the table's NOT NULL columns
+                const { error } = await supabase
+                    .from('user_settings')
+                    .upsert({
+                        user_id: user.id,
+                        week_start_day: day,
+                        end_of_day_hour: hour,
+                        end_of_day_minute: minute,
+                        end_of_day_meridiem: meridiem,
+                        updated_at: new Date().toISOString(),
+                    }, { onConflict: 'user_id' });
+                if (error) console.error('Error saving week start day:', error);
+            }
+        } catch (err) {
+            console.error('Unexpected error saving week start day:', err);
+        }
+    };
 
     const onDone = async () => {
         setShowTimePicker(false);
@@ -224,6 +276,40 @@ export default function SettingsPage() {
                                     <Text style={globalStyles.body1}>Done</Text>
                                 </Pressable>
                             </ShadowBox>
+                        </View>
+                    )}
+
+                    {/* week start day */}
+                    <View style={settingsStyle.row}>
+                        <Text style={globalStyles.body}>Week starts on</Text>
+
+                        <Pressable
+                            style={[globalStyles.bubbleLabel, { backgroundColor: COLORS.Time }]}
+                            onPress={() => setShowWeekStartPicker(prev => !prev)}
+                        >
+                            <Text style={globalStyles.body2}>{weekStartDay}</Text>
+                        </Pressable>
+                    </View>
+
+                    {showWeekStartPicker && (
+                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center' }}>
+                            {WEEK_DAYS.map((day) => {
+                                const isSelected = weekStartDay === day;
+                                return (
+                                    <Pressable key={day} onPress={() => onSelectWeekStart(day)}>
+                                        <ShadowBox
+                                            contentBackgroundColor={isSelected ? COLORS.Time : '#fff'}
+                                            contentBorderColor={isSelected ? '#000' : COLORS.Time}
+                                            shadowBorderColor={isSelected ? '#000' : COLORS.Time}
+                                            shadowColor={isSelected ? '#000' : COLORS.Time}
+                                        >
+                                            <View style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
+                                                <Text style={globalStyles.body1}>{day.slice(0, 3)}</Text>
+                                            </View>
+                                        </ShadowBox>
+                                    </Pressable>
+                                );
+                            })}
                         </View>
                     )}
 

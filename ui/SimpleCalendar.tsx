@@ -2,7 +2,7 @@
 import { PAGE } from '@/constants/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import { globalStyles } from '@/styles';
-import { formatLocalDate, getWeekDatesForDate } from '@/utils/dateUtils';
+import { formatLocalDate, getWeekDatesForDate, getWeekStartDow } from '@/utils/dateUtils';
 import React, { useMemo, useState } from 'react';
 import { Image, Pressable, Text, View } from 'react-native';
 
@@ -17,13 +17,16 @@ interface SimpleCalendarProps {
 export default function SimpleCalendar({ selectedDate, onSelectDate, selectedDateColor, minDate, weekSelectMode }: SimpleCalendarProps) {
     const [currentMonth, setCurrentMonth] = useState(new Date(selectedDate ?? new Date()));
 
+    // grid columns follow the user's configured week start day
+    const weekStartDow = getWeekStartDow();
+
     const getDaysInMonth = (date: Date) => {
         const year = date.getFullYear();
         const month = date.getMonth();
         const firstDay = new Date(year, month, 1);
         const lastDay = new Date(year, month + 1, 0);
         const daysInMonth = lastDay.getDate();
-        const startingDayOfWeek = firstDay.getDay();
+        const startingDayOfWeek = (firstDay.getDay() - weekStartDow + 7) % 7;
 
         return { daysInMonth, startingDayOfWeek };
     };
@@ -124,9 +127,11 @@ export default function SimpleCalendar({ selectedDate, onSelectDate, selectedDat
                 </Pressable>
             </View>
 
-            {/* weekday headers */}
+            {/* weekday headers — rotated to the configured week start */}
             <View style={{ flexDirection: 'row', marginBottom: 8 }}>
-                {['S', 'M', 'T', 'W', 'T', 'F', 'S'].map((day, i) => (
+                {Array.from({ length: 7 }, (_, i) =>
+                    ['S', 'M', 'T', 'W', 'T', 'F', 'S'][(weekStartDow + i) % 7]
+                ).map((day, i) => (
                     <View key={i} style={{ flex: 1, alignItems: 'center' }}>
                         <Text style={[globalStyles.label, { fontSize: 11, opacity: 0.6 }]}>
                             {day}

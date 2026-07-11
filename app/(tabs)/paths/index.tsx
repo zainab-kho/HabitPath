@@ -26,24 +26,23 @@ import Sortable from 'react-native-sortables';
 
 // date helpers
 
-const DAY_LABELS_WEEK = ['M', 'T', 'W', 'T', 'F', 'S', 'S'] as const;
+const DAY_LETTERS = ['S', 'M', 'T', 'W', 'T', 'F', 'S']; // indexed by getDay()
 
-// builds mon→sun for the current week, respecting reset time
+// builds the current week (user's configured start day), respecting reset time
 function buildWeek(now: Date, resetHour: number, resetMin: number) {
     const todayStr = getHabitDate(now, resetHour, resetMin);
-    const todayDate = new Date(todayStr + 'T12:00:00');
-    const dow = todayDate.getDay(); // 0=Sun, 1=Mon…6=Sat
-    const daysFromMon = dow === 0 ? 6 : dow - 1;
+    const todayNoon = new Date(todayStr + 'T12:00:00');
 
-    return Array.from({ length: 7 }, (_, i) => {
-        const offset = i - daysFromMon; // negative=past, 0=today, positive=future
+    return getWeekDatesForDate(todayStr).map(str => {
+        const noon = new Date(str + 'T12:00:00');
+        // real datetime offset from now so reset-time math stays consistent
+        const offset = Math.round((noon.getTime() - todayNoon.getTime()) / 86400000);
         const d = new Date(now);
         d.setDate(now.getDate() + offset);
-        const str = getHabitDate(d, resetHour, resetMin);
         return {
             date: d,
             str,
-            label: DAY_LABELS_WEEK[i],
+            label: DAY_LETTERS[noon.getDay()],
             isFuture: str > todayStr,
         };
     });

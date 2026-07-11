@@ -1,5 +1,30 @@
 // @/utils/dateUtils.ts
 // utility functions for handling dates in the habit tracking app, respecting custom reset times and local timezone.
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { STORAGE_KEYS } from '@/storage/keys';
+
+/* ============================================================================
+   WEEK START (user-configurable in settings)
+============================================================================ */
+
+const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+// module-level so the sync week helpers below can use it everywhere
+let weekStartDow = 1; // Monday default
+
+export function setWeekStartDay(day: string) {
+  const idx = DAY_NAMES.indexOf(day);
+  if (idx >= 0) weekStartDow = idx;
+}
+
+export function getWeekStartDow(): number {
+  return weekStartDow;
+}
+
+// load the persisted choice as soon as the module is imported
+AsyncStorage.getItem(STORAGE_KEYS.USER_DAY_OF_WEEK_CHOICE)
+  .then(day => { if (day) setWeekStartDay(day); })
+  .catch(() => {});
 
 /**
  * get the habit date string respecting custom reset time
@@ -403,21 +428,20 @@ export const compareDateStrings = (date1: string, date2: string): number => {
 
 /**
  * Returns all YYYY-MM-DD date strings for the week containing `dateStr`.
- * Week runs Monday–Sunday.
+ * The week starts on the user's configured day (Monday by default).
  */
 export const getWeekDatesForDate = (dateStr: string): string[] => {
   const date = parseLocalDate(dateStr);
-  // getDay(): 0=Sun,1=Mon,...,6=Sat  →  offset to Monday-based
-  const dayOfWeek = date.getDay();
-  const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  // days elapsed since the configured week start
+  const offset = (date.getDay() - weekStartDow + 7) % 7;
 
-  const monday = new Date(date);
-  monday.setDate(date.getDate() + mondayOffset);
+  const weekStart = new Date(date);
+  weekStart.setDate(date.getDate() - offset);
 
   const dates: string[] = [];
   for (let i = 0; i < 7; i++) {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
+    const d = new Date(weekStart);
+    d.setDate(weekStart.getDate() + i);
     dates.push(formatLocalDate(d));
   }
   return dates;

@@ -14,7 +14,7 @@ import { AppLinearGradient } from '@/ui/AppLinearGradient';
 import PageContainer from '@/ui/PageContainer';
 import PageHeader from '@/ui/PageHeader';
 import ShadowBox from '@/ui/ShadowBox';
-import { getHabitDate, formatDisplayDateString, parseLocalDate, getWeekDatesForDate } from '@/utils/dateUtils';
+import { getHabitDate, formatDisplayDateString, formatLocalDate, parseLocalDate, getWeekDatesForDate, getWeekStartDow } from '@/utils/dateUtils';
 import { isHabitActiveToday, getHabitStatus, getHabitCycleStart } from '@/utils/habitUtils';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
@@ -66,7 +66,9 @@ function HeatMap({
   const year = viewingMonth.getFullYear();
   const month = viewingMonth.getMonth();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const startingDayOfWeek = (new Date(year, month, 1).getDay() + 6) % 7;
+  // grid columns follow the user's configured week start day
+  const weekStartDow = getWeekStartDow();
+  const startingDayOfWeek = (new Date(year, month, 1).getDay() - weekStartDow + 7) % 7;
 
   const isCurrentMonth = year === now.getFullYear() && month === now.getMonth();
 
@@ -100,7 +102,9 @@ function HeatMap({
       </View>
 
       <View style={heatmap.headerRow}>
-        {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((label, i) => (
+        {Array.from({ length: 7 }, (_, i) =>
+          ['S', 'M', 'T', 'W', 'T', 'F', 'S'][(weekStartDow + i) % 7]
+        ).map((label, i) => (
           <Text key={i} style={heatmap.dayLabel}>{label}</Text>
         ))}
       </View>
@@ -390,24 +394,15 @@ export default function PathDetail() {
   const { thisWeek, lastWeek, weekDiff, thisMonth, lastMonth, monthDiff } = useMemo(() => {
     if (allPathHabits.length === 0) return { thisWeek: 0, lastWeek: 0, weekDiff: 0, thisMonth: 0, lastMonth: 0, monthDiff: 0 };
     const todayHabitStr = getHabitDate(new Date(), resetHour, resetMin);
-    const todayDate = new Date(todayHabitStr + 'T12:00:00');
-    const todayDow = (todayDate.getDay() + 6) % 7;
-    const thisMonday = new Date(todayDate);
-    thisMonday.setDate(todayDate.getDate() - todayDow);
-    const lastMonday = new Date(thisMonday);
-    lastMonday.setDate(thisMonday.getDate() - 7);
-
-    const daysIntoWeek = todayDow + 1;
-    const thisWeekDays: string[] = [];
-    const lastWeekDays: string[] = [];
-    for (let i = 0; i < daysIntoWeek; i++) {
-      const thisD = new Date(thisMonday);
-      thisD.setDate(thisMonday.getDate() + i);
-      thisWeekDays.push(getHabitDate(thisD, resetHour, resetMin));
-      const lastD = new Date(lastMonday);
-      lastD.setDate(lastMonday.getDate() + i);
-      lastWeekDays.push(getHabitDate(lastD, resetHour, resetMin));
-    }
+    // week window respects the user's configured start day
+    const weekDates = getWeekDatesForDate(todayHabitStr);
+    const todayIdx = weekDates.indexOf(todayHabitStr);
+    const thisWeekDays = weekDates.slice(0, todayIdx + 1);
+    const lastWeekDays = thisWeekDays.map(s => {
+      const d = new Date(s + 'T12:00:00');
+      d.setDate(d.getDate() - 7);
+      return formatLocalDate(d);
+    });
     const tw = completionsInRange(allPathHabits, thisWeekDays);
     const lw = completionsInRange(allPathHabits, lastWeekDays);
 

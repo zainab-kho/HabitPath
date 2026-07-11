@@ -124,6 +124,11 @@ export function RootDrawer() {
             icon: SYSTEM_ICONS.journal,
         },
         {
+            label: 'Lists',
+            path: '/(tabs)/more/lists',
+            icon: SYSTEM_ICONS.lists
+        },
+        {
             label: 'Assignments',
             path: '/(tabs)/more/assignments',
             icon: SYSTEM_ICONS.assignment,

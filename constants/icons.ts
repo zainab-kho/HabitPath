@@ -369,6 +369,7 @@ export const SYSTEM_ICONS = {
 
     assignment: require('@/assets/icons/system/assignment.png'),
     journal: require('@/assets/icons/system/journal-icon.png'),
+    lists: require('@/assets/icons/system/lists.png'),
     stats: require('@/assets/icons/system/stats.png'),
 
     path: require('@/assets/icons/system/path-icon.png'),

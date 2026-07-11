@@ -2,7 +2,14 @@ import React from 'react';
 
 import { MOOD_COLORS, PAGE } from '@/constants/colors';
 import { journalStyle } from '@/styles';
-import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { Modal, Pressable, Text, View } from 'react-native';
+// RN's ScrollView doesn't scroll reliably inside these modals — use gesture-handler's,
+// which needs its own root view inside the Modal's native hierarchy
+import { GestureHandlerRootView, ScrollView } from 'react-native-gesture-handler';
+
+// box (30) + label w/ margin (~19) per row, plus the 12px row gap —
+// sized so exactly 6 rows show before scrolling
+const PICKER_HEIGHT = 6 * 49 + 5 * 12;
 
 interface MoodPickerModalProps {
   visible: boolean;
@@ -14,6 +21,7 @@ interface MoodPickerModalProps {
 export default function MoodPickerModal({ visible, selectedMood, onClose, onSelect }: MoodPickerModalProps) {
   return (
     <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose}>
+      <GestureHandlerRootView style={{ flex: 1 }}>
       {/* overlay with flex centering*/}
       <Pressable
         style={{
@@ -42,6 +50,7 @@ export default function MoodPickerModal({ visible, selectedMood, onClose, onSele
 
           <View style={{ paddingVertical: 10 }}>
             <ScrollView
+              style={{ height: PICKER_HEIGHT }}
               showsVerticalScrollIndicator={false}
               contentContainerStyle={{
                 flexDirection: 'row',
@@ -90,6 +99,7 @@ export default function MoodPickerModal({ visible, selectedMood, onClose, onSele
           </View>
         </Pressable>
       </Pressable>
+      </GestureHandlerRootView>
     </Modal>
   );
 }

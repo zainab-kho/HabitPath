@@ -386,7 +386,9 @@ export default function JournalPage() {
     );
   }, [query, searchQuery]);
 
-  if (isLoading) {
+  // full-screen loader only on the very first load — on refocus refreshes the
+  // list stays mounted so the scroll position is preserved
+  if (isLoading && allEntries.length === 0) {
     return (
       <AppLinearGradient variant="journal.background">
         <PageContainer>
@@ -557,9 +559,24 @@ export default function JournalPage() {
                       style={{ marginBottom: 15 }}
                     >
                       <View style={styles.entryCard}>
-                        {/* navigates to detail */}
+                        {/* navigates to detail — locked entries go through the PIN first */}
                         <Pressable
-                          onPress={() => router.push(`/(tabs)/more/journal/${entry.id}`)}
+                          onPress={() => {
+                            if (entry.lock && !isUnlocked) {
+                              router.push({
+                                pathname: '/(tabs)/more/journal/EnterPin',
+                                params: { entryId: entry.id },
+                              });
+                            } else if (entry.lock) {
+                              // globally unlocked — pass proof so the detail page allows it
+                              router.push({
+                                pathname: '/(tabs)/more/journal/[id]',
+                                params: { id: entry.id, unlocked: '1' },
+                              });
+                            } else {
+                              router.push(`/(tabs)/more/journal/${entry.id}`);
+                            }
+                          }}
                           style={{ gap: 8 }}
                         >
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>

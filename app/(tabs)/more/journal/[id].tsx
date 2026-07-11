@@ -69,7 +69,8 @@ const MERIDIEM = ['AM', 'PM'];
 // ─── main page ────────────────────────────────────────────────────────────────
 
 export default function JournalEntryDetail() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  // `unlocked` is proof from the index/PIN flow that this locked entry may open
+  const { id, unlocked } = useLocalSearchParams<{ id: string; unlocked?: string }>();
   const { user } = useAuth();
   const router = useRouter();
 
@@ -138,6 +139,11 @@ export default function JournalEntryDetail() {
         const entries: JournalEntry[] = JSON.parse(cached);
         const found = entries.find(e => e.id === id);
         if (found) {
+          // locked entries need unlock proof — bounce to the PIN before showing anything
+          if (found.lock && unlocked !== '1') {
+            router.replace({ pathname: '/(tabs)/more/journal/EnterPin', params: { entryId: id } });
+            return;
+          }
           const parsed = { ...found, date: parseLocalDate(found.date as any) };
           setEntry(parsed as JournalEntry);
           populateEditState(parsed as JournalEntry);
@@ -154,6 +160,12 @@ export default function JournalEntryDetail() {
 
       if (error || !data) {
         if (!entry) router.back();
+        return;
+      }
+
+      // same lock guard for the fresh copy (covers cache misses)
+      if (data.is_locked && unlocked !== '1') {
+        router.replace({ pathname: '/(tabs)/more/journal/EnterPin', params: { entryId: id } });
         return;
       }
 
@@ -177,7 +189,7 @@ export default function JournalEntryDetail() {
     } finally {
       setLoading(false);
     }
-  }, [user, id]);
+  }, [user, id, unlocked]);
 
   useEffect(() => { loadEntry(); }, [loadEntry]);
 

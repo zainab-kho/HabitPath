@@ -5,7 +5,6 @@ import { JournalEntry } from '@/types/JournalEntry';
 import ShadowBox from '@/ui/ShadowBox';
 import { formatLocalDate, getWeekStartDow } from '@/utils/dateUtils';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useRouter } from 'expo-router';
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -14,7 +13,6 @@ interface MoodPreviewProps {
 }
 
 export default function MoodPreview({ entries }: MoodPreviewProps) {
-  const router = useRouter();
   const currentYear = new Date().getFullYear();
 
   // get last 3 months
@@ -95,9 +93,9 @@ export default function MoodPreview({ entries }: MoodPreviewProps) {
       shadowColor={PAGE.journal.border[0]}
       style={{ marginBottom: 20 }}
     >
+      {/* **TODO: re-enable navigation once the YearInPixels page exists */}
       <Pressable
         style={styles.container}
-        onPress={() => router.push('/tabs/more/journal/YearInPixels' as any)}
       >
         <View style={styles.header}>
           <Text style={globalStyles.body}>Mood Tracker</Text>

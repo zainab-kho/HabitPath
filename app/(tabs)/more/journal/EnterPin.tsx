@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
 import { Keyboard, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
@@ -15,6 +15,8 @@ const JOURNAL_UNLOCK_KEY = '@journal_pin_unlocked';
 
 export default function EnterPinPage() {
   const router = useRouter();
+  // when set, the PIN unlocks only this entry instead of the whole journal
+  const { entryId } = useLocalSearchParams<{ entryId?: string }>();
   const inputRef = useRef<TextInput>(null);
 
   const [pin, setPin] = useState('');
@@ -45,11 +47,18 @@ export default function EnterPinPage() {
           return;
         }
 
-        // sucess
-        // unlock journal
-        await AsyncStorage.setItem('@journal_pin_unlocked', '1');
-
-        router.back();
+        // success
+        if (entryId) {
+          // unlock just this entry: open it with proof, journal stays locked
+          router.replace({
+            pathname: '/(tabs)/more/journal/[id]',
+            params: { id: entryId, unlocked: '1' },
+          });
+        } else {
+          // unlock the whole journal
+          await AsyncStorage.setItem(JOURNAL_UNLOCK_KEY, '1');
+          router.back();
+        }
       } catch (err) {
         console.error('error verifying pin:', err);
         setError('could not verify pin. try again.');
@@ -61,7 +70,7 @@ export default function EnterPinPage() {
   return (
     <AppLinearGradient variant="journal.background">
       <PageContainer showBottomNav={false}>
-        <PageHeader title="Unlock Journal" showBackButton />
+        <PageHeader title={entryId ? 'Unlock Entry' : 'Unlock Journal'} showBackButton />
 
         <Pressable style={styles.wrapper} onPress={() => inputRef.current?.focus()}>
           <Text style={[globalStyles.h3, { textAlign: 'center' }]}>Enter PIN</Text>

@@ -313,34 +313,6 @@ export default function SettingsPage() {
                         </View>
                     )}
 
-                    {/* edit pin */}
-                    <ShadowBox
-                        contentBorderRadius={20}
-                        shadowBorderRadius={20}
-                        contentBackgroundColor={PAGE.settings.pin[0]}
-                    >
-                        <Pressable
-                            onPress={() => router.push('/more/settings/EditPin')}
-                            style={{ paddingVertical: 5, paddingHorizontal: 15, flex: 1, alignItems: 'center' }}
-                        >
-                            <Text style={globalStyles.body1}>Edit Pin</Text>
-                        </Pressable>
-                    </ShadowBox>
-
-                    {/* reset password */}
-                    <ShadowBox
-                        contentBorderRadius={20}
-                        shadowBorderRadius={20}
-                        contentBackgroundColor={PAGE.settings.pin[0]}
-                    >
-                        <Pressable
-                            onPress={handleResetPassword}
-                            style={{ paddingVertical: 5, paddingHorizontal: 15, flex: 1, alignItems: 'center' }}
-                        >
-                            <Text style={globalStyles.body1}>Reset Password</Text>
-                        </Pressable>
-                    </ShadowBox>
-
                     <Text style={[globalStyles.h4, { textAlign: 'center', marginTop: 10 }]}>
                         Data
                     </Text>
@@ -349,7 +321,7 @@ export default function SettingsPage() {
                     <ShadowBox
                         contentBorderRadius={20}
                         shadowBorderRadius={20}
-                        contentBackgroundColor={BUTTON_COLORS.Cancel}
+                        contentBackgroundColor={BUTTON_COLORS.Quiet}
                     >
                         <Pressable
                             onPress={handleClearWishlist}
@@ -363,7 +335,7 @@ export default function SettingsPage() {
                     <ShadowBox
                         contentBorderRadius={20}
                         shadowBorderRadius={20}
-                        contentBackgroundColor={BUTTON_COLORS.Cancel}
+                        contentBackgroundColor={BUTTON_COLORS.Quiet}
                     >
                         <Pressable
                             onPress={handleResetPointsBalance}
@@ -372,12 +344,39 @@ export default function SettingsPage() {
                             <Text style={globalStyles.body1}>Reset Points Balance</Text>
                         </Pressable>
                     </ShadowBox>
+
+                                        <Text style={[globalStyles.h4, { textAlign: 'center', marginTop: 10 }]}>
+                        Security
+                    </Text>
+
+                    {/* edit pin */}
+                    <ShadowBox
+                        contentBorderRadius={20}
+                        shadowBorderRadius={20}
+                        contentBackgroundColor={BUTTON_COLORS.Quiet}
+                    >
+                        <Pressable
+                            onPress={() => router.push('/more/settings/EditPin')}
+                            style={{ paddingVertical: 5, paddingHorizontal: 15, flex: 1, alignItems: 'center' }}
+                        >
+                            <Text style={globalStyles.body1}>Edit Pin</Text>
+                        </Pressable>
+                    </ShadowBox>
+
+                    {/* reset password */}
+                    <ShadowBox contentBackgroundColor={BUTTON_COLORS.Quiet}>
+                        <Pressable
+                            onPress={handleResetPassword}
+                            style={{ paddingVertical: 5, paddingHorizontal: 15, flex: 1, alignItems: 'center' }}
+                        >
+                            <Text style={globalStyles.body1}>Reset Password</Text>
+                        </Pressable>
+                    </ShadowBox>
                 </ScrollView>
 
                 <ShadowBox
-                    shadowBorderRadius={20}
-                    contentBackgroundColor={BUTTON_COLORS.Cancel}
-                    style={{ marginBottom: 100, marginHorizontal: 50 }}
+                    contentBackgroundColor={COLORS.Primary}
+                    style={{ marginBottom: 100, marginHorizontal: 30 }}
                 >
                     <Pressable
                         onPress={signOut}
@@ -398,7 +397,6 @@ const settingsStyle = StyleSheet.create({
     row: {
         flexDirection: 'row',
         justifyContent: 'space-between',
-        marginBottom: 20,
         alignItems: 'center',
     },
 });

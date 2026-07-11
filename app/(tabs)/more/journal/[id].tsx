@@ -40,7 +40,7 @@ import {
   formatLocalDate,
   parseLocalDate,
 } from '@/utils/dateUtils';
-import { buttonStyles, globalStyles, journalStyle } from '@/styles';
+import { globalStyles, journalStyle } from '@/styles';
 
 // ─── helpers ─────────────────────────────────────────────────────────────────
 
@@ -180,6 +180,7 @@ export default function JournalEntryDetail() {
         song: data.song ?? undefined,
         book: data.book ?? undefined,
         show: data.show ?? undefined,
+        starred: data.is_starred ?? false,
       } as JournalEntry;
 
       setEntry(fresh);
@@ -269,17 +270,17 @@ export default function JournalEntryDetail() {
         const updated = entries.map(e =>
           e.id === entry.id
             ? {
-                ...e,
-                date: dateStr,
-                time: timeStr,
-                mood: editedMood ?? undefined,
-                location: editedLocation.trim() || undefined,
-                entry: editedEntry.trim() || undefined,
-                lock: editedLock ? '1' : undefined,
-                song: editedSong ?? undefined,
-                book: editedBook ?? undefined,
-                show: editedShow ?? undefined,
-              }
+              ...e,
+              date: dateStr,
+              time: timeStr,
+              mood: editedMood ?? undefined,
+              location: editedLocation.trim() || undefined,
+              entry: editedEntry.trim() || undefined,
+              lock: editedLock ? '1' : undefined,
+              song: editedSong ?? undefined,
+              book: editedBook ?? undefined,
+              show: editedShow ?? undefined,
+            }
             : e
         );
         await AsyncStorage.setItem('@journal_entries', JSON.stringify(updated));
@@ -348,6 +349,37 @@ export default function JournalEntryDetail() {
     );
   };
 
+  // ── star / bookmark ───────────────────────────────────────────────────────
+
+  const handleToggleStar = async () => {
+    if (!entry || !user) return;
+    // compute the new value up front so the DB write can't race the state update
+    const newValue = !entry.starred;
+    setEntry(prev => prev ? { ...prev, starred: newValue } : prev);
+
+    try {
+      const { error } = await supabase
+        .from('journal_entries')
+        .update({ is_starred: newValue })
+        .eq('id', entry.id)
+        .eq('user_id', user.id);
+      if (error) throw error;
+
+      const cached = await AsyncStorage.getItem('@journal_entries');
+      if (cached) {
+        const entries: any[] = JSON.parse(cached);
+        await AsyncStorage.setItem(
+          '@journal_entries',
+          JSON.stringify(entries.map(e => e.id === entry.id ? { ...e, starred: newValue } : e))
+        );
+      }
+    } catch (err) {
+      console.error('Failed to save star:', err);
+      // revert on failure
+      setEntry(prev => prev ? { ...prev, starred: !newValue } : prev);
+    }
+  };
+
   // ── cancel edit ───────────────────────────────────────────────────────────
 
   const handleCancelEdit = () => {
@@ -391,7 +423,7 @@ export default function JournalEntryDetail() {
           >
             <ShadowBox
               contentBackgroundColor={moodColor}
-              shadowColor={PAGE.journal.border[0]}
+              shadowOffset={{ x: 0, y: 0 }}
             >
               <View style={styles.entryCard}>
                 {/* date + time row */}
@@ -406,7 +438,7 @@ export default function JournalEntryDetail() {
 
                 {/* mood badge */}
                 {entry.mood && (
-                  <View style={[styles.moodBadge, { backgroundColor: moodColor }]}>
+                  <View style={styles.moodBadge}>
                     <View
                       style={[
                         styles.moodDot,
@@ -470,6 +502,23 @@ export default function JournalEntryDetail() {
 
           {/* floating action buttons */}
           <View style={styles.fab}>
+            {/* star / bookmark */}
+            <Pressable onPress={handleToggleStar}>
+              <ShadowBox
+                contentBackgroundColor={entry.starred ? '#FFD581' : PAGE.journal.foreground[0]}
+                contentBorderRadius={30}
+                shadowBorderRadius={30}
+                shadowOffset={{ x: 1, y: 1 }}
+              >
+                <View style={styles.fabBtn}>
+                  <Image
+                    source={SYSTEM_ICONS.star}
+                    style={[styles.fabIcon, { tintColor: entry.starred ? COLORS.Star : 'rgba(0,0,0,0.35)' }]}
+                  />
+                </View>
+              </ShadowBox>
+            </Pressable>
+
             {/* delete */}
             <Pressable onPress={handleDelete}>
               <ShadowBox
@@ -479,7 +528,7 @@ export default function JournalEntryDetail() {
                 shadowOffset={{ x: 1, y: 1 }}
               >
                 <View style={styles.fabBtn}>
-                  <Image source={SYSTEM_ICONS.delete} style={[styles.fabIcon, { tintColor: '#fff' }]} />
+                  <Image source={SYSTEM_ICONS.delete} style={[styles.fabIcon,]} />
                 </View>
               </ShadowBox>
             </Pressable>
@@ -719,28 +768,28 @@ export default function JournalEntryDetail() {
             </View>
           </View>
 
-          {/* cancel / save */}
-          <View style={{ flexDirection: 'row', gap: 12, margin: 20, justifyContent: 'center' }}>
-            <Pressable
-              style={[buttonStyles.button, { backgroundColor: BUTTON_COLORS.Cancel }]}
-              onPress={handleCancelEdit}
-            >
-              <Text style={globalStyles.body}>Cancel</Text>
+          {/* cancel / save — standard page button dimensions */}
+          <View style={{ flexDirection: 'row', gap: 10, margin: 20, justifyContent: 'center' }}>
+            <Pressable onPress={handleCancelEdit} style={{ flex: 1, maxWidth: 100 }}>
+              <ShadowBox contentBackgroundColor={BUTTON_COLORS.Cancel} shadowBorderRadius={20}>
+                <View style={{ paddingVertical: 5, alignItems: 'center' }}>
+                  <Text style={globalStyles.body}>Cancel</Text>
+                </View>
+              </ShadowBox>
             </Pressable>
+
             <Pressable
-              style={[
-                buttonStyles.button,
-                {
-                  backgroundColor: PAGE.journal.border[0],
-                  opacity: isSaving ? 0.6 : 1,
-                },
-              ]}
               onPress={handleSave}
               disabled={isSaving}
+              style={{ flex: 1, maxWidth: 100, opacity: isSaving ? 0.6 : 1 }}
             >
-              <Text style={globalStyles.body}>
-                {isSaving ? 'Saving...' : 'Save'}
-              </Text>
+              <ShadowBox contentBackgroundColor={PAGE.journal.border[0]} shadowBorderRadius={20}>
+                <View style={{ paddingVertical: 5, alignItems: 'center' }}>
+                  <Text style={globalStyles.body}>
+                    {isSaving ? 'Saving...' : 'Save'}
+                  </Text>
+                </View>
+              </ShadowBox>
             </Pressable>
           </View>
         </KeyboardAwareScrollView>
@@ -863,7 +912,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.12)',
+    backgroundColor: BUTTON_COLORS.Quiet
   },
   moodDot: {
     width: 16,

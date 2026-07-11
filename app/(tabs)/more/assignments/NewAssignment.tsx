@@ -179,8 +179,8 @@ export default function NewAssignment() {
                                         router.push('/(tabs)/more/assignments/NewCourse')
                                     }}
                                 >
-                                <ShadowBox contentBackgroundColor={PAGE.assignments.primary[0]}>
-                                    <View style={{ padding: 15 }}>
+                                <ShadowBox contentBackgroundColor={PAGE.assignments.primary[0]} shadowBorderRadius={20}>
+                                    <View style={{ paddingVertical: 5, alignItems: 'center' }}>
                                         <Text style={globalStyles.body}>Add New Course</Text>
                                     </View>
                                 </ShadowBox>
@@ -194,7 +194,7 @@ export default function NewAssignment() {
                         >
                             <Pressable
                                 onPress={() => showCourseDropdown(prev => !prev)}
-                                style={{ padding: 8, alignItems: 'center' }}
+                                style={{ paddingVertical: 6, paddingHorizontal: 12, alignItems: 'center' }}
                             >
                                 <Text
                                     numberOfLines={1}
@@ -250,7 +250,7 @@ export default function NewAssignment() {
                         TYPE
                     </Text>
 
-                    <View style={{ marginBottom: 15, gap: 5, flexDirection: 'row', flexWrap: 'wrap' }}>
+                    <View style={{ marginBottom: 15, gap: 8, flexDirection: 'row', flexWrap: 'wrap' }}>
                         {ASSIGNMENT_TYPES.map((assignmentType) => (
                             <Pressable
                                 key={assignmentType}
@@ -280,9 +280,9 @@ export default function NewAssignment() {
                                             : ASSIGNMENT_TYPE_COLORS[assignmentType]
                                     }
                                 >
-                                    <Text style={[globalStyles.body2, { padding: 8 }]}>
-                                        {assignmentType}
-                                    </Text>
+                                    <View style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
+                                        <Text style={globalStyles.body1}>{assignmentType}</Text>
+                                    </View>
                                 </ShadowBox>
                             </Pressable>
                         ))}
@@ -294,7 +294,7 @@ export default function NewAssignment() {
                         PROGRESS
                     </Text>
 
-                    <View style={{ marginBottom: 15, gap: 5, flexDirection: 'row', flexWrap: 'wrap' }}>
+                    <View style={{ marginBottom: 15, gap: 8, flexDirection: 'row', flexWrap: 'wrap' }}>
                         {ASSIGNMENT_PROGRESS.map((progressOption) => (
                             <Pressable
                                 key={progressOption}
@@ -324,9 +324,9 @@ export default function NewAssignment() {
                                             : PROGRESS_COLORS[progressOption]
                                     }
                                 >
-                                    <Text style={[globalStyles.body2, { padding: 8 }]}>
-                                        {progressOption}
-                                    </Text>
+                                    <View style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
+                                        <Text style={globalStyles.body1}>{progressOption}</Text>
+                                    </View>
                                 </ShadowBox>
                             </Pressable>
                         ))}
@@ -366,11 +366,12 @@ export default function NewAssignment() {
                         alignItems: 'center',
                         marginBottom: 10,
                     }}>
-                        <Text style={globalStyles.body}>Add due time?</Text>
+                        <Text style={globalStyles.body1}>Add due time?</Text>
                         <Switch
-                            trackColor={{ true: PAGE.assignments.primary[1] }}
                             value={hasDueTime}
                             onValueChange={setHasDueTime}
+                            trackColor={{ false: '#ddd', true: PAGE.assignments.primary[1] }}
+                            thumbColor="#fff"
                         />
                     </View>
 
@@ -382,7 +383,7 @@ export default function NewAssignment() {
                                 style={{ width: 120, alignSelf: 'center', marginBottom: 10 }}>
                                 <Pressable
                                     onPress={() => setShowTimePicker(prev => !prev)}
-                                    style={{ padding: 8, alignItems: 'center' }}>
+                                    style={{ paddingVertical: 5, paddingHorizontal: 15, alignItems: 'center' }}>
                                     <Text style={globalStyles.body}>
                                         {hour}:{minute} {meridiem}
                                     </Text>
@@ -399,30 +400,31 @@ export default function NewAssignment() {
                             )}
                         </View>
                     )}
-                </ScrollView>
+                    {/* cancel / save — standard page button dimensions */}
+                    <View style={{ flexDirection: 'row', gap: 10, marginTop: 30, marginBottom: 20, justifyContent: 'center' }}>
+                        <Pressable onPress={() => router.back()} style={{ flex: 1, maxWidth: 100 }}>
+                            <ShadowBox contentBackgroundColor={BUTTON_COLORS.Cancel} shadowBorderRadius={20}>
+                                <View style={{ paddingVertical: 5, alignItems: 'center' }}>
+                                    <Text style={globalStyles.body}>Cancel</Text>
+                                </View>
+                            </ShadowBox>
+                        </Pressable>
 
-                {/* SAVE BUTTON */}
-                <ShadowBox
-                    shadowBorderRadius={20}
-                    contentBackgroundColor={BUTTON_COLORS.Save}
-                    style={{
-                        width: 100,
-                        alignSelf: 'center',
-                        marginTop: 20,
-                    }}>
-                    <Pressable
-                        onPress={handleSave}
-                        disabled={isSaving}
-                        style={{
-                            alignItems: 'center',
-                            margin: 6,
-                        }}
-                    >
-                        <Text style={globalStyles.body}>
-                            {isSaving ? 'Saving...' : 'Save'}
-                        </Text>
-                    </Pressable>
-                </ShadowBox>
+                        <Pressable
+                            onPress={handleSave}
+                            disabled={isSaving}
+                            style={{ flex: 1, maxWidth: 100, opacity: isSaving ? 0.6 : 1 }}
+                        >
+                            <ShadowBox contentBackgroundColor={BUTTON_COLORS.Save} shadowBorderRadius={20}>
+                                <View style={{ paddingVertical: 5, alignItems: 'center' }}>
+                                    <Text style={globalStyles.body}>
+                                        {isSaving ? 'Saving...' : 'Save'}
+                                    </Text>
+                                </View>
+                            </ShadowBox>
+                        </Pressable>
+                    </View>
+                </ScrollView>
             </View>
         </PageContainer>
         </AppLinearGradient >

@@ -26,7 +26,7 @@ import { formatDisplayDate, formatDisplayTime, formatLocalDate } from '@/utils/d
 import { MAIN_MOOD_COLORS, MOOD_COLORS } from '@/constants/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
 
-import { buttonStyles, globalStyles, journalStyle } from '@/styles';
+import { globalStyles, journalStyle } from '@/styles';
 import { AppLinearGradient } from '@/ui/AppLinearGradient';
 import PageContainer from '@/ui/PageContainer';
 import PageHeader from '@/ui/PageHeader';
@@ -437,24 +437,22 @@ export default function JournalPage() {
                         </View>
                     </View>
 
-                    {/* save */}
-                    <Pressable
-                        style={[
-                            buttonStyles.button,
-                            {
-                                alignSelf: 'center',
-                                margin: 20,
-                                backgroundColor: PAGE.journal.border[0],
-                                opacity: isSaving ? 0.6 : 1,
-                            },
-                        ]}
-                        onPress={handleSave}
-                        disabled={isSaving}
-                    >
-                        <Text style={globalStyles.body}>
-                            {isSaving ? 'Saving...' : 'Save'}
-                        </Text>
-                    </Pressable>
+                    {/* save — standard page button dimensions */}
+                    <View style={{ flexDirection: 'row', justifyContent: 'center', margin: 20 }}>
+                        <Pressable
+                            onPress={handleSave}
+                            disabled={isSaving}
+                            style={{ flex: 1, maxWidth: 100, opacity: isSaving ? 0.6 : 1 }}
+                        >
+                            <ShadowBox contentBackgroundColor={PAGE.journal.border[0]} shadowBorderRadius={20}>
+                                <View style={{ paddingVertical: 5, alignItems: 'center' }}>
+                                    <Text style={globalStyles.body}>
+                                        {isSaving ? 'Saving...' : 'Save'}
+                                    </Text>
+                                </View>
+                            </ShadowBox>
+                        </Pressable>
+                    </View>
                 </KeyboardAwareScrollView>
             </PageContainer>
 

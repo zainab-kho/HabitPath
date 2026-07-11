@@ -598,7 +598,7 @@ export default function NewRewardItem() {
 
                 {/* CANCEL / SAVE */}
                 <View style={{ flexDirection: 'row', gap: 10, marginTop: 10, justifyContent: 'center' }}>
-                  <Pressable onPress={() => router.back()} style={{ flex: 1, maxWidth: 120 }}>
+                  <Pressable onPress={() => router.back()} style={{ flex: 1, maxWidth: 100 }}>
                     <ShadowBox contentBackgroundColor={BUTTON_COLORS.Cancel} shadowBorderRadius={20}>
                       <View style={{ paddingVertical: 5, alignItems: 'center' }}>
                         <Text style={globalStyles.body}>Cancel</Text>
@@ -606,7 +606,7 @@ export default function NewRewardItem() {
                     </ShadowBox>
                   </Pressable>
 
-                  <Pressable onPress={handleSave} disabled={saving} style={{ flex: 1, maxWidth: 120 }}>
+                  <Pressable onPress={handleSave} disabled={saving} style={{ flex: 1, maxWidth: 100 }}>
                     <ShadowBox
                       contentBackgroundColor={saving ? BUTTON_COLORS.Disabled : BUTTON_COLORS.Save}
                       shadowBorderRadius={20}

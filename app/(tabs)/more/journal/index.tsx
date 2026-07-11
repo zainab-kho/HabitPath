@@ -60,44 +60,6 @@ export default function JournalPage() {
   const [starredOnly, setStarredOnly] = useState(false);
   const filtersActive = filterMoods.length > 0 || filterYear !== null || starredOnly;
 
-  const toggleStar = useCallback(async (entryId: string) => {
-    let newValue = false;
-
-    // optimistic local update
-    setEntriesByMonth(prev => {
-      const out: Record<string, JournalEntry[]> = {};
-      for (const [month, entries] of Object.entries(prev)) {
-        out[month] = entries.map(e => {
-          if (e.id !== entryId) return e;
-          newValue = !e.starred;
-          return { ...e, starred: newValue };
-        });
-      }
-      return out;
-    });
-
-    try {
-      if (user) {
-        await supabase
-          .from('journal_entries')
-          .update({ is_starred: newValue })
-          .eq('id', entryId)
-          .eq('user_id', user.id);
-      }
-
-      const cached = await AsyncStorage.getItem('@journal_entries');
-      if (cached) {
-        const entries: any[] = JSON.parse(cached);
-        await AsyncStorage.setItem(
-          '@journal_entries',
-          JSON.stringify(entries.map(e => e.id === entryId ? { ...e, starred: newValue } : e))
-        );
-      }
-    } catch (err) {
-      console.error('Failed to save star:', err);
-    }
-  }, [user]);
-
   // sort order — persisted so it sticks across sessions
   const [sortOrder, setSortOrder] = useState<'latest' | 'earliest'>('latest');
 
@@ -489,7 +451,7 @@ export default function JournalPage() {
                   <View style={{ width: 32, height: 32, justifyContent: 'center', alignItems: 'center' }}>
                     <Image
                       source={SYSTEM_ICONS.star}
-                      style={{ width: 15, height: 15, tintColor: starredOnly ? '#B8860B' : undefined }}
+                      style={{ width: 16, height: 16, tintColor: starredOnly ? '#B8860B' : undefined }}
                     />
                   </View>
                 </ShadowBox>
@@ -558,40 +520,37 @@ export default function JournalPage() {
                       contentBackgroundColor={bgColor}
                       style={{ marginBottom: 15 }}
                     >
-                      <View style={styles.entryCard}>
-                        {/* navigates to detail — locked entries go through the PIN first */}
-                        <Pressable
-                          onPress={() => {
-                            if (entry.lock && !isUnlocked) {
-                              router.push({
-                                pathname: '/(tabs)/more/journal/EnterPin',
-                                params: { entryId: entry.id },
-                              });
-                            } else if (entry.lock) {
-                              // globally unlocked — pass proof so the detail page allows it
-                              router.push({
-                                pathname: '/(tabs)/more/journal/[id]',
-                                params: { id: entry.id, unlocked: '1' },
-                              });
-                            } else {
-                              router.push(`/(tabs)/more/journal/${entry.id}`);
-                            }
-                          }}
-                          style={{ gap: 8 }}
-                        >
+                      {/* whole card navigates to detail — locked entries go through the PIN first */}
+                      <Pressable
+                        style={styles.entryCard}
+                        onPress={() => {
+                          if (entry.lock && !isUnlocked) {
+                            router.push({
+                              pathname: '/(tabs)/more/journal/EnterPin',
+                              params: { entryId: entry.id },
+                            });
+                          } else if (entry.lock) {
+                            // globally unlocked — pass proof so the detail page allows it
+                            router.push({
+                              pathname: '/(tabs)/more/journal/[id]',
+                              params: { id: entry.id, unlocked: '1' },
+                            });
+                          } else {
+                            router.push(`/(tabs)/more/journal/${entry.id}`);
+                          }
+                        }}
+                      >
+                        <View style={{ gap: 8 }}>
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                             <Text style={[styles.entryDate, { flex: 1 }]}>{formattedDate}</Text>
                             {entry.time && <Text style={styles.entryTime}>{entry.time}</Text>}
-                            <Pressable onPress={() => toggleStar(entry.id)} hitSlop={8}>
+                            {/* starred indicator — toggled from the entry detail page */}
+                            {entry.starred && (
                               <Image
                                 source={SYSTEM_ICONS.star}
-                                style={{
-                                  width: 16,
-                                  height: 16,
-                                  tintColor: entry.starred ? undefined : 'rgba(0,0,0,0.18)',
-                                }}
+                                style={{ width: 15, height: 15, marginBottom: 5, tintColor: COLORS.Star }}
                               />
-                            </Pressable>
+                            )}
                           </View>
 
                           {/* location OR lock icon */}
@@ -608,7 +567,7 @@ export default function JournalPage() {
                           ) : (
                             <Image source={SYSTEM_ICONS.lock} style={{ width: 15, height: 15 }} />
                           )}
-                        </Pressable>
+                        </View>
 
                         {/* media cards */}
                         {entry.song && canShowEntry && (
@@ -647,22 +606,12 @@ export default function JournalPage() {
                                   <Text style={styles.readMore}>
                                     {isExpanded ? 'Read less' : 'Read more'}
                                   </Text>
-                                  <Image
-                                    source={SYSTEM_ICONS.right}
-                                    style={{
-                                      width: 11,
-                                      height: 11,
-                                      marginTop: 8,
-                                      tintColor: COLORS.ReadMore,
-                                      transform: [{ rotate: isExpanded ? '180deg' : '0deg' }],
-                                    }}
-                                  />
                                 </Pressable>
                               )}
                             </View>
                           );
                         })()}
-                      </View>
+                      </Pressable>
                     </ShadowBox>
                   );
                 })}

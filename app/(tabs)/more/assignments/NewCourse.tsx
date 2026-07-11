@@ -102,7 +102,7 @@ export default function NewCourse() {
     return (
         <AppLinearGradient variant={"assignments.background"}>
             <PageContainer>
-                <PageHeader title="Create a Course" showBackButton />
+                <PageHeader title="New Course" showBackButton />
 
                 <View style={{
                     flex: 1,
@@ -184,13 +184,15 @@ export default function NewCourse() {
                                         onPress={() => setSelectedColor(color)}
                                     >
                                         <ShadowBox
-                                            contentBackgroundColor={color}
-                                            contentBorderWidth={1}
+                                            contentBackgroundColor={isSelected ? color : '#fff'}
                                             contentBorderColor={isSelected ? '#000' : color}
-                                            shadowOffset={{ x: 2, y: 2 }}
-
+                                            contentBorderWidth={1}
+                                            contentBorderRadius={18}
+                                            shadowBorderColor={isSelected ? '#000' : color}
+                                            shadowColor={isSelected ? '#000' : color}
+                                            shadowBorderRadius={18}
                                         >
-                                            <View style={{ width: 30, height: 30 }} />
+                                            <View style={{ width: 25, height: 25 }} />
                                         </ShadowBox>
                                     </Pressable>
                                 );
@@ -209,12 +211,13 @@ export default function NewCourse() {
                                 marginBottom: 10,
                             }}
                         >
-                            <Text style={globalStyles.body}>Do you have a set schedule?</Text>
+                            <Text style={globalStyles.body1}>Do you have a set schedule?</Text>
 
                             <Switch
-                                trackColor={{ true: PAGE.assignments.primary[0] }}
                                 value={hasSchedule}
                                 onValueChange={setHasSchedule}
+                                trackColor={{ false: '#ddd', true: PAGE.assignments.primary[0] }}
+                                thumbColor="#fff"
                             />
                         </View>
 
@@ -224,7 +227,7 @@ export default function NewCourse() {
                                     SELECT DAYS
                                 </Text>
 
-                                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+                                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                                     {DAYS.map(day => {
                                         const selected = selectedDays.includes(day);
 
@@ -238,24 +241,16 @@ export default function NewCourse() {
                                                             : [...prev, day]
                                                     );
                                                 }}
-                                                style={{ width: 50 }}
                                             >
                                                 <ShadowBox
-                                                    contentBackgroundColor={
-                                                        selected ? PAGE.assignments.primary[0] : '#fff'
-                                                    }
+                                                    contentBackgroundColor={selected ? PAGE.assignments.primary[0] : '#fff'}
+                                                    contentBorderColor={selected ? '#000' : PAGE.assignments.primary[0]}
+                                                    shadowBorderColor={selected ? '#000' : PAGE.assignments.primary[0]}
+                                                    shadowColor={selected ? '#000' : PAGE.assignments.primary[0]}
                                                 >
-                                                    <Text
-                                                        style={[
-                                                            globalStyles.body,
-                                                            {
-                                                                textAlign: 'center',
-                                                                padding: 5,
-                                                            },
-                                                        ]}
-                                                    >
-                                                        {day}
-                                                    </Text>
+                                                    <View style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
+                                                        <Text style={globalStyles.body1}>{day}</Text>
+                                                    </View>
                                                 </ShadowBox>
                                             </Pressable>
                                         );
@@ -268,16 +263,10 @@ export default function NewCourse() {
 
                                 <ShadowBox
                                     contentBackgroundColor={PAGE.assignments.primary[1]}
-                                    style={{
-                                        width: 100,
-                                        marginVertical: 10,
-                                    }}>
+                                    style={{ width: 120, marginVertical: 10 }}>
                                     <Pressable
                                         onPress={() => showHourTimeWheel(prev => !prev)}
-                                        style={{
-                                            padding: 5,
-                                            alignItems: 'center',
-                                        }}>
+                                        style={{ paddingVertical: 5, paddingHorizontal: 15, alignItems: 'center' }}>
                                         <Text style={globalStyles.body}>{startHour}:{startMinute} {startMeridem}</Text>
                                     </Pressable>
                                 </ShadowBox>
@@ -298,16 +287,10 @@ export default function NewCourse() {
 
                                 <ShadowBox
                                     contentBackgroundColor={PAGE.assignments.primary[1]}
-                                    style={{
-                                        width: 100,
-                                        marginVertical: 10,
-                                    }}>
+                                    style={{ width: 120, marginVertical: 10 }}>
                                     <Pressable
                                         onPress={() => showMinTimeWheel(prev => !prev)}
-                                        style={{
-                                            padding: 5,
-                                            alignItems: 'center',
-                                        }}>
+                                        style={{ paddingVertical: 5, paddingHorizontal: 15, alignItems: 'center' }}>
                                         <Text style={globalStyles.body}>{endHour}:{endMinute} {endMeridem}</Text>
                                     </Pressable>
                                 </ShadowBox>
@@ -322,29 +305,31 @@ export default function NewCourse() {
                                 )}
                             </View>
                         )}
-                    </ScrollView>
+                        {/* cancel / save — standard page button dimensions */}
+                        <View style={{ flexDirection: 'row', gap: 10, marginTop: 30, marginBottom: 20, justifyContent: 'center' }}>
+                            <Pressable onPress={() => router.back()} style={{ flex: 1, maxWidth: 100 }}>
+                                <ShadowBox contentBackgroundColor={BUTTON_COLORS.Cancel} shadowBorderRadius={20}>
+                                    <View style={{ paddingVertical: 5, alignItems: 'center' }}>
+                                        <Text style={globalStyles.body}>Cancel</Text>
+                                    </View>
+                                </ShadowBox>
+                            </Pressable>
 
-                    <ShadowBox
-                        shadowBorderRadius={20}
-                        contentBackgroundColor={BUTTON_COLORS.Save}
-                        style={{
-                            width: 100,
-                            alignSelf: 'center',
-                            marginTop: 20,
-                        }}>
-                        <Pressable
-                            onPress={handleSave}
-                            disabled={isSaving}
-                            style={{
-                                alignItems: 'center',
-                                margin: 6,
-                            }}
-                        >
-                            <Text style={globalStyles.body}>
-                                {isSaving ? 'Saving...' : 'Save'}
-                            </Text>
-                        </Pressable>
-                    </ShadowBox>
+                            <Pressable
+                                onPress={handleSave}
+                                disabled={isSaving}
+                                style={{ flex: 1, maxWidth: 100, opacity: isSaving ? 0.6 : 1 }}
+                            >
+                                <ShadowBox contentBackgroundColor={BUTTON_COLORS.Save} shadowBorderRadius={20}>
+                                    <View style={{ paddingVertical: 5, alignItems: 'center' }}>
+                                        <Text style={globalStyles.body}>
+                                            {isSaving ? 'Saving...' : 'Save'}
+                                        </Text>
+                                    </View>
+                                </ShadowBox>
+                            </Pressable>
+                        </View>
+                    </ScrollView>
                 </View>
             </PageContainer>
         </AppLinearGradient>

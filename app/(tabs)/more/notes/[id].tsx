@@ -97,17 +97,11 @@ export default function NoteEditorPage() {
 
     const [copied, setCopied] = useState(false);
 
-    // explicit input heights — auto-grow is unreliable (the input stops growing
-    // and turns into an internal scroll area). Height = content height EXACTLY,
-    // with zero vertical padding on the input, so the value is a fixed point and
-    // can never feed back into itself and grow forever.
-    const [blockHeights, setBlockHeights] = useState<Record<string, number>>({});
-    const onBlockContentSize = useCallback((blockId: string, h: number) => {
-        const next = Math.max(24, Math.round(h));
-        setBlockHeights(prev =>
-            Math.abs((prev[blockId] ?? 0) - next) > 1 ? { ...prev, [blockId]: next } : prev
-        );
-    }, []);
+    // measured pixel width of the editor column. On iOS a multiline TextInput
+    // inside a ScrollView is NOT bounded by its parent's width — it lays the text
+    // out on one endless line and clips it. Giving the box a real pixel width
+    // forces wrapping; native multiline auto-grow then handles height on its own.
+    const [editorWidth, setEditorWidth] = useState(0);
 
     const inputRefs = useRef<Record<string, TextInput | null>>({});
     // pending focus after inserting/removing a block
@@ -380,14 +374,15 @@ export default function NoteEditorPage() {
                         contentContainerStyle={{ paddingBottom: 20 }}
                         keyboardShouldPersistTaps="handled"
                         showsVerticalScrollIndicator={false}
+                        onLayout={(e) => setEditorWidth(e.nativeEvent.layout.width)}
                     >
                         {/* date — like journal */}
                         <Text style={styles.date}>{formatDisplayDate(noteDate)}</Text>
 
-                        {/* outlined note box — plain bordered card exactly like the
-                            journal's entry card, which types cleanly. No ShadowBox,
-                            no measured widths, no row wrappers around body text. */}
-                        <View style={styles.noteBox}>
+                        {/* outlined note box — plain bordered card like the journal's
+                            entry card. Explicit pixel width so the inputs inside wrap
+                            (iOS won't bound a multiline TextInput to its parent). */}
+                        <View style={[styles.noteBox, editorWidth > 0 && { width: editorWidth }]}>
                             <TextInput
                                 style={styles.titleInput}
                                 value={title}
@@ -423,13 +418,11 @@ export default function NoteEditorPage() {
                                     cursorColor: PAGE.notes.primary[0],
                                     selectionColor: PAGE.notes.primary[0],
                                     multiline: true,
+                                    // native auto-grow handles height — no JS height
+                                    // state (that caused the runaway growth loop)
                                     scrollEnabled: false,
                                     textAlignVertical: 'top' as const,
-                                    onContentSizeChange: (e: any) =>
-                                        onBlockContentSize(block.id, e.nativeEvent.contentSize.height),
                                 };
-
-                                const heightStyle = { height: blockHeights[block.id] ?? 24 };
 
                                 // body block — the journal's input, verbatim
                                 if (block.type === 'body') {
@@ -437,14 +430,21 @@ export default function NoteEditorPage() {
                                         <TextInput
                                             key={block.id}
                                             ref={(r) => { inputRefs.current[block.id] = r; }}
-                                            style={[globalStyles.body, styles.bodyArea, heightStyle]}
+                                            style={[globalStyles.body, styles.bodyArea]}
                                             placeholder={blocks.length === 1 && !block.text ? 'Start typing...' : undefined}
                                             {...sharedProps}
                                         />
                                     );
                                 }
 
-                                // formatted line — leading decoration + single-line-ish input
+                                // formatted line — leading decoration + input.
+                                // explicit width (box − padding − lead column − quote inset)
+                                // so the input wraps on iOS like the body does.
+                                const hasLead = block.type === 'bullet' || block.type === 'number' || block.type === 'check';
+                                const fmtWidth = editorWidth > 0
+                                    ? editorWidth - 20 - (hasLead ? 30 : 0) - (block.type === 'quote' ? 13 : 0)
+                                    : undefined;
+
                                 return (
                                     <View
                                         key={block.id}
@@ -469,7 +469,7 @@ export default function NoteEditorPage() {
                                             style={[
                                                 styles.blockInput,
                                                 BLOCK_TEXT_STYLE[block.type],
-                                                heightStyle,
+                                                fmtWidth ? { width: fmtWidth } : null,
                                                 block.type === 'check' && block.checked && styles.checkedText,
                                             ]}
                                             returnKeyType="next"
@@ -535,12 +535,11 @@ const styles = StyleSheet.create({
         paddingVertical: 10,
         minHeight: 300,
     },
-    // same recipe as the journal's entry input — vertical spacing lives on
-    // margins because the input's height is set to its exact content height
+    // same recipe as the journal's entry input
     bodyArea: {
-        paddingVertical: 0,
+        width: '100%',
+        paddingVertical: 6,
         paddingHorizontal: 10,
-        marginVertical: 6,
         fontSize: 15,
         lineHeight: 20,
     },
@@ -602,9 +601,8 @@ const styles = StyleSheet.create({
         opacity: 0.5,
     },
     blockInput: {
-        flex: 1,
         padding: 0,
-        marginVertical: 6,
+        paddingVertical: 6,
     },
     toolbar: {
         flexDirection: 'row',

@@ -12,26 +12,31 @@ export function BottomNav() {
     const insets = useSafeAreaInsets();
     const { openDrawer } = useDrawer();
 
+    // `match` is what usePathname reports (route groups like "(tabs)" are stripped)
     const tabs = [
         {
             name: 'habits',
             route: '/habits',
+            match: '/habits',
             icon: SYSTEM_ICONS.habit,
         },
         {
             name: 'paths',
             route: '/paths',
+            match: '/paths',
             icon: SYSTEM_ICONS.path,
+        },
+        {
+            name: 'assignments',
+            route: '/(tabs)/more/assignments',
+            match: '/more/assignments',
+            icon: SYSTEM_ICONS.assignment,
         },
         {
             name: 'quests',
             route: '/quests',
+            match: '/quests',
             icon: SYSTEM_ICONS.quest,
-        },
-        {
-            name: 'profile',
-            route: '/(tabs)/profile',
-            icon: SYSTEM_ICONS.profile,
         },
     ];
 
@@ -52,7 +57,7 @@ export function BottomNav() {
             }}
         >
             {tabs.map((tab) => {
-                const isActive = pathname === tab.route || pathname.startsWith(tab.route + '/');
+                const isActive = pathname === tab.match || pathname.startsWith(tab.match + '/');
 
                 return (
                     <Pressable

@@ -10,8 +10,10 @@ import PageContainer from '@/ui/PageContainer';
 import PageHeader from '@/ui/PageHeader';
 import ShadowBox from '@/ui/ShadowBox';
 import SimpleCalendar from '@/ui/SimpleCalendar';
+import { STORAGE_KEYS } from '@/storage/keys';
 import { formatDisplayDateString, formatLocalDate, getHabitDate, parseLocalDate } from '@/utils/dateUtils';
-import { getGradientForTime } from '@/utils/gradients';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useGradientForTime } from '@/utils/gradients';
 import { LinearGradient } from 'expo-linear-gradient';
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -19,6 +21,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 export default function InboxPage() {
   const { user } = useAuth();
+  const gradient = useGradientForTime();
   // stable date object — a fresh `new Date()` each render makes useHabits loop
   const [today] = useState(() => new Date());
   const { allHabits, loading, resetTime, unsnoozeToToday, loadHabits } = useHabits(today);
@@ -64,6 +67,8 @@ export default function InboxPage() {
       if (error) throw error;
 
       setSchedulingHabit(null);
+      // this page has its own useHabits instance — flag the habits page to reload on focus
+      await AsyncStorage.setItem(STORAGE_KEYS.HABITS_DIRTY, '1');
       await loadHabits();
     } catch (err) {
       console.error('Error scheduling habit:', err);
@@ -75,6 +80,8 @@ export default function InboxPage() {
 
   const handleDoToday = async (habitId: string) => {
     await unsnoozeToToday(habitId);
+    // this page has its own useHabits instance — flag the habits page to reload on focus
+    await AsyncStorage.setItem(STORAGE_KEYS.HABITS_DIRTY, '1');
   };
 
   // real habit item — the action button replaces the checkbox
@@ -109,7 +116,7 @@ export default function InboxPage() {
 
   return (
     <LinearGradient
-      colors={getGradientForTime()}
+      colors={gradient}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={{ flex: 1 }}

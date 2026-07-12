@@ -1,6 +1,6 @@
 // app/(tabs)/_layout.tsx
 import 'react-native-gesture-handler';
-import { getGradientForTime } from '@/utils/gradients';
+import { useGradientForTime } from '@/utils/gradients';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Stack } from 'expo-router';
 import * as Updates from 'expo-updates';
@@ -14,11 +14,12 @@ console.log('channel', Updates.channel);
 console.log('createdAt', Updates.createdAt);
 
 export default function TabsLayout() {
+  const gradient = useGradientForTime();
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <View style={{ flex: 1 }}>
         <LinearGradient
-          colors={getGradientForTime()}
+          colors={gradient}
           start={{ x: 0.5, y: 0 }}
           end={{ x: 0.5, y: 1 }}
           style={{ flex: 1 }}

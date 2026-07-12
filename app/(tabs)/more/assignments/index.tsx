@@ -1,5 +1,5 @@
 import { useAuth } from '@/contexts/AuthContext';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
 import { ActivityIndicator, ScrollView, View } from 'react-native';
 
@@ -47,6 +47,9 @@ import { AssignmentWithCourse } from '@/hooks/useAssignmentData';
 export default function Assignments() {
     const { user } = useAuth();
     const router = useRouter();
+    // drawer access shows a back button; tab access shows the bottom nav
+    const { from } = useLocalSearchParams<{ from?: string }>();
+    const fromDrawer = from === 'drawer';
     const scrollViewRef = useRef<ScrollView>(null);
 
     // data management
@@ -161,8 +164,8 @@ export default function Assignments() {
     if (loading) {
         return (
             <AppLinearGradient variant="assignments.background">
-                <PageContainer>
-                    <PageHeader title="Assignments" showBackButton/>
+                <PageContainer showBottomNav={!fromDrawer}>
+                    <PageHeader title="Assignments" showBackButton={fromDrawer} showPlusButton={!fromDrawer} />
                     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
                         <ActivityIndicator size="small" color={PAGE.assignments.primary[0]} />
                     </View>
@@ -175,8 +178,8 @@ export default function Assignments() {
     if (courses.length === 0) {
         return (
             <AppLinearGradient variant="assignments.background">
-                <PageContainer>
-                    <PageHeader title="Assignments" showBackButton/>
+                <PageContainer showBottomNav={!fromDrawer}>
+                    <PageHeader title="Assignments" showBackButton={fromDrawer} showPlusButton={!fromDrawer} />
                     <EmptyStateView
                         icon={SYSTEM_ICONS.tag}
                         title="No courses yet"
@@ -192,8 +195,8 @@ export default function Assignments() {
 
     return (
         <AppLinearGradient variant="assignments.background">
-            <PageContainer>
-                <PageHeader title="Assignments" showBackButton/>
+            <PageContainer showBottomNav={!fromDrawer}>
+                <PageHeader title="Assignments" showBackButton={fromDrawer} showPlusButton={!fromDrawer} />
 
                 <ScrollView
                     ref={scrollViewRef}
@@ -266,6 +269,7 @@ export default function Assignments() {
                     onEdit={handleEnterEditMode}
                     onAddAssignment={() => router.push('/(tabs)/more/assignments/NewAssignment')}
                     onCloseMenu={() => setShowMoreMenu(false)}
+                    fromDrawer={fromDrawer}
                 />
 
                 {/* Modals */}

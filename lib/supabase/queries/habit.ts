@@ -70,17 +70,19 @@ export async function loadHabitsFromSupabase(
 
 // ─── TOGGLE / UPDATE ─────────────────────────────────────────────────────────
 
-export async function toggleHabitCompletion(
+// pure state change — no DB. Split from the persist step so callers can apply
+// the update synchronously (fixes rapid-tap races where two toggles both read
+// a stale snapshot and the second overwrites the first).
+export function applyToggleCompletion(
   habitId: string,
   habits: Habit[],
   dateStr: string,
   resetHour: number,
-  resetMinute: number,
-  userId: string
-): Promise<Habit[]> {
+  resetMinute: number
+): Habit[] {
   const todayStr = getHabitDate(new Date(), resetHour, resetMinute);
 
-  const updated = habits.map(habit => {
+  return habits.map(habit => {
     if (habit.id !== habitId) return habit;
 
     const history = habit.completionHistory || [];
@@ -96,45 +98,57 @@ export async function toggleHabitCompletion(
       lastCompletedDate: completed ? undefined : todayStr,
     };
   });
+}
+
+export async function persistHabitCompletion(target: Habit, userId: string): Promise<void> {
+  try {
+    await supabase
+      .from('habits')
+      .update({ completion_history: target.completionHistory })
+      .eq('id', target.id)
+      .eq('user_id', userId);
+  } catch {
+    throw new Error('Failed to update habit completion');
+  }
+
+  // best-effort: column may not exist yet, never block the completion itself
+  try {
+    await supabase
+      .from('habits')
+      .update({ last_completed_date: target.lastCompletedDate ?? null })
+      .eq('id', target.id)
+      .eq('user_id', userId);
+  } catch {}
+}
+
+export async function toggleHabitCompletion(
+  habitId: string,
+  habits: Habit[],
+  dateStr: string,
+  resetHour: number,
+  resetMinute: number,
+  userId: string
+): Promise<Habit[]> {
+  const updated = applyToggleCompletion(habitId, habits, dateStr, resetHour, resetMinute);
 
   const target = updated.find(h => h.id === habitId);
-
-  if (target) {
-    try {
-      await supabase
-        .from('habits')
-        .update({ completion_history: target.completionHistory })
-        .eq('id', habitId)
-        .eq('user_id', userId);
-    } catch {
-      throw new Error('Failed to update habit completion');
-    }
-
-    // best-effort: column may not exist yet, never block the completion itself
-    try {
-      await supabase
-        .from('habits')
-        .update({ last_completed_date: target.lastCompletedDate ?? null })
-        .eq('id', habitId)
-        .eq('user_id', userId);
-    } catch {}
-  }
+  if (target) await persistHabitCompletion(target, userId);
 
   return updated;
 }
 
-export async function updateHabitIncrement(
+// pure state change — no DB (see applyToggleCompletion for why this is split)
+export function applyIncrementUpdate(
   habitId: string,
   habits: Habit[],
   dateStr: string,
   newAmount: number,
-  userId: string,
   resetHour: number = 4,
   resetMinute: number = 0
-): Promise<Habit[]> {
+): Habit[] {
   const todayStr = getHabitDate(new Date(), resetHour, resetMinute);
 
-  const updated = habits.map(habit => {
+  return habits.map(habit => {
     if (habit.id !== habitId) return habit;
 
     const incrementHistory = habit.incrementHistory || {};
@@ -158,34 +172,47 @@ export async function updateHabitIncrement(
       lastCompletedDate,
     };
   });
+}
+
+export async function persistHabitIncrement(target: Habit, newAmount: number, userId: string): Promise<void> {
+  const { error } = await supabase
+    .from('habits')
+    .update({
+      increment_amount: newAmount,
+      increment_history: target.incrementHistory,
+    })
+    .eq('id', target.id)
+    .eq('user_id', userId);
+
+  if (error) {
+    console.error('Supabase increment update failed:', error);
+  }
+
+  // best-effort, separate so a missing column never blocks the increment
+  if (target.keepUntil && target.increment) {
+    try {
+      await supabase
+        .from('habits')
+        .update({ last_completed_date: target.lastCompletedDate ?? null })
+        .eq('id', target.id)
+        .eq('user_id', userId);
+    } catch {}
+  }
+}
+
+export async function updateHabitIncrement(
+  habitId: string,
+  habits: Habit[],
+  dateStr: string,
+  newAmount: number,
+  userId: string,
+  resetHour: number = 4,
+  resetMinute: number = 0
+): Promise<Habit[]> {
+  const updated = applyIncrementUpdate(habitId, habits, dateStr, newAmount, resetHour, resetMinute);
 
   const target = updated.find(h => h.id === habitId);
-
-  if (target) {
-    const { error } = await supabase
-      .from('habits')
-      .update({
-        increment_amount: newAmount,
-        increment_history: target.incrementHistory,
-      })
-      .eq('id', habitId)
-      .eq('user_id', userId);
-
-    if (error) {
-      console.error('Supabase increment update failed:', error);
-    }
-
-    // best-effort, separate so a missing column never blocks the increment
-    if (target.keepUntil && target.increment) {
-      try {
-        await supabase
-          .from('habits')
-          .update({ last_completed_date: target.lastCompletedDate ?? null })
-          .eq('id', habitId)
-          .eq('user_id', userId);
-      } catch {}
-    }
-  }
+  if (target) await persistHabitIncrement(target, newAmount, userId);
 
   return updated;
 }

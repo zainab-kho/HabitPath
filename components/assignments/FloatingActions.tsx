@@ -19,6 +19,8 @@ interface FloatingActionsProps {
     onEdit: () => void;
     onAddAssignment: () => void;
     onCloseMenu: () => void;
+    // drawer access hides the "more" menu button and sits the buttons lower
+    fromDrawer?: boolean;
 }
 
 export function FloatingActions({
@@ -33,6 +35,7 @@ export function FloatingActions({
     onEdit,
     onAddAssignment,
     onCloseMenu,
+    fromDrawer = false,
 }: FloatingActionsProps) {
     return (
         <>
@@ -99,23 +102,25 @@ export function FloatingActions({
             )}
 
             {/* floating buttons */}
-            <View style={{ position: 'absolute', bottom: 50, right: 0, zIndex: 5 }}>
+            <View style={{ position: 'absolute', bottom: fromDrawer ? 30 : 10, right: 0, zIndex: 5 }}>
                 {!showSaveButton && (
                     <View style={{ flexDirection: 'row', gap: 10, opacity: 1 }}>
-                        <Pressable onPress={onToggleMenu}>
-                            <ShadowBox
-                                contentBackgroundColor={PAGE.assignments.primary[1]}
-                                contentBorderRadius={30}
-                                shadowBorderRadius={30}
-                                shadowOffset={{ x: 1, y: 1 }}
-                            >
-                                <View
-                                    style={{ width: 40, height: 40, justifyContent: 'center', alignItems: 'center' }}
+                        {!fromDrawer && (
+                            <Pressable onPress={onToggleMenu}>
+                                <ShadowBox
+                                    contentBackgroundColor={PAGE.assignments.primary[1]}
+                                    contentBorderRadius={30}
+                                    shadowBorderRadius={30}
+                                    shadowOffset={{ x: 1, y: 1 }}
                                 >
-                                    <Image source={SYSTEM_ICONS.more} style={{ width: 20, height: 20 }} />
-                                </View>
-                            </ShadowBox>
-                        </Pressable>
+                                    <View
+                                        style={{ width: 40, height: 40, justifyContent: 'center', alignItems: 'center' }}
+                                    >
+                                        <Image source={SYSTEM_ICONS.more} style={{ width: 20, height: 20 }} />
+                                    </View>
+                                </ShadowBox>
+                            </Pressable>
+                        )}
 
                         <Pressable onPress={onAddAssignment}>
                             <ShadowBox

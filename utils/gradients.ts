@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+
 // dynamic background for HabitPage
 export const getGradientForTime = (): [string, string, ...string[]] => {
   const hour = new Date().getHours();
@@ -29,7 +31,26 @@ export const getGradientForTime = (): [string, string, ...string[]] => {
 
   // 12am - 5am
   return [
-    '#7F5A83', 
-    '#0D324D', 
+    '#7F5A83',
+    '#0D324D',
 ];
 };
+
+// reactive version — re-checks the hour every minute so the background
+// updates on its own instead of only when something forces a re-render
+export function useGradientForTime(): [string, string, ...string[]] {
+  const [gradient, setGradient] = useState<[string, string, ...string[]]>(getGradientForTime);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      setGradient(prev => {
+        const next = getGradientForTime();
+        // keep the same array reference if unchanged to avoid pointless re-renders
+        return prev.join() === next.join() ? prev : next;
+      });
+    }, 60_000);
+    return () => clearInterval(id);
+  }, []);
+
+  return gradient;
+}

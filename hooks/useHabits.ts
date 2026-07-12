@@ -15,13 +15,16 @@ import {
   updateAppStreak,
 } from '@/utils/habitUtils';
 import {
+  applyIncrementUpdate,
+  applyToggleCompletion,
   deleteHabit as deleteHabitService,
   loadHabitsFromSupabase,
+  persistHabitCompletion,
+  persistHabitIncrement,
   skipHabit as skipHabitService,
   unskipHabit as unskipHabitService,
   snoozeHabit as snoozeHabitService,
   toggleHabitCompletion,
-  updateHabitIncrement,
 } from '@/lib/supabase/queries/habit';
 import {
   loadQuestGoalsAsHabits,
@@ -170,10 +173,13 @@ export function useHabits(viewingDate: Date = new Date()) {
       const target = currentHabits.find(h => h.id === habitId);
       if (!target) return;
 
-      // keepUntil: use cycle start; snoozed: use snoozedFrom (only while active)
+      // keepUntil: use cycle start; snoozed: use snoozedFrom (only while active —
+      // increment habits include the arrival day, matching getHabitStatus/HabitItem)
       // Weekly Goal: week-scoped — remove an existing record wherever it sits
       // in the viewed week, otherwise record on the week's monday
-      const isSnoozedNow = target.snoozedFrom && target.snoozedUntil && rawDs < target.snoozedUntil.slice(0, 10);
+      const snoozeDay = target.snoozedUntil?.slice(0, 10);
+      const isSnoozedNow = target.snoozedFrom && snoozeDay &&
+        (target.increment ? rawDs <= snoozeDay : rawDs < snoozeDay);
       let ds: string;
       if (target.frequency === 'Weekly Goal') {
         const weekDays = getWeekDatesForDate(rawDs);
@@ -186,21 +192,10 @@ export function useHabits(viewingDate: Date = new Date()) {
 
       const isCurrentlyCompleted = target.completionHistory?.includes(ds) ?? false;
 
-      // optimistic: flip status immediately
-      setHabits(prev => prev.map(h =>
-        h.id === habitId
-          ? { ...h, status: isCurrentlyCompleted ? 'active' : 'completed' as HabitStatus }
-          : h
-      ));
-      // weekly goals don't count toward the daily points badge
-      if (target.frequency !== 'Weekly Goal') {
-        setEarnedPoints(prev => prev + (isCurrentlyCompleted ? -(target.rewardPoints || 0) : (target.rewardPoints || 0)));
-      }
-
       try {
         // Quest goals: "worked on it today" visual toggle (not actual completion)
         if (target.isQuestGoal && target.questGoalId) {
-          await toggleQuestGoalWorkedOn(target.questGoalId, ds, isCurrentlyCompleted);
+          // apply synchronously BEFORE the await so rapid taps never read stale state
           const updatedHabits = currentHabits.map(h => {
             if (h.id !== habitId) return h;
             const history = h.completionHistory || [];
@@ -212,11 +207,17 @@ export function useHabits(viewingDate: Date = new Date()) {
             };
           });
           applyHabitsUpdate(updatedHabits, resetTime);
+          await toggleQuestGoalWorkedOn(target.questGoalId, ds, isCurrentlyCompleted);
           return;
         }
 
-        const updatedHabits = await toggleHabitCompletion(habitId, currentHabits, ds, resetTime.hour, resetTime.minute, user.id);
+        // apply synchronously BEFORE the await — rawHabitsRef is fresh for the
+        // next tap, so rapid check-offs can't overwrite each other
+        const updatedHabits = applyToggleCompletion(habitId, currentHabits, ds, resetTime.hour, resetTime.minute);
         applyHabitsUpdate(updatedHabits, resetTime);
+
+        const updatedTarget = updatedHabits.find(h => h.id === habitId);
+        if (updatedTarget) await persistHabitCompletion(updatedTarget, user.id);
 
         const [streak, total] = await Promise.all([
           updateAppStreak(updatedHabits.filter(h => !h.isQuestGoal), resetTime.hour, resetTime.minute),
@@ -248,21 +249,16 @@ export function useHabits(viewingDate: Date = new Date()) {
           ? target.snoozedFrom!
           : rawDs;
 
-      // optimistic
-      setHabits(prev => prev.map(h =>
-        h.id !== habitId ? h : {
-          ...h,
-          incrementAmount: newAmount,
-          incrementHistory: { ...(h.incrementHistory || {}), [ds]: newAmount },
-        }
-      ));
-
       try {
         // Quest goals don't support increment from habits page
         if (target?.isQuestGoal) return;
 
-        const updatedHabits = await updateHabitIncrement(habitId, currentHabits, ds, newAmount, user.id, resetTime.hour, resetTime.minute);
+        // apply synchronously BEFORE the await so rapid increments never read stale state
+        const updatedHabits = applyIncrementUpdate(habitId, currentHabits, ds, newAmount, resetTime.hour, resetTime.minute);
         applyHabitsUpdate(updatedHabits, resetTime);
+
+        const updatedTarget = updatedHabits.find(h => h.id === habitId);
+        if (updatedTarget) await persistHabitIncrement(updatedTarget, newAmount, user.id);
       } catch (err) {
         console.error('Error updating increment:', err);
         loadHabits();

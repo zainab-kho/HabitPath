@@ -26,10 +26,11 @@ import {
   isToday,
   navigateDate as navigateDateUtil,
 } from '@/utils/dateUtils';
-import { getGradientForTime } from '@/utils/gradients';
+import { useGradientForTime } from '@/utils/gradients';
 
 export default function HabitsPage() {
   const { user } = useAuth();
+  const gradient = useGradientForTime();
 
   const atNoon = (d: Date) =>
     new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12, 0, 0, 0);
@@ -161,7 +162,7 @@ export default function HabitsPage() {
 
   return (
     <LinearGradient
-      colors={getGradientForTime()}
+      colors={gradient}
       start={{ x: 0.5, y: 0 }}
       end={{ x: 0.5, y: 1 }}
       style={{ flex: 1 }}

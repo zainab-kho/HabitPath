@@ -132,6 +132,8 @@ export function RootDrawer() {
             label: 'Assignments',
             path: '/(tabs)/more/assignments',
             icon: SYSTEM_ICONS.assignment,
+            // drawer access shows a back button instead of the bottom nav
+            params: { from: 'drawer' },
         },
         {
             label: 'Settings',
@@ -203,7 +205,11 @@ export function RootDrawer() {
                                 onPress={() => {
                                     closeDrawer();
                                     setTimeout(() => {
-                                        router.push(item.path as any);
+                                        if ((item as any).params) {
+                                            router.push({ pathname: item.path, params: (item as any).params } as any);
+                                        } else {
+                                            router.push(item.path as any);
+                                        }
                                     }, 200);
                                 }}
                                 style={({ pressed }) => ({

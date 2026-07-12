@@ -410,8 +410,8 @@ export default function JournalPage() {
                   shadowBorderRadius={20}
                   shadowOffset={{ x: 1, y: 1 }}
                 >
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 8, paddingHorizontal: 12 }}>
-                    <Text style={{ fontFamily: 'p1', fontSize: 12 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, height: 32, paddingHorizontal: 12 }}>
+                    <Text style={{ fontFamily: 'p1', fontSize: 13 }}>
                       {sortOrder === 'latest' ? 'Latest' : 'Earliest'}
                     </Text>
                     <Image
@@ -434,8 +434,8 @@ export default function JournalPage() {
                   shadowBorderRadius={30}
                   shadowOffset={{ x: 1, y: 1 }}
                 >
-                  <View style={{ width: 36, height: 36, justifyContent: 'center', alignItems: 'center' }}>
-                    <Image source={SYSTEM_ICONS.list} style={{ width: 17, height: 17 }} />
+                  <View style={{ width: 32, height: 32, justifyContent: 'center', alignItems: 'center' }}>
+                    <Image source={SYSTEM_ICONS.list} style={{ width: 16, height: 16 }} />
                   </View>
                 </ShadowBox>
               </Pressable>
@@ -460,13 +460,12 @@ export default function JournalPage() {
               {/* search */}
               <Pressable onPress={toggleSearch}>
                 <ShadowBox
-                  contentBackgroundColor={PAGE.journal.foreground[0]}
                   contentBorderRadius={30}
                   shadowBorderRadius={30}
                   shadowOffset={{ x: 1, y: 1 }}
                 >
-                  <View style={{ width: 36, height: 36, justifyContent: 'center', alignItems: 'center' }}>
-                    <Image source={SYSTEM_ICONS.search} style={{ width: 17, height: 17 }} />
+                  <View style={{ width: 32, height: 32, justifyContent: 'center', alignItems: 'center' }}>
+                    <Image source={SYSTEM_ICONS.search} style={{ width: 16, height: 16 }} />
                   </View>
                 </ShadowBox>
               </Pressable>

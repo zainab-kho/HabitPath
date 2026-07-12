@@ -11,6 +11,7 @@ type GradientPath =
   | 'quest.background'
   | 'profile.background'
   | 'journal.background'
+  | 'notes.background'
   | 'focus.backgroundMain'
   | 'focus.backgroundBreak'
   | 'assignments.background'

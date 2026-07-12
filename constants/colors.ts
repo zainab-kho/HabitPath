@@ -76,6 +76,10 @@ export const PAGE = {
     border: ['#55d7b0ff'],
     primary: ['#ED8BE7'],
   },
+  notes: {
+    background: ['#FFDBF7', '#FFD3FF', '#FFE7FF'],
+    primary: ['#75A9FF', '#FFA4D8']
+  },
   focus: {
     backgroundMain: ['#EDE574', '#E1F5C4'],
     backgroundBreak: ['#f8997d', '#ad336d'],

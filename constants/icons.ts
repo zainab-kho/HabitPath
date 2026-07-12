@@ -381,6 +381,7 @@ export const SYSTEM_ICONS = {
 
     fire: require('@/assets/icons/system/fire.png'),
     fireBlue: require('@/assets/icons/system/fire-blue.png'),
+    folder: require('@/assets/icons/system/folder.png'),
     duplicate: require('@/assets/icons/system/duplicate.png'),
     archive: require('@/assets/icons/system/archive.png'),
     trash: require('@/assets/icons/system/trash.png'),
@@ -393,6 +394,7 @@ export const SYSTEM_ICONS = {
     tag: require('@/assets/icons/system/tag.png'),
     settings: require('@/assets/icons/system/settings-icon.png'),
     plus: require('@/assets/icons/system/plus.png'),
+    pin: require('@/assets/icons/system/pin.png'),
     delete: require('@/assets/icons/system/delete.png'),
     lock: require('@/assets/icons/system/lock.png'),
     padlock: require('@/assets/icons/system/padlock.png'),

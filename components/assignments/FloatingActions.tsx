@@ -53,7 +53,7 @@ export function FloatingActions({
                     <Pressable
                         style={{
                             position: 'absolute',
-                            bottom: 60,
+                            bottom: 100,
                             right: 50,
                             backgroundColor: '#fff',
                             borderRadius: 20,
@@ -99,7 +99,7 @@ export function FloatingActions({
             )}
 
             {/* floating buttons */}
-            <View style={{ position: 'absolute', bottom: 10, right: 0, zIndex: 5 }}>
+            <View style={{ position: 'absolute', bottom: 50, right: 0, zIndex: 5 }}>
                 {!showSaveButton && (
                     <View style={{ flexDirection: 'row', gap: 10, opacity: 1 }}>
                         <Pressable onPress={onToggleMenu}>
@@ -107,6 +107,7 @@ export function FloatingActions({
                                 contentBackgroundColor={PAGE.assignments.primary[1]}
                                 contentBorderRadius={30}
                                 shadowBorderRadius={30}
+                                shadowOffset={{ x: 1, y: 1 }}
                             >
                                 <View
                                     style={{ width: 40, height: 40, justifyContent: 'center', alignItems: 'center' }}
@@ -121,9 +122,10 @@ export function FloatingActions({
                                 contentBackgroundColor={PAGE.assignments.primary[0]}
                                 contentBorderRadius={30}
                                 shadowBorderRadius={30}
+                                shadowOffset={{ x: 1, y: 1 }}
                             >
                                 <View style={{ width: 40, height: 40, justifyContent: 'center', alignItems: 'center' }}>
-                                    <Text style={{ fontSize: 25, textAlign: 'center' }}>+</Text>
+                                    <Image source={SYSTEM_ICONS.plus} style={{ width: 20, height: 20 }} />
                                 </View>
                             </ShadowBox>
                         </Pressable>

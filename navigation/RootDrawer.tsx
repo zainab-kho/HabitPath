@@ -124,8 +124,8 @@ export function RootDrawer() {
             icon: SYSTEM_ICONS.journal,
         },
         {
-            label: 'Lists',
-            path: '/(tabs)/more/lists',
+            label: 'Notes',
+            path: '/(tabs)/more/notes',
             icon: SYSTEM_ICONS.lists
         },
         {

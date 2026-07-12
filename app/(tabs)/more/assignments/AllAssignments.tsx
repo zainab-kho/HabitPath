@@ -2,7 +2,7 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
-import { ActivityIndicator, Dimensions, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Dimensions, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 // hooks
 import { useAssignmentData } from '@/hooks/useAssignmentData';
@@ -193,26 +193,21 @@ export default function AllAssignments() {
                 </View>
 
                 {/* add assignment button */}
-                <View style={{
-                    position: 'absolute',
-                    bottom: 50,
-                    right: 0,
-                }}>
-                    <Pressable onPress={() => router.push('/(tabs)/more/assignments/NewAssignment')}>
-                        <ShadowBox
-                            contentBackgroundColor={PAGE.assignments.primary[0]}
-                            shadowBorderRadius={30}
-                            contentBorderRadius={30}
-                        >
-                            <View style={{
-                                width: 40,
-                                height: 40,
-                                justifyContent: 'center',
-                            }}>
-                                <Text style={{ fontSize: 25, textAlign: 'center' }}>+</Text>
-                            </View>
-                        </ShadowBox>
-                    </Pressable>
+                <View style={{ position: 'absolute', bottom: 50, right: 0, zIndex: 5 }}>
+                    <View style={{ flexDirection: 'row', gap: 10, opacity: 1 }}>
+                        <Pressable onPress={() => router.push('/(tabs)/more/assignments/NewAssignment')}>
+                            <ShadowBox
+                                contentBackgroundColor={PAGE.assignments.primary[0]}
+                                contentBorderRadius={30}
+                                shadowBorderRadius={30}
+                                shadowOffset={{ x: 1, y: 1 }}
+                            >
+                                <View style={{ width: 40, height: 40, justifyContent: 'center', alignItems: 'center' }}>
+                                    <Image source={SYSTEM_ICONS.plus} style={{ width: 20, height: 20 }} />
+                                </View>
+                            </ShadowBox>
+                        </Pressable>
+                    </View>
                 </View>
 
                 {/* edit assignment modal */}

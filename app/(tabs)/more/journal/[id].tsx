@@ -21,6 +21,7 @@ import { ScrollView as GHScrollView } from 'react-native-gesture-handler';
 import SongCard from '@/components/journal/SongCard';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { markJournalEntrySynced, upsertJournalCacheRow } from '@/lib/journal/offlineSync';
 import MoodPickerModal from '@/modals/MoodPickerModal';
 import SongPickerModal, { SongData } from '@/modals/SongPickerModal';
 import { JournalEntry } from '@/types/JournalEntry';
@@ -241,10 +242,43 @@ export default function JournalEntryDetail() {
     if (!user || !entry) return;
     setIsSaving(true);
 
-    try {
-      const dateStr = formatLocalDate(editDateTime);
-      const timeStr = formatDisplayTime(editDateTime);
+    const dateStr = formatLocalDate(editDateTime);
+    const timeStr = formatDisplayTime(editDateTime);
 
+    try {
+      // 1) write the edit to the cache first, flagged pending until it syncs.
+      // merges over the existing row so fields like starred/created_at are kept.
+      await upsertJournalCacheRow({
+        id: entry.id,
+        date: dateStr,
+        time: timeStr,
+        mood: editedMood ?? null,
+        location: editedLocation.trim() || null,
+        entry: editedEntry.trim() || null,
+        lock: editedLock,
+        song: editedSong ?? null,
+        book: editedBook ?? null,
+        show: editedShow ?? null,
+        pendingSync: true,
+      });
+
+      // 2) reflect changes locally right away
+      setEntry(prev => prev ? {
+        ...prev,
+        date: editDateTime,
+        time: timeStr,
+        mood: editedMood ?? undefined,
+        location: editedLocation.trim() || undefined,
+        entry: editedEntry.trim() || undefined,
+        lock: editedLock ? '1' : undefined,
+        song: editedSong ?? undefined,
+        book: editedBook ?? undefined,
+        show: editedShow ?? undefined,
+      } as JournalEntry : prev);
+      setIsEditMode(false);
+
+      // 3) try to push now; if offline it stays pending and the journal list
+      // retries the sync next time it loads with a connection
       const { error } = await supabase
         .from('journal_entries')
         .update({
@@ -261,49 +295,15 @@ export default function JournalEntryDetail() {
         .eq('id', entry.id)
         .eq('user_id', user.id);
 
-      if (error) throw error;
-
-      // update local cache
-      const cached = await AsyncStorage.getItem('@journal_entries');
-      if (cached) {
-        const entries: JournalEntry[] = JSON.parse(cached);
-        const updated = entries.map(e =>
-          e.id === entry.id
-            ? {
-              ...e,
-              date: dateStr,
-              time: timeStr,
-              mood: editedMood ?? undefined,
-              location: editedLocation.trim() || undefined,
-              entry: editedEntry.trim() || undefined,
-              lock: editedLock ? '1' : undefined,
-              song: editedSong ?? undefined,
-              book: editedBook ?? undefined,
-              show: editedShow ?? undefined,
-            }
-            : e
-        );
-        await AsyncStorage.setItem('@journal_entries', JSON.stringify(updated));
+      if (error) {
+        console.error('Save failed (will retry):', error);
+        Alert.alert('Saved Locally', 'Your changes are saved on this device and will sync when you have a connection.');
+      } else {
+        await markJournalEntrySynced(entry.id);
       }
-
-      // reflect changes locally
-      setEntry(prev => prev ? {
-        ...prev,
-        date: editDateTime,
-        time: timeStr,
-        mood: editedMood ?? undefined,
-        location: editedLocation.trim() || undefined,
-        entry: editedEntry.trim() || undefined,
-        lock: editedLock ? '1' : undefined,
-        song: editedSong ?? undefined,
-        book: editedBook ?? undefined,
-        show: editedShow ?? undefined,
-      } as JournalEntry : prev);
-
-      setIsEditMode(false);
     } catch (err) {
-      console.error('Save failed:', err);
-      Alert.alert('Error', 'Failed to save changes.');
+      console.error('Save failed (will retry):', err);
+      Alert.alert('Saved Locally', 'Your changes are saved on this device and will sync when you have a connection.');
     } finally {
       setIsSaving(false);
     }
@@ -322,13 +322,17 @@ export default function JournalEntryDetail() {
           style: 'destructive',
           onPress: async () => {
             try {
-              await supabase
+              // deletes require a connection — unlike creates/edits we don't queue
+              // them, so we never remove locally until the server delete succeeds
+              const { error } = await supabase
                 .from('journal_entries')
                 .delete()
                 .eq('id', id)
                 .eq('user_id', user?.id);
 
-              // remove from cache
+              if (error) throw error;
+
+              // remove from cache only after the server confirms the delete
               const cached = await AsyncStorage.getItem('@journal_entries');
               if (cached) {
                 const entries: JournalEntry[] = JSON.parse(cached);
@@ -341,7 +345,10 @@ export default function JournalEntryDetail() {
               router.back();
             } catch (err) {
               console.error('Delete failed:', err);
-              Alert.alert('Error', 'Failed to delete entry.');
+              Alert.alert(
+                "Couldn't delete",
+                "Deleting an entry needs an internet connection. Please try again when you're back online."
+              );
             }
           },
         },

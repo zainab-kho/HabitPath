@@ -735,11 +735,18 @@ export const getProgressUnitsForDay = (
     progressTotal += 1;
 
     if (h.increment) {
+      // only fall back to the snooze source date while the habit is STILL snoozed.
+      // a leftover snoozedFrom from an elapsed snooze must not pull a past (already
+      // completed) amount into today's progress — that's how an untouched habit was
+      // showing full credit. (matches the isSnoozedNow guard in toggleHabit /
+      // handleUndoIncrement — increments use <= since they include the arrival day)
+      const snoozeDay = h.snoozedUntil?.slice(0, 10);
+      const isSnoozedNow = !!h.snoozedFrom && !!snoozeDay && dateStr <= snoozeDay;
       const effectiveDate =
         (h.keepUntil || h.frequency === 'Weekly Goal') && viewingDate && resetHour !== undefined && resetMinute !== undefined
           ? getHabitCycleStart(h, viewingDate, resetHour, resetMinute)
-          : h.snoozedFrom
-            ? h.snoozedFrom
+          : isSnoozedNow
+            ? h.snoozedFrom!
             : dateStr;
 
       const currentAmount = isTimeTrackingHabit(h)

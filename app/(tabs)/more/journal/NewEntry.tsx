@@ -17,6 +17,7 @@ import { ScrollView as GHScrollView } from 'react-native-gesture-handler';
 
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { markJournalEntrySynced } from '@/lib/journal/offlineSync';
 import { JournalEntry } from '@/types/JournalEntry';
 import { COLORS, PAGE } from '@/constants/colors';
 import MoodPickerModal from '@/modals/MoodPickerModal';
@@ -166,10 +167,15 @@ export default function JournalPage() {
                 show: show || undefined,
             };
 
-            // save to AsyncStorage
+            // save to AsyncStorage — flagged pendingSync until it reaches Supabase.
+            // lock + created_at are cached too so an offline entry can be synced
+            // later with its full state intact.
             const cacheEntry = {
                 ...newEntry,
                 date: localDateString,
+                lock,
+                created_at: now.toISOString(),
+                pendingSync: true,
             };
             const existing = await AsyncStorage.getItem('@journal_entries');
             const allEntries: any[] = existing ? JSON.parse(existing) : [];
@@ -202,9 +208,11 @@ export default function JournalPage() {
                 console.error('**LOG: Supabase error:', error);
                 Alert.alert(
                     'Saved Locally',
-                    'Entry saved on your device but failed to sync to cloud. Will retry when online.'
+                    'Entry saved on your device. It will sync automatically next time you open your journal with a connection.'
                 );
             } else {
+                // reached the cloud — clear the pending flag so it isn't re-synced
+                await markJournalEntrySynced(id);
                 console.log('**LOG: Saved to Supabase (cloud)');
             }
 

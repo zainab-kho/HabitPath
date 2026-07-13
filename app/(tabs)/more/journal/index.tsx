@@ -10,6 +10,7 @@ import MoodPreview from '@/components/journal/MoodPreview';
 import SongCard from '@/components/journal/SongCard';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
+import { syncPendingJournalEntries } from '@/lib/journal/offlineSync';
 import { JournalEntry } from '@/types/JournalEntry';
 
 import { COLORS, MOOD_COLORS, PAGE } from '@/constants/colors';
@@ -153,7 +154,7 @@ export default function JournalPage() {
     try {
       setIsLoading(true);
 
-      // 1) load cache immediately
+      // 1) load cache immediately (includes any offline-pending entries)
       const cached = await AsyncStorage.getItem('@journal_entries');
       if (cached) {
         const cachedEntries: JournalEntry[] = JSON.parse(cached);
@@ -166,7 +167,14 @@ export default function JournalPage() {
         }
       }
 
-      // 2) fetch fresh data
+      // 2) push any offline-saved entries now that we may have a connection
+      try {
+        await syncPendingJournalEntries(user.id);
+      } catch (e) {
+        console.error('journal sync failed:', e);
+      }
+
+      // 3) fetch fresh data
       const { data, error } = await supabase
         .from('journal_entries')
         .select('*')
@@ -175,7 +183,7 @@ export default function JournalPage() {
 
       if (error) {
         console.error('Supabase error:', error);
-        return;
+        return; // stay on cache (still holds any pending entries)
       }
 
       const fresh: JournalEntry[] = (data || []).map(row => ({
@@ -192,8 +200,23 @@ export default function JournalPage() {
         starred: row.is_starred ?? false,
       }));
 
-      await AsyncStorage.setItem('@journal_entries', JSON.stringify(fresh));
-      groupAndSetEntries(fresh);
+      // 4) preserve any entries still pending sync so the server fetch never
+      // clobbers an offline create/edit that hasn't uploaded yet — for a pending
+      // edit we keep the LOCAL row over the (stale) server one
+      const afterSyncRaw = await AsyncStorage.getItem('@journal_entries');
+      const afterSync: any[] = afterSyncRaw ? JSON.parse(afterSyncRaw) : [];
+      const pendingRows = afterSync.filter(e => e.pendingSync);
+      const pendingIds = new Set(pendingRows.map(e => e.id));
+      const serverKept = fresh.filter(e => !pendingIds.has(e.id));
+
+      // cache: server rows we kept + pending rows (in their string-date cache shape)
+      await AsyncStorage.setItem('@journal_entries', JSON.stringify([...serverKept, ...pendingRows]));
+
+      const merged: JournalEntry[] = [
+        ...serverKept,
+        ...pendingRows.map(e => ({ ...e, date: parseLocalDate(e.date) })),
+      ];
+      groupAndSetEntries(merged);
     } catch (err) {
       console.error('loadEntries failed:', err);
     } finally {
@@ -341,6 +364,10 @@ export default function JournalPage() {
   const renderHighlighted = useCallback((text: string) => {
     if (!query) return text;
     const parts = text.split(new RegExp(`(${escapeRegExp(searchQuery.trim())})`, 'ig'));
+    // guard against pathological splits (e.g. a single common letter matched across a
+    // huge entry) producing thousands of Text nodes — that would freeze/crash the list.
+    // fall back to the plain (unhighlighted) text in that case.
+    if (parts.length > 400) return text;
     return parts.map((part, i) =>
       part.toLowerCase() === query
         ? <Text key={i} style={{ backgroundColor: '#FFE066' }}>{part}</Text>
@@ -588,12 +615,19 @@ export default function JournalPage() {
                         {/* body — expanded while searching so highlights are visible */}
                         {entry.entry && canShowEntry && (() => {
                           const isExpanded = !!expandedIds[entry.id] || query.length > 0;
-                          const previewLines = isExpanded ? 999 : 6;
+                          // Cap the collapsed preview: handing a very long string to a
+                          // <Text numberOfLines> makes iOS measure the WHOLE string to find
+                          // the truncation point, which freezes then crashes on huge entries.
+                          // A ~6-line preview never needs more than a few hundred chars; when
+                          // expanded we drop numberOfLines so there's no truncation measurement.
+                          const bodyText = isExpanded || entry.entry.length <= 500
+                            ? entry.entry
+                            : entry.entry.slice(0, 500);
 
                           return (
                             <View style={{ marginTop: 10 }}>
-                              <Text style={styles.entryText} numberOfLines={previewLines}>
-                                {renderHighlighted(entry.entry)}
+                              <Text style={styles.entryText} numberOfLines={isExpanded ? undefined : 6}>
+                                {renderHighlighted(bodyText)}
                               </Text>
 
                               {/* only show toggle if it's long */}

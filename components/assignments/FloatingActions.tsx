@@ -56,7 +56,8 @@ export function FloatingActions({
                     <Pressable
                         style={{
                             position: 'absolute',
-                            bottom: 100,
+                            // sit just above the floating buttons (which are lower on tabs)
+                            bottom: fromDrawer ? 80 : 60,
                             right: 50,
                             backgroundColor: '#fff',
                             borderRadius: 20,

@@ -447,6 +447,39 @@ export function useHabits(viewingDate: Date = new Date()) {
     [viewingDate, resetTime, user, applyHabitsUpdate, loadHabits]
   );
 
+  // ─── reorder (daily temp order + time-of-day section) ───────────────────────
+  // The drag handler already persisted the new order to Supabase and hands us an
+  // updater that stamps tempOrder/tempTimeOfDay onto each habit. We must mirror
+  // those fields back onto rawHabitsRef + allHabits, otherwise the next
+  // applyHabitsUpdate (from a toggle/add/etc.) rebuilds `habits` from the stale
+  // raw source and the order snaps back until the next full refresh.
+  const reorderHabits = useCallback(
+    (updater: (prev: HabitWithStatus[]) => HabitWithStatus[]) => {
+      setHabits(prev => {
+        const next = updater(prev);
+
+        const tempById = new Map(
+          next.map(h => [h.id, {
+            tempOrder: h.tempOrder,
+            tempOrderDate: h.tempOrderDate,
+            tempTimeOfDay: h.tempTimeOfDay,
+            tempTimeOfDayDate: h.tempTimeOfDayDate,
+          }])
+        );
+        const syncTemp = <T extends Habit>(h: T): T => {
+          const t = tempById.get(h.id);
+          return t ? { ...h, ...t } : h;
+        };
+
+        rawHabitsRef.current = rawHabitsRef.current.map(syncTemp);
+        setAllHabits(prevAll => prevAll.map(syncTemp));
+
+        return next;
+      });
+    },
+    []
+  );
+
   const deleteHabit = useCallback(
     async (habitId: string) => {
       if (!user) return;
@@ -504,6 +537,6 @@ export function useHabits(viewingDate: Date = new Date()) {
     unskipHabit,
     unskipAndCompleteHabit,
     deleteHabit,
-    reorderHabits: (updater: (prev: HabitWithStatus[]) => HabitWithStatus[]) => setHabits(updater),
+    reorderHabits,
   };
 }

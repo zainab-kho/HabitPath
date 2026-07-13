@@ -365,3 +365,21 @@ export async function deleteHabit(
   return habits.filter(h => h.id !== habitId);
 }
 
+// soft-hide a habit — stamps archived_at; the row stays in the DB so it can be
+// restored later. Returns the list with archivedAt applied.
+export async function archiveHabit(
+  habitId: string,
+  habits: Habit[],
+  userId: string,
+  archivedAt: string = new Date().toISOString()
+): Promise<Habit[]> {
+  const { error } = await supabase
+    .from('habits')
+    .update({ archived_at: archivedAt })
+    .eq('id', habitId)
+    .eq('user_id', userId);
+  if (error) throw error;
+
+  return habits.map(h => (h.id === habitId ? { ...h, archivedAt } : h));
+}
+

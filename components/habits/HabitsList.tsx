@@ -47,6 +47,8 @@ interface HabitsListProps {
   onUnskipAndCompleteHabit?: (habitId: string) => void;
   onSnoozeHabit?: (habitId: string) => void;
   onReorderHabits?: (updater: (prev: HabitWithStatus[]) => HabitWithStatus[]) => void;
+  onDeleteHabit?: (habitId: string) => void;
+  onArchiveHabit?: (habitId: string) => void;
 }
 
 type TimeOfDay = typeof TIME_OPTIONS[number];
@@ -80,6 +82,8 @@ export default function HabitsList({
   onUnskipAndCompleteHabit,
   onSnoozeHabit,
   onReorderHabits,
+  onDeleteHabit,
+  onArchiveHabit,
 }: HabitsListProps) {
   const router = useRouter();
   const currentDate = viewingDate || new Date();
@@ -627,6 +631,8 @@ export default function HabitsList({
         onClose={() => setModalVisible(false)}
         onUpdate={handleModalUpdate}
         onUndoIncrement={handleUndoIncrement}
+        onDelete={onDeleteHabit}
+        onArchive={onArchiveHabit}
       />
 
       <TimeLogModal

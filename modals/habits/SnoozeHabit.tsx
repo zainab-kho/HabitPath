@@ -4,7 +4,7 @@ import { Image, Modal, Pressable, Text, View } from 'react-native';
 
 // hooks
 import { HabitWithStatus } from '@/hooks/useHabits';
-import { formatLocalDate } from '@/utils/dateUtils';
+import { formatLocalDate, getHabitDate, parseLocalDate } from '@/utils/dateUtils';
 
 // styles and constants
 import { BUTTON_COLORS, COLORS, PAGE } from '@/constants/colors';
@@ -20,14 +20,17 @@ interface SnoozeHabitProps {
   snoozeDateStr: string; // the currently set snooze date (YYYY-MM-DD)
   onUpdateSnoozeDate: (habitId: string, newDateStr: string) => void;
   onUndoSnooze: (habitId: string) => void;
+  resetHour?: number;
+  resetMin?: number;
 }
 
 /**
  * formats a YYYY-MM-DD date string into a friendly label.
- * returns "Tomorrow" if it's tomorrow, otherwise "Mon, Feb 17" etc.
+ * returns "Tomorrow" if it's the day after the current habit day (respecting the
+ * reset time), otherwise "Mon, Feb 17" etc.
  */
-function formatSnoozeLabel(dateStr: string): string {
-  const tomorrow = new Date();
+function formatSnoozeLabel(dateStr: string, resetHour: number, resetMin: number): string {
+  const tomorrow = parseLocalDate(getHabitDate(new Date(), resetHour, resetMin));
   tomorrow.setDate(tomorrow.getDate() + 1);
   const tomorrowStr = formatLocalDate(tomorrow);
 
@@ -51,6 +54,8 @@ export default function SnoozeHabitModal({
   snoozeDateStr,
   onUpdateSnoozeDate,
   onUndoSnooze,
+  resetHour = 4,
+  resetMin = 0,
 }: SnoozeHabitProps) {
   const [showCalendar, setShowCalendar] = useState(false);
   const [pendingDate, setPendingDate] = useState(snoozeDateStr);
@@ -63,7 +68,7 @@ export default function SnoozeHabitModal({
 
   if (!habit) return null;
 
-  const dateLabel = formatSnoozeLabel(pendingDate);
+  const dateLabel = formatSnoozeLabel(pendingDate, resetHour, resetMin);
 
   // convert pendingDate string to a Date for SimpleCalendar (timezone-safe)
   const [y, m, d] = pendingDate.split('-').map(Number);

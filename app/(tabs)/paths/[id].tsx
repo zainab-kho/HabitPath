@@ -265,20 +265,25 @@ export default function PathDetail() {
   const isRecurring = (h: Habit) =>
     h.frequency === 'Daily' || h.frequency === 'Weekly' || h.frequency === 'Weekly Goal' || h.frequency === 'Monthly';
 
-  const isVisible = (h: Habit): boolean => {
+  // scheduled ahead of today — snoozed forward or a future start date
+  const isFuture = (h: Habit): boolean => {
     const snoozeDay = h.snoozedUntil?.slice(0, 10);
     if (snoozeDay && snoozeDay > todayStr) return true;
+    return h.startDate > todayStr;
+  };
+
+  // shown in the main list: every habit in the path that repeats, is due today, or
+  // is scheduled for the future. Everything else — archived, past its end date,
+  // past one-timers, completed keep-untils — falls through to the archived list.
+  const isVisible = (h: Habit): boolean => {
+    if (h.archivedAt) return false;
+    if (h.endDate && h.endDate < todayStr) return false;
+    if (isFuture(h)) return true;
+    if (isRecurring(h)) return true;
     return isHabitActiveToday(h, new Date(), resetHour, resetMin);
   };
 
-  // past one-timers, completed keep-until, etc.
-  const isArchived = (h: Habit): boolean => {
-    const snoozeDay = h.snoozedUntil?.slice(0, 10);
-    if (snoozeDay && snoozeDay > todayStr) return false;
-    if (isRecurring(h) && h.frequency !== 'Weekly Goal') return false;
-    if (isHabitActiveToday(h, new Date(), resetHour, resetMin)) return false;
-    return true;
-  };
+  const isArchived = (h: Habit): boolean => !isVisible(h);
 
   // label like "snoozed until...", "today", etc.
   const nextDueLabel = (h: Habit): string | null => {
@@ -299,9 +304,10 @@ export default function PathDetail() {
         .sort((a, b) => {
           const order = (h: Habit) => {
             const snoozeDay = h.snoozedUntil?.slice(0, 10);
-            if (snoozeDay && snoozeDay > todayStr) return 3;
-            if (isRecurring(h)) return 1;
-            return 0;
+            if (snoozeDay && snoozeDay > todayStr) return 3; // snoozed ahead
+            if (isFuture(h)) return 2;                        // future start date
+            if (isRecurring(h)) return 1;                     // repeats
+            return 0;                                          // due today
           };
           return order(a) - order(b);
         })

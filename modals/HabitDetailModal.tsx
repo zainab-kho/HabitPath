@@ -9,7 +9,6 @@ import {
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { BUTTON_COLORS, COLORS, PAGE } from '@/constants/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
@@ -28,6 +27,9 @@ interface HabitDetailModalProps {
     onClose: () => void;
     onUpdate: () => void;
     onUndoIncrement?: (habitId: string) => void;
+    // optimistic delete/archive — removes the habit from the list immediately
+    onDelete?: (habitId: string) => void;
+    onArchive?: (habitId: string) => void;
 }
 
 const ICON_SIZE = 20;
@@ -120,7 +122,7 @@ const DAY_ABBREV: Record<string, string> = {
     Monday: 'M', Tuesday: 'T', Wednesday: 'W', Thursday: 'Th', Friday: 'F', Saturday: 'Sa', Sunday: 'Su',
 };
 
-export default function HabitDetailModal({ visible, habit, resetHour, resetMin, onClose, onUpdate, onUndoIncrement }: HabitDetailModalProps) {
+export default function HabitDetailModal({ visible, habit, resetHour, resetMin, onClose, onUpdate, onUndoIncrement, onDelete, onArchive }: HabitDetailModalProps) {
     const { user } = useAuth();
     const router = useRouter();
     const [showMore, setShowMore] = useState(false);
@@ -148,19 +150,12 @@ export default function HabitDetailModal({ visible, habit, resetHour, resetMin, 
                 {
                     text: 'Archive',
                     onPress: async () => {
-                        try {
-                            await supabase
-                                .from('habits')
-                                .update({ archived_at: new Date().toISOString() })
-                                .eq('id', habit.id)
-                                .eq('user_id', user?.id);
-                            await AsyncStorage.setItem('@habits_dirty', '1');
-                            onUpdate();
-                            onClose();
-                        } catch (err) {
-                            console.error('Error archiving habit:', err);
-                            Alert.alert('Error', 'Failed to archive habit');
-                        }
+                        // mark other screens dirty, then hand off to the hook's
+                        // optimistic archive so the row disappears immediately
+                        // (it also stamps archived_at in Supabase)
+                        await AsyncStorage.setItem('@habits_dirty', '1');
+                        onClose();
+                        onArchive?.(habit.id);
                     },
                 },
             ]
@@ -177,19 +172,12 @@ export default function HabitDetailModal({ visible, habit, resetHour, resetMin, 
                     text: 'Delete',
                     style: 'destructive',
                     onPress: async () => {
-                        try {
-                            await supabase
-                                .from('habits')
-                                .delete()
-                                .eq('id', habit.id)
-                                .eq('user_id', user?.id);
-                            await AsyncStorage.setItem('@habits_dirty', '1');
-                            onUpdate();
-                            onClose();
-                        } catch (err) {
-                            console.error('Error deleting habit:', err);
-                            Alert.alert('Error', 'Failed to delete habit');
-                        }
+                        // mark other screens dirty, then hand off to the hook's
+                        // optimistic delete so the row disappears immediately
+                        // (it also removes it from Supabase)
+                        await AsyncStorage.setItem('@habits_dirty', '1');
+                        onClose();
+                        onDelete?.(habit.id);
                     },
                 },
             ]

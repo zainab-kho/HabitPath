@@ -25,6 +25,7 @@ import {
   getHabitDate,
   isToday,
   navigateDate as navigateDateUtil,
+  parseLocalDate,
 } from '@/utils/dateUtils';
 import { useGradientForTime } from '@/utils/gradients';
 
@@ -57,6 +58,8 @@ export default function HabitsPage() {
     unskipHabit,
     unskipAndCompleteHabit,
     reorderHabits,
+    deleteHabit,
+    archiveHabit,
   } = useHabits(viewingDate);
 
   // snooze modal state
@@ -67,14 +70,17 @@ export default function HabitsPage() {
   const handleSnoozeHabit = async (habitId: string) => {
     const target = habits.find(h => h.id === habitId) ?? null;
 
-    // viewing a past day → snooze to today; viewing today → snooze to tomorrow
+    // viewing a past day → snooze to today; viewing today → snooze to tomorrow.
+    // "tomorrow" is the day AFTER the current habit day (respects the reset time),
+    // not calendar tomorrow — otherwise at e.g. 2am with a 4am reset it would skip
+    // a day (the habit day is still "yesterday" until the reset passes).
     const todayStr = getHabitDate(new Date(), resetTime.hour, resetTime.minute);
     const viewingStr = getHabitDate(viewingDate, resetTime.hour, resetTime.minute);
     let defaultSnoozeStr: string;
     if (viewingStr < todayStr) {
       defaultSnoozeStr = todayStr;
     } else {
-      const tomorrow = new Date();
+      const tomorrow = parseLocalDate(viewingStr);
       tomorrow.setDate(tomorrow.getDate() + 1);
       defaultSnoozeStr = formatLocalDate(tomorrow);
     }
@@ -255,6 +261,8 @@ export default function HabitsPage() {
           onUnskipAndCompleteHabit={unskipAndCompleteHabit}
           onSnoozeHabit={handleSnoozeHabit}
           onReorderHabits={reorderHabits}
+          onDeleteHabit={deleteHabit}
+          onArchiveHabit={archiveHabit}
         />
 
         {/* snooze confirmation modal */}
@@ -265,6 +273,8 @@ export default function HabitsPage() {
           snoozeDateStr={snoozeDateStr}
           onUpdateSnoozeDate={handleUpdateSnoozeDate}
           onUndoSnooze={handleUndoSnooze}
+          resetHour={resetTime.hour}
+          resetMin={resetTime.minute}
         />
 
         {/* floating buttons */}

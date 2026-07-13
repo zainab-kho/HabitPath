@@ -4,7 +4,7 @@ import { unstable_batchedUpdates } from 'react-native';
 
 import { useAuth } from '@/contexts/AuthContext';
 import { Habit } from '@/types/Habit';
-import { formatLocalDate, getHabitDate, getWeekDatesForDate } from '@/utils/dateUtils';
+import { formatLocalDate, getHabitDate, getWeekDatesForDate, parseLocalDate } from '@/utils/dateUtils';
 import { getResetTime } from '@/lib/supabase/queries';
 import {
   addStatusToHabits,
@@ -17,6 +17,7 @@ import {
 import {
   applyIncrementUpdate,
   applyToggleCompletion,
+  archiveHabit as archiveHabitService,
   deleteHabit as deleteHabitService,
   loadHabitsFromSupabase,
   persistHabitCompletion,
@@ -292,7 +293,9 @@ export function useHabits(viewingDate: Date = new Date()) {
         if (viewingStr < todayStr) {
           targetDate = todayStr;
         } else {
-          const tomorrow = new Date();
+          // day after the current habit day (respects the reset time), not
+          // calendar tomorrow
+          const tomorrow = parseLocalDate(viewingStr);
           tomorrow.setDate(tomorrow.getDate() + 1);
           targetDate = formatLocalDate(tomorrow);
         }
@@ -483,12 +486,35 @@ export function useHabits(viewingDate: Date = new Date()) {
   const deleteHabit = useCallback(
     async (habitId: string) => {
       if (!user) return;
+      // apply synchronously BEFORE the await so the row disappears immediately
+      const before = rawHabitsRef.current;
+      applyHabitsUpdate(before.filter(h => h.id !== habitId), resetTime);
       try {
-        const updatedHabits = await deleteHabitService(habitId, rawHabitsRef.current, user.id);
-        applyHabitsUpdate(updatedHabits, resetTime);
+        await deleteHabitService(habitId, before, user.id);
       } catch (err) {
         console.error('Error deleting habit:', err);
-        loadHabits();
+        loadHabits(); // restore truth on failure
+      }
+    },
+    [viewingDate, resetTime, user, applyHabitsUpdate, loadHabits]
+  );
+
+  const archiveHabit = useCallback(
+    async (habitId: string) => {
+      if (!user) return;
+      const archivedAt = new Date().toISOString();
+      // apply synchronously BEFORE the await — archiving a repeating habit makes
+      // isHabitActiveToday drop it, so the row leaves the list immediately
+      const before = rawHabitsRef.current;
+      applyHabitsUpdate(
+        before.map(h => (h.id === habitId ? { ...h, archivedAt } : h)),
+        resetTime
+      );
+      try {
+        await archiveHabitService(habitId, before, user.id, archivedAt);
+      } catch (err) {
+        console.error('Error archiving habit:', err);
+        loadHabits(); // restore truth on failure
       }
     },
     [viewingDate, resetTime, user, applyHabitsUpdate, loadHabits]
@@ -537,6 +563,7 @@ export function useHabits(viewingDate: Date = new Date()) {
     unskipHabit,
     unskipAndCompleteHabit,
     deleteHabit,
+    archiveHabit,
     reorderHabits,
   };
 }

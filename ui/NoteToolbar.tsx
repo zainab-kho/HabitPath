@@ -62,6 +62,9 @@ export function NoteToolbar({ editor, onDone }: { editor: EditorBridge; onDone?:
             <View style={styles.bar}>
                 <ScrollView
                     horizontal
+                    directionalLockEnabled
+                    alwaysBounceVertical={false}
+                    alwaysBounceHorizontal={false}
                     showsHorizontalScrollIndicator={false}
                     keyboardShouldPersistTaps="always"
                     contentContainerStyle={styles.content}

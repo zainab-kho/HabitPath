@@ -3,7 +3,7 @@ import React, { useRef } from 'react';
 import { Animated, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 
-import { PAGE } from '@/constants/colors';
+import { BUTTON_COLORS, COLORS, PAGE } from '@/constants/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import { Note } from '@/types/Note';
 import ShadowBox from '@/ui/ShadowBox';
@@ -57,7 +57,7 @@ export default function NoteCard({
         const actions = onRecover || onDeleteForever
             ? [
                 { icon: SYSTEM_ICONS.undo, onPress: closeThen(onRecover), tint: '#54d697' },
-                { icon: SYSTEM_ICONS.trash, onPress: closeThen(onDeleteForever), tint: '#FF7A7A' },
+                { icon: SYSTEM_ICONS.trash, onPress: closeThen(onDeleteForever), tint: BUTTON_COLORS.Delete },
             ]
             : [
                 { icon: SYSTEM_ICONS.pin, onPress: closeThen(onPin), tint: PAGE.notes.primary[0] },
@@ -93,17 +93,20 @@ export default function NoteCard({
             overshootRight={false}
             friction={2}
         >
-            <ShadowBox shadowOffset={{ x: 0, y: 2 }} style={styles.cardWrap}>
+            <ShadowBox 
+                shadowOffset={{ x: 0, y: 3 }} 
+                shadowColor={PAGE.notes.primary[0]}
+                style={styles.cardWrap}>
                 <Pressable onPress={onPress} style={styles.card}>
                     <View style={styles.row}>
                         <Text style={styles.title} numberOfLines={1}>
-                            {note.title.trim() || 'Untitled'}
+                            {note.title.trim() || 'body'}
                         </Text>
                         <Text style={styles.date}>{formatEditedDate(note.updatedAt)}</Text>
                     </View>
                     <View style={styles.row}>
-                        <Text style={styles.body} numberOfLines={1}>
-                            {body || 'No additional text'}
+                        <Text style={styles.body} numberOfLines={2}>
+                            {body || ''}
                         </Text>
                         <Text style={styles.time}>{formatEditedTime(note.updatedAt)}</Text>
                     </View>
@@ -116,16 +119,17 @@ export default function NoteCard({
 const styles = StyleSheet.create({
     cardWrap: {
         marginBottom: 12,
-        marginRight: 2,
+        // marginRight: 2,
     },
     card: {
         paddingVertical: 12,
         paddingHorizontal: 15,
-        gap: 4,
+        gap: 10,
+        marginBottom: 5,
     },
     row: {
         flexDirection: 'row',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         justifyContent: 'space-between',
         gap: 10,
     },

@@ -92,7 +92,7 @@ export default function FoldersModal({
 
                             {/* folder cards */}
                             {sortedFolders.map(folder => (
-                                <ShadowBox key={folder.id} shadowOffset={{ x: 1, y: 1 }}>
+                                <ShadowBox key={folder.id}>
                                     <Pressable
                                         onPress={() => onSelectFolder(folder.id)}
                                         style={styles.folderCard}

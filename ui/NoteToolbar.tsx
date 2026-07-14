@@ -49,7 +49,7 @@ const ITEMS: ToolbarItem[] = [
         isActive: s => s.isBlockquoteActive, onPress: e => e.toggleBlockquote() },
 ];
 
-export function NoteToolbar({ editor }: { editor: EditorBridge }) {
+export function NoteToolbar({ editor, onDone }: { editor: EditorBridge; onDone?: () => void }) {
     const state = useBridgeState(editor);
     const { isKeyboardUp } = useKeyboard();
 
@@ -57,44 +57,73 @@ export function NoteToolbar({ editor }: { editor: EditorBridge }) {
     if (!isKeyboardUp || !state.isFocused) return null;
 
     return (
-        // Outer View is the fixed-width pill; the ScrollView scrolls buttons inside it.
-        <View style={styles.bar}>
-            <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                keyboardShouldPersistTaps="always"
-                contentContainerStyle={styles.content}
-            >
-                {ITEMS.map(item => {
-                    const active = item.isActive(state);
-                    return (
-                        <Pressable
-                            key={item.key}
-                            style={[styles.button, active && styles.buttonActive]}
-                            onPress={() => item.onPress(editor, state)}
-                        >
-                            <Text style={[styles.label, item.labelStyle, active && styles.labelActive]}>
-                                {item.label}
-                            </Text>
-                        </Pressable>
-                    );
-                })}
-            </ScrollView>
+        <View style={styles.row}>
+            {/* the formatting pill: fixed width, buttons scroll horizontally inside */}
+            <View style={styles.bar}>
+                <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    keyboardShouldPersistTaps="always"
+                    contentContainerStyle={styles.content}
+                >
+                    {ITEMS.map(item => {
+                        const active = item.isActive(state);
+                        return (
+                            <Pressable
+                                key={item.key}
+                                style={[styles.button, active && styles.buttonActive]}
+                                onPress={() => item.onPress(editor, state)}
+                            >
+                                <Text style={[styles.label, item.labelStyle, active && styles.labelActive]}>
+                                    {item.label}
+                                </Text>
+                            </Pressable>
+                        );
+                    })}
+                </ScrollView>
+            </View>
+
+            {/* Done: closes the keyboard */}
+            {onDone && (
+                <Pressable onPress={onDone} style={styles.doneButton}>
+                    <Text style={styles.doneLabel}>Done</Text>
+                </Pressable>
+            )}
         </View>
     );
 }
 
 const styles = StyleSheet.create({
-    bar: {
-        // fixed-width pill: fills the screen width minus side margins, never wider
-        alignSelf: 'stretch',
+    row: {
+        flexDirection: 'row',
+        alignItems: 'center',
         marginHorizontal: 10,
         marginBottom: 10,
+        gap: 8,
+    },
+    bar: {
+        // formatting pill takes the remaining width; Done sits to its right
+        flex: 1,
         backgroundColor: PAGE.notes.primary[1],
         borderWidth: 2,
         borderColor: PAGE.notes.primary[0],
         borderRadius: 20,
         overflow: 'hidden', // clip the scrolling buttons to the rounded corners
+    },
+    doneButton: {
+        height: 46,
+        paddingHorizontal: 16,
+        borderRadius: 20,
+        borderWidth: 2,
+        borderColor: PAGE.notes.primary[0],
+        backgroundColor: PAGE.notes.primary[1],
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    doneLabel: {
+        fontFamily: 'p1',
+        fontSize: 14,
+        color: '#000',
     },
     content: {
         // the scrollable row that lives inside the pill

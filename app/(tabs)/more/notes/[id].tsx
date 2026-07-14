@@ -14,11 +14,12 @@ import { useLocalSearchParams } from "expo-router";
 import { useCallback, useRef, useState } from "react";
 import {
     ActivityIndicator,
+    Keyboard,
     KeyboardAvoidingView,
     Platform,
+    Pressable,
     StyleSheet,
     Text,
-    TextInput,
     View,
 } from "react-native";
 
@@ -27,7 +28,7 @@ export default function NoteEditorPage() {
     const { id, folderId } = useLocalSearchParams<{ id: string; folderId?: string }>();
     const isNew = id === 'new';
 
-    const [title, setTitle] = useState('');
+    // const [title, setTitle] = useState('');
     const [noteDate] = useState<Date>(new Date());
     const [loading] = useState(false);
 
@@ -38,8 +39,11 @@ export default function NoteEditorPage() {
     // rich text editor (Tiptap in a WebView) — replaces the old native TextInput body
     const editor = useEditorBridge({
         autofocus: true,
-        avoidIosKeyboard: true,
-        initialContent: '<p></p>',
+        // No avoidIosKeyboard: it force-scrolls the editor to the caret on every new
+        // line (even in a short note). Without it, the box only scrolls once the
+        // content overflows its fixed height — like the journal entry.
+        // start the note on an H1 "title" line; pressing Enter drops to body text
+        initialContent: '<h1></h1>',
         // inject the app's Apercu font into the WebView so note text matches native text
         bridgeExtensions: [...TenTapStartKit, CoreBridge.configureCSS(APERCU_EDITOR_CSS)],
     });
@@ -54,6 +58,13 @@ export default function NoteEditorPage() {
     const logHtml = useCallback(async () => {
         const html = await editor.getHTML();
         console.log('[note html]', noteIdRef.current, html);
+    }, [editor]);
+
+    // tapping outside the editor should close the keyboard. The keyboard belongs
+    // to the WebView, so blur the editor as well as dismissing natively.
+    const dismissKeyboard = useCallback(() => {
+        editor.blur();
+        Keyboard.dismiss();
     }, [editor]);
 
     if (loading) {
@@ -74,24 +85,24 @@ export default function NoteEditorPage() {
             <PageContainer>
                 <PageHeader title="" showBackButton />
 
-                {/* date / time pill */}
-                <View style={styles.datePill}>
-                    <Text style={[globalStyles.body2, { fontSize: 13 }]}>
-                        {localDate}  •  {localTime}
-                    </Text>
-                </View>
+                <View style={styles.body}>
+                    {/* date / time pill — tap this area to dismiss the keyboard */}
+                    <Pressable onPress={dismissKeyboard} style={styles.topDismiss}>
+                        <View style={styles.datePill}>
+                            <Text style={[globalStyles.body2, { fontSize: 13 }]}>
+                                {localDate}  •  {localTime}
+                            </Text>
+                        </View>
+                    </Pressable>
 
-                <View style={styles.noteBox}>
-                    {/* title */}
-                    <TextInput
-                        style={styles.titleInput}
-                        value={title}
-                        onChangeText={setTitle}
-                        placeholder="Title"
-                    />
+                    {/* rich text body — a plain View (NOT inside a Pressable) so taps here
+                        only reach the WebView and reliably keep the keyboard up */}
+                    <View style={styles.noteBox}>
+                        <RichText editor={editor} onBlur={logHtml} style={styles.richText} />
+                    </View>
 
-                    {/* rich text body — WebView editor fills the rest of the box */}
-                    <RichText editor={editor} onBlur={logHtml} style={styles.richText} />
+                    {/* empty space below the box — tap to dismiss the keyboard */}
+                    <Pressable onPress={dismissKeyboard} style={styles.bottomDismiss} />
                 </View>
             </PageContainer>
 
@@ -119,8 +130,20 @@ const styles = StyleSheet.create({
         alignSelf: 'center',
         marginBottom: 10,
     },
-    noteBox: {
+    body: {
         flex: 1,
+    },
+    topDismiss: {
+        // wraps the date pill; tapping it dismisses without overlapping the editor
+        alignItems: 'center',
+    },
+    bottomDismiss: {
+        // fills the space under the box; tapping it dismisses the keyboard
+        flex: 1,
+    },
+    noteBox: {
+        // fixed-height text box (change `height` to taste); the editor scrolls inside it
+        height: 340,
         borderWidth: 2,
         borderColor: PAGE.notes.primary[0],
         backgroundColor: '#fff',
@@ -128,12 +151,6 @@ const styles = StyleSheet.create({
         paddingHorizontal: 10,
         paddingVertical: 10,
         overflow: 'hidden',
-    },
-    titleInput: {
-        fontFamily: 'p2',
-        fontSize: 22,
-        paddingVertical: 4,
-        marginBottom: 6,
     },
     richText: {
         flex: 1,

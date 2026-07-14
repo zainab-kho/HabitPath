@@ -67,6 +67,7 @@ export function NoteToolbar({ editor, onDone }: { editor: EditorBridge; onDone?:
                     alwaysBounceHorizontal={false}
                     showsHorizontalScrollIndicator={false}
                     keyboardShouldPersistTaps="always"
+                    style={styles.scroll}
                     contentContainerStyle={styles.content}
                 >
                     {ITEMS.map(item => {
@@ -127,6 +128,11 @@ const styles = StyleSheet.create({
         fontFamily: 'p1',
         fontSize: 14,
         color: '#000',
+    },
+    scroll: {
+        // pin the scroll frame to the content height (34 button + 12 padding) so there's
+        // no vertical slack to scroll — the toolbar can only move left/right
+        height: 46,
     },
     content: {
         // the scrollable row that lives inside the pill

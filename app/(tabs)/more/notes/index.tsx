@@ -78,11 +78,42 @@ export default function NotesPage() {
         });
     }, []);
 
-    // folder modal — browse mode opens folders, assign mode picks one for a note
+    // folder modal — used for managing folders + assigning a note to one
     const [folderModalOpen, setFolderModalOpen] = useState(false);
     const [assigningNoteId, setAssigningNoteId] = useState<string | null>(null);
 
+    // folder filter — chips filter the list in place instead of opening a page.
+    // 'unfiled' = notes with no folder (default main view), 'all' = every note.
+    const [folderFilter, setFolderFilter] = useState<'unfiled' | 'all' | string>('unfiled');
+
+    const selectFolder = useCallback((key: 'unfiled' | 'all' | string) => {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+        setFolderFilter(key);
+    }, []);
+
+    // if the selected folder gets deleted, fall back to the default (unfiled) view
+    useEffect(() => {
+        if (folderFilter !== 'unfiled' && folderFilter !== 'all' && !folders.some(f => f.id === folderFilter)) {
+            setFolderFilter('unfiled');
+        }
+    }, [folders, folderFilter]);
+
+    // folder chips, pinned first then alphabetical
+    const folderChips = useMemo(
+        () => [...folders].sort((a, b) =>
+            a.pinned !== b.pinned ? Number(b.pinned) - Number(a.pinned) : a.name.localeCompare(b.name)
+        ),
+        [folders]
+    );
+
     const activeNotes = useMemo(() => notes.filter(n => !n.deletedAt), [notes]);
+
+    // apply the folder filter first: unfiled = no folder, all = everything, else a folder
+    const inFolder = useMemo(() => {
+        if (folderFilter === 'all') return activeNotes;
+        if (folderFilter === 'unfiled') return activeNotes.filter(n => !n.folderId);
+        return activeNotes.filter(n => n.folderId === folderFilter);
+    }, [activeNotes, folderFilter]);
 
     // search across title + block text
     const matchesQuery = useCallback((note: Note) => {
@@ -91,7 +122,10 @@ export default function NotesPage() {
         return haystack.includes(query);
     }, [query]);
 
-    const searched = useMemo(() => activeNotes.filter(matchesQuery), [activeNotes, matchesQuery]);
+    const searched = useMemo(() => inFolder.filter(matchesQuery), [inFolder, matchesQuery]);
+
+    // new notes created while a folder is active land in that folder
+    const activeFolderId = folderFilter !== 'all' && folderFilter !== 'unfiled' ? folderFilter : null;
 
     const pinnedNotes = useMemo(() => searched.filter(n => n.pinned), [searched]);
 
@@ -120,10 +154,23 @@ export default function NotesPage() {
             setAssigningNoteId(null);
             setFolderModalOpen(false);
         } else if (folderId) {
-            // browse mode — open the folder page
+            // browse mode — filter the list in place instead of opening a page
             setFolderModalOpen(false);
-            router.push(`/(tabs)/more/notes/folder/${folderId}` as any);
+            selectFolder(folderId);
         }
+    };
+
+    const renderChip = (key: string, label: string) => {
+        const selected = folderFilter === key;
+        return (
+            <Pressable key={key} onPress={() => selectFolder(key)}>
+                <View style={[styles.chip, selected && styles.chipSelected]}>
+                    <Text style={[styles.chipText, selected && styles.chipTextSelected]} numberOfLines={1}>
+                        {label}
+                    </Text>
+                </View>
+            </Pressable>
+        );
     };
 
     const renderNote = (note: Note) => (
@@ -234,6 +281,19 @@ export default function NotesPage() {
                         )}
                     </View>
 
+                    {/* folder filter chips — filter the list in place (no navigation) */}
+                    <ScrollView
+                        horizontal
+                        showsHorizontalScrollIndicator={false}
+                        keyboardShouldPersistTaps="handled"
+                        contentContainerStyle={{ gap: 8, paddingHorizontal: 3, paddingRight: 14 }}
+                        style={styles.chipRow}
+                    >
+                        {renderChip('all', 'All')}
+                        {renderChip('unfiled', 'Notes')}
+                        {folderChips.map(f => renderChip(f.id, f.name))}
+                    </ScrollView>
+
                     <ScrollView
                         contentContainerStyle={{ paddingHorizontal: 3, paddingBottom: 65 }}
                         style={{ flex: 1 }}
@@ -269,24 +329,37 @@ export default function NotesPage() {
                             </View>
                         ))}
 
-                        {/* empty state */}
-                        {activeNotes.length === 0 && !query && (
-                            <View style={{ marginTop: 40 }}>
-                                <EmptyStateView
-                                    icon={SYSTEM_ICONS.lists}
-                                    title="No notes yet"
-                                    description="Jot down anything — ideas, lists, reminders!"
-                                    buttonText="New Note"
-                                    buttonAction={() => router.push('/(tabs)/more/notes/new' as any)}
-                                    buttonColor={PAGE.notes.primary[0]}
-                                />
-                            </View>
+                        {/* empty state — full prompt when there are no notes at all,
+                            otherwise a short note that this filter is empty */}
+                        {searched.length === 0 && !query && (
+                            activeNotes.length === 0 ? (
+                                <View style={{ marginTop: 40 }}>
+                                    <EmptyStateView
+                                        icon={SYSTEM_ICONS.lists}
+                                        title="No notes yet"
+                                        description="Jot down anything — ideas, lists, reminders!"
+                                        buttonText="New Note"
+                                        buttonAction={() => router.push('/(tabs)/more/notes/new' as any)}
+                                        buttonColor={PAGE.notes.primary[0]}
+                                    />
+                                </View>
+                            ) : (
+                                <Text style={styles.noMatches}>
+                                    {folderFilter === 'unfiled'
+                                        ? 'No loose notes — they’re all in folders. Tap “All” to see everything.'
+                                        : 'No notes in this folder yet.'}
+                                </Text>
+                            )
                         )}
                     </ScrollView>
 
-                    {/* floating new-note button */}
+                    {/* floating new-note button — lands in the active folder if one is selected */}
                     <View style={{ position: 'absolute', bottom: 30, right: 0, zIndex: 5 }}>
-                        <Pressable onPress={() => router.push('/(tabs)/more/notes/new' as any)}>
+                        <Pressable onPress={() => router.push(
+                            activeFolderId
+                                ? { pathname: '/(tabs)/more/notes/new', params: { folderId: activeFolderId } } as any
+                                : '/(tabs)/more/notes/new' as any
+                        )}>
                             <ShadowBox
                                 contentBackgroundColor={PAGE.notes.primary[0]}
                                 contentBorderRadius={30}
@@ -343,6 +416,31 @@ const styles = StyleSheet.create({
     sectionHeader: {
         fontFamily: 'p2',
         fontSize: 19,
+    },
+    chipRow: {
+        flexGrow: 0,
+        marginBottom: 12,
+    },
+    chip: {
+        paddingHorizontal: 14,
+        height: 32,
+        borderRadius: 20,
+        borderWidth: 1.5,
+        borderColor: PAGE.notes.primary[0],
+        backgroundColor: '#fff',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    chipSelected: {
+        backgroundColor: PAGE.notes.primary[0],
+    },
+    chipText: {
+        fontFamily: 'p1',
+        fontSize: 13,
+        color: '#000',
+    },
+    chipTextSelected: {
+        color: '#fff',
     },
     noMatches: {
         fontFamily: 'label',

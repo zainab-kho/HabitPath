@@ -5,6 +5,7 @@ import Swipeable from 'react-native-gesture-handler/Swipeable';
 
 import { BUTTON_COLORS, COLORS, PAGE } from '@/constants/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
+import { notePreview } from '@/lib/editor/noteContent';
 import { Note } from '@/types/Note';
 import ShadowBox from '@/ui/ShadowBox';
 
@@ -28,13 +29,6 @@ const formatEditedTime = (iso: string) =>
         .toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
         .replace(' ', '')
         .toLowerCase();
-
-// first non-empty line is the one-line body preview (body blocks are multiline)
-const previewText = (note: Note) =>
-    note.blocks
-        .find(b => b.text.trim().length > 0)?.text
-        .split('\n')
-        .find(l => l.trim().length > 0) ?? '';
 
 export default function NoteCard({
     note,
@@ -84,7 +78,7 @@ export default function NoteCard({
         );
     };
 
-    const body = previewText(note);
+    const body = notePreview(note);
 
     return (
         <Swipeable

@@ -8,6 +8,9 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 // hooks
 import { useNotes } from '@/hooks/useNotes';
 
+// helpers
+import { noteSearchText } from '@/lib/editor/noteContent';
+
 // components
 import NoteCard from '@/components/notes/NoteCard';
 import FoldersModal from '@/modals/notes/FoldersModal';
@@ -115,11 +118,10 @@ export default function NotesPage() {
         return activeNotes.filter(n => n.folderId === folderFilter);
     }, [activeNotes, folderFilter]);
 
-    // search across title + block text
+    // search across title + body text (HTML-aware)
     const matchesQuery = useCallback((note: Note) => {
         if (!query) return true;
-        const haystack = [note.title, ...note.blocks.map(b => b.text)].join(' ').toLowerCase();
-        return haystack.includes(query);
+        return noteSearchText(note).includes(query);
     }, [query]);
 
     const searched = useMemo(() => inFolder.filter(matchesQuery), [inFolder, matchesQuery]);

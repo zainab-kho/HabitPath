@@ -9,13 +9,14 @@ import PageHeader from "@/ui/PageHeader";
 import { formatDisplayDate, formatDisplayTime } from "@/utils/dateUtils";
 import { APERCU_EDITOR_CSS } from "@/lib/editor/apercuEditorCss";
 import { NoteToolbar } from "@/ui/NoteToolbar";
-import { CoreBridge, RichText, TenTapStartKit, useEditorBridge } from "@10play/tentap-editor";
+import { CoreBridge, RichText, TenTapStartKit, useEditorBridge, useKeyboard } from "@10play/tentap-editor";
 import { useLocalSearchParams } from "expo-router";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
     ActivityIndicator,
     Keyboard,
     KeyboardAvoidingView,
+    LayoutAnimation,
     Platform,
     Pressable,
     StyleSheet,
@@ -47,6 +48,14 @@ export default function NoteEditorPage() {
         // inject the app's Apercu font into the WebView so note text matches native text
         bridgeExtensions: [...TenTapStartKit, CoreBridge.configureCSS(APERCU_EDITOR_CSS)],
     });
+
+    // when the keyboard is down, let the text box expand
+    const { isKeyboardUp } = useKeyboard();
+
+    // smoothly animate the box height as the keyboard shows / hides
+    useEffect(() => {
+        LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    }, [isKeyboardUp]);
 
     // exact date + time
     const [noteDateTime] = useState<Date>(() => new Date());
@@ -96,13 +105,14 @@ export default function NoteEditorPage() {
                     </Pressable>
 
                     {/* rich text body — a plain View (NOT inside a Pressable) so taps here
-                        only reach the WebView and reliably keep the keyboard up */}
-                    <View style={styles.noteBox}>
+                        only reach the WebView and reliably keep the keyboard up.
+                        Fixed height while the keyboard is up; fills the screen when it's down. */}
+                    <View style={[styles.noteBox, isKeyboardUp ? styles.noteBoxFixed : styles.noteBoxFull]}>
                         <RichText editor={editor} onBlur={logHtml} style={styles.richText} />
                     </View>
 
-                    {/* empty space below the box — tap to dismiss the keyboard */}
-                    <Pressable onPress={dismissKeyboard} style={styles.bottomDismiss} />
+                    {/* empty space below the box (only while the keyboard is up) — tap to dismiss */}
+                    {isKeyboardUp && <Pressable onPress={dismissKeyboard} style={styles.bottomDismiss} />}
                 </View>
             </PageContainer>
 
@@ -142,8 +152,6 @@ const styles = StyleSheet.create({
         flex: 1,
     },
     noteBox: {
-        // fixed-height text box (change `height` to taste); the editor scrolls inside it
-        height: 340,
         borderWidth: 2,
         borderColor: PAGE.notes.primary[0],
         backgroundColor: '#fff',
@@ -151,6 +159,14 @@ const styles = StyleSheet.create({
         paddingHorizontal: 10,
         paddingVertical: 10,
         overflow: 'hidden',
+    },
+    noteBoxFixed: {
+        // keyboard up: shorter so the box sits above the keyboard
+        height: 300,
+    },
+    noteBoxFull: {
+        // keyboard down: taller
+        height: 600,
     },
     richText: {
         flex: 1,

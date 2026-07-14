@@ -8,7 +8,8 @@ import PageContainer from "@/ui/PageContainer";
 import PageHeader from "@/ui/PageHeader";
 import { formatDisplayDate, formatDisplayTime } from "@/utils/dateUtils";
 import { APERCU_EDITOR_CSS } from "@/lib/editor/apercuEditorCss";
-import { CoreBridge, RichText, TenTapStartKit, Toolbar, useEditorBridge } from "@10play/tentap-editor";
+import { NoteToolbar } from "@/ui/NoteToolbar";
+import { CoreBridge, RichText, TenTapStartKit, useEditorBridge } from "@10play/tentap-editor";
 import { useLocalSearchParams } from "expo-router";
 import { useCallback, useRef, useState } from "react";
 import {
@@ -101,7 +102,7 @@ export default function NoteEditorPage() {
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 style={styles.toolbarContainer}
             >
-                <Toolbar editor={editor} />
+                <NoteToolbar editor={editor} />
             </KeyboardAvoidingView>
         </AppLinearGradient>
     );

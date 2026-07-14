@@ -72,14 +72,16 @@ export function editorHtmlToStorage(html: string): { title: string; blocks: Note
     return { title, blocks: [{ id: 'content', type: 'body', text: html }] };
 }
 
-// one-line body preview for the note card (skips the title line for HTML notes)
+// body preview for the note card — the first two body lines, kept as separate
+// lines (the card caps at 2 lines). Skips the title line for HTML notes.
 export function notePreview(note: { title: string; blocks: NoteBlock[] }): string {
     if (isStoredHtml(note.blocks)) {
         const lines = htmlToPlainText(note.blocks[0].text).split('\n').filter(Boolean);
-        return lines.slice(1).join('  ');
+        return lines.slice(1, 3).join('\n');
     }
-    const first = note.blocks.find(b => b.text.trim().length > 0)?.text ?? '';
-    return first.split('\n').find(l => l.trim().length > 0) ?? '';
+    const lines = note.blocks.map(b => b.text).join('\n')
+        .split('\n').map(l => l.trim()).filter(Boolean);
+    return lines.slice(0, 2).join('\n');
 }
 
 // lowercase haystack for search (title + body text)

@@ -116,8 +116,8 @@ const styles = StyleSheet.create({
         // marginRight: 2,
     },
     card: {
-        paddingVertical: 12,
-        paddingHorizontal: 15,
+        // match the journal entry card
+        padding: 20,
         gap: 10,
         marginBottom: 5,
     },
@@ -134,17 +134,17 @@ const styles = StyleSheet.create({
     },
     date: {
         fontFamily: 'p2',
-        fontSize: 13,
+        fontSize: 15,
     },
     body: {
         flex: 1,
         fontFamily: 'p3',
-        fontSize: 13,
-        opacity: 0.6,
+        fontSize: 15,
+        lineHeight: 20,
     },
     time: {
         fontFamily: 'label',
-        fontSize: 12,
+        fontSize: 13,
         opacity: 0.6,
     },
     actionsContainer: {

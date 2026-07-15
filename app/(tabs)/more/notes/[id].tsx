@@ -8,7 +8,8 @@ import {
     editorHtmlToStorage,
     noteToEditorHtml,
 } from "@/lib/editor/noteContent";
-import { createNote, loadNotes, updateNoteContent } from "@/lib/supabase/queries/notes";
+import { getCachedNote, upsertCachedNote } from "@/lib/notes/notesCache";
+import { createNote, getNote, updateNoteContent } from "@/lib/supabase/queries/notes";
 import { globalStyles } from "@/styles";
 import { AppLinearGradient } from "@/ui/AppLinearGradient";
 import { NoteToolbar } from "@/ui/NoteToolbar";
@@ -35,21 +36,23 @@ export default function NoteEditorPage() {
     const { id, folderId } = useLocalSearchParams<{ id: string; folderId?: string }>();
     const isNew = id === 'new';
 
-    // load the existing note BEFORE mounting the editor, so its HTML can be the
-    // editor's initialContent (the editor is created once, with that content).
-    const [loading, setLoading] = useState(!isNew);
-    const [initialHtml, setInitialHtml] = useState('<h1></h1>');
-    const [initialNoteId, setInitialNoteId] = useState<string | null>(isNew ? null : id);
-    const [initialUpdatedAt, setInitialUpdatedAt] = useState<string | null>(null);
+    // read from the shared cache synchronously so a tapped note opens instantly.
+    // (The list keeps this fresh.) Only fetch when it's not cached, e.g. a deep link.
+    const cached = isNew ? undefined : getCachedNote(id);
+
+    const [loading, setLoading] = useState(!isNew && !cached);
+    const [initialHtml, setInitialHtml] = useState(cached ? noteToEditorHtml(cached) : '<h1></h1>');
+    const [initialNoteId, setInitialNoteId] = useState<string | null>(isNew ? null : (cached?.id ?? id));
+    const [initialUpdatedAt, setInitialUpdatedAt] = useState<string | null>(cached?.updatedAt ?? null);
 
     useEffect(() => {
         let cancelled = false;
         if (isNew) { setLoading(false); return; }
+        if (getCachedNote(id)) { setLoading(false); return; } // already have it from cache
         if (!user) return; // wait until auth is ready before loading
         (async () => {
             try {
-                const notes = await loadNotes(user.id);
-                const note = notes.find(n => n.id === id);
+                const note = await getNote(id, user.id);
                 if (!cancelled && note) {
                     setInitialHtml(noteToEditorHtml(note));
                     setInitialNoteId(note.id);
@@ -105,7 +108,9 @@ function NoteEditor({
     const onChangeRef = useRef<() => void>(() => {});
 
     const editor = useEditorBridge({
-        autofocus: true,
+        // only new notes auto-focus (keyboard up to write); existing notes open
+        // into a clean, unfocused page — tap the text to start editing
+        autofocus: initialNoteId === null,
         initialContent: initialHtml,
         // inject the app's Apercu font into the WebView so note text matches native text
         bridgeExtensions: [...TenTapStartKit, CoreBridge.configureCSS(APERCU_EDITOR_CSS)],
@@ -138,16 +143,20 @@ function NoteEditor({
         const html = await editor.getHTML();
         if (!editorHasContent(html)) return; // don't create/keep an empty note
         const { title, blocks } = editorHtmlToStorage(html);
+        const now = new Date().toISOString();
         try {
             if (!noteIdRef.current) {
                 if (creatingRef.current) return;
                 creatingRef.current = true;
                 const created = await createNote(userId, { title, blocks, folderId });
                 noteIdRef.current = created.id;
+                upsertCachedNote(created); // so reopening is instant + correct
             } else {
                 await updateNoteContent(noteIdRef.current, userId, title, blocks);
+                const existing = getCachedNote(noteIdRef.current);
+                if (existing) upsertCachedNote({ ...existing, title, blocks, updatedAt: now });
             }
-            setEditedAt(new Date().toISOString());
+            setEditedAt(now);
         } catch (err) {
             console.error('Error saving note:', err);
         } finally {
@@ -184,6 +193,23 @@ function NoteEditor({
         Keyboard.dismiss();
     }, [editor]);
 
+    // keep the editor hidden behind a spinner until the WebView has rendered, so
+    // you never see a half-painted note flash in. A short buffer after the page
+    // loads lets the content paint; a fallback guarantees we never stay stuck.
+    const [ready, setReady] = useState(false);
+    const revealTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const markReady = useCallback(() => {
+        if (revealTimer.current) return;
+        revealTimer.current = setTimeout(() => setReady(true), 250);
+    }, []);
+    useEffect(() => {
+        const fallback = setTimeout(() => setReady(true), 2500);
+        return () => {
+            clearTimeout(fallback);
+            if (revealTimer.current) clearTimeout(revealTimer.current);
+        };
+    }, []);
+
     const localDate = formatDisplayDate(new Date(editedAt));
     const localTime = formatDisplayTime(new Date(editedAt));
 
@@ -205,21 +231,31 @@ function NoteEditor({
                     {/* rich text body — a plain View so taps only reach the WebView.
                         Fixed height while the keyboard is up; taller when it's down. */}
                     <View style={[styles.noteBox, isKeyboardUp ? styles.noteBoxFixed : styles.noteBoxFull]}>
-                        <RichText editor={editor} style={styles.richText} />
+                        <RichText editor={editor} onLoadEnd={markReady} style={styles.richText} />
                     </View>
 
                     {/* empty space below the box (only while the keyboard is up) — tap to dismiss */}
-                    {isKeyboardUp && <Pressable onPress={dismissKeyboard} style={styles.bottomDismiss} />}
+                    {ready && isKeyboardUp && <Pressable onPress={dismissKeyboard} style={styles.bottomDismiss} />}
+
+                    {/* while the editor renders in the background, cover the whole area
+                        (pill + box) with just a spinner, then reveal the finished page at once */}
+                    {!ready && (
+                        <AppLinearGradient variant="notes.background" style={styles.loadingCover}>
+                            <ActivityIndicator size="small" color={PAGE.notes.primary[0]} />
+                        </AppLinearGradient>
+                    )}
                 </View>
             </PageContainer>
 
-            {/* toolbar — pinned to the bottom; shown only while editing (above the keyboard) */}
-            <KeyboardAvoidingView
-                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                style={styles.toolbarContainer}
-            >
-                <NoteToolbar editor={editor} />
-            </KeyboardAvoidingView>
+            {/* toolbar — pinned to the bottom; shown only once the editor is ready */}
+            {ready && (
+                <KeyboardAvoidingView
+                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                    style={styles.toolbarContainer}
+                >
+                    <NoteToolbar editor={editor} />
+                </KeyboardAvoidingView>
+            )}
         </AppLinearGradient>
     );
 }
@@ -266,6 +302,13 @@ const styles = StyleSheet.create({
     richText: {
         flex: 1,
         backgroundColor: '#fff',
+    },
+    // covers the pill + box with just a spinner (matching the page gradient) while
+    // the editor renders in the background; removed to reveal the finished page
+    loadingCover: {
+        ...StyleSheet.absoluteFillObject,
+        justifyContent: 'center',
+        alignItems: 'center',
     },
     toolbarContainer: {
         position: 'absolute',

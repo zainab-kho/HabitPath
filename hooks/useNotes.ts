@@ -13,6 +13,7 @@ import {
     setNotePinned as setNotePinnedService,
     softDeleteNote as softDeleteNoteService,
 } from '@/lib/supabase/queries/notes';
+import { setNotesCache } from '@/lib/notes/notesCache';
 import { Note, NoteFolder } from '@/types/Note';
 
 export function useNotes(userId?: string) {
@@ -34,6 +35,7 @@ export function useNotes(userId?: string) {
             ]);
             setNotes(freshNotes);
             setFolders(freshFolders);
+            setNotesCache(freshNotes); // keep the shared cache fresh for instant note opens
         } catch (err) {
             console.error('Error loading notes:', err);
         } finally {

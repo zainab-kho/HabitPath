@@ -39,6 +39,19 @@ export async function loadNotes(userId: string): Promise<Note[]> {
     return (data || []).map(mapNote);
 }
 
+// loads a single note by id — much faster than loadNotes when opening one
+export async function getNote(noteId: string, userId: string): Promise<Note | null> {
+    const { data, error } = await supabase
+        .from('notes')
+        .select('*')
+        .eq('id', noteId)
+        .eq('user_id', userId)
+        .maybeSingle();
+
+    if (error) throw error;
+    return data ? mapNote(data) : null;
+}
+
 export async function createNote(
     userId: string,
     fields: Partial<Pick<Note, 'title' | 'blocks' | 'folderId'>> = {}

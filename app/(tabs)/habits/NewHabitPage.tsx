@@ -42,12 +42,23 @@ const ICON_SIZE = 30;
 export default function NewHabitPage() {
     const router = useRouter();
     const { user } = useAuth();
-    const params = useLocalSearchParams<{ startDate?: string; editId?: string; editData?: string }>();
+    const params = useLocalSearchParams<{
+        startDate?: string; editId?: string; editData?: string;
+        // when creating a habit inside a quest phase:
+        questId?: string; phaseId?: string; questScope?: string;
+        phaseEndDate?: string; questEndDate?: string;
+    }>();
     const inputRef = useRef<TextInput>(null);
     const scrollRef = useRef<KeyboardAwareScrollView>(null);
     const hasNavigatedAway = useRef(false);
 
     const isEditMode = !!params.editId;
+    // quest mode: this habit is a "goal" inside a quest (shows quest styling, hides paths)
+    const isQuestMode = !!params.questId;
+    const inPhase = !!params.phaseId;
+    const [questScope, setQuestScope] = useState<'phase' | 'carry' | 'forever'>(
+        (params.questScope as 'phase' | 'carry' | 'forever') || (params.phaseId ? 'phase' : 'forever')
+    );
     const editHabit = React.useMemo(
         () => params.editData ? JSON.parse(params.editData) : null,
         [params.editData]
@@ -351,6 +362,17 @@ export default function NewHabitPage() {
                 monthly_week: finalFrequency === 'Monthly' && monthlyMode === 'nthWeekday' ? monthlyWeek : null,
                 monthly_weekday: finalFrequency === 'Monthly' && monthlyMode === 'nthWeekday' ? monthlyWeekday : null,
                 end_date: endDate ? formatLocalDate(endDate) : null,
+                // quest linkage — when created from a quest phase, the scope drives the
+                // effective end date (overriding the picker above)
+                ...(params.questId ? {
+                    quest_id: params.questId,
+                    phase_id: params.phaseId ?? null,
+                    quest_scope: questScope,
+                    end_date:
+                        questScope === 'forever' ? null :
+                        questScope === 'carry' ? (params.questEndDate ?? null) :
+                        (params.phaseEndDate ?? null),
+                } : {}),
             };
 
             const { error } = isEditMode
@@ -383,9 +405,9 @@ export default function NewHabitPage() {
     };
 
     return (
-        <AppLinearGradient variant="newHabit.background">
+        <AppLinearGradient variant={isQuestMode ? "quest.background" : "newHabit.background"}>
             <PageContainer>
-                <PageHeader title={isEditMode ? "Edit Habit" : "New Habit"} showBackButton />
+                <PageHeader title={isQuestMode ? "New Goal" : (isEditMode ? "Edit Habit" : "New Habit")} showBackButton />
 
                 <KeyboardAwareScrollView
                     ref={scrollRef}
@@ -1021,39 +1043,69 @@ export default function NewHabitPage() {
 
                                 <View style={{ gap: 10 }}>
 
-                                    {/* paths */}
-                                    <Text style={[globalStyles.label]}>
-                                        PATHS
-                                    </Text>
-                                    <View style={{
-                                        flexDirection: 'row',
-                                        flexWrap: 'wrap',
-                                        gap: 8,
-                                    }}>
-                                        {paths.length === 0 ? (
-                                            <Text style={[globalStyles.label, { opacity: 0.4 }]}>No paths yet</Text>
-                                        ) : (
-                                            paths.map((path) => {
-                                                const selected = selectedPathId === path.id;
-                                                const colorHex = PATH_COLORS[path.color as PathColorKey] ?? '#999';
-                                                return (
-                                                    <Pressable key={path.id} onPress={() => togglePath(path.id)}>
-                                                        <ShadowBox
-                                                            contentBackgroundColor={selected ? colorHex : '#fff'}
-                                                            contentBorderColor={selected ? '#000' : colorHex}
-                                                            shadowBorderColor={selected ? '#000' : colorHex}
-                                                            shadowColor={selected ? '#000' : colorHex}
-                                                        >
-                                                            <View style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
-                                                                <Text style={globalStyles.body1}>{path.name}</Text>
-                                                            </View>
-                                                        </ShadowBox>
-                                                    </Pressable>
-                                                );
-                                            })
-                                        )}
+                                    {/* paths — hidden for quest goals */}
+                                    {!isQuestMode && (
+                                        <>
+                                            <Text style={[globalStyles.label]}>
+                                                PATHS
+                                            </Text>
+                                            <View style={{
+                                                flexDirection: 'row',
+                                                flexWrap: 'wrap',
+                                                gap: 8,
+                                            }}>
+                                                {paths.length === 0 ? (
+                                                    <Text style={[globalStyles.label, { opacity: 0.4 }]}>No paths yet</Text>
+                                                ) : (
+                                                    paths.map((path) => {
+                                                        const selected = selectedPathId === path.id;
+                                                        const colorHex = PATH_COLORS[path.color as PathColorKey] ?? '#999';
+                                                        return (
+                                                            <Pressable key={path.id} onPress={() => togglePath(path.id)}>
+                                                                <ShadowBox
+                                                                    contentBackgroundColor={selected ? colorHex : '#fff'}
+                                                                    contentBorderColor={selected ? '#000' : colorHex}
+                                                                    shadowBorderColor={selected ? '#000' : colorHex}
+                                                                    shadowColor={selected ? '#000' : colorHex}
+                                                                >
+                                                                    <View style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
+                                                                        <Text style={globalStyles.body1}>{path.name}</Text>
+                                                                    </View>
+                                                                </ShadowBox>
+                                                            </Pressable>
+                                                        );
+                                                    })
+                                                )}
 
-                                    </View>
+                                            </View>
+                                        </>
+                                    )}
+
+                                    {/* quest goal: what happens to this habit when its phase ends */}
+                                    {isQuestMode && inPhase && (
+                                        <>
+                                            <Text style={[globalStyles.label]}>WHEN THIS PHASE ENDS</Text>
+                                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                                                {([['phase', 'End with phase'], ['carry', 'Carry forward'], ['forever', 'Keep forever']] as const).map(([val, lbl]) => {
+                                                    const sel = questScope === val;
+                                                    return (
+                                                        <Pressable key={val} onPress={() => setQuestScope(val)}>
+                                                            <ShadowBox
+                                                                contentBackgroundColor={sel ? PAGE.quest.primary[0] : '#fff'}
+                                                                contentBorderColor={sel ? '#000' : PAGE.quest.primary[0]}
+                                                                shadowBorderColor={sel ? '#000' : PAGE.quest.primary[0]}
+                                                                shadowColor={sel ? '#000' : PAGE.quest.primary[0]}
+                                                            >
+                                                                <View style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
+                                                                    <Text style={globalStyles.body1}>{lbl}</Text>
+                                                                </View>
+                                                            </ShadowBox>
+                                                        </Pressable>
+                                                    );
+                                                })}
+                                            </View>
+                                        </>
+                                    )}
 
                                     {/* **TODO: create More options logic */}
                                     <Pressable

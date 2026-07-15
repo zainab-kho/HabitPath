@@ -64,7 +64,7 @@ export const PAGE = {
   },
   quest: {
     background: ['#FE9494', '#FFE4E2', '#ABB967'],
-    primary: ['#FF6E83', '#C0FCF7']
+    primary: ['#FF6E83', '#9EA42E']
   },
   profile: {
     background: ['#CF8BF3', '#A770EF', '#FDB99B'],

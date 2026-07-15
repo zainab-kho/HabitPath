@@ -12,7 +12,6 @@ import HabitSectionHeader from '@/components/habits/HabitSectionHeader';
 import { getHabitCycleStart, getWeeklyTimeTotal } from '@/utils/habitUtils';
 import HabitDetailModal from '@/modals/HabitDetailModal';
 import TimeLogModal from '@/modals/habits/TimeLogModal';
-import { toggleQuestSubtaskCompletion } from '@/lib/supabase/queries/questGoalHabits';
 import { COLORS, PAGE } from '@/constants/colors';
 import { TIME_OPTIONS } from '@/constants/habits';
 import { SYSTEM_ICONS } from '@/constants/icons';
@@ -149,8 +148,9 @@ export default function HabitsList({
 
   const handleToggleSubtask = async (subtaskId: string, completed: boolean) => {
     try {
+      // legacy quest-subtask toggle — quest goals are now real habits with no
+      // subtasks, so this handler is inert (kept until the UI branch is removed)
       setSubtaskOverrides(prev => ({ ...prev, [subtaskId]: completed }));
-      await toggleQuestSubtaskCompletion(subtaskId, completed);
     } catch (err) {
       console.error('Error toggling quest subtask:', err);
       // revert on error

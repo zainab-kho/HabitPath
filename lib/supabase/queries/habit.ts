@@ -1,6 +1,28 @@
 import { supabase } from '@/lib/supabase';
 import { Habit } from '@/types/Habit';
 import { getHabitDate } from '@/utils/dateUtils';
+import uuid from 'react-native-uuid';
+
+
+// ─── CREATE ──────────────────────────────────────────────────────────────────
+
+// inserts a habit row. `habitData` is the same column-shaped object NewHabitPage
+// builds (snake_case keys). Returns the new row id. Used both by NewHabitPage and
+// when a quest creates a real habit tagged with quest_id / phase_id / quest_scope.
+export async function createHabit(
+  habitData: Record<string, any>,
+  userId: string,
+): Promise<string> {
+  const id = habitData.id ? String(habitData.id) : String(uuid.v4());
+  const { error } = await supabase.from('habits').insert([{
+    ...habitData,
+    id,
+    user_id: userId,
+    created_at: new Date().toISOString(),
+  }]);
+  if (error) throw error;
+  return id;
+}
 
 
 // ─── LOAD ────────────────────────────────────────────────────────────────────
@@ -21,51 +43,74 @@ export async function loadHabitsFromSupabase(
 
     if (error) throw error;
 
-    return (data || []).map(row => ({
-      id: row.id,
-      userId: row.user_id,
-      name: row.name,
-      habitText: row.name,
-      icon: row.icon,
-      frequency: row.frequency,
-      selectedDays: row.selected_days || [],
-      selectedTimeOfDay: row.selected_time_of_day,
-      tempTimeOfDay: row.temp_time_of_day ?? undefined,
-      tempTimeOfDayDate: row.temp_time_of_day_date ?? undefined,
-      tempOrder: row.temp_order ?? undefined,
-      tempOrderDate: row.temp_order_date ?? undefined,
-      tempSelectedDays: row.temp_selected_days ?? undefined,
-      tempSelectedDaysWeek: row.temp_selected_days_week ?? undefined,
-      // empty = inbox habit: not scheduled anywhere until the user picks a date
-      startDate: row.start_date ?? '',
-      selectedDate: row.selected_date,
-      rewardPoints: row.reward_points || 0,
-      completionHistory: row.completion_history || [],
-      lastCompletedDate: row.last_completed_date ?? undefined,
-      snoozedFrom: row.snoozed_from,
-      snoozedUntil: row.snoozed_until,
-      skippedDates: row.skipped_dates || [],
-      archivedAt: row.archived_at,
-      keepUntil: row.keep_until || false,
-      increment: row.increment || false,
-      incrementAmount: row.increment_amount || 0,
-      incrementGoal: row.increment_goal || undefined,
-      incrementStep: row.increment_step || 1,
-      incrementType: row.increment_type || undefined,
-      incrementHistory: row.increment_history || {},
-      path: row.path,
-      pathColor: row.path_color,
-      customType: row.custom_type ?? undefined,
-      customInterval: row.custom_interval ?? undefined,
-      monthlyWeek: row.monthly_week ?? undefined,
-      monthlyWeekday: row.monthly_weekday ?? undefined,
-      endDate: row.end_date ?? undefined,
-      created_at: row.created_at,
-    })) as Habit[];
+    return (data || []).map(mapHabitRow);
   } catch (err) {
     console.error('Error: loadHabitsFromSupabase failed', err);
     return [];
   }
+}
+
+// maps a raw `habits` row to a Habit. Shared by the full load and quest-scoped load.
+export function mapHabitRow(row: any): Habit {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    name: row.name,
+    habitText: row.name,
+    icon: row.icon,
+    frequency: row.frequency,
+    selectedDays: row.selected_days || [],
+    selectedTimeOfDay: row.selected_time_of_day,
+    tempTimeOfDay: row.temp_time_of_day ?? undefined,
+    tempTimeOfDayDate: row.temp_time_of_day_date ?? undefined,
+    tempOrder: row.temp_order ?? undefined,
+    tempOrderDate: row.temp_order_date ?? undefined,
+    tempSelectedDays: row.temp_selected_days ?? undefined,
+    tempSelectedDaysWeek: row.temp_selected_days_week ?? undefined,
+    // empty = inbox habit: not scheduled anywhere until the user picks a date
+    startDate: row.start_date ?? '',
+    selectedDate: row.selected_date,
+    rewardPoints: row.reward_points || 0,
+    completionHistory: row.completion_history || [],
+    lastCompletedDate: row.last_completed_date ?? undefined,
+    snoozedFrom: row.snoozed_from,
+    snoozedUntil: row.snoozed_until,
+    skippedDates: row.skipped_dates || [],
+    archivedAt: row.archived_at,
+    keepUntil: row.keep_until || false,
+    increment: row.increment || false,
+    incrementAmount: row.increment_amount || 0,
+    incrementGoal: row.increment_goal || undefined,
+    incrementStep: row.increment_step || 1,
+    incrementType: row.increment_type || undefined,
+    incrementHistory: row.increment_history || {},
+    path: row.path,
+    pathColor: row.path_color,
+    customType: row.custom_type ?? undefined,
+    customInterval: row.custom_interval ?? undefined,
+    monthlyWeek: row.monthly_week ?? undefined,
+    monthlyWeekday: row.monthly_weekday ?? undefined,
+    endDate: row.end_date ?? undefined,
+    created_at: row.created_at,
+    // quest linkage (real columns; null for normal habits)
+    questId: row.quest_id ?? undefined,
+    phaseId: row.phase_id ?? undefined,
+    questScope: row.quest_scope ?? undefined,
+  } as Habit;
+}
+
+// loads all habits belonging to one quest (any phase), incl. archived ones —
+// the quest detail decides what to show per phase.
+export async function loadHabitsByQuest(questId: string, userId: string): Promise<Habit[]> {
+  const { data, error } = await supabase
+    .from('habits')
+    .select('*')
+    .eq('user_id', userId)
+    .eq('quest_id', questId)
+    .order('created_at', { ascending: true });
+
+  if (error) throw error;
+  return (data || []).map(mapHabitRow);
 }
 
 // ─── TOGGLE / UPDATE ─────────────────────────────────────────────────────────

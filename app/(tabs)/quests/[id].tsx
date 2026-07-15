@@ -1,132 +1,44 @@
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/supabase';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
+// @/app/(tabs)/quests/[id].tsx
+// Quest detail: header (Main/Side badge), phases (pager) or a flat list, and the
+// quest's goals — real habits + one-time tasks. "+ Add goal" opens the habit
+// creator in quest mode (New Goal); tapping a goal toggles today's completion.
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useCallback, useState } from 'react';
 import {
-    ActivityIndicator, Alert, Image, Pressable, ScrollView,
-    StyleSheet, Text, View,
+    ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View,
 } from 'react-native';
 
+import { PAGE } from '@/constants/colors';
+import { useAuth } from '@/contexts/AuthContext';
+import { loadHabitsByQuest, toggleHabitCompletion } from '@/lib/supabase/queries/habit';
+import { addPhase, getQuest } from '@/lib/supabase/queries/quests';
+import { Habit } from '@/types/Habit';
+import { Quest, QuestPhase } from '@/types/Quest';
 import { AppLinearGradient } from '@/ui/AppLinearGradient';
 import PageContainer from '@/ui/PageContainer';
 import PageHeader from '@/ui/PageHeader';
 import ShadowBox from '@/ui/ShadowBox';
-import { globalStyles, uiStyles } from '@/styles';
-import { BUTTON_COLORS, PAGE } from '@/constants/colors';
-import { SYSTEM_ICONS } from '@/constants/icons';
-import { getIconFile } from '@/components/habits/iconUtils';
-import { useQuestCreation } from '@/contexts/QuestCreationContext';
+import { formatDisplayDate, formatLocalDate } from '@/utils/dateUtils';
 
-// ─── types ───────────────────────────────────────────────────────────────────
+const isTask = (h: Habit) => !h.frequency || h.frequency === 'None';
 
-interface Subtask {
-    id: string;
-    name: string;
-    completed: boolean;
-    sort_order: number;
-}
-
-interface Goal {
-    id: string;
-    name: string;
-    icon: string;
-    type: string;
-    target_count: number | null;
-    completed: boolean;
-    week_id: string | null;
-    sort_order: number;
-    quest_subtasks: Subtask[];
-}
-
-interface Week {
-    id: string;
-    label: string;
-    sort_order: number;
-}
-
-interface Phase {
-    id: string;
-    name: string;
-    end_date: string | null;
-    sort_order: number;
-    quest_goals: Goal[];
-    quest_weeks: (Week & { quest_goals: Goal[] })[];
-}
-
-interface Quest {
-    id: string;
-    name: string;
-    type: string;
-    end_date: string | null;
-    has_phases: boolean;
-    quest_phases: Phase[];
-}
-
-// ─── main page ───────────────────────────────────────────────────────────────
-
-export default function QuestDetail() {
-    const { id } = useLocalSearchParams<{ id: string }>();
+export default function QuestDetailPage() {
     const { user } = useAuth();
     const router = useRouter();
+    const { id } = useLocalSearchParams<{ id: string }>();
 
     const [quest, setQuest] = useState<Quest | null>(null);
+    const [habits, setHabits] = useState<Habit[]>([]);
     const [loading, setLoading] = useState(true);
-    const [currentPhaseIndex, setCurrentPhaseIndex] = useState(0);
-    const [expandedGoals, setExpandedGoals] = useState<Set<string>>(new Set());
-    const [showMenu, setShowMenu] = useState(false);
-    const [editMode, setEditMode] = useState(false);
-    const {
-        setDetailPhaseId,
-        setDetailWeekId,
-        setEditingGoal,
-        setOnDetailGoalSaved,
-    } = useQuestCreation();
+    const [phaseIndex, setPhaseIndex] = useState(0);
 
-    const loadQuest = useCallback(async () => {
+    const load = useCallback(async () => {
         if (!user || !id) return;
         try {
-            const { data, error } = await supabase
-                .from('quests')
-                .select(`
-                    id, name, type, end_date, has_phases,
-                    quest_phases ( id, name, end_date, sort_order,
-                        quest_goals ( id, name, icon, type, target_count, completed, week_id, sort_order,
-                            quest_subtasks ( id, name, completed, sort_order )
-                        ),
-                        quest_weeks ( id, label, sort_order,
-                            quest_goals:quest_goals ( id, name, icon, type, target_count, completed, week_id, sort_order,
-                                quest_subtasks:quest_subtasks ( id, name, completed, sort_order )
-                            )
-                        )
-                    )
-                `)
-                .eq('id', id)
-                .eq('user_id', user.id)
-                .single();
-
-            if (error || !data) {
-                router.back();
-                return;
-            }
-
-            // sort phases, goals, weeks, subtasks
-            const q = data as unknown as Quest;
-            q.quest_phases.sort((a, b) => a.sort_order - b.sort_order);
-            for (const phase of q.quest_phases) {
-                phase.quest_goals.sort((a, b) => a.sort_order - b.sort_order);
-                phase.quest_weeks.sort((a, b) => a.sort_order - b.sort_order);
-                for (const goal of phase.quest_goals) {
-                    goal.quest_subtasks.sort((a, b) => a.sort_order - b.sort_order);
-                }
-                for (const week of phase.quest_weeks) {
-                    week.quest_goals.sort((a, b) => a.sort_order - b.sort_order);
-                    for (const goal of week.quest_goals) {
-                        goal.quest_subtasks.sort((a, b) => a.sort_order - b.sort_order);
-                    }
-                }
-            }
-
+            const [q, hs] = await Promise.all([getQuest(id, user.id), loadHabitsByQuest(id, user.id)]);
             setQuest(q);
+            setHabits(hs);
+            if (q) setPhaseIndex(idx => Math.min(idx, Math.max(0, (q.phases?.length ?? 1) - 1)));
         } catch (err) {
             console.error('Error loading quest:', err);
         } finally {
@@ -134,447 +46,200 @@ export default function QuestDetail() {
         }
     }, [user, id]);
 
-    useEffect(() => { loadQuest(); }, [loadQuest]);
+    useFocusEffect(useCallback(() => { load(); }, [load]));
 
-    const toggleGoalCompleted = async (goalId: string, current: boolean) => {
-        await supabase.from('quest_goals').update({ completed: !current }).eq('id', goalId);
-        loadQuest();
+    const phases = quest?.phases ?? [];
+    const phase: QuestPhase | undefined = quest?.hasPhases ? phases[phaseIndex] : undefined;
+
+    // items for the current phase: its own items + carried-forward habits from earlier phases
+    const itemsForPhase = (phaseId: string | null): Habit[] => {
+        const own = habits.filter(h => h.phaseId === phaseId);
+        const carried = habits.filter(h =>
+            h.questScope === 'carry' && h.phaseId && h.phaseId !== phaseId &&
+            phases.findIndex(p => p.id === h.phaseId) < phaseIndex
+        );
+        return [...own, ...carried];
+    };
+    const items = quest?.hasPhases ? itemsForPhase(phase?.id ?? null) : habits;
+    // habits and one-time tasks are all "goals" — one unified list
+    const goals = items;
+    const todayStr = formatLocalDate(new Date());
+
+    // "+ Add goal" opens the habit creator in quest mode (New Goal); the scope
+    // (end with phase / carry / keep) is chosen there
+    const addGoal = (phaseId: string | null) => {
+        if (!quest) return;
+        router.push({
+            pathname: '/(tabs)/habits/NewHabitPage',
+            params: {
+                questId: quest.id,
+                phaseId: phaseId ?? '',
+                phaseEndDate: phase?.endDate ?? '',
+                questEndDate: quest.endDate ?? '',
+            },
+        } as any);
     };
 
-    const toggleSubtaskCompleted = async (subtaskId: string, current: boolean) => {
-        await supabase.from('quest_subtasks').update({ completed: !current }).eq('id', subtaskId);
-        loadQuest();
+    const toggleGoal = async (goal: Habit) => {
+        if (!user) return;
+        const today = formatLocalDate(new Date());
+        try {
+            setHabits(await toggleHabitCompletion(goal.id, habits, today, 4, 0, user.id));
+        } catch (err) {
+            console.error('Error toggling goal:', err);
+        }
     };
 
-    const toggleGoalExpanded = (goalId: string) => {
-        setExpandedGoals(prev => {
-            const next = new Set(prev);
-            if (next.has(goalId)) next.delete(goalId);
-            else next.add(goalId);
-            return next;
-        });
-    };
-
-    const handleRemoveGoal = async (goalId: string) => {
-        await supabase.from('quest_goals').delete().eq('id', goalId);
-        loadQuest();
-    };
-
-    const navigateToAddGoal = (phaseId: string, weekId: string | null) => {
-        setEditingGoal(null);
-        setDetailPhaseId(phaseId);
-        setDetailWeekId(weekId);
-        setOnDetailGoalSaved(() => loadQuest);
-        router.push('/(tabs)/quests/AddGoal');
-    };
-
-    const handleDeleteQuest = () => {
-        Alert.alert('Delete Quest', 'This will permanently delete this quest and all its data.', [
+    const confirmDelete = () => {
+        Alert.alert('Delete quest?', 'This removes the quest and its habits/tasks.', [
             { text: 'Cancel', style: 'cancel' },
             {
                 text: 'Delete', style: 'destructive', onPress: async () => {
-                    await supabase.from('quests').delete().eq('id', id);
+                    if (!user || !quest) return;
+                    const { deleteQuest } = await import('@/lib/supabase/queries/quests');
+                    await deleteQuest(quest.id, user.id);
                     router.back();
                 },
             },
         ]);
     };
 
-    // ── loading ──
-    if (loading || !quest) {
+    const createPhase = async () => {
+        if (!quest) return;
+        await addPhase(quest.id, { name: `Phase ${phases.length + 1}`, sortOrder: phases.length });
+        load();
+    };
+
+    if (loading) {
         return (
             <AppLinearGradient variant="quest.background">
-                <PageContainer showBottomNav>
+                <PageContainer>
                     <PageHeader title="" showBackButton />
-                    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                        <ActivityIndicator size="small" color={PAGE.quest.primary[0]} />
-                    </View>
+                    <View style={styles.center}><ActivityIndicator size="small" color={PAGE.quest.primary[0]} /></View>
+                </PageContainer>
+            </AppLinearGradient>
+        );
+    }
+    if (!quest) {
+        return (
+            <AppLinearGradient variant="quest.background">
+                <PageContainer>
+                    <PageHeader title="" showBackButton />
+                    <View style={styles.center}><Text style={styles.hint}>Quest not found.</Text></View>
                 </PageContainer>
             </AppLinearGradient>
         );
     }
 
-    // ── stats ──
-    const allGoals = quest.quest_phases.flatMap(p => [
-        ...p.quest_goals,
-        ...p.quest_weeks.flatMap(w => w.quest_goals),
-    ]);
-    const allSubtasks = allGoals.flatMap(g => g.quest_subtasks);
-    const totalItems = allGoals.length + allSubtasks.length;
-    const completedItems = allGoals.filter(g => g.completed).length + allSubtasks.filter(s => s.completed).length;
-    const progressPercent = totalItems > 0 ? Math.round((completedItems / totalItems) * 100) : 0;
-
-    const phase = quest.quest_phases[currentPhaseIndex];
-    const phaseCount = quest.quest_phases.length;
-
-    // ── render ──
     return (
         <AppLinearGradient variant="quest.background">
-            <PageContainer showBottomNav>
-                <PageHeader title={quest.name} showBackButton />
+            <PageContainer>
+                <PageHeader title="" showBackButton />
 
-                <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 80 }}>
-
-                    {/* overall progress */}
-                    <View style={{ marginBottom: 16 }}>
-                        <View style={{ borderRadius: 20, backgroundColor: '#fff', borderWidth: 1 }}>
-                            <View style={{
-                                height: 30,
-                                borderRadius: 20,
-                                overflow: 'hidden',
-                                backgroundColor: '#fff',
-                                position: 'relative',
-                            }}>
-                                {progressPercent > 0 && (
-                                    <View style={{
-                                        position: 'absolute', top: 0, left: 0, bottom: 0,
-                                        width: `${progressPercent}%`,
-                                        backgroundColor: progressPercent >= 100 ? '#54d697' : PAGE.quest.primary[0],
-                                        zIndex: 2,
-                                    }} />
-                                )}
-                                <View style={{
-                                    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-                                    justifyContent: 'center', alignItems: 'center', zIndex: 3,
-                                }}>
-                                    <Text style={{ fontSize: 12, fontFamily: 'label', fontWeight: '600' }}>
-                                        {progressPercent}%  ·  {completedItems}/{totalItems} tasks
-                                    </Text>
-                                </View>
-                            </View>
+                <ScrollView contentContainerStyle={{ paddingHorizontal: 3, paddingBottom: 60 }} showsVerticalScrollIndicator={false}>
+                    {/* header */}
+                    <View style={styles.badgeRow}>
+                        <View style={styles.badge}>
+                            <Text style={styles.badgeText}>{quest.type === 'main' ? 'Main Quest' : 'Side Quest'}</Text>
                         </View>
+                        {quest.endDate && (
+                            <Text style={styles.meta}>by {formatDisplayDate(new Date(quest.endDate))}</Text>
+                        )}
                     </View>
+                    <Text style={styles.title}>{quest.name}</Text>
 
-                    {/* phase navigation (if has phases) */}
-                    {quest.has_phases && phaseCount > 0 && (
-                        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16 }}>
-                            <View style={{ width: 36, justifyContent: 'center', alignItems: 'center' }}>
-                                {currentPhaseIndex > 0 && (
-                                    <Pressable onPress={() => setCurrentPhaseIndex(currentPhaseIndex - 1)}>
-                                        <Image source={SYSTEM_ICONS.sortLeft} style={{ width: 22, height: 22 }} />
-                                    </Pressable>
-                                )}
-                            </View>
-                            <View style={{ flex: 1, alignItems: 'center' }}>
-                                <Text style={globalStyles.label}>
-                                    PHASE {currentPhaseIndex + 1} OF {phaseCount}
-                                </Text>
-                                <Text style={[globalStyles.body, { marginTop: 2 }]}>{phase?.name}</Text>
-                            </View>
-                            <View style={{ width: 36, justifyContent: 'center', alignItems: 'center' }}>
-                                {currentPhaseIndex < phaseCount - 1 && (
-                                    <Pressable onPress={() => setCurrentPhaseIndex(currentPhaseIndex + 1)}>
-                                        <Image source={SYSTEM_ICONS.sortRight} style={{ width: 22, height: 22 }} />
-                                    </Pressable>
-                                )}
-                            </View>
+                    {/* phase pager */}
+                    {quest.hasPhases && (
+                        <View style={styles.pager}>
+                            <Pressable disabled={phaseIndex === 0} onPress={() => setPhaseIndex(i => i - 1)} hitSlop={10}>
+                                <Text style={[styles.arrow, phaseIndex === 0 && { opacity: 0.25 }]}>‹</Text>
+                            </Pressable>
+                            <Text style={styles.pagerLabel}>
+                                {phases.length === 0 ? 'No phases yet' : `${phase?.name ?? ''} · ${phaseIndex + 1} of ${phases.length}`}
+                            </Text>
+                            <Pressable disabled={phaseIndex >= phases.length - 1} onPress={() => setPhaseIndex(i => i + 1)} hitSlop={10}>
+                                <Text style={[styles.arrow, phaseIndex >= phases.length - 1 && { opacity: 0.25 }]}>›</Text>
+                            </Pressable>
                         </View>
                     )}
+                    {quest.hasPhases && phase?.endDate && (
+                        <Text style={styles.phaseEnd}>Ends {formatDisplayDate(new Date(phase.endDate))}</Text>
+                    )}
 
-                    {/* phase content */}
-                    {phase && (
-                        <View style={{ gap: 12 }}>
-                            {/* phase-level goals */}
-                            {phase.quest_goals.length > 0 && (
-                                <View>
-                                    <Text style={[globalStyles.label, { marginBottom: 8 }]}>GOALS</Text>
-                                    {phase.quest_goals.map(goal => (
-                                        <GoalCard
-                                            key={goal.id}
-                                            goal={goal}
-                                            expanded={expandedGoals.has(goal.id)}
-                                            editMode={editMode}
-                                            onToggleExpand={() => toggleGoalExpanded(goal.id)}
-                                            onToggleGoal={() => toggleGoalCompleted(goal.id, goal.completed)}
-                                            onToggleSubtask={toggleSubtaskCompleted}
-                                            onRemove={() => handleRemoveGoal(goal.id)}
-                                        />
-                                    ))}
-                                </View>
-                            )}
-
-                            {/* weeks */}
-                            {phase.quest_weeks.map(week => (
-                                <View key={week.id}>
-                                    <Text style={[globalStyles.label, { marginBottom: 8 }]}>{week.label.toUpperCase()}</Text>
-                                    {week.quest_goals.length === 0 ? (
-                                        <Text style={[globalStyles.body2, { opacity: 0.4, marginBottom: 8 }]}>
-                                            No goals this week
-                                        </Text>
-                                    ) : (
-                                        week.quest_goals.map(goal => (
-                                            <GoalCard
-                                                key={goal.id}
-                                                goal={goal}
-                                                expanded={expandedGoals.has(goal.id)}
-                                                onToggleExpand={() => toggleGoalExpanded(goal.id)}
-                                                onToggleGoal={() => toggleGoalCompleted(goal.id, goal.completed)}
-                                                onToggleSubtask={toggleSubtaskCompleted}
-                                            />
-                                        ))
-                                    )}
-                                    {/* add goal to week */}
-                                    <Pressable
-                                        onPress={() => navigateToAddGoal(phase.id, week.id)}
-                                        style={{ marginTop: 4, marginBottom: 8 }}
-                                    >
-                                        <ShadowBox
-                                            contentBackgroundColor={PAGE.quest.primary[1]}
-                                            shadowBorderRadius={20}
-                                            style={{ width: '100%' }}
-                                        >
-                                            <View style={{ justifyContent: 'center', alignItems: 'center', paddingVertical: 5 }}>
-                                                <Text style={globalStyles.body}>+</Text>
+                    {/* goals — habits + one-time tasks, unified */}
+                    {(!quest.hasPhases || phases.length > 0) && (
+                        <>
+                            {goals.length > 0 && <Text style={styles.section}>Goals</Text>}
+                            {goals.map(g => {
+                                const done = (g.completionHistory ?? []).includes(todayStr);
+                                return (
+                                    <Pressable key={g.id} onPress={() => toggleGoal(g)}>
+                                        <ShadowBox style={styles.itemWrap} contentBackgroundColor="#fff" contentBorderRadius={14}>
+                                            <View style={styles.item}>
+                                                <View style={[styles.check, done && styles.checkDone]}>
+                                                    {done && <Text style={styles.checkMark}>✓</Text>}
+                                                </View>
+                                                <Text style={styles.itemIcon}>{g.icon || '✦'}</Text>
+                                                <Text style={[styles.itemName, done && styles.itemDone]} numberOfLines={1}>{g.name}</Text>
+                                                <Text style={styles.freq}>{isTask(g) ? 'Task' : g.frequency}</Text>
                                             </View>
                                         </ShadowBox>
                                     </Pressable>
-                                </View>
-                            ))}
-                        </View>
+                                );
+                            })}
+                            {goals.length === 0 && <Text style={styles.emptyGoals}>No goals yet.</Text>}
+
+                            {/* add goal */}
+                            <Pressable style={styles.addBtn} onPress={() => addGoal(phase?.id ?? null)}>
+                                <Text style={styles.addText}>+ Add goal</Text>
+                            </Pressable>
+                        </>
                     )}
 
-                </ScrollView>
-
-                {/* floating menu overlay */}
-                {showMenu && (
-                    <Pressable
-                        style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 10 }}
-                        onPress={() => setShowMenu(false)}
-                    >
-                        <Pressable
-                            style={{
-                                position: 'absolute',
-                                bottom: 60,
-                                right: 50,
-                                backgroundColor: '#fff',
-                                borderRadius: 20,
-                                borderWidth: 1,
-                                borderColor: '#000',
-                                padding: 15,
-                                gap: 12,
-                                minWidth: 180,
-                                shadowColor: '#000',
-                                shadowOffset: { width: 1, height: 1 },
-                                shadowOpacity: 1,
-                                shadowRadius: 0,
-                            }}
-                            onPress={(e) => e.stopPropagation()}
-                        >
-                            {phase && (
-                                <Pressable onPress={() => {
-                                    setShowMenu(false);
-                                    navigateToAddGoal(phase.id, null);
-                                }}>
-                                    <View style={{ padding: 5, borderBottomWidth: 1 }}>
-                                        <Text style={globalStyles.body}>Add Goal</Text>
-                                    </View>
-                                </Pressable>
-                            )}
-
-                            <Pressable onPress={() => {
-                                setShowMenu(false);
-                                setEditMode(!editMode);
-                            }}>
-                                <View style={{ padding: 5, borderBottomWidth: 1 }}>
-                                    <Text style={globalStyles.body}>{editMode ? 'Done Editing' : 'Edit'}</Text>
-                                </View>
-                            </Pressable>
-
-                            <Pressable onPress={() => {
-                                setShowMenu(false);
-                                handleDeleteQuest();
-                            }}>
-                                <View style={{ padding: 5 }}>
-                                    <Text style={[globalStyles.body, { color: '#e74c3c' }]}>Delete Quest</Text>
-                                </View>
-                            </Pressable>
+                    {/* add phase */}
+                    {quest.hasPhases && (
+                        <Pressable style={styles.addPhaseBtn} onPress={createPhase}>
+                            <Text style={styles.addPhaseText}>+ Add phase</Text>
                         </Pressable>
+                    )}
+
+                    {/* delete */}
+                    <Pressable style={styles.deleteBtn} onPress={confirmDelete}>
+                        <Text style={styles.deleteText}>Delete quest</Text>
                     </Pressable>
-                )}
-
-                {/* floating buttons */}
-                <View style={{ position: 'absolute', bottom: 10, right: 0, zIndex: 5 }}>
-                    <View style={{ flexDirection: 'row', gap: 10 }}>
-                        <Pressable onPress={() => setShowMenu(!showMenu)}>
-                            <ShadowBox
-                                contentBackgroundColor={PAGE.quest.primary[1]}
-                                contentBorderRadius={30}
-                                shadowBorderRadius={30}
-                            >
-                                <View style={{ width: 40, height: 40, justifyContent: 'center', alignItems: 'center' }}>
-                                    <Image source={SYSTEM_ICONS.more} style={{ width: 20, height: 20 }} />
-                                </View>
-                            </ShadowBox>
-                        </Pressable>
-
-                        {phase && (
-                            <Pressable onPress={() => navigateToAddGoal(phase.id, null)}>
-                                <ShadowBox
-                                    contentBackgroundColor={PAGE.quest.primary[0]}
-                                    contentBorderRadius={30}
-                                    shadowBorderRadius={30}
-                                >
-                                    <View style={{ width: 40, height: 40, justifyContent: 'center', alignItems: 'center' }}>
-                                        <Text style={{ fontSize: 20, textAlign: 'center' }}>+</Text>
-                                    </View>
-                                </ShadowBox>
-                            </Pressable>
-                        )}
-                    </View>
-                </View>
+                </ScrollView>
             </PageContainer>
         </AppLinearGradient>
     );
 }
 
-// ─── goal card component ─────────────────────────────────────────────────────
-
-function GoalCard({
-    goal,
-    expanded,
-    editMode,
-    onToggleExpand,
-    onToggleGoal,
-    onToggleSubtask,
-    onRemove,
-}: {
-    goal: Goal;
-    expanded: boolean;
-    editMode?: boolean;
-    onToggleExpand: () => void;
-    onToggleGoal: () => void;
-    onToggleSubtask: (id: string, current: boolean) => void;
-    onRemove?: () => void;
-}) {
-    const hasSubtasks = goal.quest_subtasks.length > 0;
-    const completedSubtasks = goal.quest_subtasks.filter(s => s.completed).length;
-
-    return (
-        <View style={{ marginBottom: 12 }}>
-            <ShadowBox
-                contentBackgroundColor={goal.completed ? PAGE.quest.primary[0] : '#fff'}
-                contentBorderColor="#000"
-                contentBorderWidth={1}
-                shadowBorderRadius={15}
-                shadowOffset={goal.completed ? { x: 0, y: 0 } : { x: 0, y: 5 }}
-                shadowColor={goal.completed ? '#000' : PAGE.quest.primary[0]}
-            >
-                <View style={{ padding: 12 }}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-
-                        {/* icon */}
-                        <View style={{ width: 34, height: 34, borderRadius: 17, justifyContent: 'center', alignItems: 'center' }}>
-                            <Image source={getIconFile(goal.icon)} style={{ width: 34, height: 34, resizeMode: 'contain' }} />
-                        </View>
-
-                        {/* name + subtask count */}
-                        <View style={{ flex: 1 }}>
-                            <Text
-                                style={[
-                                    globalStyles.body,
-                                    { fontSize: 15 },
-                                    goal.completed && { textDecorationLine: 'line-through', opacity: 0.6 },
-                                ]}
-                                numberOfLines={1}
-                            >
-                                {goal.name}
-                            </Text>
-                            {hasSubtasks && (
-                                <Text style={[globalStyles.label, { fontSize: 10, opacity: 0.5, marginTop: 2 }]}>
-                                    {completedSubtasks}/{goal.quest_subtasks.length} subtasks
-                                </Text>
-                            )}
-                        </View>
-
-                        {/* expand arrow or weekly goal badge */}
-                        {goal.type === 'increment' && goal.target_count && (
-                            <View style={[uiStyles.badge, { backgroundColor: PAGE.quest.primary[1], borderColor: PAGE.quest.primary[0] }]}>
-                                <Image source={SYSTEM_ICONS.star} style={[uiStyles.badgeIcon, { tintColor: PAGE.quest.primary[0] }]} />
-                                <Text style={uiStyles.badgeText}>{goal.target_count}/wk</Text>
-                            </View>
-                        )}
-
-                        {hasSubtasks && !editMode && (
-                            <Pressable onPress={onToggleExpand}>
-                                <Image
-                                    source={expanded ? SYSTEM_ICONS.sort : SYSTEM_ICONS.sortRight}
-                                    style={{ width: 16, height: 16, opacity: 0.4 }}
-                                />
-                            </Pressable>
-                        )}
-
-                        {/* checkbox */}
-                        <Pressable onPress={onToggleGoal}>
-                            <ShadowBox
-                                shadowBorderRadius={8}
-                                contentBorderRadius={8}
-                                contentBorderColor="#000"
-                                shadowColor={goal.completed ? '#000' : PAGE.quest.primary[0]}
-                                shadowOffset={{ x: 2, y: 2 }}
-                                contentBackgroundColor={goal.completed ? PAGE.quest.primary[0] : '#fff'}
-                            >
-                                <View style={{ width: 28, height: 28, justifyContent: 'center', alignItems: 'center' }}>
-                                    {goal.completed && (
-                                        <Text style={{ fontSize: 14, fontWeight: 'bold' }}>✓</Text>
-                                    )}
-                                </View>
-                            </ShadowBox>
-                        </Pressable>
-
-                        {editMode && onRemove && (
-                            <Pressable onPress={onRemove}>
-                                <View style={{
-                                    backgroundColor: BUTTON_COLORS.Delete,
-                                    borderWidth: 1,
-                                    borderRadius: 12,
-                                    width: 25,
-                                    height: 25,
-                                    justifyContent: 'center',
-                                    alignItems: 'center',
-                                }}>
-                                    <Image source={SYSTEM_ICONS.delete} style={{ width: 12, height: 12 }} />
-                                </View>
-                            </Pressable>
-                        )}
-                    </View>
-
-                    {/* subtasks (expanded) */}
-                    {hasSubtasks && expanded && !editMode && (
-                        <View style={{ marginTop: 10, paddingLeft: 52, gap: 8 }}>
-                            {goal.quest_subtasks.map(st => (
-                                <Pressable key={st.id} onPress={() => onToggleSubtask(st.id, st.completed)}>
-                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                                        <ShadowBox
-                                            contentBorderRadius={0}
-                                            shadowBorderRadius={0}
-                                            shadowColor={st.completed ? '#000' : PAGE.quest.primary[1]}
-                                            shadowOffset={{ x: 2, y: 2 }}
-                                            contentBackgroundColor={st.completed ? PAGE.quest.primary[0] : '#fff'}
-                                            contentBorderColor="#000"
-                                            contentBorderWidth={1}
-                                        >
-                                            <View style={{ height: 14, width: 14, justifyContent: 'center', alignItems: 'center' }}>
-                                                {st.completed && (
-                                                    <Text style={{ fontSize: 9, fontWeight: 'bold' }}>✓</Text>
-                                                )}
-                                            </View>
-                                        </ShadowBox>
-                                        <Text
-                                            style={[
-                                                globalStyles.body2,
-                                                { fontSize: 13 },
-                                                st.completed && { textDecorationLine: 'line-through', opacity: 0.5 },
-                                            ]}
-                                        >
-                                            {st.name}
-                                        </Text>
-                                    </View>
-                                </Pressable>
-                            ))}
-                        </View>
-                    )}
-                </View>
-            </ShadowBox>
-        </View>
-    );
-}
+const styles = StyleSheet.create({
+    center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+    hint: { fontFamily: 'p3', fontSize: 14, opacity: 0.6 },
+    title: { fontFamily: 'p1', fontSize: 24, marginBottom: 16 },
+    badgeRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4, marginBottom: 10 },
+    badge: { backgroundColor: PAGE.quest.primary[0], paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12 },
+    badgeText: { fontFamily: 'p1', fontSize: 12, color: '#fff' },
+    meta: { fontFamily: 'p2', fontSize: 13, opacity: 0.7 },
+    emptyGoals: { fontFamily: 'p3', fontSize: 13, opacity: 0.5, marginTop: 8, marginLeft: 4 },
+    pager: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#fff', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 10, marginBottom: 6 },
+    arrow: { fontSize: 26, fontFamily: 'p1' },
+    pagerLabel: { fontFamily: 'p1', fontSize: 15 },
+    phaseEnd: { fontFamily: 'p3', fontSize: 12, opacity: 0.6, textAlign: 'center', marginBottom: 10 },
+    section: { fontFamily: 'p1', fontSize: 13, opacity: 0.55, marginTop: 16, marginBottom: 8, marginLeft: 4, textTransform: 'uppercase' },
+    itemWrap: { marginBottom: 10 },
+    item: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 12 },
+    itemIcon: { fontSize: 18 },
+    itemName: { flex: 1, fontFamily: 'p2', fontSize: 15 },
+    itemDone: { textDecorationLine: 'line-through', opacity: 0.5 },
+    freq: { fontFamily: 'p3', fontSize: 12, opacity: 0.6 },
+    check: { width: 22, height: 22, borderRadius: 7, borderWidth: 2, borderColor: PAGE.quest.primary[0], alignItems: 'center', justifyContent: 'center' },
+    checkDone: { backgroundColor: PAGE.quest.primary[0] },
+    checkMark: { color: '#fff', fontSize: 13, fontFamily: 'p1' },
+    addBtn: { marginTop: 14, backgroundColor: '#fff', borderRadius: 14, paddingVertical: 12, alignItems: 'center', borderWidth: 2, borderColor: PAGE.quest.primary[0] },
+    addText: { fontFamily: 'p1', fontSize: 14, color: '#000' },
+    addPhaseBtn: { marginTop: 20, backgroundColor: PAGE.quest.primary[1], borderRadius: 14, paddingVertical: 12, alignItems: 'center' },
+    addPhaseText: { fontFamily: 'p1', fontSize: 14 },
+    deleteBtn: { marginTop: 30, alignItems: 'center', paddingVertical: 10 },
+    deleteText: { fontFamily: 'p2', fontSize: 14, color: '#FF7A7A' },
+});

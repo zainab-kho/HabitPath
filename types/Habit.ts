@@ -71,11 +71,15 @@ export interface Habit {
 
   completed?: boolean; // **TODO: instead of completed, compute a "status" that can be "completed", "skipped", "snoozed", "active", "missed"
 
-  // quest goal integration
-  isQuestGoal?: boolean;
-  questGoalId?: string;   // the actual quest_goals.id in Supabase
-  questName?: string;     // name of the parent quest (for badge display)
-  questId?: string;       // parent quest id (for navigation)
-  questSubtasks?: { id: string; name: string; completed: boolean }[];
+  // quest linkage — real columns on the habits table (null for normal habits)
+  questId?: string;                        // parent quest id
+  phaseId?: string;                        // origin phase id
+  questScope?: 'phase' | 'carry' | 'forever'; // what happens when the phase ends
+  questName?: string;                      // parent quest name (for the card badge)
 
+  // DEPRECATED old virtual quest-goal bridge — no longer populated; kept only so
+  // leftover UI branches still compile until they're cleaned up.
+  isQuestGoal?: boolean;
+  questGoalId?: string;
+  questSubtasks?: { id: string; name: string; completed: boolean }[];
 }

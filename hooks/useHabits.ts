@@ -27,12 +27,6 @@ import {
   snoozeHabit as snoozeHabitService,
   toggleHabitCompletion,
 } from '@/lib/supabase/queries/habit';
-import {
-  loadQuestGoalsAsHabits,
-  toggleQuestGoalWorkedOn,
-  snoozeQuestGoal,
-  skipQuestGoal,
-} from '@/lib/supabase/queries/questGoalHabits';
 import { getTotalPoints } from '@/services/habits/cache';
 
 // ─── types ────────────────────────────────────────────────────────────────────
@@ -135,12 +129,8 @@ export function useHabits(viewingDate: Date = new Date()) {
       const reset = await getResetTime();
       setResetTime(reset);
 
-      // Fetch everything in parallel — habits, quest goals
-      const [fresh, questGoals] = await Promise.all([
-        loadHabitsFromSupabase(user.id),
-        loadQuestGoalsAsHabits(user.id),
-      ]);
-      const merged = [...fresh, ...questGoals];
+      // quest habits are now real habits, so they come through here too
+      const fresh = await loadHabitsFromSupabase(user.id);
 
       // Fetch streak + points before updating UI so everything lands in one render
       const [streak, total] = await Promise.all([
@@ -150,7 +140,7 @@ export function useHabits(viewingDate: Date = new Date()) {
 
       // All state updates in one batch — no intermediate renders
       unstable_batchedUpdates(() => {
-        applyHabitsUpdate(merged, reset);
+        applyHabitsUpdate(fresh, reset);
         setAppStreak(streak);
         setTotalPoints(total);
         setInitialLoading(false);
@@ -194,24 +184,6 @@ export function useHabits(viewingDate: Date = new Date()) {
       const isCurrentlyCompleted = target.completionHistory?.includes(ds) ?? false;
 
       try {
-        // Quest goals: "worked on it today" visual toggle (not actual completion)
-        if (target.isQuestGoal && target.questGoalId) {
-          // apply synchronously BEFORE the await so rapid taps never read stale state
-          const updatedHabits = currentHabits.map(h => {
-            if (h.id !== habitId) return h;
-            const history = h.completionHistory || [];
-            return {
-              ...h,
-              completionHistory: isCurrentlyCompleted
-                ? history.filter(d => d !== ds)
-                : [...history, ds],
-            };
-          });
-          applyHabitsUpdate(updatedHabits, resetTime);
-          await toggleQuestGoalWorkedOn(target.questGoalId, ds, isCurrentlyCompleted);
-          return;
-        }
-
         // apply synchronously BEFORE the await — rawHabitsRef is fresh for the
         // next tap, so rapid check-offs can't overwrite each other
         const updatedHabits = applyToggleCompletion(habitId, currentHabits, ds, resetTime.hour, resetTime.minute);
@@ -310,18 +282,6 @@ export function useHabits(viewingDate: Date = new Date()) {
         const currentHabits = rawHabitsRef.current;
         const target = currentHabits.find(h => h.id === habitId);
 
-        // Quest goals: update quest_goals table
-        if (target?.isQuestGoal && target.questGoalId) {
-          await snoozeQuestGoal(target.questGoalId, targetDate, ds);
-          const updatedHabits = currentHabits.map(h =>
-            h.id === habitId
-              ? { ...h, snoozedUntil: targetDate ?? undefined, snoozedFrom: ds }
-              : h
-          );
-          applyHabitsUpdate(updatedHabits, resetTime);
-          return;
-        }
-
         const updatedHabits = await snoozeHabitService(
           habitId,
           currentHabits,
@@ -386,19 +346,6 @@ export function useHabits(viewingDate: Date = new Date()) {
         : rawDs;
 
       try {
-
-        // Quest goals: update quest_goals table
-        if (target?.isQuestGoal && target.questGoalId) {
-          await skipQuestGoal(target.questGoalId, ds);
-          const updatedHabits = currentHabits.map(h =>
-            h.id === habitId
-              ? { ...h, skippedDates: [...(h.skippedDates || []), ds] }
-              : h
-          );
-          applyHabitsUpdate(updatedHabits, resetTime);
-          return;
-        }
-
         const updatedHabits = await skipHabitService(habitId, currentHabits, ds, user.id);
         applyHabitsUpdate(updatedHabits, resetTime);
       } catch (err) {

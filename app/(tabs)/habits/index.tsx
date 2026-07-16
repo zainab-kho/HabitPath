@@ -121,6 +121,15 @@ export default function HabitsPage() {
   });
   const inboxCount = allHabits.filter(h => !h.startDate && !h.archivedAt).length;
 
+  // badge count must match the Inbox page, which is always relative to REAL today —
+  // so navigating to a different day doesn't change the "Inbox & Snoozed (#)" number
+  const realTodayStr = getHabitDate(new Date(), resetTime.hour, resetTime.minute);
+  const snoozedTodayCount = allHabits.filter(h => {
+    const from = h.snoozedFrom?.slice(0, 10);
+    const until = h.snoozedUntil?.slice(0, 10);
+    return from && until && realTodayStr >= from && realTodayStr < until;
+  }).length;
+
   // calculate totals for points badge (unchanged)
   const totalActivePoints = activeHabits.reduce(
     (sum, h) => h.frequency === 'Weekly Goal' ? sum : sum + (h.rewardPoints || 0),
@@ -250,6 +259,7 @@ export default function HabitsPage() {
           habits={habits}
           snoozedHabits={snoozedHabits}
           inboxCount={inboxCount}
+          inboxSnoozedCount={snoozedTodayCount}
           loading={loading}
           viewingDate={viewingDate}
           resetTime={resetTime}

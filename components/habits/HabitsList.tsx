@@ -35,6 +35,7 @@ interface HabitsListProps {
   habits: HabitWithStatus[];
   snoozedHabits?: Habit[];
   inboxCount?: number;
+  inboxSnoozedCount?: number; // snoozed count relative to real today (day-independent, for the badge)
   loading?: boolean;
   viewingDate: Date | null;
   resetTime: { hour: number; minute: number };
@@ -70,6 +71,7 @@ export default function HabitsList({
   habits,
   snoozedHabits = [],
   inboxCount = 0,
+  inboxSnoozedCount = 0,
   loading,
   viewingDate,
   resetTime,
@@ -616,7 +618,7 @@ export default function HabitsList({
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 5, paddingHorizontal: 14 }}>
               <Image source={SYSTEM_ICONS.snooze} style={{ width: 15, height: 15 }} />
               <Text style={globalStyles.body}>
-                Inbox & Snoozed{inboxCount + snoozedHabits.length > 0 ? ` (${inboxCount + snoozedHabits.length})` : ''}
+                Inbox & Snoozed{inboxCount + inboxSnoozedCount > 0 ? ` (${inboxCount + inboxSnoozedCount})` : ''}
               </Text>
             </View>
           </ShadowBox>

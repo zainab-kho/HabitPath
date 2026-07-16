@@ -1,6 +1,7 @@
 // @/app/_layout.tsx
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { DrawerProvider } from '@/navigation/DrawerContext';
+import { NavTabsProvider } from '@/navigation/NavTabsContext';
 import { RootDrawer } from '@/navigation/RootDrawer';
 import { useFonts } from "expo-font";
 import { Stack, useRouter, useSegments } from "expo-router";
@@ -36,27 +37,29 @@ function RootLayoutNav() {
   }
 
   return (
-    <DrawerProvider>
-      <View style={{ flex: 1 }} pointerEvents="box-none">
-        <Stack
-          screenOptions={{
-            headerShown: false,
-            animation: 'none',
-            gestureEnabled: false,
-            contentStyle: { backgroundColor: 'transparent' },
-          }}
-        >
-          <Stack.Screen name="index" />
-          <Stack.Screen name="auth/LoginScreen" />
-          <Stack.Screen name="auth/ForgotPassword" />
-          <Stack.Screen name="auth/ResetPassword" />
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        </Stack>
+    <NavTabsProvider>
+      <DrawerProvider>
+        <View style={{ flex: 1 }} pointerEvents="box-none">
+          <Stack
+            screenOptions={{
+              headerShown: false,
+              animation: 'none',
+              gestureEnabled: false,
+              contentStyle: { backgroundColor: 'transparent' },
+            }}
+          >
+            <Stack.Screen name="index" />
+            <Stack.Screen name="auth/LoginScreen" />
+            <Stack.Screen name="auth/ForgotPassword" />
+            <Stack.Screen name="auth/ResetPassword" />
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          </Stack>
 
-        {/* global drawer */}
-        <RootDrawer />
-      </View>
-    </DrawerProvider>
+          {/* global drawer */}
+          <RootDrawer />
+        </View>
+      </DrawerProvider>
+    </NavTabsProvider>
   );
 }
 

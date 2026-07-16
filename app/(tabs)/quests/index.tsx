@@ -1,5 +1,5 @@
 // @/app/(tabs)/quests/index.tsx
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -21,6 +21,9 @@ export default function QuestsPage() {
     const { user } = useAuth();
     const router = useRouter();
     const { quests, loading, loadData } = useQuests(user?.id);
+    // drawer access shows a back button; otherwise the bottom nav
+    const { from } = useLocalSearchParams<{ from?: string }>();
+    const fromDrawer = from === 'drawer';
 
     useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
 
@@ -29,8 +32,8 @@ export default function QuestsPage() {
     if (loading) {
         return (
             <AppLinearGradient variant="quest.background">
-                <PageContainer showBottomNav>
-                    <PageHeader title="Quests" />
+                <PageContainer showBottomNav={!fromDrawer}>
+                    <PageHeader title="Quests" showBackButton={fromDrawer} />
                     <View style={styles.center}>
                         <ActivityIndicator size="small" color={PAGE.quest.primary[0]} />
                     </View>
@@ -41,8 +44,8 @@ export default function QuestsPage() {
 
     return (
         <AppLinearGradient variant="quest.background">
-            <PageContainer showBottomNav>
-                <PageHeader title="Quests" showPlusButton onPlusPress={openNew} />
+            <PageContainer showBottomNav={!fromDrawer}>
+                <PageHeader title="Quests" showPlusButton onPlusPress={openNew} showBackButton={fromDrawer} />
 
                 <ScrollView
                     contentContainerStyle={{ paddingHorizontal: 3, paddingBottom: 65 }}

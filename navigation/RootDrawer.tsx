@@ -109,6 +109,19 @@ export function RootDrawer() {
 
     const menuItems = [
         {
+            label: 'Paths',
+            path: '/(tabs)/paths',
+            icon: SYSTEM_ICONS.path,
+            // drawer access shows a back button instead of the bottom nav
+            params: { from: 'drawer' },
+        },
+        {
+            label: 'Quests',
+            path: '/(tabs)/quests',
+            icon: SYSTEM_ICONS.quest,
+            params: { from: 'drawer' },
+        },
+        {
             label: 'All Goals',
             path: '/(tabs)/more/goals',
             icon: SYSTEM_ICONS.list,
@@ -117,22 +130,24 @@ export function RootDrawer() {
             label: 'Rewards',
             path: '/(tabs)/more/rewards',
             icon: SYSTEM_ICONS.reward,
+            params: { from: 'drawer' },
         },
         {
             label: 'Journal',
             path: '/(tabs)/more/journal',
             icon: SYSTEM_ICONS.journal,
+            params: { from: 'drawer' },
         },
         {
             label: 'Notes',
             path: '/(tabs)/more/notes',
-            icon: SYSTEM_ICONS.lists
+            icon: SYSTEM_ICONS.lists,
+            params: { from: 'drawer' },
         },
         {
             label: 'Assignments',
             path: '/(tabs)/more/assignments',
             icon: SYSTEM_ICONS.assignment,
-            // drawer access shows a back button instead of the bottom nav
             params: { from: 'drawer' },
         },
         {

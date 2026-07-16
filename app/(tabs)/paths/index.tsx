@@ -16,7 +16,7 @@ import PageContainer from '@/ui/PageContainer';
 import PageHeader from '@/ui/PageHeader';
 import ShadowBox from '@/ui/ShadowBox';
 import { getHabitDate, getWeekDatesForDate } from '@/utils/dateUtils';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import React, { useCallback, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View, Image } from 'react-native';
@@ -480,6 +480,9 @@ function DailySummary({
 export default function Paths() {
     const { user } = useAuth();
     const router = useRouter();
+    // drawer access shows a back button; otherwise the bottom nav
+    const { from } = useLocalSearchParams<{ from?: string }>();
+    const fromDrawer = from === 'drawer';
 
     const today = useMemo(() => new Date(), []);
     const { habits: allHabitsRaw, allHabits: allHabitsUnfiltered, loading: habitsLoading, loadHabits, resetTime } = useHabits(today);
@@ -566,8 +569,8 @@ export default function Paths() {
 
     return (
         <AppLinearGradient variant="path.background">
-            <PageContainer showBottomNav>
-                <PageHeader title="Paths" showPlusButton />
+            <PageContainer showBottomNav={!fromDrawer}>
+                <PageHeader title="Paths" showPlusButton showBackButton={fromDrawer} />
 
                 {loading ? (
                     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -666,7 +669,7 @@ export default function Paths() {
                 )}
 
                 {/* floating buttons */}
-                <View style={{ position: 'absolute', bottom: 10, right: 0, zIndex: 5 }}>
+                <View style={{ position: 'absolute', bottom: fromDrawer ? 30 : 10, right: 0, zIndex: 5 }}>
                     <View style={{ flexDirection: 'row', gap: 10, opacity: 1 }}>
 
                         <Pressable onPress={() => setShowNewPath(true)}>

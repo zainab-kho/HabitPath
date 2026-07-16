@@ -8,6 +8,9 @@ export const STORAGE_KEYS = {
   TOGGLE_STATE: '@habits_toggle',
   WEEKLY_COLLAPSED: '@habits_weekly_collapsed',
 
+  // configurable bottom-nav tabs (slots 2–4; slot 1 is always Habits)
+  NAV_TABS: '@nav_tabs',
+
   JOURNAL_CACHE: '@journal_cache',
   JOURNAL_DIRTY: '@journal_dirty',
 

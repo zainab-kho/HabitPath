@@ -313,6 +313,20 @@ export default function SettingsPage() {
                         </View>
                     )}
 
+                    {/* navigation bar customization */}
+                    <ShadowBox
+                        contentBorderRadius={20}
+                        shadowBorderRadius={20}
+                        contentBackgroundColor={BUTTON_COLORS.Quiet}
+                    >
+                        <Pressable
+                            onPress={() => router.push('/more/settings/NavBar')}
+                            style={{ paddingVertical: 5, paddingHorizontal: 15, flex: 1, alignItems: 'center' }}
+                        >
+                            <Text style={globalStyles.body1}>Customize Navigation bar</Text>
+                        </Pressable>
+                    </ShadowBox>
+
                     <Text style={[globalStyles.h4, { textAlign: 'center', marginTop: 10 }]}>
                         Data
                     </Text>

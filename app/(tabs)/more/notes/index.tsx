@@ -1,6 +1,6 @@
 // @/app/(tabs)/more/notes/index.tsx
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Image, LayoutAnimation, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -33,6 +33,9 @@ const NOTES_SORT_KEY = '@notes_sort_order';
 export default function NotesPage() {
     const { user } = useAuth();
     const router = useRouter();
+    // drawer access shows a back button; otherwise the bottom nav
+    const { from } = useLocalSearchParams<{ from?: string }>();
+    const fromDrawer = from === 'drawer';
 
     const {
         notes,
@@ -191,13 +194,18 @@ export default function NotesPage() {
 
     if (loading) {
         return (
+            // keep the same wrapper shape as the loaded branch (GestureHandlerRootView
+            // → PageContainer) so React reconciles the bottom nav instead of
+            // remounting it — otherwise it flashes out when the spinner clears
             <AppLinearGradient variant="notes.background">
-                <PageContainer>
-                    <PageHeader title="Notes" showBackButton />
-                    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-                        <ActivityIndicator size="small" color={PAGE.notes.primary[0]} />
-                    </View>
-                </PageContainer>
+                <GestureHandlerRootView style={{ flex: 1 }}>
+                    <PageContainer showBottomNav={!fromDrawer}>
+                        <PageHeader title="Notes" showBackButton={fromDrawer} />
+                        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                            <ActivityIndicator size="small" color={PAGE.notes.primary[0]} />
+                        </View>
+                    </PageContainer>
+                </GestureHandlerRootView>
             </AppLinearGradient>
         );
     }
@@ -205,8 +213,8 @@ export default function NotesPage() {
     return (
         <AppLinearGradient variant="notes.background">
             <GestureHandlerRootView style={{ flex: 1 }}>
-                <PageContainer>
-                    <PageHeader title="Notes" showBackButton />
+                <PageContainer showBottomNav={!fromDrawer}>
+                    <PageHeader title="Notes" showBackButton={fromDrawer} />
 
                     {/* sort / folder / search row */}
                     <View style={{ flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center', gap: 10, paddingHorizontal: 3, marginBottom: 10 }}>
@@ -356,7 +364,7 @@ export default function NotesPage() {
                     </ScrollView>
 
                     {/* floating new-note button — lands in the active folder if one is selected */}
-                    <View style={{ position: 'absolute', bottom: 30, right: 0, zIndex: 5 }}>
+                    <View style={{ position: 'absolute', bottom: fromDrawer ? 30 : 10, right: 0, zIndex: 5 }}>
                         <Pressable onPress={() => router.push(
                             activeFolderId
                                 ? { pathname: '/(tabs)/more/notes/new', params: { folderId: activeFolderId } } as any

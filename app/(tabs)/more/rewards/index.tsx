@@ -1,4 +1,4 @@
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
@@ -35,6 +35,9 @@ import { formatLocalDate } from '@/utils/dateUtils';
 export default function RewardsPage() {
     const router = useRouter();
     const { user } = useAuth();
+    // drawer access shows a back button; otherwise the bottom nav
+    const { from } = useLocalSearchParams<{ from?: string }>();
+    const fromDrawer = from === 'drawer';
 
     const [loading, setLoading] = useState(true);
 
@@ -176,8 +179,8 @@ export default function RewardsPage() {
 
     return (
         <AppLinearGradient variant="rewards.background">
-            <PageContainer>
-                <PageHeader title="My Rewards" showBackButton />
+            <PageContainer showBottomNav={!fromDrawer}>
+                <PageHeader title="My Rewards" showBackButton={fromDrawer} />
 
                 <ExchangeRateModal
                     visible={showExchangeModal}
@@ -380,7 +383,7 @@ export default function RewardsPage() {
                 </ScrollView>
 
                 {/* floating button */}
-                <View style={{ position: 'absolute', bottom: 50, right: 0, zIndex: 5 }}>
+                <View style={{ position: 'absolute', bottom: fromDrawer ? 30 : 10, right: 0, zIndex: 5 }}>
                     <View style={{ flexDirection: 'row', gap: 10, opacity: 1 }}>
                         <Pressable onPress={() => router.push('/(tabs)/more/rewards/NewRewardItem' as any)}>
                             <ShadowBox

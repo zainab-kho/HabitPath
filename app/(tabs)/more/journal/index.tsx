@@ -1,6 +1,6 @@
 // @/app/(tabs)/more/journal/index.tsx
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Image, LayoutAnimation, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 // gesture-handler scroll + root view so scrolling works inside the filter modal
@@ -32,6 +32,9 @@ function escapeRegExp(str: string): string {
 export default function JournalPage() {
   const router = useRouter();
   const { user } = useAuth();
+  // drawer access shows a back button; otherwise the bottom nav
+  const { from } = useLocalSearchParams<{ from?: string }>();
+  const fromDrawer = from === 'drawer';
 
   const [entriesByMonth, setEntriesByMonth] = useState<Record<string, JournalEntry[]>>({});
   const [isLoading, setIsLoading] = useState(true);
@@ -380,10 +383,10 @@ export default function JournalPage() {
   if (isLoading && allEntries.length === 0) {
     return (
       <AppLinearGradient variant="journal.background">
-        <PageContainer>
+        <PageContainer showBottomNav={!fromDrawer}>
           <PageHeader
             title="Journal"
-            showBackButton
+            showBackButton={fromDrawer}
             showPlusButton
             navigateIcon={SYSTEM_ICONS.lock}
             onNavigatePress={handleHeaderLockPress}
@@ -398,10 +401,10 @@ export default function JournalPage() {
 
   return (
     <AppLinearGradient variant="journal.background">
-      <PageContainer>
+      <PageContainer showBottomNav={!fromDrawer}>
         <PageHeader
           title="Journal"
-          showBackButton
+          showBackButton={fromDrawer}
           showPlusButton
           navigateIcon={isUnlocked ? SYSTEM_ICONS.padlock : SYSTEM_ICONS.lock}
           onNavigatePress={handleHeaderLockPress}
@@ -675,7 +678,7 @@ export default function JournalPage() {
         </ScrollView>
 
         {/* floating button */}
-        <View style={{ position: 'absolute', bottom: 50, right: 0, zIndex: 5 }}>
+        <View style={{ position: 'absolute', bottom: fromDrawer ? 30 : 10, right: 0, zIndex: 5 }}>
           <View style={{ flexDirection: 'row', gap: 10, opacity: 1 }}>
             <Pressable onPress={() => router.push('/more/journal/NewEntry')}>
               <ShadowBox

@@ -1,7 +1,7 @@
 // @/navigation/BottomNav.tsx
 import { COLORS } from '@/constants/colors';
-import { SYSTEM_ICONS } from '@/constants/icons';
-import { useDrawer } from '@/navigation/DrawerContext';
+import { FIXED_TAB, NAV_DESTINATIONS } from '@/constants/navTabs';
+import { useNavTabs } from '@/navigation/NavTabsContext';
 import { usePathname, useRouter } from 'expo-router';
 import { Image, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,35 +10,11 @@ export function BottomNav() {
     const router = useRouter();
     const pathname = usePathname();
     const insets = useSafeAreaInsets();
-    const { openDrawer } = useDrawer();
+    const { navTabs } = useNavTabs();
 
+    // slot 1 is always Habits; slots 2–4 come from the user's config.
     // `match` is what usePathname reports (route groups like "(tabs)" are stripped)
-    const tabs = [
-        {
-            name: 'habits',
-            route: '/habits',
-            match: '/habits',
-            icon: SYSTEM_ICONS.habit,
-        },
-        {
-            name: 'paths',
-            route: '/paths',
-            match: '/paths',
-            icon: SYSTEM_ICONS.path,
-        },
-        {
-            name: 'assignments',
-            route: '/(tabs)/more/assignments',
-            match: '/more/assignments',
-            icon: SYSTEM_ICONS.assignment,
-        },
-        {
-            name: 'quests',
-            route: '/quests',
-            match: '/quests',
-            icon: SYSTEM_ICONS.quest,
-        },
-    ];
+    const tabs = [NAV_DESTINATIONS[FIXED_TAB], ...navTabs.map(id => NAV_DESTINATIONS[id])];
 
     return (
         <View
@@ -61,14 +37,8 @@ export function BottomNav() {
 
                 return (
                     <Pressable
-                        key={tab.name}
-                        onPress={() => {
-                            if (tab.name === 'more') {
-                                openDrawer();
-                            } else {
-                                router.replace(tab.route as any);
-                            }
-                        }}
+                        key={tab.id}
+                        onPress={() => router.replace(tab.route as any)}
                         style={({ pressed }) => ({
                             flex: 1,
                             alignItems: 'center',

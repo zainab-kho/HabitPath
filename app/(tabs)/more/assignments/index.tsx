@@ -47,7 +47,7 @@ import { AssignmentWithCourse } from '@/hooks/useAssignmentData';
 export default function Assignments() {
     const { user } = useAuth();
     const router = useRouter();
-    // drawer access shows a back button; tab access shows the bottom nav
+    // drawer access shows a back button; otherwise the bottom nav
     const { from } = useLocalSearchParams<{ from?: string }>();
     const fromDrawer = from === 'drawer';
     const scrollViewRef = useRef<ScrollView>(null);

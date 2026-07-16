@@ -75,9 +75,6 @@ export default function JournalPage() {
     const locationRef = useRef<TextInput>(null);
     const inputRef = useRef<TextInput>(null);
 
-    // while blurred the journal input ignores touches (so drags scroll the page);
-    // a deliberate tap on the wrapper re-focuses it
-    const [entryFocused, setEntryFocused] = useState(false);
 
     // autofocus for quick logging
     useEffect(() => {
@@ -383,17 +380,7 @@ export default function JournalPage() {
                                 placeholderTextColor="rgba(0,0,0,0.5)"
                                 value={entry}
                                 onChangeText={setEntry}
-                                onFocus={() => setEntryFocused(true)}
-                                onBlur={() => setEntryFocused(false)}
                             />
-                            {/* while blurred, this invisible layer catches touches so
-                                drags scroll the page — only a real tap re-focuses */}
-                            {!entryFocused && (
-                                <Pressable
-                                    style={StyleSheet.absoluteFill}
-                                    onPress={() => inputRef.current?.focus()}
-                                />
-                            )}
                         </View>
 
                         {/* faint action row */}

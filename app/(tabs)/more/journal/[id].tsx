@@ -104,7 +104,6 @@ export default function JournalEntryDetail() {
 
   // journal input scroll/focus handling (same as new entry page)
   const inputRef = useRef<TextInput>(null);
-  const [entryFocused, setEntryFocused] = useState(false);
 
   const BASE_MOODS = Object.keys(MAIN_MOOD_COLORS) as (keyof typeof MAIN_MOOD_COLORS)[];
   const displayedMoods: (keyof typeof MOOD_COLORS)[] = extraMood
@@ -711,17 +710,7 @@ export default function JournalEntryDetail() {
                 placeholderTextColor="rgba(0,0,0,0.5)"
                 value={editedEntry}
                 onChangeText={setEditedEntry}
-                onFocus={() => setEntryFocused(true)}
-                onBlur={() => setEntryFocused(false)}
               />
-              {/* while blurred, this invisible layer catches touches so
-                  drags scroll the page — only a real tap re-focuses */}
-              {!entryFocused && (
-                <Pressable
-                  style={StyleSheet.absoluteFill}
-                  onPress={() => inputRef.current?.focus()}
-                />
-              )}
             </View>
 
             {/* faint action row */}

@@ -1,5 +1,5 @@
 // @/hooks/useAssignmentData.ts
-import { COURSE_COLORS } from '@/constants/';
+import { PRESET_COLORS } from '@/constants/colors';
 import { supabase } from '@/lib/supabase';
 import { Assignment } from '@/types/Assignment';
 import { Course } from '@/types/Course';
@@ -62,7 +62,7 @@ export function useAssignmentData(userId?: string) {
                             .findIndex((c: any) => c.id === course.id);
                         return {
                             ...course,
-                            color: COURSE_COLORS[uncoloredIndex % COURSE_COLORS.length]
+                            color: PRESET_COLORS[uncoloredIndex % PRESET_COLORS.length]
                         };
                     }
                     return course;

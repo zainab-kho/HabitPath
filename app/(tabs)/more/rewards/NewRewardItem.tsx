@@ -391,26 +391,33 @@ export default function NewRewardItem() {
                 {/* CARD COLOR */}
                 <View style={{ gap: 10 }}>
                   <Text style={globalStyles.label}>CARD COLOR</Text>
-                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, padding: 15, backgroundColor: PAGE.rewards.primary[1] + 95, borderRadius: 15 }}>
+                  <View style={{
+                    flexDirection: 'row',
+                    flexWrap: 'wrap',
+                    gap: 10,
+                    padding: 15,
+                    backgroundColor: PAGE.rewards.background[1],
+                    borderRadius: 15
+
+                  }}>
                     {PRESET_COLORS.map(color => {
                       const isSelected = backgroundColor === color;
                       return (
-                        <Pressable
-                          key={color}
-                          onPress={() => setBackgroundColor(color)}
+                        <ShadowBox
+                          contentBackgroundColor={isSelected ? color : '#fff'}
+                          contentBorderColor={isSelected ? '#000' : color}
+                          contentBorderWidth={1}
+                          contentBorderRadius={18}
+                          shadowBorderColor={isSelected ? '#000' : color}
+                          shadowColor={isSelected ? '#000' : color}
+                          shadowBorderRadius={18}
                         >
-                          <ShadowBox
-                            contentBackgroundColor={isSelected ? color : '#fff'}
-                            contentBorderColor={isSelected ? '#000' : color}
-                            contentBorderWidth={1}
-                            contentBorderRadius={18}
-                            shadowBorderColor={isSelected ? '#000' : color}
-                            shadowColor={isSelected ? '#000' : color}
-                            shadowBorderRadius={18}
-                          >
-                            <View style={{ width: 25, height: 25 }} />
-                          </ShadowBox>
-                        </Pressable>
+                          <Pressable
+                            key={color}
+                            onPress={() => setBackgroundColor(color)}
+                            style={{ width: 25, height: 25 }}
+                          />
+                        </ShadowBox>
                       );
                     })}
                   </View>

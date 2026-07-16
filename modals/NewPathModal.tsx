@@ -86,16 +86,27 @@ export default function NewPathModal({ visible, onClose, onCreated }: NewPathMod
                             </View>
 
                             <Text style={[globalStyles.label, { marginBottom: 12 }]}>COLOR</Text>
-                            <View style={styles.colorGrid}>
+                            <View style={{
+                                flexDirection: 'row',
+                                flexWrap: 'wrap',
+                                gap: 10,
+                                padding: 15,
+                                marginBottom: 20,
+                                backgroundColor: PAGE.path.background[0],
+                                borderRadius: 15
+                            }}>
                                 {PATH_COLOR_OPTIONS.map(({ name, hex }) => (
                                     <ShadowBox
                                         key={name}
                                         contentBackgroundColor={selectedColor === name ? hex : '#fff'}
+                                        contentBorderColor={selectedColor === name ? '#000' : hex}
+                                        contentBorderRadius={18}
+                                        shadowBorderColor={selectedColor === name ? '#000' : hex}
                                         shadowColor={selectedColor === name ? '#000' : hex}
                                     >
                                         <Pressable
                                             onPress={() => setSelectedColor(name)}
-                                            style={styles.colorSwatch}
+                                            style={{ width: 25, height: 25 }}
                                         />
                                     </ShadowBox>
                                 ))}
@@ -148,14 +159,8 @@ const styles = StyleSheet.create({
         width: '90%',
         alignSelf: 'center',
     },
-    colorGrid: {
-        flexDirection: 'row',
-        flexWrap: 'wrap',
-        gap: 10,
-        marginBottom: 20,
-    },
     colorSwatch: {
-        width: 30,
-        height: 30,
+        width: 25,
+        height: 25,
     },
 });

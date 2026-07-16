@@ -2,6 +2,7 @@ import React from 'react';
 
 import { MOOD_COLORS, PAGE } from '@/constants/colors';
 import { journalStyle } from '@/styles';
+import ShadowBox from '@/ui/ShadowBox';
 import { Modal, Pressable, Text, View } from 'react-native';
 // RN's ScrollView doesn't scroll reliably inside these modals — use gesture-handler's,
 // which needs its own root view inside the Modal's native hierarchy
@@ -73,24 +74,19 @@ export default function MoodPickerModal({ visible, selectedMood, onClose, onSele
                       alignItems: 'center',
                     }}
                   >
-                    <Pressable
-                      onPress={() => onSelect(key)}
-                      style={{
-                        height: 30,
-                        width: 30,
-                        borderRadius: 10,
-                        borderWidth: 1,
-                        backgroundColor: isSelected ? color : PAGE.journal.foreground[0],
-                        borderColor: isSelected ? '#000' : color,
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        shadowColor: isSelected ? '#000' : color,
-                        shadowOffset: { width: 2, height: 2 },
-                        shadowOpacity: 1,
-                        shadowRadius: 0,
-                        elevation: 3,
-                      }}
-                    />
+                    <Pressable onPress={() => onSelect(key)}>
+                      <ShadowBox
+                        contentBackgroundColor={isSelected ? color : PAGE.journal.foreground[0]}
+                        contentBorderColor={isSelected ? '#000' : color}
+                        contentBorderRadius={10}
+                        shadowColor={isSelected ? '#000' : color}
+                        shadowBorderColor={isSelected ? '#000' : color}
+                        shadowBorderRadius={10}
+                        shadowOffset={{ x: 2, y: 2 }}
+                      >
+                        <View style={{ width: 30, height: 30 }} />
+                      </ShadowBox>
+                    </Pressable>
                     <Text style={[journalStyle.moodLabel, { marginTop: 6, textAlign: 'center' }]}>{key}</Text>
                   </View>
                 );

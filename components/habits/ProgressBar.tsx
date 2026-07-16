@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
     gap: 5,
     paddingHorizontal: 10,
     paddingVertical: 6,
-    width: 70,
+    minWidth: 75,
     justifyContent: 'center',
   },
   badgeIcon: {

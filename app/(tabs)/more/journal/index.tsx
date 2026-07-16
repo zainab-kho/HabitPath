@@ -588,7 +588,7 @@ export default function JournalPage() {
                               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                                 <Image
                                   source={SYSTEM_ICONS.location}
-                                  style={{ width: 15, height: 15, tintColor: COLORS.Secondary, marginRight: 5, marginBottom: 7 }}
+                                  style={{ width: 15, height: 15, tintColor: COLORS.Secondary, marginRight: 5}}
                                 />
                                 <Text style={styles.entryLocation}>{renderHighlighted(entry.location)}</Text>
                               </View>
@@ -887,7 +887,6 @@ const styles = StyleSheet.create({
     fontFamily: 'label',
     fontSize: 14,
     fontStyle: 'italic',
-    marginBottom: 10,
   },
   entryText: {
     fontFamily: 'p3',

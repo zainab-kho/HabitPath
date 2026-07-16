@@ -278,18 +278,19 @@ export default function JournalPage() {
 
                                 return (
                                     <View key={mood} style={journalStyle.moodItem}>
-                                        <Pressable
-                                            onPress={() => handleMoodPress(mood)}
-                                            style={[
-                                                journalStyle.moodBox,
-                                                { borderColor: color, shadowColor: color },
-                                                selectedMood === mood && {
-                                                    backgroundColor: color,
-                                                    shadowColor: '#000',
-                                                    borderColor: '#000',
-                                                },
-                                            ]}
-                                        />
+                                        <Pressable onPress={() => handleMoodPress(mood)}>
+                                            <ShadowBox
+                                                contentBackgroundColor={selectedMood === mood ? color : '#F9F8FF'}
+                                                contentBorderColor={selectedMood === mood ? '#000' : color}
+                                                contentBorderRadius={7}
+                                                shadowColor={selectedMood === mood ? '#000' : color}
+                                                shadowBorderColor={selectedMood === mood ? '#000' : color}
+                                                shadowBorderRadius={7}
+                                                shadowOffset={{ x: 2, y: 2 }}
+                                            >
+                                                <View style={{ width: 20, height: 20 }} />
+                                            </ShadowBox>
+                                        </Pressable>
                                         <Text style={journalStyle.moodLabel}>{mood}</Text>
                                     </View>
                                 );

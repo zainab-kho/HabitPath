@@ -5,17 +5,6 @@ export const DATE_OPTIONS = ['Today', 'Tomorrow', 'Custom'] as const;
 export const FREQUENCY_OPTIONS = ['Daily', 'Weekly', 'Monthly', 'Custom', 'None'] as const;
 export const WEEK_DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const;
 
-// course + assignment constants
-export const COURSE_COLORS = [
-    '#ffc1c1',
-    '#fff7c1',
-    '#d1ffc1',
-    '#c1fff0',
-    '#c1cdff',
-    '#ebc1ff',
-    '#ffc1ea',
-] as const;
-
 export const ASSIGNMENT_TYPES = [
     'Assignment',
     'Discussion Post',

@@ -338,6 +338,18 @@ export default function PathDetail() {
       })
     : [];
 
+  // week's points progress for the collapsed card (mirrors the HabitsList design)
+  const weeklyTotalPoints = weeklyGoalHabits.reduce((s, h) => s + (h.rewardPoints ?? 0), 0);
+  const weeklyEarnedPoints = weeklyGoalHabits.reduce((s, h) => {
+    const days = getWeekDatesForDate(weekAnchor);
+    let done = days.some(d => h.completionHistory?.includes(d));
+    if (!done && h.increment) {
+      const amount = days.reduce((a, d) => a + (h.incrementHistory?.[d] ?? 0), 0);
+      done = (h.incrementGoal ?? 0) > 0 && amount >= (h.incrementGoal ?? 0);
+    }
+    return done ? s + (h.rewardPoints ?? 0) : s;
+  }, 0);
+
   // all habits in this path (for heatmap + trends)
   const allPathHabits = path
     ? allHabitsAll.filter(h => h.path === path.name)
@@ -827,41 +839,98 @@ export default function PathDetail() {
             );
           })()}
 
-          {/* weekly goals */}
+          {/* weekly goals — matches the HabitsList weekly goals design */}
           {weeklyGoalHabits.length > 0 && (
-            <View style={{ marginTop: 15 }}>
-              <Text style={[styles.sectionLabel, { marginBottom: 8 }]}>WEEKLY GOALS</Text>
-              <View style={{
-                borderWidth: 1,
-                borderColor: '#000',
-                borderRadius: 15,
-                padding: 10,
-                paddingVertical: 15,
-                backgroundColor: PAGE.path.background[0],
-              }}>
-              <Pressable
-                onPress={() => setWeeklyCollapsed(!weeklyCollapsed)}
-                style={{
-                  flexDirection: 'row',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginBottom: weeklyCollapsed ? 0 : 10,
-                  marginHorizontal: 10,
-                }}
-              >
-                <Text style={globalStyles.body}>{weekRangeLabel}</Text>
-                <Image
-                  source={SYSTEM_ICONS.sort}
-                  style={{
-                    width: 20,
-                    height: 20,
-                    tintColor: colorHex,
-                    transform: [{ rotate: weeklyCollapsed ? '0deg' : '180deg' }],
-                  }}
-                />
-              </Pressable>
+            <View style={{ marginTop: 15, marginBottom: 10 }}>
+              <Text style={{
+                fontSize: 12,
+                fontFamily: 'label',
+                fontWeight: '600',
+                textTransform: 'uppercase',
+                letterSpacing: 0.5,
+                opacity: 0.7,
+                marginBottom: 8,
+              }}>Weekly Goals</Text>
 
-              {!weeklyCollapsed && weeklyGoalHabits.map(habit => {
+              {weeklyCollapsed ? (
+                // collapsed: same shape as a habit card, with the week's points progress
+                <ShadowBox
+                  contentBackgroundColor="#fff"
+                  contentBorderColor="#000"
+                  shadowColor={colorHex}
+                  contentBorderWidth={1}
+                  shadowBorderRadius={15}
+                  shadowOffset={{ x: 0, y: 5 }}
+                >
+                  <Pressable
+                    onPress={() => setWeeklyCollapsed(false)}
+                    style={{ padding: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 12 }}>
+                      <View style={{ width: 40, height: 40, justifyContent: 'center', alignItems: 'center' }}>
+                        <Image source={SYSTEM_ICONS.calendar} style={{ width: 30, height: 30 }} />
+                      </View>
+                      <View style={{ gap: 6 }}>
+                        <Text style={[globalStyles.body, { fontSize: 15 }]}>{weekRangeLabel}</Text>
+                        <View style={{
+                          flexDirection: 'row',
+                          alignItems: 'center',
+                          gap: 5,
+                          paddingHorizontal: 8,
+                          paddingVertical: 3,
+                          borderRadius: 8,
+                          borderWidth: 1,
+                          backgroundColor: COLORS.RewardsBackground,
+                          borderColor: COLORS.RewardsAccent,
+                          alignSelf: 'flex-start',
+                        }}>
+                          <Image source={SYSTEM_ICONS.reward} style={{ width: 12, height: 12, tintColor: COLORS.Rewards }} />
+                          <Text style={{ fontSize: 10, fontFamily: 'label' }}>
+                            {weeklyEarnedPoints}/{weeklyTotalPoints}
+                          </Text>
+                        </View>
+                      </View>
+                    </View>
+                    <Image
+                      source={SYSTEM_ICONS.sort}
+                      style={{ width: 20, height: 20, tintColor: colorHex, marginRight: 5 }}
+                    />
+                  </Pressable>
+                </ShadowBox>
+              ) : (
+                // open: bordered container with the week's habits
+                <View style={{
+                  borderWidth: 1,
+                  borderColor: '#000',
+                  borderRadius: 15,
+                  padding: 10,
+                  paddingVertical: 15,
+                  backgroundColor: PAGE.path.background[0],
+                }}>
+                  <Pressable
+                    onPress={() => setWeeklyCollapsed(true)}
+                    style={{
+                      flexDirection: 'row',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginBottom: 10,
+                      marginHorizontal: 10,
+                    }}
+                  >
+                    <Text style={globalStyles.body}>{weekRangeLabel}</Text>
+                    <Image
+                      source={SYSTEM_ICONS.sort}
+                      style={{
+                        width: 20,
+                        height: 20,
+                        tintColor: colorHex,
+                        transform: [{ rotate: '180deg' }],
+                      }}
+                    />
+                  </Pressable>
+
+                  <View>
+                  {weeklyGoalHabits.map(habit => {
                 const iconFile = habit.icon ? HABIT_ICONS[habit.icon] : null;
                 // week-scoped: a completion anywhere in the anchor week counts
                 const anchorWeekDays = getWeekDatesForDate(weekAnchor);
@@ -908,8 +977,10 @@ export default function PathDetail() {
                     </View>
                   </ShadowBox>
                 );
-              })}
-              </View>
+                  })}
+                  </View>
+                </View>
+              )}
             </View>
           )}
 

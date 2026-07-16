@@ -446,19 +446,15 @@ export default function JournalEntryDetail() {
                 {/* mood badge */}
                 {entry.mood && (
                   <View style={styles.moodBadge}>
-                    <View
-                      style={[
-                        styles.moodDot,
-                        {
-                          backgroundColor: moodColor,
-                          borderColor: '#000',
-                          shadowColor: '#000',
-                          shadowOffset: { width: 1, height: 1 },
-                          shadowOpacity: 1,
-                          shadowRadius: 0,
-                        },
-                      ]}
-                    />
+                    <ShadowBox
+                        contentBackgroundColor={moodColor}
+                        contentBorderColor={'#000'}
+                        contentBorderRadius={6}
+                        shadowBorderRadius={6}
+                        shadowOffset={{ x: 1, y: 1 }}
+                      >
+                        <View style={{ width: 15, height: 15 }} />
+                      </ShadowBox>
                     <Text style={journalStyle.moodLabel}>{entry.mood}</Text>
                   </View>
                 )}
@@ -611,18 +607,19 @@ export default function JournalEntryDetail() {
                 const color = MOOD_COLORS[mood];
                 return (
                   <View key={mood} style={journalStyle.moodItem}>
-                    <Pressable
-                      onPress={() => handleMoodPress(mood)}
-                      style={[
-                        journalStyle.moodBox,
-                        { borderColor: color, shadowColor: color },
-                        editedMood === mood && {
-                          backgroundColor: color,
-                          shadowColor: '#000',
-                          borderColor: '#000',
-                        },
-                      ]}
-                    />
+                    <Pressable onPress={() => handleMoodPress(mood)}>
+                      <ShadowBox
+                        contentBackgroundColor={editedMood === mood ? color : '#F9F8FF'}
+                        contentBorderColor={editedMood === mood ? '#000' : color}
+                        contentBorderRadius={7}
+                        shadowColor={editedMood === mood ? '#000' : color}
+                        shadowBorderColor={editedMood === mood ? '#000' : color}
+                        shadowBorderRadius={7}
+                        shadowOffset={{ x: 2, y: 2 }}
+                      >
+                        <View style={{ width: 20, height: 20 }} />
+                      </ShadowBox>
+                    </Pressable>
                     <Text style={journalStyle.moodLabel}>{mood}</Text>
                   </View>
                 );
@@ -920,12 +917,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1,
     backgroundColor: BUTTON_COLORS.Quiet
-  },
-  moodDot: {
-    width: 16,
-    height: 16,
-    borderRadius: 6,
-    borderWidth: 1,
   },
   locationRow: {
     flexDirection: 'row',

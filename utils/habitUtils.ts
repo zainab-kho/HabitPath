@@ -525,10 +525,18 @@ export const getHabitStatus = (
           ? habit.snoozedFrom!
           : dateStr;
 
-  // snoozed check first so snoozed habits don't show as missed
-  // use < (not <=) so the habit is active ON the snoozedUntil day
+  // snoozed check first so snoozed habits don't show as missed.
+  // window is [snoozedFrom, snoozedUntil): the lower bound guard stops a FUTURE
+  // snooze from marking the habit snoozed on days before the window starts.
+  // use < (not <=) on the upper bound so the habit is active ON the snoozedUntil day.
   // .slice(0,10) normalizes legacy ISO strings ("2026-02-17T05:00:00Z" → "2026-02-17")
-  if (habit.snoozedUntil && dateStr < habit.snoozedUntil.slice(0, 10)) return 'snoozed';
+  if (
+    habit.snoozedUntil &&
+    dateStr < habit.snoozedUntil.slice(0, 10) &&
+    (!habit.snoozedFrom || dateStr >= habit.snoozedFrom.slice(0, 10))
+  ) {
+    return 'snoozed';
+  }
 
   // weekly goals are week-scoped: a completion anywhere in the viewed week
   // marks the whole week, no matter which day it was recorded on

@@ -127,18 +127,21 @@ export function useHabits(viewingDate: Date = new Date()) {
 
     try {
       const reset = await getResetTime();
-      setResetTime(reset);
+      // keep the same object if unchanged, so it doesn't trigger a needless recompute
+      setResetTime(prev =>
+        prev.hour === reset.hour && prev.minute === reset.minute ? prev : reset
+      );
 
       // quest habits are now real habits, so they come through here too
       const fresh = await loadHabitsFromSupabase(user.id);
 
-      // Fetch streak + points before updating UI so everything lands in one render
+      // fetch streak + points before updating UI so everything lands in one render
       const [streak, total] = await Promise.all([
         updateAppStreak(fresh, reset.hour, reset.minute),
         getTotalPoints(),
       ]);
 
-      // All state updates in one batch — no intermediate renders
+      // all state updates in one batch; no intermediate renders
       unstable_batchedUpdates(() => {
         applyHabitsUpdate(fresh, reset);
         setAppStreak(streak);

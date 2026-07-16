@@ -584,11 +584,13 @@ export default function JournalEntryDetail() {
         <KeyboardAwareScrollView
           enableOnAndroid={true}
           enableAutomaticScroll={true}
-          extraScrollHeight={20}
+          extraScrollHeight={110}
+          // remove bounce when typing a long entry
+          enableResetScrollToCoords={false}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="interactive"
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: 40 }}
+          contentContainerStyle={{ paddingBottom: 120 }}
         >
           {/* lock entry */}
           <ToggleRow

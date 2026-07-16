@@ -37,7 +37,7 @@ export default function ProgressBar({
   return (
     <View style={styles.container}>
       {/* points badge */}
-      <Pressable onPress={() => router.push('/(tabs)/more/rewards' as any)}>
+      <Pressable onPress={() => router.push({ pathname: '/(tabs)/more/rewards', params: { from: 'drawer' } } as any)}>
         <ShadowBox
           contentBorderColor='#000'
           shadowColor={COLORS.RewardsAccent}

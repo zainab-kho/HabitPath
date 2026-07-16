@@ -151,12 +151,6 @@ export default function HabitsPage() {
   // check if viewing today
   const isViewingToday = isToday(viewingDate, resetTime.hour, resetTime.minute);
 
-  // handle pressing a habit to view details
-  const handlePressHabit = (habit: any) => {
-    // **TODO: Navigate to habit details page
-    // router.push(`/habits/${habit.id}`);
-  };
-
   useFocusEffect(
     useCallback(() => {
       let cancelled = false;
@@ -306,7 +300,7 @@ export default function HabitsPage() {
 
             <Pressable onPress={() => router.push({ pathname: '/habits/NewHabitPage', params: { startDate: formatLocalDate(viewingDate) } })}>
               <ShadowBox
-                contentBackgroundColor={PAGE.habits.primary[0]}
+                contentBackgroundColor={COLORS.PrimaryLight}
                 contentBorderRadius={30}
                 shadowBorderRadius={30}
               >

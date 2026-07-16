@@ -340,8 +340,8 @@ export default function HabitsList({
 
   if (loading) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', marginTop: 60 }}>
-        <ActivityIndicator size="small" color={COLORS.Primary} />
+      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator size="small" color={'#fff'} />
       </View>
     );
   }

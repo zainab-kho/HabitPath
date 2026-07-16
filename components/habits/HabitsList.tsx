@@ -49,6 +49,7 @@ interface HabitsListProps {
   onReorderHabits?: (updater: (prev: HabitWithStatus[]) => HabitWithStatus[]) => void;
   onDeleteHabit?: (habitId: string) => void;
   onArchiveHabit?: (habitId: string) => void;
+  onReloadHabits?: () => void;
 }
 
 type TimeOfDay = typeof TIME_OPTIONS[number];
@@ -85,6 +86,7 @@ export default function HabitsList({
   onReorderHabits,
   onDeleteHabit,
   onArchiveHabit,
+  onReloadHabits,
 }: HabitsListProps) {
   const router = useRouter();
   const currentDate = viewingDate || new Date();
@@ -336,6 +338,10 @@ export default function HabitsList({
 
   const handleModalUpdate = () => {
     // Order is derived from habits prop (Supabase data) — no manual reload needed
+    // for reordering. But the "move to a different day" action writes a
+    // tempSelectedDays override straight to Supabase without touching local
+    // state, so re-fetch to recompute which day the habit is active on.
+    onReloadHabits?.();
   };
 
   if (loading) {

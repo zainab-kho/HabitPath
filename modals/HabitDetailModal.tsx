@@ -15,7 +15,7 @@ import { SYSTEM_ICONS } from '@/constants/icons';
 import ShadowBox from '@/ui/ShadowBox';
 import { globalStyles } from '@/styles';
 import { HabitWithStatus } from '@/hooks/useHabits';
-import { saveTempSelectedDays } from '@/hooks/useDailyHabitOverrides';
+import { saveHabitStartDate, saveTempSelectedDays } from '@/hooks/useDailyHabitOverrides';
 import { getWeekDatesForDate, getHabitDate, parseLocalDate, formatLocalDate } from '@/utils/dateUtils';
 import { matchesNthWeekday } from '@/utils/habitUtils';
 
@@ -121,6 +121,9 @@ const ALL_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Satur
 const DAY_ABBREV: Record<string, string> = {
     Monday: 'M', Tuesday: 'T', Wednesday: 'W', Thursday: 'Th', Friday: 'F', Saturday: 'Sa', Sunday: 'Su',
 };
+const JS_DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+// weekday name (e.g. "Wednesday") for a YYYY-MM-DD string, noon-anchored to avoid TZ drift
+const weekdayOf = (dateStr: string) => JS_DAY_NAMES[new Date(dateStr + 'T12:00:00').getDay()];
 
 export default function HabitDetailModal({ visible, habit, resetHour, resetMin, onClose, onUpdate, onUndoIncrement, onDelete, onArchive }: HabitDetailModalProps) {
     const { user } = useAuth();
@@ -455,6 +458,80 @@ export default function HabitDetailModal({ visible, habit, resetHour, resetMin, 
                                                         contentBorderColor={COLORS.PrimaryLight}
                                                         shadowBorderColor={COLORS.PrimaryLight}
                                                         shadowColor={COLORS.PrimaryLight}
+                                        >
+                                            <View style={{ paddingVertical: 5, paddingHorizontal: 16, alignItems: 'center' }}>
+                                                <Text style={[globalStyles.body, { fontSize: 13 }]}>Cancel</Text>
+                                            </View>
+                                        </ShadowBox>
+                                    </Pressable>
+                                </View>
+                            )}
+                        </View>
+                    )}
+
+                    {/* move to a different day (one-time habits): reschedules the start date
+                        within the habit's own week */}
+                    {showMore && (!habit.frequency || habit.frequency === 'None') && !habit.keepUntil && habit.startDate && (
+                        <View style={{ paddingHorizontal: 20, paddingTop: 10, paddingBottom: 4 }}>
+                            {!movingDay ? (
+                                <Pressable onPress={() => setMovingDay(true)}>
+                                    <ShadowBox contentBackgroundColor={BUTTON_COLORS.Quiet}>
+                                        <View style={{ paddingVertical: 5, paddingHorizontal: 10, alignItems: 'center' }}>
+                                            <Text style={[globalStyles.body, { fontSize: 14 }]}>
+                                                Move to a different day
+                                            </Text>
+                                        </View>
+                                    </ShadowBox>
+                                </Pressable>
+                            ) : (
+                                <View style={{ gap: 20, marginTop: 10 }}>
+                                    <Text style={[globalStyles.label, { fontSize: 10, opacity: 0.5, textAlign: 'center', textTransform: 'uppercase' }]}>
+                                        Do it on:
+                                    </Text>
+                                    <View style={{ flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 8 }}>
+                                        {(() => {
+                                            // the 7 dates of the habit's current week, keyed by weekday name
+                                            const weekDates = getWeekDatesForDate(habit.startDate);
+                                            const currentDay = weekdayOf(habit.startDate);
+                                            return ALL_DAYS.map(day => {
+                                                const target = weekDates.find(d => weekdayOf(d) === day);
+                                                const isCurrent = day === currentDay;
+                                                return (
+                                                    <Pressable
+                                                        key={day}
+                                                        onPress={async () => {
+                                                            if (!user || !target || isCurrent) return;
+                                                            await saveHabitStartDate(habit.id, user.id, target);
+                                                            await AsyncStorage.setItem('@habits_dirty', '1');
+                                                            setMovingDay(false);
+                                                            onUpdate();
+                                                            onClose();
+                                                        }}
+                                                        style={{ width: 36, opacity: isCurrent ? 0.5 : 1 }}
+                                                    >
+                                                        <ShadowBox
+                                                            contentBackgroundColor={isCurrent ? COLORS.PrimaryLight : '#fff'}
+                                                            contentBorderColor={isCurrent ? '#000' : COLORS.PrimaryLight}
+                                                            shadowBorderColor={isCurrent ? '#000' : COLORS.PrimaryLight}
+                                                            shadowColor={isCurrent ? '#000' : COLORS.PrimaryLight}
+                                                        >
+                                                            <View style={{ paddingVertical: 5, alignItems: 'center' }}>
+                                                                <Text style={[globalStyles.body1, { fontSize: 13 }]}>
+                                                                    {DAY_ABBREV[day]}
+                                                                </Text>
+                                                            </View>
+                                                        </ShadowBox>
+                                                    </Pressable>
+                                                );
+                                            });
+                                        })()}
+                                    </View>
+                                    <Pressable onPress={() => setMovingDay(false)} style={{ alignSelf: 'center' }}>
+                                        <ShadowBox
+                                            contentBackgroundColor={'#fff'}
+                                            contentBorderColor={COLORS.PrimaryLight}
+                                            shadowBorderColor={COLORS.PrimaryLight}
+                                            shadowColor={COLORS.PrimaryLight}
                                         >
                                             <View style={{ paddingVertical: 5, paddingHorizontal: 16, alignItems: 'center' }}>
                                                 <Text style={[globalStyles.body, { fontSize: 13 }]}>Cancel</Text>

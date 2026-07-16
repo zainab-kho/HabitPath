@@ -267,6 +267,7 @@ export default function HabitsPage() {
           onReorderHabits={reorderHabits}
           onDeleteHabit={deleteHabit}
           onArchiveHabit={archiveHabit}
+          onReloadHabits={loadHabits}
         />
 
         {/* snooze confirmation modal */}

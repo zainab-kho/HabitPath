@@ -124,3 +124,22 @@ export async function saveTempSelectedDays(
     throw error;
   }
 }
+
+// One-time habits don't repeat, so "move to a different day" simply reschedules
+// them by rewriting their start date (their only due date).
+export async function saveHabitStartDate(
+  habitId: string,
+  userId: string,
+  startDate: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from('habits')
+    .update({ start_date: startDate })
+    .eq('id', habitId)
+    .eq('user_id', userId);
+
+  if (error) {
+    console.error('[useDailyHabitOverrides] saveHabitStartDate error:', error);
+    throw error;
+  }
+}

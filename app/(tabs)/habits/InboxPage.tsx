@@ -15,7 +15,7 @@ import { formatDisplayDateString, formatLocalDate, getHabitDate, parseLocalDate 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useGradientForTime } from '@/utils/gradients';
 import { LinearGradient } from 'expo-linear-gradient';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
@@ -25,6 +25,14 @@ export default function InboxPage() {
   // stable date object — a fresh `new Date()` each render makes useHabits loop
   const [today] = useState(() => new Date());
   const { allHabits, loading, resetTime, unsnoozeToToday, loadHabits } = useHabits(today);
+
+  // don't render the "empty" states until the first load has actually finished,
+  // otherwise the empty text flashes before habits arrive
+  const [loadedOnce, setLoadedOnce] = useState(false);
+  useEffect(() => {
+    if (!loading) setLoadedOnce(true);
+  }, [loading]);
+  const showLoading = loading || !loadedOnce;
 
   const todayStr = getHabitDate(today, resetTime.hour, resetTime.minute);
 
@@ -92,7 +100,7 @@ export default function InboxPage() {
     onAction: () => void,
     statusBadge?: string,
   ) => (
-    <View key={habit.id} style={{ marginBottom: 12 }}>
+    <View key={habit.id}>
       <HabitItem
         habit={withStatus(habit)}
         dateStr={todayStr}
@@ -125,7 +133,7 @@ export default function InboxPage() {
       <PageContainer>
         <PageHeader title="Inbox & Snoozed" showBackButton />
 
-        {loading ? (
+        {showLoading ? (
           <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
             <ActivityIndicator size="small" color={COLORS.Primary} />
           </View>
@@ -144,20 +152,21 @@ export default function InboxPage() {
               )
             )}
 
-            {/* snoozed — hidden from today until their snooze day */}
-            <Text style={[styles.sectionLabel, { marginTop: 25 }]}>SNOOZED</Text>
-            {snoozedHabits.length === 0 ? (
-              <Text style={styles.emptyText}>No snoozed habits right now.</Text>
-            ) : (
-              snoozedHabits.map(habit =>
-                renderHabit(
-                  habit,
-                  'Do today',
-                  PAGE.habits.button[0],
-                  () => handleDoToday(habit.id),
-                  `${formatDisplayDateString(habit.snoozedUntil?.slice(0, 10))}`
-                )
-              )
+            {/* snoozed — hidden from today until their snooze day.
+                only shown when there's at least one snoozed habit */}
+            {snoozedHabits.length > 0 && (
+              <>
+                <Text style={[styles.sectionLabel, { marginTop: 25 }]}>SNOOZED</Text>
+                {snoozedHabits.map(habit =>
+                  renderHabit(
+                    habit,
+                    'Do today',
+                    PAGE.habits.button[0],
+                    () => handleDoToday(habit.id),
+                    `${formatDisplayDateString(habit.snoozedUntil?.slice(0, 10))}`
+                  )
+                )}
+              </>
             )}
 
           </ScrollView>
@@ -258,6 +267,7 @@ const styles = StyleSheet.create({
     fontFamily: 'label',
     opacity: 0.5,
     marginBottom: 10,
+    alignSelf: 'center'
   },
   overlay: {
     flex: 1,

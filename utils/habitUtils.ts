@@ -404,8 +404,14 @@ export function isHabitActiveToday(
     const startMonday = getWeekDatesForDate(habit.startDate)[0];
     if (thisMonday < startMonday) return false;
 
-    const latestCompletion = habit.lastCompletedDate
-      ?? [...(habit.completionHistory ?? [])].sort().at(-1)
+    // anchor on completionHistory (the recorded per-week completions) so this
+    // visibility check agrees with getHabitStatus. lastCompletedDate tracks the
+    // physical tap day (and the increment path writes it without touching
+    // completionHistory), so it can drift into a later week than the recorded
+    // completion and keep a finished goal visible. fall back to it only when
+    // there's no recorded history (e.g. a pure-increment goal).
+    const latestCompletion = [...(habit.completionHistory ?? [])].sort().at(-1)
+      ?? habit.lastCompletedDate
       ?? null;
     if (latestCompletion) {
       return thisMonday <= getWeekDatesForDate(latestCompletion)[0];
@@ -434,8 +440,11 @@ export function isHabitActiveToday(
     }
   }
 
-  // End date: stop scheduling new occurrences after end date
-  if (habit.endDate && todayStr > habit.endDate) return false;
+  // End date: stop scheduling new occurrences after end date.
+  // Weekly Goals are week-scoped — their own branch below ends them by WEEK
+  // (endMonday), so a mid-week end date still shows for the rest of that week
+  // instead of being cut off the day after.
+  if (habit.endDate && habit.frequency !== 'Weekly Goal' && todayStr > habit.endDate) return false;
 
   // Standard scheduling rules for repeating habits
 
@@ -471,8 +480,9 @@ export function isHabitActiveToday(
       const endMonday = getWeekDatesForDate(habit.endDate)[0];
       if (dateMonday > endMonday) return false;
     }
-    // non-keepUntil without endDate: one-shot, only show for start week
-    if (!habit.keepUntil && !habit.endDate && dateMonday > startMonday) return false;
+    // no endDate = recurring weekly goal: shows every week from the start week on,
+    // with per-week increments that reset each Monday (see getHabitStatus).
+    // a one-week goal instead carries endDate = the Sunday of its start week.
     return true;
   }
 

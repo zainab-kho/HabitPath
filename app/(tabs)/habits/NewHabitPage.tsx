@@ -123,6 +123,9 @@ export default function NewHabitPage() {
         return editHabit.startDate !== habitToday && editHabit.startDate !== habitTomorrowStr;
     });
     const [isWeeklyGoal, setIsWeeklyGoal] = useState(editFreq === 'Weekly Goal');
+    // recurring weekly goal = a weekly goal with no end date (repeats every week,
+    // increments reset each Monday). a one-week goal instead ends on its start Sunday.
+    const [weeklyRepeat, setWeeklyRepeat] = useState(editFreq === 'Weekly Goal' && !editHabit?.endDate);
 
     // inbox habit: created without a start date, lives on the inbox page until scheduled
     const [noStartDate, setNoStartDate] = useState(!!editHabit && !editHabit.startDate);
@@ -557,7 +560,8 @@ export default function NewHabitPage() {
                                                         if (val) {
                                                             const monday = snapToMonday(startDate);
                                                             setStartDate(monday);
-                                                            setEndDate(getSundayOfWeek(monday));
+                                                            // default to a one-week goal unless "repeat every week" is on
+                                                            setEndDate(weeklyRepeat ? null : getSundayOfWeek(monday));
                                                             if (selectedFrequency === 'Daily') {
                                                                 setSelectedFrequency('None');
                                                             }
@@ -566,19 +570,44 @@ export default function NewHabitPage() {
                                                             }
                                                         } else {
                                                             setEndDate(null);
+                                                            setWeeklyRepeat(false);
                                                         }
                                                     }}
                                                     trackColor={{ false: '#ddd', true: PAGE.habits.primary[0] }}
                                                     thumbColor="#fff"
                                                 />
                                             </View>
+
+                                            {/* recurring weekly goal: no end date, repeats every week */}
+                                            {isWeeklyGoal && (
+                                                <View style={{
+                                                    flexDirection: 'row',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'space-between',
+                                                    paddingVertical: 4,
+                                                    paddingHorizontal: 2,
+                                                }}>
+                                                    <Text style={globalStyles.body1}>Repeat every week?</Text>
+                                                    <Switch
+                                                        value={weeklyRepeat}
+                                                        onValueChange={(val) => {
+                                                            setWeeklyRepeat(val);
+                                                            // recurring = no end date; one-week = ends on the start Sunday
+                                                            setEndDate(val ? null : getSundayOfWeek(startDate));
+                                                        }}
+                                                        trackColor={{ false: '#ddd', true: PAGE.habits.primary[0] }}
+                                                        thumbColor="#fff"
+                                                    />
+                                                </View>
+                                            )}
                                             <ShadowBox>
                                                 <SimpleCalendar
                                                     selectedDate={startDate}
                                                     onSelectDate={(date) => {
                                                         if (isWeeklyGoal) {
                                                             setStartDate(date);
-                                                            setEndDate(getSundayOfWeek(date));
+                                                            // keep it open-ended when repeating; otherwise scope to that week
+                                                            setEndDate(weeklyRepeat ? null : getSundayOfWeek(date));
                                                         } else {
                                                             setStartDate(date);
                                                             setShowCalendar(false);

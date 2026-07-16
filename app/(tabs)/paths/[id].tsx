@@ -567,7 +567,6 @@ export default function PathDetail() {
         <PageHeader
           title={path.name}
           showBackButton
-          showPlusButton
         />
 
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>

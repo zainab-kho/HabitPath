@@ -570,7 +570,7 @@ export default function Paths() {
     return (
         <AppLinearGradient variant="path.background">
             <PageContainer showBottomNav={!fromDrawer}>
-                <PageHeader title="Paths" showPlusButton showBackButton={fromDrawer} />
+                <PageHeader title="Paths" showBackButton={fromDrawer} />
 
                 {loading ? (
                     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>

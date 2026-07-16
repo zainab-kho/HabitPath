@@ -165,7 +165,7 @@ export default function Assignments() {
         return (
             <AppLinearGradient variant="assignments.background">
                 <PageContainer showBottomNav={!fromDrawer}>
-                    <PageHeader title="Assignments" showBackButton={fromDrawer} showPlusButton={!fromDrawer} />
+                    <PageHeader title="Assignments" showBackButton={fromDrawer} />
                     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
                         <ActivityIndicator size="small" color={PAGE.assignments.primary[0]} />
                     </View>
@@ -179,7 +179,7 @@ export default function Assignments() {
         return (
             <AppLinearGradient variant="assignments.background">
                 <PageContainer showBottomNav={!fromDrawer}>
-                    <PageHeader title="Assignments" showBackButton={fromDrawer} showPlusButton={!fromDrawer} />
+                    <PageHeader title="Assignments" showBackButton={fromDrawer} />
                     <EmptyStateView
                         icon={SYSTEM_ICONS.tag}
                         title="No courses yet"
@@ -196,7 +196,7 @@ export default function Assignments() {
     return (
         <AppLinearGradient variant="assignments.background">
             <PageContainer showBottomNav={!fromDrawer}>
-                <PageHeader title="Assignments" showBackButton={fromDrawer} showPlusButton={!fromDrawer} />
+                <PageHeader title="Assignments" showBackButton={fromDrawer} />
 
                 <ScrollView
                     ref={scrollViewRef}

@@ -31,15 +31,18 @@ export default function PageHeader({
   const router = useRouter();
   const { openDrawer } = useDrawer();
 
-  const handlePlusPress = () => {
+  // custom right-side action (an "add" plus, or a page-specific icon like the
+  // journal lock). the drawer is handled by the separate More button below.
+  const handleActionPress = () => {
     if (onPlusPress) onPlusPress();
     else if (plusNavigateTo) router.push(plusNavigateTo as any);
+    else if (onNavigatePress) onNavigatePress();
   };
 
-  const handleNavigatePress = () => {
-    if (onNavigatePress) onNavigatePress();
-    else openDrawer();
-  };
+  const showActionButton = showPlusButton || !!navigateIcon;
+  // the More button opens the side drawer. it sits on the far right of every
+  // top-level (bottom-nav) page — i.e. whenever there's no back button.
+  const showMoreButton = !showBackButton;
 
   return (
     <View
@@ -73,15 +76,28 @@ export default function PageHeader({
         </Text>
       </View>
 
-      {/* right side */}
-      <View style={{ width: 40, alignItems: 'flex-end' }}>
-        {showPlusButton && (
+      {/* right side: [custom action] [More] — More is always rightmost */}
+      <View style={{ minWidth: 40, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end' }}>
+        {showActionButton && (
           <Pressable
-            style={{ width: 40, height: 40, alignItems: 'flex-end', justifyContent: 'center' }}
-            onPress={onPlusPress || plusNavigateTo ? handlePlusPress : handleNavigatePress}
+            style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}
+            onPress={handleActionPress}
           >
             <Image
-              source={navigateIcon ?? SYSTEM_ICONS.more}
+              source={navigateIcon ?? SYSTEM_ICONS.plus}
+              style={{ width: 20, height: 20 }}
+              tintColor="rgba(0,0,0,0.7)"
+            />
+          </Pressable>
+        )}
+
+        {showMoreButton && (
+          <Pressable
+            style={{ width: 40, height: 40, alignItems: 'center', justifyContent: 'center' }}
+            onPress={openDrawer}
+          >
+            <Image
+              source={SYSTEM_ICONS.more}
               style={{ width: 20, height: 20 }}
               tintColor="rgba(0,0,0,0.7)"
             />

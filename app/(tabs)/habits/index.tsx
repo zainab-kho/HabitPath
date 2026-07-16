@@ -177,7 +177,7 @@ export default function HabitsPage() {
       style={{ flex: 1 }}
     >
       <PageContainer showBottomNav>
-        <PageHeader title="Habits" showPlusButton textColor={textColor} />
+        <PageHeader title="Habits" textColor={textColor} />
 
         {/* date navigator */}
         <View

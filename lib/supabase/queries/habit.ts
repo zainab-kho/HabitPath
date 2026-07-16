@@ -99,6 +99,22 @@ export function mapHabitRow(row: any): Habit {
   } as Habit;
 }
 
+// assign / move a quest goal into a phase: sets phase_id, scope, and end date
+export async function setHabitPhase(
+  habitId: string,
+  userId: string,
+  phaseId: string | null,
+  endDate: string | null,
+  scope: 'phase' | 'carry' | 'forever' = 'phase',
+): Promise<void> {
+  const { error } = await supabase
+    .from('habits')
+    .update({ phase_id: phaseId, quest_scope: scope, end_date: endDate })
+    .eq('id', habitId)
+    .eq('user_id', userId);
+  if (error) throw error;
+}
+
 // loads all habits belonging to one quest (any phase), incl. archived ones —
 // the quest detail decides what to show per phase.
 export async function loadHabitsByQuest(questId: string, userId: string): Promise<Habit[]> {

@@ -5,13 +5,16 @@
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import {
-    ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View,
+    ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, View,
 } from 'react-native';
 
 import { PAGE } from '@/constants/colors';
+import { HABIT_ICONS } from '@/constants/icons';
 import { useAuth } from '@/contexts/AuthContext';
-import { loadHabitsByQuest, toggleHabitCompletion } from '@/lib/supabase/queries/habit';
+import { loadHabitsByQuest, setHabitPhase, toggleHabitCompletion } from '@/lib/supabase/queries/habit';
 import { addPhase, getQuest } from '@/lib/supabase/queries/quests';
+import AddPhaseModal from '@/modals/quests/AddPhaseModal';
+import { globalStyles } from '@/styles';
 import { Habit } from '@/types/Habit';
 import { Quest, QuestPhase } from '@/types/Quest';
 import { AppLinearGradient } from '@/ui/AppLinearGradient';
@@ -31,6 +34,7 @@ export default function QuestDetailPage() {
     const [habits, setHabits] = useState<Habit[]>([]);
     const [loading, setLoading] = useState(true);
     const [phaseIndex, setPhaseIndex] = useState(0);
+    const [phaseModalOpen, setPhaseModalOpen] = useState(false);
 
     const load = useCallback(async () => {
         if (!user || !id) return;
@@ -49,7 +53,9 @@ export default function QuestDetailPage() {
     useFocusEffect(useCallback(() => { load(); }, [load]));
 
     const phases = quest?.phases ?? [];
-    const phase: QuestPhase | undefined = quest?.hasPhases ? phases[phaseIndex] : undefined;
+    const phased = phases.length > 0; // emergent: a quest is phased once it has a phase
+    const phase: QuestPhase | undefined = phased ? phases[phaseIndex] : undefined;
+    const looseGoals = habits.filter(h => !h.phaseId);
 
     // items for the current phase: its own items + carried-forward habits from earlier phases
     const itemsForPhase = (phaseId: string | null): Habit[] => {
@@ -60,13 +66,10 @@ export default function QuestDetailPage() {
         );
         return [...own, ...carried];
     };
-    const items = quest?.hasPhases ? itemsForPhase(phase?.id ?? null) : habits;
-    // habits and one-time tasks are all "goals" — one unified list
-    const goals = items;
+    const goals = phased ? itemsForPhase(phase?.id ?? null) : habits;
+    const unassigned = phased ? looseGoals : []; // loose goals still shown so they aren't lost
     const todayStr = formatLocalDate(new Date());
 
-    // "+ Add goal" opens the habit creator in quest mode (New Goal); the scope
-    // (end with phase / carry / keep) is chosen there
     const addGoal = (phaseId: string | null) => {
         if (!quest) return;
         router.push({
@@ -82,16 +85,24 @@ export default function QuestDetailPage() {
 
     const toggleGoal = async (goal: Habit) => {
         if (!user) return;
-        const today = formatLocalDate(new Date());
         try {
-            setHabits(await toggleHabitCompletion(goal.id, habits, today, 4, 0, user.id));
+            setHabits(await toggleHabitCompletion(goal.id, habits, todayStr, 4, 0, user.id));
         } catch (err) {
             console.error('Error toggling goal:', err);
         }
     };
 
+    const createPhaseWithGoals = async (name: string, goalIds: string[]) => {
+        if (!quest || !user) return;
+        setPhaseModalOpen(false);
+        const newPhase = await addPhase(quest.id, { name, sortOrder: phases.length });
+        await Promise.all(goalIds.map(gid => setHabitPhase(gid, user.id, newPhase.id, newPhase.endDate ?? null)));
+        setPhaseIndex(phases.length); // jump to the new phase
+        load();
+    };
+
     const confirmDelete = () => {
-        Alert.alert('Delete quest?', 'This removes the quest and its habits/tasks.', [
+        Alert.alert('Delete quest?', 'This removes the quest and its goals.', [
             { text: 'Cancel', style: 'cancel' },
             {
                 text: 'Delete', style: 'destructive', onPress: async () => {
@@ -104,11 +115,49 @@ export default function QuestDetailPage() {
         ]);
     };
 
-    const createPhase = async () => {
-        if (!quest) return;
-        await addPhase(quest.id, { name: `Phase ${phases.length + 1}`, sortOrder: phases.length });
-        load();
+    const renderGoal = (g: Habit) => {
+        const done = (g.completionHistory ?? []).includes(todayStr);
+        const iconFile = g.icon ? HABIT_ICONS[g.icon] : null;
+        return (
+            <Pressable key={g.id} onPress={() => toggleGoal(g)} style={{ marginBottom: 10 }}>
+                <ShadowBox
+                    contentBackgroundColor="#fff"
+                    contentBorderColor="#000"
+                    contentBorderWidth={1}
+                    shadowColor={PAGE.quest.primary[0]}
+                    shadowBorderRadius={15}
+                >
+                    <View style={styles.item}>
+                        <View style={[styles.check, done && styles.checkDone]}>
+                            {done && <Text style={styles.checkMark}>✓</Text>}
+                        </View>
+                        {iconFile
+                            ? <Image source={iconFile} style={styles.icon} />
+                            : <Text style={{ fontSize: 22 }}>✦</Text>}
+                        <Text style={[globalStyles.body, { flex: 1 }, done && styles.itemDone]} numberOfLines={1}>{g.name}</Text>
+                        <View style={styles.freqBubble}>
+                            <Text style={[globalStyles.label, { opacity: 1 }]}>{isTask(g) ? 'Task' : g.frequency}</Text>
+                        </View>
+                    </View>
+                </ShadowBox>
+            </Pressable>
+        );
     };
+
+    const pillButton = (label: string, onPress: () => void, filled?: boolean) => (
+        <Pressable onPress={onPress} style={{ marginTop: 14 }}>
+            <ShadowBox
+                contentBackgroundColor={filled ? PAGE.quest.primary[1] : '#fff'}
+                contentBorderColor={PAGE.quest.primary[0]}
+                shadowColor={PAGE.quest.primary[0]}
+                shadowBorderRadius={15}
+            >
+                <View style={{ paddingVertical: 11, alignItems: 'center' }}>
+                    <Text style={globalStyles.body}>{label}</Text>
+                </View>
+            </ShadowBox>
+        </Pressable>
+    );
 
     if (loading) {
         return (
@@ -125,7 +174,7 @@ export default function QuestDetailPage() {
             <AppLinearGradient variant="quest.background">
                 <PageContainer>
                     <PageHeader title="" showBackButton />
-                    <View style={styles.center}><Text style={styles.hint}>Quest not found.</Text></View>
+                    <View style={styles.center}><Text style={globalStyles.body}>Quest not found.</Text></View>
                 </PageContainer>
             </AppLinearGradient>
         );
@@ -139,107 +188,92 @@ export default function QuestDetailPage() {
                 <ScrollView contentContainerStyle={{ paddingHorizontal: 3, paddingBottom: 60 }} showsVerticalScrollIndicator={false}>
                     {/* header */}
                     <View style={styles.badgeRow}>
-                        <View style={styles.badge}>
-                            <Text style={styles.badgeText}>{quest.type === 'main' ? 'Main Quest' : 'Side Quest'}</Text>
-                        </View>
+                        <ShadowBox
+                            contentBackgroundColor={PAGE.quest.primary[0]}
+                            contentBorderColor="#000"
+                            shadowColor="#000"
+                            shadowBorderRadius={12}
+                        >
+                            <View style={{ paddingHorizontal: 12, paddingVertical: 4 }}>
+                                <Text style={[globalStyles.label, { color: '#fff', opacity: 1 }]}>
+                                    {quest.type === 'main' ? 'MAIN QUEST' : 'SIDE QUEST'}
+                                </Text>
+                            </View>
+                        </ShadowBox>
                         {quest.endDate && (
-                            <Text style={styles.meta}>by {formatDisplayDate(new Date(quest.endDate))}</Text>
+                            <Text style={[globalStyles.body2, { opacity: 0.7 }]}>by {formatDisplayDate(new Date(quest.endDate))}</Text>
                         )}
                     </View>
-                    <Text style={styles.title}>{quest.name}</Text>
+                    <Text style={[globalStyles.h1, { fontSize: 24, marginBottom: 16 }]}>{quest.name}</Text>
 
                     {/* phase pager */}
-                    {quest.hasPhases && (
-                        <View style={styles.pager}>
-                            <Pressable disabled={phaseIndex === 0} onPress={() => setPhaseIndex(i => i - 1)} hitSlop={10}>
-                                <Text style={[styles.arrow, phaseIndex === 0 && { opacity: 0.25 }]}>‹</Text>
-                            </Pressable>
-                            <Text style={styles.pagerLabel}>
-                                {phases.length === 0 ? 'No phases yet' : `${phase?.name ?? ''} · ${phaseIndex + 1} of ${phases.length}`}
-                            </Text>
-                            <Pressable disabled={phaseIndex >= phases.length - 1} onPress={() => setPhaseIndex(i => i + 1)} hitSlop={10}>
-                                <Text style={[styles.arrow, phaseIndex >= phases.length - 1 && { opacity: 0.25 }]}>›</Text>
-                            </Pressable>
-                        </View>
+                    {phased && (
+                        <ShadowBox contentBackgroundColor="#fff" shadowColor={PAGE.quest.primary[0]} shadowBorderRadius={16} style={{ marginBottom: phase?.endDate ? 4 : 8 }}>
+                            <View style={styles.pager}>
+                                <Pressable disabled={phaseIndex === 0} onPress={() => setPhaseIndex(i => i - 1)} hitSlop={12}>
+                                    <Text style={[styles.arrow, phaseIndex === 0 && { opacity: 0.25 }]}>‹</Text>
+                                </Pressable>
+                                <Text style={globalStyles.h4}>{`${phase?.name ?? ''}  ·  ${phaseIndex + 1} of ${phases.length}`}</Text>
+                                <Pressable disabled={phaseIndex >= phases.length - 1} onPress={() => setPhaseIndex(i => i + 1)} hitSlop={12}>
+                                    <Text style={[styles.arrow, phaseIndex >= phases.length - 1 && { opacity: 0.25 }]}>›</Text>
+                                </Pressable>
+                            </View>
+                        </ShadowBox>
                     )}
-                    {quest.hasPhases && phase?.endDate && (
-                        <Text style={styles.phaseEnd}>Ends {formatDisplayDate(new Date(phase.endDate))}</Text>
+                    {phased && phase?.endDate && (
+                        <Text style={[globalStyles.label, { textAlign: 'center', marginBottom: 10 }]}>
+                            Ends {formatDisplayDate(new Date(phase.endDate))}
+                        </Text>
                     )}
 
                     {/* goals — habits + one-time tasks, unified */}
-                    {(!quest.hasPhases || phases.length > 0) && (
-                        <>
-                            {goals.length > 0 && <Text style={styles.section}>Goals</Text>}
-                            {goals.map(g => {
-                                const done = (g.completionHistory ?? []).includes(todayStr);
-                                return (
-                                    <Pressable key={g.id} onPress={() => toggleGoal(g)}>
-                                        <ShadowBox style={styles.itemWrap} contentBackgroundColor="#fff" contentBorderRadius={14}>
-                                            <View style={styles.item}>
-                                                <View style={[styles.check, done && styles.checkDone]}>
-                                                    {done && <Text style={styles.checkMark}>✓</Text>}
-                                                </View>
-                                                <Text style={styles.itemIcon}>{g.icon || '✦'}</Text>
-                                                <Text style={[styles.itemName, done && styles.itemDone]} numberOfLines={1}>{g.name}</Text>
-                                                <Text style={styles.freq}>{isTask(g) ? 'Task' : g.frequency}</Text>
-                                            </View>
-                                        </ShadowBox>
-                                    </Pressable>
-                                );
-                            })}
-                            {goals.length === 0 && <Text style={styles.emptyGoals}>No goals yet.</Text>}
+                    {goals.length > 0 && <Text style={[globalStyles.label, styles.section]}>GOALS</Text>}
+                    {goals.map(renderGoal)}
+                    {goals.length === 0 && <Text style={[globalStyles.body2, { opacity: 0.5, marginLeft: 4 }]}>No goals yet.</Text>}
 
-                            {/* add goal */}
-                            <Pressable style={styles.addBtn} onPress={() => addGoal(phase?.id ?? null)}>
-                                <Text style={styles.addText}>+ Add goal</Text>
-                            </Pressable>
+                    {pillButton('+ Add goal', () => addGoal(phase?.id ?? null))}
+
+                    {/* loose goals not yet sorted into a phase */}
+                    {phased && unassigned.length > 0 && (
+                        <>
+                            <Text style={[globalStyles.label, styles.section]}>NOT IN A PHASE</Text>
+                            {unassigned.map(renderGoal)}
                         </>
                     )}
 
-                    {/* add phase */}
-                    {quest.hasPhases && (
-                        <Pressable style={styles.addPhaseBtn} onPress={createPhase}>
-                            <Text style={styles.addPhaseText}>+ Add phase</Text>
-                        </Pressable>
-                    )}
+                    {/* add phase — Main quests only */}
+                    {quest.type === 'main' && pillButton('+ Add phase', () => setPhaseModalOpen(true), true)}
 
                     {/* delete */}
                     <Pressable style={styles.deleteBtn} onPress={confirmDelete}>
-                        <Text style={styles.deleteText}>Delete quest</Text>
+                        <Text style={[globalStyles.body2, { color: '#FF7A7A' }]}>Delete quest</Text>
                     </Pressable>
                 </ScrollView>
             </PageContainer>
+
+            <AddPhaseModal
+                visible={phaseModalOpen}
+                looseGoals={looseGoals}
+                defaultName={`Phase ${phases.length + 1}`}
+                onClose={() => setPhaseModalOpen(false)}
+                onCreate={createPhaseWithGoals}
+            />
         </AppLinearGradient>
     );
 }
 
 const styles = StyleSheet.create({
     center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    hint: { fontFamily: 'p3', fontSize: 14, opacity: 0.6 },
-    title: { fontFamily: 'p1', fontSize: 24, marginBottom: 16 },
-    badgeRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 4, marginBottom: 10 },
-    badge: { backgroundColor: PAGE.quest.primary[0], paddingHorizontal: 12, paddingVertical: 4, borderRadius: 12 },
-    badgeText: { fontFamily: 'p1', fontSize: 12, color: '#fff' },
-    meta: { fontFamily: 'p2', fontSize: 13, opacity: 0.7 },
-    emptyGoals: { fontFamily: 'p3', fontSize: 13, opacity: 0.5, marginTop: 8, marginLeft: 4 },
-    pager: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#fff', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 10, marginBottom: 6 },
+    badgeRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4, marginBottom: 12 },
+    section: { marginTop: 18, marginBottom: 8, marginLeft: 4 },
+    pager: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 18, paddingVertical: 12 },
     arrow: { fontSize: 26, fontFamily: 'p1' },
-    pagerLabel: { fontFamily: 'p1', fontSize: 15 },
-    phaseEnd: { fontFamily: 'p3', fontSize: 12, opacity: 0.6, textAlign: 'center', marginBottom: 10 },
-    section: { fontFamily: 'p1', fontSize: 13, opacity: 0.55, marginTop: 16, marginBottom: 8, marginLeft: 4, textTransform: 'uppercase' },
-    itemWrap: { marginBottom: 10 },
-    item: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: 14, paddingVertical: 12 },
-    itemIcon: { fontSize: 18 },
-    itemName: { flex: 1, fontFamily: 'p2', fontSize: 15 },
+    item: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 12 },
+    icon: { width: 30, height: 30, resizeMode: 'contain' },
     itemDone: { textDecorationLine: 'line-through', opacity: 0.5 },
-    freq: { fontFamily: 'p3', fontSize: 12, opacity: 0.6 },
+    freqBubble: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, borderWidth: 1, borderColor: PAGE.quest.primary[0], backgroundColor: PAGE.quest.primary[1] },
     check: { width: 22, height: 22, borderRadius: 7, borderWidth: 2, borderColor: PAGE.quest.primary[0], alignItems: 'center', justifyContent: 'center' },
     checkDone: { backgroundColor: PAGE.quest.primary[0] },
     checkMark: { color: '#fff', fontSize: 13, fontFamily: 'p1' },
-    addBtn: { marginTop: 14, backgroundColor: '#fff', borderRadius: 14, paddingVertical: 12, alignItems: 'center', borderWidth: 2, borderColor: PAGE.quest.primary[0] },
-    addText: { fontFamily: 'p1', fontSize: 14, color: '#000' },
-    addPhaseBtn: { marginTop: 20, backgroundColor: PAGE.quest.primary[1], borderRadius: 14, paddingVertical: 12, alignItems: 'center' },
-    addPhaseText: { fontFamily: 'p1', fontSize: 14 },
     deleteBtn: { marginTop: 30, alignItems: 'center', paddingVertical: 10 },
-    deleteText: { fontFamily: 'p2', fontSize: 14, color: '#FF7A7A' },
 });

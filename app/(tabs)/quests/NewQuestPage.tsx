@@ -23,7 +23,6 @@ export default function NewQuestPage() {
 
     const [name, setName] = useState('');
     const [type, setType] = useState<QuestType>('main');
-    const [hasPhases, setHasPhases] = useState(false);
     const [endDateEnabled, setEndDateEnabled] = useState(false);
     const [endDate, setEndDate] = useState<Date | null>(null);
     const [saving, setSaving] = useState(false);
@@ -35,7 +34,7 @@ export default function NewQuestPage() {
             const quest = await createQuest(user.id, {
                 name: name.trim(),
                 type,
-                hasPhases,
+                hasPhases: false, // phases are added later on the quest detail (Main quests)
                 endDate: endDate ? formatLocalDate(endDate) : null,
             });
             router.replace(`/(tabs)/quests/${quest.id}` as any);
@@ -73,7 +72,7 @@ export default function NewQuestPage() {
                                 return (
                                     <Pressable
                                         key={t}
-                                        onPress={() => { setType(t); if (t === 'side') setHasPhases(false); }}
+                                        onPress={() => setType(t)}
                                         style={{ flex: 1, maxWidth: 100 }}
                                     >
                                         <ShadowBox
@@ -90,26 +89,6 @@ export default function NewQuestPage() {
                                 );
                             })}
                         </View>
-
-                        {/* phases — Main quests only; Side quests are a loose list */}
-                        {type === 'main' && (
-                            <>
-                                <Text style={[globalStyles.label, { marginBottom: 10 }]}>PHASES</Text>
-                                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 20 }}>
-                                    <View style={{ flex: 1, paddingRight: 10 }}>
-                                        <Text style={globalStyles.body}>Break into phases?</Text>
-                                        <Text style={[globalStyles.body2, { fontSize: 12, opacity: 0.55, marginTop: 2 }]}>
-                                            Ordered stages of habits & goals
-                                        </Text>
-                                    </View>
-                                    <Switch
-                                        value={hasPhases}
-                                        onValueChange={setHasPhases}
-                                        trackColor={{ true: PAGE.quest.primary[0], false: '#ccc' }}
-                                    />
-                                </View>
-                            </>
-                        )}
 
                         {/* end date — a question + toggle, revealing the date picker when on */}
                         <Text style={[globalStyles.label, { marginBottom: 10 }]}>END DATE</Text>

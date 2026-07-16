@@ -927,65 +927,8 @@ export default function NewHabitPage() {
                                         </>
                                     )}
 
-                                    {/* end date — for any repeating frequency */}
-                                    {selectedFrequency !== 'None' && (
-                                        <>
-                                            <Text style={globalStyles.label}>END DATE</Text>
-                                            <Pressable onPress={() => setShowEndDateCalendar(!showEndDateCalendar)}>
-                                                <ShadowBox
-                                                    contentBackgroundColor="#fff"
-                                                    contentBorderRadius={10}
-                                                >
-                                                    <View style={{
-                                                        flexDirection: 'row',
-                                                        alignItems: 'center',
-                                                        gap: 10,
-                                                        paddingVertical: 5,
-                                                        paddingHorizontal: 15,
-                                                    }}>
-                                                        <Image
-                                                            source={SYSTEM_ICONS.calendar}
-                                                            style={{ width: 17, height: 17 }}
-                                                        />
-                                                        <Text style={globalStyles.body1}>
-                                                            {getEndDateLabel(endDate)}
-                                                        </Text>
-                                                    </View>
-                                                </ShadowBox>
-                                            </Pressable>
-
-                                            {showEndDateCalendar && (
-                                                <View style={{ marginVertical: 5, gap: 10 }}>
-                                                    {endDate && (
-                                                        <Pressable onPress={() => { setEndDate(null); setShowEndDateCalendar(false); }}>
-                                                            <ShadowBox
-                                                                contentBackgroundColor={BUTTON_COLORS.Cancel}
-                                                                shadowBorderRadius={15}
-                                                            >
-                                                                <View style={{ paddingVertical: 5, alignItems: 'center' }}>
-                                                                    <Text style={globalStyles.body1}>Remove end date</Text>
-                                                                </View>
-                                                            </ShadowBox>
-                                                        </Pressable>
-                                                    )}
-                                                    <ShadowBox>
-                                                        <SimpleCalendar
-                                                            selectedDate={endDate || startDate}
-                                                            onSelectDate={(date) => {
-                                                                if (date > startDate) {
-                                                                    setEndDate(date);
-                                                                    setShowEndDateCalendar(false);
-                                                                } else {
-                                                                    Alert.alert('Invalid date', 'End date must be after the start date.');
-                                                                }
-                                                            }}
-                                                            selectedDateColor={PAGE.habits.primary[0]}
-                                                        />
-                                                    </ShadowBox>
-                                                </View>
-                                            )}
-                                        </>
-                                    )}
+                                    {/* end date removed — a habit's lifespan is now driven by
+                                        its quest phase (scope), not a manual per-habit end date */}
                                 </View>
 
                                 {!isWeeklyGoal && <View style={{ gap: 10 }}>

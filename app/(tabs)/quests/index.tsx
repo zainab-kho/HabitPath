@@ -9,6 +9,7 @@ import { Quest } from '@/types/Quest';
 
 import { PAGE } from '@/constants/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
+import { globalStyles } from '@/styles';
 import { AppLinearGradient } from '@/ui/AppLinearGradient';
 import EmptyStateView from '@/ui/EmptyStateView';
 import PageContainer from '@/ui/PageContainer';
@@ -74,18 +75,27 @@ function QuestCard({ quest, onPress }: { quest: Quest; onPress: () => void }) {
     const phaseCount = quest.phases?.length ?? 0;
     const done = !!quest.completedAt;
     return (
-        <ShadowBox shadowOffset={{ x: 0, y: 3 }} shadowColor={PAGE.quest.primary[0]} style={styles.cardWrap}>
+        <ShadowBox
+            contentBackgroundColor="#fff"
+            contentBorderColor="#000"
+            contentBorderWidth={1}
+            shadowColor={PAGE.quest.primary[0]}
+            shadowBorderRadius={16}
+            style={styles.cardWrap}
+        >
             <Pressable onPress={onPress} style={styles.card}>
                 <View style={styles.cardTop}>
-                    <Text style={styles.cardTitle} numberOfLines={1}>{quest.name || 'Untitled quest'}</Text>
-                    <View style={[styles.badge, { backgroundColor: quest.type === 'main' ? PAGE.quest.primary[0] : '#ddd' }]}>
-                        <Text style={styles.badgeText}>{quest.type === 'main' ? 'Main' : 'Side'}</Text>
+                    <Text style={[globalStyles.h4, { flex: 1 }]} numberOfLines={1}>{quest.name || 'Untitled quest'}</Text>
+                    <View style={[styles.badge, { backgroundColor: quest.type === 'main' ? PAGE.quest.primary[0] : PAGE.quest.primary[1] }]}>
+                        <Text style={[globalStyles.label, { color: quest.type === 'main' ? '#fff' : '#000', opacity: 1 }]}>
+                            {quest.type === 'main' ? 'MAIN' : 'SIDE'}
+                        </Text>
                     </View>
                 </View>
                 <View style={styles.metaRow}>
-                    {quest.hasPhases && <Text style={styles.meta}>{phaseCount} {phaseCount === 1 ? 'phase' : 'phases'}</Text>}
-                    {quest.endDate && <Text style={styles.meta}>· by {formatDisplayDate(new Date(quest.endDate))}</Text>}
-                    {done && <Text style={[styles.meta, { color: '#54d697' }]}>· Completed</Text>}
+                    {phaseCount > 0 && <Text style={[globalStyles.label, { opacity: 0.7 }]}>{phaseCount} {phaseCount === 1 ? 'phase' : 'phases'}</Text>}
+                    {quest.endDate && <Text style={[globalStyles.label, { opacity: 0.7 }]}>· by {formatDisplayDate(new Date(quest.endDate))}</Text>}
+                    {done && <Text style={[globalStyles.label, { color: '#54d697', opacity: 1 }]}>· Completed</Text>}
                 </View>
             </Pressable>
         </ShadowBox>
@@ -94,12 +104,9 @@ function QuestCard({ quest, onPress }: { quest: Quest; onPress: () => void }) {
 
 const styles = StyleSheet.create({
     center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    cardWrap: { marginBottom: 12 },
+    cardWrap: { marginBottom: 14 },
     card: { paddingVertical: 16, paddingHorizontal: 18, gap: 8 },
     cardTop: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 },
-    cardTitle: { flex: 1, fontFamily: 'p1', fontSize: 17 },
-    badge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 12 },
-    badgeText: { fontFamily: 'p2', fontSize: 12, color: '#000' },
+    badge: { paddingHorizontal: 10, paddingVertical: 3, borderRadius: 12, borderWidth: 1, borderColor: '#000' },
     metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' },
-    meta: { fontFamily: 'p2', fontSize: 13, opacity: 0.7 },
 });

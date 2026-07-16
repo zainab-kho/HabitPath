@@ -125,16 +125,23 @@ export async function saveTempSelectedDays(
   }
 }
 
-// One-time habits don't repeat, so "move to a different day" simply reschedules
-// them by rewriting their start date (their only due date).
+// Re-anchors a habit by rewriting its start date. Used by "move to a different
+// day": for one-time habits it just reschedules the single due date; for
+// every-N-days habits it shifts the whole interval grid.
+// Optionally rewrites completion_history too, so a re-anchor can drop stale
+// completions that no longer line up with the new grid.
 export async function saveHabitStartDate(
   habitId: string,
   userId: string,
   startDate: string,
+  completionHistory?: string[],
 ): Promise<void> {
+  const update: { start_date: string; completion_history?: string[] } = { start_date: startDate };
+  if (completionHistory) update.completion_history = completionHistory;
+
   const { error } = await supabase
     .from('habits')
-    .update({ start_date: startDate })
+    .update(update)
     .eq('id', habitId)
     .eq('user_id', userId);
 

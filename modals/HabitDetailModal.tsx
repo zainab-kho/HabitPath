@@ -16,7 +16,7 @@ import ShadowBox from '@/ui/ShadowBox';
 import { globalStyles } from '@/styles';
 import { HabitWithStatus } from '@/hooks/useHabits';
 import { saveHabitStartDate, saveTempSelectedDays } from '@/hooks/useDailyHabitOverrides';
-import { getWeekDatesForDate, getHabitDate, parseLocalDate, formatLocalDate } from '@/utils/dateUtils';
+import { getWeekDatesForDate, getHabitDate, parseLocalDate, formatLocalDate, daysBetween } from '@/utils/dateUtils';
 import { matchesNthWeekday } from '@/utils/habitUtils';
 
 interface HabitDetailModalProps {
@@ -97,6 +97,33 @@ function getNextAssignedDate(habit: HabitWithStatus, resetHour: number, resetMin
         const next = new Date(habitToday.getFullYear(), habitToday.getMonth(), startDay);
         if (formatLocalDate(next) <= todayStr) next.setMonth(next.getMonth() + 1);
         return fmt(next);
+    }
+
+    // custom "every N days": interval grid anchored to startDate, but the "next
+    // due" counts from the last completion ("every N days after last completed").
+    if (habit.frequency === 'Custom' && habit.customType === 'daily') {
+        const interval = habit.customInterval && habit.customInterval > 0 ? habit.customInterval : 1;
+        const start = parseLocalDate(habit.startDate);
+        const completed = new Set(habit.completionHistory ?? []);
+
+        // due today if today is on the grid and not yet checked off
+        const todayDiff = daysBetween(start, habitToday);
+        if (todayDiff >= 0 && todayDiff % interval === 0 && !completed.has(todayStr)) return 'Today';
+
+        // otherwise count forward from the later of today / the last completion,
+        // so completing an occurrence advances the next due date
+        const lastCompletion = habit.completionHistory?.length
+            ? [...habit.completionHistory].sort().at(-1)!
+            : undefined;
+        const refStr = lastCompletion && lastCompletion > todayStr ? lastCompletion : todayStr;
+        const ref = parseLocalDate(refStr);
+        for (let i = 1; i <= interval + 1; i++) {
+            const next = new Date(ref);
+            next.setDate(ref.getDate() + i);
+            const diff = daysBetween(start, next);
+            if (diff >= 0 && diff % interval === 0) return fmt(next);
+        }
+        return 'N/A';
     }
 
     // daily (or weekly with every day selected)
@@ -502,6 +529,90 @@ export default function HabitDetailModal({ visible, habit, resetHour, resetMin, 
                                                         onPress={async () => {
                                                             if (!user || !target || isCurrent) return;
                                                             await saveHabitStartDate(habit.id, user.id, target);
+                                                            await AsyncStorage.setItem('@habits_dirty', '1');
+                                                            setMovingDay(false);
+                                                            onUpdate();
+                                                            onClose();
+                                                        }}
+                                                        style={{ width: 36, opacity: isCurrent ? 0.5 : 1 }}
+                                                    >
+                                                        <ShadowBox
+                                                            contentBackgroundColor={isCurrent ? COLORS.PrimaryLight : '#fff'}
+                                                            contentBorderColor={isCurrent ? '#000' : COLORS.PrimaryLight}
+                                                            shadowBorderColor={isCurrent ? '#000' : COLORS.PrimaryLight}
+                                                            shadowColor={isCurrent ? '#000' : COLORS.PrimaryLight}
+                                                        >
+                                                            <View style={{ paddingVertical: 5, alignItems: 'center' }}>
+                                                                <Text style={[globalStyles.body1, { fontSize: 13 }]}>
+                                                                    {DAY_ABBREV[day]}
+                                                                </Text>
+                                                            </View>
+                                                        </ShadowBox>
+                                                    </Pressable>
+                                                );
+                                            });
+                                        })()}
+                                    </View>
+                                    <Pressable onPress={() => setMovingDay(false)} style={{ alignSelf: 'center' }}>
+                                        <ShadowBox
+                                            contentBackgroundColor={'#fff'}
+                                            contentBorderColor={COLORS.PrimaryLight}
+                                            shadowBorderColor={COLORS.PrimaryLight}
+                                            shadowColor={COLORS.PrimaryLight}
+                                        >
+                                            <View style={{ paddingVertical: 5, paddingHorizontal: 16, alignItems: 'center' }}>
+                                                <Text style={[globalStyles.body, { fontSize: 13 }]}>Cancel</Text>
+                                            </View>
+                                        </ShadowBox>
+                                    </Pressable>
+                                </View>
+                            )}
+                        </View>
+                    )}
+
+                    {/* move an "every N days" habit: re-anchors the interval grid to the
+                        chosen day this week (permanent — future repeats count from there) */}
+                    {showMore && habit.frequency === 'Custom' && habit.customType === 'daily' && habit.startDate && (
+                        <View style={{ paddingHorizontal: 20, paddingTop: 10, paddingBottom: 4 }}>
+                            {!movingDay ? (
+                                <Pressable onPress={() => setMovingDay(true)}>
+                                    <ShadowBox contentBackgroundColor={BUTTON_COLORS.Quiet}>
+                                        <View style={{ paddingVertical: 5, paddingHorizontal: 10, alignItems: 'center' }}>
+                                            <Text style={[globalStyles.body, { fontSize: 14 }]}>
+                                                Move to a different day
+                                            </Text>
+                                        </View>
+                                    </ShadowBox>
+                                </Pressable>
+                            ) : (
+                                <View style={{ gap: 20, marginTop: 10 }}>
+                                    <Text style={[globalStyles.label, { fontSize: 10, opacity: 0.5, textAlign: 'center', textTransform: 'uppercase' }]}>
+                                        Repeat every {habit.customInterval ?? 1} days from:
+                                    </Text>
+                                    <View style={{ flexDirection: 'row', justifyContent: 'center', flexWrap: 'wrap', gap: 8 }}>
+                                        {(() => {
+                                            // re-anchor to a day in the CURRENT week
+                                            const todayStr = getHabitDate(new Date(), resetHour, resetMin);
+                                            const weekDates = getWeekDatesForDate(todayStr);
+                                            const currentAnchorDay = weekdayOf(habit.startDate);
+                                            return ALL_DAYS.map(day => {
+                                                const target = weekDates.find(d => weekdayOf(d) === day);
+                                                const isCurrent = day === currentAnchorDay;
+                                                return (
+                                                    <Pressable
+                                                        key={day}
+                                                        onPress={async () => {
+                                                            if (!user || !target || isCurrent) return;
+                                                            // drop completions that no longer fit the new grid, but keep
+                                                            // genuine older history (dates before the new anchor)
+                                                            const interval = habit.customInterval && habit.customInterval > 0 ? habit.customInterval : 1;
+                                                            const anchor = parseLocalDate(target);
+                                                            const cleanedHistory = (habit.completionHistory ?? []).filter(d => {
+                                                                if (d < target) return true;
+                                                                const diff = daysBetween(anchor, parseLocalDate(d));
+                                                                return diff >= 0 && diff % interval === 0;
+                                                            });
+                                                            await saveHabitStartDate(habit.id, user.id, target, cleanedHistory);
                                                             await AsyncStorage.setItem('@habits_dirty', '1');
                                                             setMovingDay(false);
                                                             onUpdate();

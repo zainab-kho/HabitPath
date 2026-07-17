@@ -12,6 +12,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { syncPendingJournalEntries } from '@/lib/journal/offlineSync';
 import { decryptEntryFields, getJournalKey, hasVault } from '@/lib/journal/entryCrypto';
+import { migrateJournalEntries } from '@/lib/journal/migrateJournal';
+import { getCache, setCache } from '@/lib/journal/journalCacheStore';
 import { JournalEntry } from '@/types/JournalEntry';
 
 import { COLORS, MOOD_COLORS, PAGE } from '@/constants/colors';
@@ -170,16 +172,13 @@ export default function JournalPage() {
       setIsLoading(true);
 
       // 1) load cache immediately (includes any offline-pending entries)
-      const cached = await AsyncStorage.getItem('@journal_entries');
-      if (cached) {
-        const cachedEntries: JournalEntry[] = JSON.parse(cached);
-        if (cachedEntries?.length) {
-          const parsed = cachedEntries.map(e => ({
-            ...e,
-            date: parseLocalDate(e.date as any),
-          }));
-          groupAndSetEntries(parsed);
-        }
+      const cachedEntries: JournalEntry[] = await getCache(user.id);
+      if (cachedEntries?.length) {
+        const parsed = cachedEntries.map(e => ({
+          ...e,
+          date: parseLocalDate(e.date as any),
+        }));
+        groupAndSetEntries(parsed);
       }
 
       // 2) push any offline-saved entries now that we may have a connection
@@ -223,20 +222,25 @@ export default function JournalPage() {
       // 4) preserve any entries still pending sync so the server fetch never
       // clobbers an offline create/edit that hasn't uploaded yet — for a pending
       // edit we keep the LOCAL row over the (stale) server one
-      const afterSyncRaw = await AsyncStorage.getItem('@journal_entries');
-      const afterSync: any[] = afterSyncRaw ? JSON.parse(afterSyncRaw) : [];
+      const afterSync: any[] = await getCache(user.id);
       const pendingRows = afterSync.filter(e => e.pendingSync);
       const pendingIds = new Set(pendingRows.map(e => e.id));
       const serverKept = fresh.filter(e => !pendingIds.has(e.id));
 
       // cache: server rows we kept + pending rows (in their string-date cache shape)
-      await AsyncStorage.setItem('@journal_entries', JSON.stringify([...serverKept, ...pendingRows]));
+      await setCache(user.id, [...serverKept, ...pendingRows]);
 
       const merged: JournalEntry[] = [
         ...serverKept,
         ...pendingRows.map(e => ({ ...e, date: parseLocalDate(e.date) })),
       ];
       groupAndSetEntries(merged);
+
+      // background: encrypt any entries still stored as plaintext (idempotent —
+      // skips already-encrypted ones). Doesn't block or change what's on screen.
+      migrateJournalEntries(user.id)
+        .then(n => { if (n > 0) console.log(`[journal] encrypted ${n} existing entr${n === 1 ? 'y' : 'ies'}`); })
+        .catch(() => {});
     } catch (err) {
       console.error('loadEntries failed:', err);
     } finally {

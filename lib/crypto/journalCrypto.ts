@@ -181,7 +181,7 @@ export function base64ToBytes(str: string): Uint8Array {
 // Passphrase strength — the whole system rests on this, so we won't allow weak ones
 // ════════════════════════════════════════════════════════════════════════════
 
-export type Strength = { ok: boolean; label: 'Too short' | 'Weak' | 'Good' | 'Strong'; hint: string };
+export type Strength = { ok: boolean; label: 'Too short' | 'Weak' | 'Strong'; hint: string };
 
 /**
  * Suggest a strong, memorable passphrase: N random words from the wordlist,
@@ -221,22 +221,28 @@ export function generateRandomPassword(length = 20): string {
   return out;
 }
 
-/** A simple, honest strength gate: reward length and multiple words. */
+/**
+ * A strict gate — weak keys are NOT allowed. Accepted only if it's a proper
+ * random-style password (12+ chars with a real mix of character types) or a
+ * genuine multi-word passphrase (4+ words). Anything softer is rejected.
+ */
 export function passphraseStrength(passphrase: string): Strength {
   const p = passphrase.trim();
   const len = p.length;
   const words = p.split(/\s+/).filter(Boolean).length;
+  const classes =
+    (/[a-z]/.test(p) ? 1 : 0) +
+    (/[A-Z]/.test(p) ? 1 : 0) +
+    (/[0-9]/.test(p) ? 1 : 0) +
+    (/[^a-zA-Z0-9\s]/.test(p) ? 1 : 0);
 
-  if (len < 8) {
-    return { ok: false, label: 'Too short', hint: 'Aim for 4 words or 12+ characters.' };
+  if (len < 12) {
+    return { ok: false, label: 'Too short', hint: 'Use at least 12 characters.' };
   }
-  if (words >= 5 || len >= 20) {
-    return { ok: true, label: 'Strong', hint: 'Great — write this down somewhere safe.' };
+  if ((len >= 12 && classes >= 3) || words >= 4) {
+    return { ok: true, label: 'Strong', hint: 'Great — keep this safe. It can’t be reset.' };
   }
-  if (words >= 4 || len >= 12) {
-    return { ok: true, label: 'Good', hint: 'This works. Remember it — it cannot be reset.' };
-  }
-  return { ok: false, label: 'Weak', hint: 'Add more — try 4 random words like "river candle mostly fox".' };
+  return { ok: false, label: 'Weak', hint: 'Add a real mix of letters, numbers, and symbols.' };
 }
 
 // ════════════════════════════════════════════════════════════════════════════

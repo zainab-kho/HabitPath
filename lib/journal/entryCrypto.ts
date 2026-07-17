@@ -44,6 +44,16 @@ export function decryptEntryFields(fields: Fields, key: Uint8Array | null): { en
   return { entry: dec(fields.entry), mood: dec(fields.mood) };
 }
 
+/**
+ * Encrypt a single field ONLY if it's still plaintext. Already-encrypted values
+ * pass through untouched — this is what makes the migration safe to re-run and
+ * guarantees we never double-encrypt.
+ */
+export function encryptFieldIfPlaintext(v: string | null | undefined, key: Uint8Array): string | null {
+  if (v == null || v === '' || v.startsWith(ENC)) return v ?? null;
+  return ENC + encryptText(v, key);
+}
+
 /** The master key for this user, or null if encryption is off / this device is locked. */
 export async function getJournalKey(userId: string): Promise<Uint8Array | null> {
   return Vault.getMasterKey(userId);

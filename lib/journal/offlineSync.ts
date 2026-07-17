@@ -5,11 +5,11 @@
 // keeps `pendingSync: true` and is retried the next time the journal loads with
 // a connection. This is what makes "saved locally, will sync later" actually true.
 
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@/lib/supabase';
 import { encryptEntryFields, getJournalKey } from '@/lib/journal/entryCrypto';
+import { getCache, setCache, JOURNAL_CACHE_KEY } from '@/lib/journal/journalCacheStore';
 
-export const JOURNAL_CACHE_KEY = '@journal_entries';
+export { JOURNAL_CACHE_KEY };
 
 // Loosely-typed cache row — journal entries are cached as plain JSON with the
 // date stored as a 'YYYY-MM-DD' string (not a Date). Offline-saved rows carry
@@ -30,14 +30,10 @@ export type CachedJournalRow = {
   pendingSync?: boolean;
 };
 
-async function readCache(): Promise<CachedJournalRow[]> {
-  const raw = await AsyncStorage.getItem(JOURNAL_CACHE_KEY);
-  return raw ? JSON.parse(raw) : [];
-}
-
-async function writeCache(rows: CachedJournalRow[]): Promise<void> {
-  await AsyncStorage.setItem(JOURNAL_CACHE_KEY, JSON.stringify(rows));
-}
+// The cache is stored encrypted (whole-blob); getCache/setCache handle that, so
+// the rows we work with here are always plaintext in memory.
+const readCache = (userId: string) => getCache(userId) as Promise<CachedJournalRow[]>;
+const writeCache = (userId: string, rows: CachedJournalRow[]) => setCache(userId, rows);
 
 // Build the Supabase row shape from a cached entry. `key` encrypts the sensitive
 // fields (entry + mood) before they leave the device; null = encryption off.
@@ -69,20 +65,21 @@ function toSupabaseRow(r: CachedJournalRow, userId: string, key: Uint8Array | nu
  */
 export async function upsertJournalCacheRow(
   row: Partial<CachedJournalRow> & { id: string },
+  userId: string,
 ): Promise<void> {
-  const rows = await readCache();
+  const rows = await readCache(userId);
   const idx = rows.findIndex(r => r.id === row.id);
   if (idx >= 0) {
     rows[idx] = { ...rows[idx], ...row };
   } else {
     rows.push(row as CachedJournalRow);
   }
-  await writeCache(rows);
+  await writeCache(userId, rows);
 }
 
 /** Flip a single cached entry to synced (after a successful online insert). */
-export async function markJournalEntrySynced(id: string): Promise<void> {
-  const rows = await readCache();
+export async function markJournalEntrySynced(id: string, userId: string): Promise<void> {
+  const rows = await readCache(userId);
   let changed = false;
   const next = rows.map(r => {
     if (r.id === id && r.pendingSync) {
@@ -91,7 +88,7 @@ export async function markJournalEntrySynced(id: string): Promise<void> {
     }
     return r;
   });
-  if (changed) await writeCache(next);
+  if (changed) await writeCache(userId, next);
 }
 
 /**
@@ -100,7 +97,7 @@ export async function markJournalEntrySynced(id: string): Promise<void> {
  * creates) and edits to existing ones. Returns the count still pending.
  */
 export async function syncPendingJournalEntries(userId: string): Promise<number> {
-  const rows = await readCache();
+  const rows = await readCache(userId);
   const pending = rows.filter(r => r.pendingSync);
   if (pending.length === 0) return 0;
 
@@ -120,6 +117,6 @@ export async function syncPendingJournalEntries(userId: string): Promise<number>
     }
   }
 
-  if (changed) await writeCache(rows);
+  if (changed) await writeCache(userId, rows);
   return stillPending;
 }

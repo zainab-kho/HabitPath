@@ -18,6 +18,7 @@ import { ScrollView as GHScrollView } from 'react-native-gesture-handler';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { markJournalEntrySynced } from '@/lib/journal/offlineSync';
+import { getCache, setCache } from '@/lib/journal/journalCacheStore';
 import { encryptEntryFields, getJournalKey } from '@/lib/journal/entryCrypto';
 import { JournalEntry } from '@/types/JournalEntry';
 import { COLORS, PAGE } from '@/constants/colors';
@@ -175,10 +176,9 @@ export default function JournalPage() {
                 created_at: now.toISOString(),
                 pendingSync: true,
             };
-            const existing = await AsyncStorage.getItem('@journal_entries');
-            const allEntries: any[] = existing ? JSON.parse(existing) : [];
+            const allEntries: any[] = await getCache(user.id);
             allEntries.push(cacheEntry);
-            await AsyncStorage.setItem('@journal_entries', JSON.stringify(allEntries));
+            await setCache(user.id, allEntries);
 
             console.log('**LOG: Entry saved to AsyncStorage (cache)');
 
@@ -215,7 +215,7 @@ export default function JournalPage() {
                 );
             } else {
                 // reached the cloud — clear the pending flag so it isn't re-synced
-                await markJournalEntrySynced(id);
+                await markJournalEntrySynced(id, user.id);
                 console.log('**LOG: Saved to Supabase (cloud)');
             }
 

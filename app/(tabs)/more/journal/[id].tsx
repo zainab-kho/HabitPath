@@ -22,6 +22,7 @@ import SongCard from '@/components/journal/SongCard';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { markJournalEntrySynced, upsertJournalCacheRow } from '@/lib/journal/offlineSync';
+import { getCache, setCache } from '@/lib/journal/journalCacheStore';
 import { encryptEntryFields, decryptEntryFields, getJournalKey } from '@/lib/journal/entryCrypto';
 import MoodPickerModal from '@/modals/MoodPickerModal';
 import SongPickerModal, { SongData } from '@/modals/SongPickerModal';
@@ -135,9 +136,8 @@ export default function JournalEntryDetail() {
 
     try {
       // try cache first
-      const cached = await AsyncStorage.getItem('@journal_entries');
-      if (cached) {
-        const entries: JournalEntry[] = JSON.parse(cached);
+      const entries: JournalEntry[] = await getCache(user.id);
+      {
         const found = entries.find(e => e.id === id);
         if (found) {
           // locked entries need unlock proof — bounce to the PIN before showing anything
@@ -263,7 +263,7 @@ export default function JournalEntryDetail() {
         book: editedBook ?? null,
         show: editedShow ?? null,
         pendingSync: true,
-      });
+      }, user.id);
 
       // 2) reflect changes locally right away
       setEntry(prev => prev ? {
@@ -305,7 +305,7 @@ export default function JournalEntryDetail() {
         console.error('Save failed (will retry):', error);
         Alert.alert('Saved Locally', 'Your changes are saved on this device and will sync when you have a connection.');
       } else {
-        await markJournalEntrySynced(entry.id);
+        await markJournalEntrySynced(entry.id, user.id);
       }
     } catch (err) {
       console.error('Save failed (will retry):', err);
@@ -339,13 +339,9 @@ export default function JournalEntryDetail() {
               if (error) throw error;
 
               // remove from cache only after the server confirms the delete
-              const cached = await AsyncStorage.getItem('@journal_entries');
-              if (cached) {
-                const entries: JournalEntry[] = JSON.parse(cached);
-                await AsyncStorage.setItem(
-                  '@journal_entries',
-                  JSON.stringify(entries.filter(e => e.id !== id))
-                );
+              if (user) {
+                const entries = await getCache(user.id);
+                await setCache(user.id, entries.filter((e: any) => e.id !== id));
               }
 
               router.back();
@@ -378,14 +374,8 @@ export default function JournalEntryDetail() {
         .eq('user_id', user.id);
       if (error) throw error;
 
-      const cached = await AsyncStorage.getItem('@journal_entries');
-      if (cached) {
-        const entries: any[] = JSON.parse(cached);
-        await AsyncStorage.setItem(
-          '@journal_entries',
-          JSON.stringify(entries.map(e => e.id === entry.id ? { ...e, starred: newValue } : e))
-        );
-      }
+      const entries = await getCache(user.id);
+      await setCache(user.id, entries.map((e: any) => e.id === entry.id ? { ...e, starred: newValue } : e));
     } catch (err) {
       console.error('Failed to save star:', err);
       // revert on failure

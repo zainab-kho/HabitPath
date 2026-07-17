@@ -11,6 +11,7 @@ import SongCard from '@/components/journal/SongCard';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { syncPendingJournalEntries } from '@/lib/journal/offlineSync';
+import { decryptEntryFields, getJournalKey, hasVault } from '@/lib/journal/entryCrypto';
 import { JournalEntry } from '@/types/JournalEntry';
 
 import { COLORS, MOOD_COLORS, PAGE } from '@/constants/colors';
@@ -39,6 +40,8 @@ export default function JournalPage() {
   const [entriesByMonth, setEntriesByMonth] = useState<Record<string, JournalEntry[]>>({});
   const [isLoading, setIsLoading] = useState(true);
   const [isUnlocked, setIsUnlocked] = useState(false);
+  // encryption is on but this device hasn't been unlocked yet → gate the journal
+  const [encLocked, setEncLocked] = useState(false);
 
   const [expandedIds, setExpandedIds] = useState<Record<string, boolean>>({});
 
@@ -154,6 +157,15 @@ export default function JournalPage() {
       return;
     }
 
+    // if encryption is on but this device is locked, don't load/save anything —
+    // show the unlock gate instead (prevents plaintext writes and blank reads)
+    if ((await hasVault(user.id)) && !(await getJournalKey(user.id))) {
+      setEncLocked(true);
+      setIsLoading(false);
+      return;
+    }
+    setEncLocked(false);
+
     try {
       setIsLoading(true);
 
@@ -189,19 +201,24 @@ export default function JournalPage() {
         return; // stay on cache (still holds any pending entries)
       }
 
-      const fresh: JournalEntry[] = (data || []).map(row => ({
-        id: row.id,
-        date: parseLocalDate(row.date),
-        time: row.time,
-        mood: row.mood,
-        location: row.location ?? undefined,
-        lock: row.is_locked ?? undefined,
-        entry: row.entry ?? undefined,
-        song: row.song ?? undefined,
-        book: row.book ?? undefined,
-        show: row.show ?? undefined,
-        starred: row.is_starred ?? false,
-      }));
+      // decrypt the sensitive fields on the way in (legacy plaintext passes through)
+      const key = await getJournalKey(user.id);
+      const fresh: JournalEntry[] = (data || []).map(row => {
+        const dec = decryptEntryFields({ entry: row.entry ?? null, mood: row.mood ?? null }, key);
+        return {
+          id: row.id,
+          date: parseLocalDate(row.date),
+          time: row.time,
+          mood: dec.mood ?? undefined,
+          location: row.location ?? undefined,
+          lock: row.is_locked ?? undefined,
+          entry: dec.entry ?? undefined,
+          song: row.song ?? undefined,
+          book: row.book ?? undefined,
+          show: row.show ?? undefined,
+          starred: row.is_starred ?? false,
+        };
+      });
 
       // 4) preserve any entries still pending sync so the server fetch never
       // clobbers an offline create/edit that hasn't uploaded yet — for a pending
@@ -377,6 +394,29 @@ export default function JournalPage() {
         : part
     );
   }, [query, searchQuery]);
+
+  // encryption is on but this device is locked → show the unlock gate
+  if (encLocked) {
+    return (
+      <AppLinearGradient variant="journal.background">
+        <PageContainer showBottomNav={!fromDrawer}>
+          <PageHeader title="Journal" showBackButton={fromDrawer} />
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', gap: 14, paddingHorizontal: 36, paddingBottom: 60 }}>
+            <Image source={SYSTEM_ICONS.lock} style={{ width: 34, height: 34, tintColor: PAGE.journal.primary[0] }} />
+            <Text style={{ fontFamily: 'p2', fontSize: 19, color: '#000', textAlign: 'center' }}>Your journal is locked</Text>
+            <Text style={{ fontFamily: 'p3', fontSize: 15, color: '#3a3646', textAlign: 'center', lineHeight: 22 }}>
+              Enter your passphrase to unlock it on this device.
+            </Text>
+            <ShadowBox contentBackgroundColor={PAGE.journal.primary[0]} shadowBorderRadius={20} style={{ marginTop: 4 }}>
+              <Pressable onPress={() => router.push('/(tabs)/more/journal/SetUpEncryption')} style={{ paddingVertical: 8, paddingHorizontal: 26 }}>
+                <Text style={{ fontFamily: 'p2', fontSize: 14, color: '#000' }}>Unlock</Text>
+              </Pressable>
+            </ShadowBox>
+          </View>
+        </PageContainer>
+      </AppLinearGradient>
+    );
+  }
 
   // full-screen loader only on the very first load — on refocus refreshes the
   // list stays mounted so the scroll position is preserved

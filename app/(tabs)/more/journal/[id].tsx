@@ -22,6 +22,7 @@ import SongCard from '@/components/journal/SongCard';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { markJournalEntrySynced, upsertJournalCacheRow } from '@/lib/journal/offlineSync';
+import { encryptEntryFields, decryptEntryFields, getJournalKey } from '@/lib/journal/entryCrypto';
 import MoodPickerModal from '@/modals/MoodPickerModal';
 import SongPickerModal, { SongData } from '@/modals/SongPickerModal';
 import { JournalEntry } from '@/types/JournalEntry';
@@ -169,14 +170,17 @@ export default function JournalEntryDetail() {
         return;
       }
 
+      // decrypt the sensitive fields (legacy plaintext passes through)
+      const key = await getJournalKey(user.id);
+      const dec = decryptEntryFields({ entry: data.entry ?? null, mood: data.mood ?? null }, key);
       const fresh: JournalEntry = {
         id: data.id,
         date: parseLocalDate(data.date),
         time: data.time,
-        mood: data.mood ?? undefined,
+        mood: dec.mood ?? undefined,
         location: data.location ?? undefined,
         lock: data.is_locked ? '1' : undefined,
-        entry: data.entry ?? undefined,
+        entry: dec.entry ?? undefined,
         song: data.song ?? undefined,
         book: data.book ?? undefined,
         show: data.show ?? undefined,
@@ -277,15 +281,18 @@ export default function JournalEntryDetail() {
       setIsEditMode(false);
 
       // 3) try to push now; if offline it stays pending and the journal list
-      // retries the sync next time it loads with a connection
+      // retries the sync next time it loads with a connection.
+      // encrypt the sensitive fields first (no-op if encryption is off)
+      const key = await getJournalKey(user.id);
+      const enc = encryptEntryFields({ entry: editedEntry.trim() || null, mood: editedMood ?? null }, key);
       const { error } = await supabase
         .from('journal_entries')
         .update({
           date: dateStr,
           time: timeStr,
-          mood: editedMood ?? null,
+          mood: enc.mood,
           location: editedLocation.trim() || null,
-          entry: editedEntry.trim() || null,
+          entry: enc.entry,
           is_locked: editedLock,
           song: editedSong ?? null,
           book: editedBook ?? null,

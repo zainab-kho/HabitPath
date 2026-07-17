@@ -7,6 +7,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '@/lib/supabase';
+import { encryptEntryFields, getJournalKey } from '@/lib/journal/entryCrypto';
 
 export const JOURNAL_CACHE_KEY = '@journal_entries';
 
@@ -38,16 +39,18 @@ async function writeCache(rows: CachedJournalRow[]): Promise<void> {
   await AsyncStorage.setItem(JOURNAL_CACHE_KEY, JSON.stringify(rows));
 }
 
-// Build the Supabase row shape from a cached entry.
-function toSupabaseRow(r: CachedJournalRow, userId: string) {
+// Build the Supabase row shape from a cached entry. `key` encrypts the sensitive
+// fields (entry + mood) before they leave the device; null = encryption off.
+function toSupabaseRow(r: CachedJournalRow, userId: string, key: Uint8Array | null) {
+  const enc = encryptEntryFields({ entry: r.entry ?? null, mood: r.mood ?? null }, key);
   const row: Record<string, any> = {
     id: r.id,
     user_id: userId,
     date: r.date,
     time: r.time,
-    mood: r.mood ?? null,
+    mood: enc.mood,
     location: r.location ?? null,
-    entry: r.entry ?? null,
+    entry: enc.entry,
     is_locked: !!r.lock,
     song: r.song ?? null,
     book: r.book ?? null,
@@ -104,8 +107,11 @@ export async function syncPendingJournalEntries(userId: string): Promise<number>
   let changed = false;
   let stillPending = 0;
 
+  // fetch the encryption key once for the whole batch
+  const key = await getJournalKey(userId);
+
   for (const r of pending) {
-    const { error } = await supabase.from('journal_entries').upsert([toSupabaseRow(r, userId)]);
+    const { error } = await supabase.from('journal_entries').upsert([toSupabaseRow(r, userId, key)]);
     if (!error) {
       r.pendingSync = false; // mutates the object inside `rows`
       changed = true;

@@ -18,6 +18,7 @@ import { ScrollView as GHScrollView } from 'react-native-gesture-handler';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { markJournalEntrySynced } from '@/lib/journal/offlineSync';
+import { encryptEntryFields, getJournalKey } from '@/lib/journal/entryCrypto';
 import { JournalEntry } from '@/types/JournalEntry';
 import { COLORS, PAGE } from '@/constants/colors';
 import MoodPickerModal from '@/modals/MoodPickerModal';
@@ -181,6 +182,11 @@ export default function JournalPage() {
 
             console.log('**LOG: Entry saved to AsyncStorage (cache)');
 
+            // encrypt the sensitive fields before they leave the device (no-op if
+            // the user hasn't turned on encryption — then they save as plaintext)
+            const key = await getJournalKey(user.id);
+            const enc = encryptEntryFields({ entry: entry || null, mood: selectedMood ?? null }, key);
+
             // save to Supabase WITH LOCK STATUS
             const { data, error } = await supabase
                 .from('journal_entries')
@@ -190,9 +196,9 @@ export default function JournalPage() {
                         user_id: user.id,
                         date: localDateString,
                         time: localTime,
-                        mood: selectedMood,
+                        mood: enc.mood,
                         location: location || null,
-                        entry: entry || null,
+                        entry: enc.entry,
                         is_locked: lock,
                         song: song || null,
                         book: book || null,

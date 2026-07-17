@@ -452,7 +452,7 @@ export default function PointsHistoryModal({
         {date && (
           <View style={[s.badge, s.dateBadge, { alignSelf: 'center', marginTop: 8 }]}>
             <Text style={[globalStyles.label, { fontSize: 9, opacity: 1 }]}>
-              {reward.recurring ? '↻ ' : ''}{formatDateHeader(parseLocalDate(date)).toUpperCase()}
+              {formatDateHeader(parseLocalDate(date)).toUpperCase()}
             </Text>
           </View>
         )}

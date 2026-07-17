@@ -183,21 +183,21 @@ export default function NewCourse() {
                                 const isSelected = selectedColor === color;
 
                                 return (
-                                        <ShadowBox
-                                            contentBackgroundColor={isSelected ? color : '#fff'}
-                                            contentBorderColor={isSelected ? '#000' : color}
-                                            contentBorderWidth={1}
-                                            contentBorderRadius={18}
-                                            shadowBorderColor={isSelected ? '#000' : color}
-                                            shadowColor={isSelected ? '#000' : color}
-                                            shadowBorderRadius={18}
-                                        >
-                                                                                <Pressable
+                                    <ShadowBox
                                         key={color}
-                                        onPress={() => setSelectedColor(color)}
-                                        style={{ width: 25, height: 25 }}
-                                    />
-                                        </ShadowBox>
+                                        contentBackgroundColor={isSelected ? color : '#fff'}
+                                        contentBorderColor={isSelected ? '#000' : color}
+                                        contentBorderWidth={1}
+                                        contentBorderRadius={18}
+                                        shadowBorderColor={isSelected ? '#000' : color}
+                                        shadowColor={isSelected ? '#000' : color}
+                                        shadowBorderRadius={18}
+                                    >
+                                        <Pressable
+                                            onPress={() => setSelectedColor(color)}
+                                            style={{ width: 25, height: 25 }}
+                                        />
+                                    </ShadowBox>
                                 );
                             })}
                         </View>

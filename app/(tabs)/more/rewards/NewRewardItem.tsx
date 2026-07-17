@@ -404,6 +404,7 @@ export default function NewRewardItem() {
                       const isSelected = backgroundColor === color;
                       return (
                         <ShadowBox
+                          key={color}
                           contentBackgroundColor={isSelected ? color : '#fff'}
                           contentBorderColor={isSelected ? '#000' : color}
                           contentBorderWidth={1}
@@ -413,7 +414,6 @@ export default function NewRewardItem() {
                           shadowBorderRadius={18}
                         >
                           <Pressable
-                            key={color}
                             onPress={() => setBackgroundColor(color)}
                             style={{ width: 25, height: 25 }}
                           />

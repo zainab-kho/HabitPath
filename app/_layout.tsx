@@ -1,4 +1,8 @@
 // @/app/_layout.tsx
+// Must be first: installs a secure random source (crypto.getRandomValues) that
+// the journal encryption relies on. Nothing crypto-related may run before this.
+import 'react-native-get-random-values';
+
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { DrawerProvider } from '@/navigation/DrawerContext';
 import { NavTabsProvider } from '@/navigation/NavTabsContext';

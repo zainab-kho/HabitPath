@@ -363,6 +363,20 @@ export default function SettingsPage() {
                         Security
                     </Text>
 
+                    {/* journal encryption */}
+                    <ShadowBox
+                        contentBorderRadius={20}
+                        shadowBorderRadius={20}
+                        contentBackgroundColor={BUTTON_COLORS.Quiet}
+                    >
+                        <Pressable
+                            onPress={() => router.push('/more/journal/SetUpEncryption')}
+                            style={{ paddingVertical: 5, paddingHorizontal: 15, flex: 1, alignItems: 'center' }}
+                        >
+                            <Text style={globalStyles.body1}>Journal Encryption</Text>
+                        </Pressable>
+                    </ShadowBox>
+
                     {/* edit pin */}
                     <ShadowBox
                         contentBorderRadius={20}

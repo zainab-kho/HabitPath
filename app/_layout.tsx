@@ -22,13 +22,16 @@ function RootLayoutNav() {
     if (loading) return;
 
     const inAuthGroup = segments[0] === 'auth';
+    // the deep-link reset route is public — don't bounce to login before the
+    // recovery session (set asynchronously from the URL tokens) is established
+    const inRecoveryRoute = segments[0] === 'reset-password';
 
     if (isPasswordRecovery) {
       router.replace('/auth/ResetPassword');
       return;
     }
 
-    if (!user && !inAuthGroup) {
+    if (!user && !inAuthGroup && !inRecoveryRoute) {
       router.replace('/auth/LoginScreen');
     } else if (user && inAuthGroup) {
       router.replace('/(tabs)/habits');
@@ -56,6 +59,7 @@ function RootLayoutNav() {
             <Stack.Screen name="auth/LoginScreen" />
             <Stack.Screen name="auth/ForgotPassword" />
             <Stack.Screen name="auth/ResetPassword" />
+            <Stack.Screen name="reset-password" />
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           </Stack>
 

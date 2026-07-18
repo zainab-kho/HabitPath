@@ -21,12 +21,20 @@ import {
 
 export default function ResetPassword() {
   const router = useRouter()
-  const { clearPasswordRecovery } = useAuth()
+  const { recoveryEmail, clearPasswordRecovery } = useAuth()
+  // code flow: we emailed a code; verify it here before setting the password.
+  // deep-link flow (no recoveryEmail): the recovery session already exists.
+  const isCodeFlow = !!recoveryEmail
+  const [code, setCode] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
 
   const handleUpdatePassword = async () => {
+    if (isCodeFlow && code.trim().length < 6) {
+      Alert.alert('Error', 'Please enter the code from your email')
+      return
+    }
     if (!password) {
       Alert.alert('Error', 'Please enter a new password')
       return
@@ -42,6 +50,17 @@ export default function ResetPassword() {
 
     setLoading(true)
     try {
+      if (isCodeFlow) {
+        const { error: otpError } = await supabase.auth.verifyOtp({
+          email: recoveryEmail!,
+          token: code.trim(),
+          type: 'recovery',
+        })
+        if (otpError) {
+          Alert.alert('Error', 'That code didn’t work. Check it and try again — codes expire after a while.')
+          return
+        }
+      }
       const { error } = await supabase.auth.updateUser({ password })
       if (error) throw error
       clearPasswordRecovery()
@@ -53,6 +72,11 @@ export default function ResetPassword() {
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleCancel = () => {
+    clearPasswordRecovery()
+    router.replace('/')
   }
 
   return (
@@ -89,9 +113,31 @@ export default function ResetPassword() {
                   fontSize: 14,
                   textAlign: 'center',
                 }]}>
-                  Enter your new password below
+                  {isCodeFlow
+                    ? `Enter the code we emailed to ${recoveryEmail} and your new password`
+                    : 'Enter your new password below'}
                 </Text>
               </View>
+
+              {isCodeFlow && (
+                <View style={{ gap: 10 }}>
+                  <Text style={globalStyles.label}>CODE</Text>
+                  <TextInput
+                    style={[uiStyles.inputField, {
+                      borderColor: PAGE.auth.border[0],
+                      marginBottom: 15,
+                      textAlign: 'center',
+                      letterSpacing: 6,
+                    }]}
+                    placeholder="00000000"
+                    value={code}
+                    onChangeText={setCode}
+                    keyboardType="number-pad"
+                    maxLength={10}
+                    returnKeyType="next"
+                  />
+                </View>
+              )}
 
               <View style={{ gap: 10 }}>
                 <Text style={globalStyles.label}>NEW PASSWORD</Text>
@@ -142,6 +188,25 @@ export default function ResetPassword() {
                   {loading ? 'Updating...' : 'Update Password'}
                 </Text>
               </Pressable>
+
+              {isCodeFlow && (
+                <Pressable
+                  onPress={handleCancel}
+                  style={({ pressed }) => ({
+                    paddingVertical: 12,
+                    opacity: pressed ? 0.6 : 1,
+                  })}
+                >
+                  <Text style={{
+                    color: PAGE.auth.border[0],
+                    fontFamily: 'p1',
+                    fontSize: 15,
+                    textAlign: 'center',
+                  }}>
+                    Cancel
+                  </Text>
+                </Pressable>
+              )}
             </View>
           </ScrollView>
         </TouchableWithoutFeedback>

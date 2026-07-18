@@ -1,6 +1,6 @@
 // @/app/auth/ForgotPassword.tsx
 import { PAGE } from '@/constants/colors'
-import { supabase } from '@/lib/supabase'
+import { useAuth } from '@/contexts/AuthContext'
 import { buttonStyles, globalStyles, uiStyles } from '@/styles'
 import { AppLinearGradient } from '@/ui/AppLinearGradient'
 import { useRouter } from 'expo-router'
@@ -20,9 +20,9 @@ import {
 
 export default function ForgotPassword() {
   const router = useRouter()
+  const { startCodeRecovery } = useAuth()
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
-  const [sent, setSent] = useState(false)
 
   const handleReset = async () => {
     if (!email) {
@@ -32,11 +32,9 @@ export default function ForgotPassword() {
 
     setLoading(true)
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: 'habitpath://reset-password',
-      })
-      if (error) throw error
-      setSent(true)
+      // sends the code and flips into recovery mode — the root layout
+      // routes to the ResetPassword screen, which collects the code + new password
+      await startCodeRecovery(email.trim())
     } catch (error: any) {
       Alert.alert('Error', error.message)
     } finally {
@@ -78,71 +76,46 @@ export default function ForgotPassword() {
                   fontSize: 14,
                   textAlign: 'center',
                 }]}>
-                  {sent
-                    ? 'Check your inbox for the reset link'
-                    : "Enter your email and we'll send you a reset link"}
+                  Enter your email and we&apos;ll send you a code
                 </Text>
               </View>
 
-              {!sent ? (
-                <>
-                  <View style={{ gap: 10 }}>
-                    <Text style={globalStyles.label}>EMAIL</Text>
-                    <TextInput
-                      style={[uiStyles.inputField, {
-                        borderColor: PAGE.auth.border[0],
-                        marginBottom: 15,
-                      }]}
-                      placeholder="you@example.com"
-                      value={email}
-                      onChangeText={setEmail}
-                      autoCapitalize="none"
-                      keyboardType="email-address"
-                      returnKeyType="done"
-                      onSubmitEditing={handleReset}
-                    />
-                  </View>
+              <View style={{ gap: 10 }}>
+                <Text style={globalStyles.label}>EMAIL</Text>
+                <TextInput
+                  style={[uiStyles.inputField, {
+                    borderColor: PAGE.auth.border[0],
+                    marginBottom: 15,
+                  }]}
+                  placeholder="you@example.com"
+                  value={email}
+                  onChangeText={setEmail}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  returnKeyType="done"
+                  onSubmitEditing={handleReset}
+                />
+              </View>
 
-                  <Pressable
-                    onPress={handleReset}
-                    disabled={loading}
-                    style={({ pressed }) => [
-                      buttonStyles.button,
-                      {
-                        backgroundColor: '#FED0FF',
-                        width: '100%',
-                        marginTop: 8,
-                        marginBottom: 20,
-                      },
-                      loading && { opacity: 0.5 },
-                      pressed && !loading && { opacity: 0.8 },
-                    ]}
-                  >
-                    <Text style={[globalStyles.body, { fontSize: 16 }]}>
-                      {loading ? 'Sending...' : 'Send Reset Link'}
-                    </Text>
-                  </Pressable>
-                </>
-              ) : (
-                <Pressable
-                  onPress={handleReset}
-                  disabled={loading}
-                  style={({ pressed }) => [
-                    buttonStyles.button,
-                    {
-                      backgroundColor: '#FED0FF',
-                      width: '100%',
-                      marginBottom: 20,
-                    },
-                    loading && { opacity: 0.5 },
-                    pressed && !loading && { opacity: 0.8 },
-                  ]}
-                >
-                  <Text style={[globalStyles.body, { fontSize: 16 }]}>
-                    {loading ? 'Sending...' : 'Resend Link'}
-                  </Text>
-                </Pressable>
-              )}
+              <Pressable
+                onPress={handleReset}
+                disabled={loading}
+                style={({ pressed }) => [
+                  buttonStyles.button,
+                  {
+                    backgroundColor: '#FED0FF',
+                    width: '100%',
+                    marginTop: 8,
+                    marginBottom: 20,
+                  },
+                  loading && { opacity: 0.5 },
+                  pressed && !loading && { opacity: 0.8 },
+                ]}
+              >
+                <Text style={[globalStyles.body, { fontSize: 16 }]}>
+                  {loading ? 'Sending...' : 'Send Code'}
+                </Text>
+              </Pressable>
 
               <View style={{
                 paddingTop: 20,

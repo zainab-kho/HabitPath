@@ -3,12 +3,38 @@ import { supabase } from '@/lib/supabase'
 import { CURRENT_CACHE_VERSION, STORAGE_KEYS } from '@/storage/keys'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import type { User } from '@supabase/supabase-js'
+import * as Linking from 'expo-linking'
 import React, { createContext, useContext, useEffect, useState } from 'react'
+import { Alert } from 'react-native'
+
+// Supabase returns auth tokens in the URL fragment (#...), and errors in the query
+// string — collect params from both so we can start the recovery session.
+function paramsFromUrl(url: string): Record<string, string> {
+  const out: Record<string, string> = {}
+  const hashIndex = url.indexOf('#')
+  const queryIndex = url.indexOf('?')
+  const collect = (segment?: string) => {
+    if (!segment) return
+    for (const pair of segment.split('&')) {
+      if (!pair) continue
+      const [k, v] = pair.split('=')
+      // '+' means space in query encoding (Supabase encodes error messages this way)
+      if (k) out[decodeURIComponent(k)] = decodeURIComponent((v ?? '').replace(/\+/g, ' '))
+    }
+  }
+  if (queryIndex >= 0) collect(url.slice(queryIndex + 1, hashIndex >= 0 ? hashIndex : undefined))
+  if (hashIndex >= 0) collect(url.slice(hashIndex + 1))
+  return out
+}
 
 interface AuthContextType {
   user: User | null
   loading: boolean
   isPasswordRecovery: boolean
+  // set during the code reset flow; the ResetPassword screen shows a code
+  // field when this is present
+  recoveryEmail: string | null
+  startCodeRecovery: (email: string) => Promise<void>
   clearPasswordRecovery: () => void
   signUp: (email: string, password: string) => Promise<void>
   signIn: (email: string, password: string) => Promise<void>
@@ -51,6 +77,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
   const [isPasswordRecovery, setIsPasswordRecovery] = useState(false)
+  const [recoveryEmail, setRecoveryEmail] = useState<string | null>(null)
+
+  // code reset flow: email the code, then flip into recovery mode — the root
+  // layout routes to the ResetPassword screen, which collects the code + new password.
+  const startCodeRecoveryHandler = async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email)
+    if (error) throw error
+    setRecoveryEmail(email)
+    setIsPasswordRecovery(true)
+  }
 
   useEffect(() => {
     // run one-time cache migration before checking session
@@ -75,6 +111,45 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     )
 
     return () => subscription.unsubscribe()
+  }, [])
+
+  // Handle password-reset deep links (habitpath://reset-password#access_token=...&type=recovery).
+  // detectSessionInUrl is off for React Native, so we parse the tokens ourselves, start the
+  // recovery session, and flip into recovery mode (which routes to the ResetPassword screen).
+  useEffect(() => {
+    // Safari's "Open HabitPath?" flow often makes the user tap the email link twice,
+    // so the app can receive BOTH a valid token delivery and an "otp expired" error
+    // for the same reset. Once recovery is established, ignore the stray error.
+    let recovered = false
+
+    const handleUrl = async (url: string | null) => {
+      if (!url) return
+      const params = paramsFromUrl(url)
+
+      if (params.type === 'recovery' && params.access_token && params.refresh_token) {
+        const { error } = await supabase.auth.setSession({
+          access_token: params.access_token,
+          refresh_token: params.refresh_token,
+        })
+        if (error) {
+          Alert.alert('Reset link problem', 'This password reset link is invalid or has expired. Please request a new one.')
+          return
+        }
+        recovered = true
+        setIsPasswordRecovery(true)
+        return
+      }
+
+      // an expired/used link comes back with an error instead of tokens
+      if (!recovered && (params.error_description || params.error)) {
+        Alert.alert('Reset link problem', params.error_description || 'This link is invalid or has expired. Please request a new one.')
+      }
+    }
+
+    // cold start (app opened by the link) + warm (app already running)
+    Linking.getInitialURL().then(handleUrl)
+    const sub = Linking.addEventListener('url', ({ url }) => handleUrl(url))
+    return () => sub.remove()
   }, [])
 
   const signUpHandler = async (email: string, password: string) => {
@@ -117,7 +192,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         user,
         loading,
         isPasswordRecovery,
-        clearPasswordRecovery: () => setIsPasswordRecovery(false),
+        recoveryEmail,
+        startCodeRecovery: startCodeRecoveryHandler,
+        clearPasswordRecovery: () => {
+          setIsPasswordRecovery(false)
+          setRecoveryEmail(null)
+        },
         signUp: signUpHandler,
         signIn: signInHandler,
         signOut: signOutHandler,

@@ -12,5 +12,7 @@ export interface Reward {
   dateAdded: string;
   isClaimed: boolean;
   dateClaimed?: string;
+  // one entry per redemption: "YYYY-MM-DD" (legacy) or "YYYY-MM-DD:<points paid>"
+  // — see makeClaimEntry/parseClaimEntry in services/rewards/rewards.ts
   claimHistory?: string[];
 }

@@ -193,7 +193,7 @@ export default function NewAssignment() {
                     ) : (
                     <ShadowBox
                         contentBackgroundColor={selectedCourse ? PAGE.assignments.primary[1] : '#fff'}
-                        style={{ marginBottom: 10 }}
+                        style={{ marginBottom: 20 }}
                     >
                         <Pressable
                             onPress={() => showCourseDropdown(true)}
@@ -217,7 +217,7 @@ export default function NewAssignment() {
                         TYPE
                     </Text>
 
-                    <View style={{ marginBottom: 15, gap: 8, flexDirection: 'row', flexWrap: 'wrap' }}>
+                    <View style={{ marginBottom: 20, gap: 8, flexDirection: 'row', flexWrap: 'wrap' }}>
                         {ASSIGNMENT_TYPES.map((assignmentType) => (
                             <Pressable
                                 key={assignmentType}
@@ -261,7 +261,7 @@ export default function NewAssignment() {
                         PROGRESS
                     </Text>
 
-                    <View style={{ marginBottom: 15, gap: 8, flexDirection: 'row', flexWrap: 'wrap' }}>
+                    <View style={{ marginBottom: 20, gap: 8, flexDirection: 'row', flexWrap: 'wrap' }}>
                         {ASSIGNMENT_PROGRESS.map((progressOption) => (
                             <Pressable
                                 key={progressOption}

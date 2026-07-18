@@ -37,6 +37,8 @@ export default function NewRewardItem() {
   const router = useRouter();
   const { user } = useAuth();
   const scrollRef = useRef<KeyboardAwareScrollView>(null);
+  const priceInputRef = useRef<TextInput>(null);
+  const pointsInputRef = useRef<TextInput>(null);
 
   // edit mode: reward passed from RewardDetailModal, mirrors the habit edit flow
   const params = useLocalSearchParams<{ editData?: string }>();
@@ -75,12 +77,12 @@ export default function NewRewardItem() {
   // Auto-fill reward points from price unless the user has manually overridden
   useEffect(() => {
     if (!pointsOverridden) {
-      const derived = parseInt(rewardPrice) * 10 || 0;
+      const derived = parseInt(rewardPrice) * exchangeRate || 0;
       setRewardPoints(derived > 0 ? derived.toString() : '');
     }
-  }, [rewardPrice, pointsOverridden]);
+  }, [rewardPrice, pointsOverridden, exchangeRate]);
 
-  const price = parseInt(rewardPrice) * 10 || 0;
+  const price = parseInt(rewardPrice) * exchangeRate || 0;
   const points = parseInt(rewardPoints) || 0;
   // The points that will actually be saved — manual override wins, otherwise derived from price
   const finalPoints = pointsOverridden ? points : price;
@@ -290,17 +292,24 @@ export default function NewRewardItem() {
                     </ShadowBox>
 
                     <ShadowBox shadowColor={PAGE.rewards.primary[0]}>
-                      <View style={{ paddingVertical: 2, width: 100, borderRadius: 20, justifyContent: 'center' }}>
+                      {/* "$" lives outside the editable text so the cursor can only
+                          ever be in the number; tapping anywhere in the bubble focuses it */}
+                      <Pressable
+                        onPress={() => priceInputRef.current?.focus()}
+                        style={{ paddingVertical: 2, width: 100, borderRadius: 20, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}
+                      >
+                        <Text style={[globalStyles.body, price <= 0 && { color: COLORS.PlaceHolder }]}>$</Text>
                         <TextInput
-                          style={[globalStyles.body, { textAlign: 'center' }]}
+                          ref={priceInputRef}
+                          style={[globalStyles.body, { textAlign: 'left', padding: 0 }]}
                           keyboardType="number-pad"
-                          placeholder='$0'
+                          placeholder='0'
                           placeholderTextColor={COLORS.PlaceHolder}
-                          value={price > 0 ? `$${rewardPrice}` : ''}
-                          onChangeText={text => setRewardPrice(text.replace('$', ''))}
+                          value={price > 0 ? rewardPrice : ''}
+                          onChangeText={text => setRewardPrice(text.replace(/[^0-9]/g, ''))}
                           onFocus={(e) => scrollRef.current?.scrollToFocusedInput(e.nativeEvent.target)}
                         />
-                      </View>
+                      </Pressable>
                     </ShadowBox>
 
                     <ShadowBox shadowColor={PAGE.rewards.primary[0]}>
@@ -355,20 +364,27 @@ export default function NewRewardItem() {
                     </ShadowBox>
 
                     <ShadowBox shadowColor={PAGE.rewards.primary[1]}>
-                      <View style={{ paddingVertical: 2, width: 100, borderRadius: 20, justifyContent: 'center' }}>
+                      {/* "pts" lives outside the editable text so the cursor can only
+                          ever be in the number; tapping anywhere in the bubble focuses it */}
+                      <Pressable
+                        onPress={() => pointsInputRef.current?.focus()}
+                        style={{ paddingVertical: 2, width: 100, borderRadius: 20, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}
+                      >
                         <TextInput
-                          style={[globalStyles.body, { textAlign: 'center' }]}
+                          ref={pointsInputRef}
+                          style={[globalStyles.body, { textAlign: 'right', padding: 0 }]}
                           keyboardType="number-pad"
-                          value={points > 0 ? `${rewardPoints} pts` : ''}
-                          placeholder='0 pts'
+                          value={points > 0 ? rewardPoints : ''}
+                          placeholder='0'
                           placeholderTextColor={COLORS.PlaceHolder}
                           onChangeText={text => {
                             setPointsOverridden(true);
-                            setRewardPoints(text.replace('pts', '').trim());
+                            setRewardPoints(text.replace(/[^0-9]/g, ''));
                           }}
                           onFocus={(e) => scrollRef.current?.scrollToFocusedInput(e.nativeEvent.target)}
                         />
-                      </View>
+                        <Text style={[globalStyles.body, points <= 0 && { color: COLORS.PlaceHolder }]}> pts</Text>
+                      </Pressable>
                     </ShadowBox>
 
                     <ShadowBox shadowColor={PAGE.rewards.primary[1]}>

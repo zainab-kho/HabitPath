@@ -14,6 +14,7 @@ import {
 import { FlatList, ScrollView } from 'react-native-gesture-handler';
 import { Habit } from '@/types/Habit';
 import { Reward } from '@/types/Reward';
+import { parseClaimEntry } from '@/services/rewards/rewards';
 import { HABIT_ICONS, SYSTEM_ICONS } from '@/constants/icons';
 import ShadowBox from '@/ui/ShadowBox';
 import { formatDateHeader, parseLocalDate } from '@/utils/dateUtils';
@@ -34,6 +35,7 @@ interface Props {
 interface ClaimEntry {
   reward: Reward;
   date: string | null; // claim date; null for legacy claimed rewards without one
+  points: number | null; // points paid at claim time; null for legacy entries → current cost
 }
 
 // One entry per unique habit after dedup + post-reset aggregation
@@ -77,11 +79,14 @@ export default function PointsHistoryModal({
   // wishlist; falls back to dateClaimed for rewards claimed before claimHistory existed
   const claimEntries: ClaimEntry[] = rewards
     .filter(r => r.isClaimed || !!r.dateClaimed)
-    .flatMap(r => {
-      const dates: (string | null)[] = r.claimHistory?.length
-        ? r.claimHistory
-        : r.dateClaimed ? [r.dateClaimed] : [null];
-      return dates.map(date => ({ reward: r, date }));
+    .flatMap((r): ClaimEntry[] => {
+      if (r.claimHistory?.length) {
+        return r.claimHistory.map(entry => {
+          const { date, points } = parseClaimEntry(entry);
+          return { reward: r, date, points };
+        });
+      }
+      return [{ reward: r, date: r.dateClaimed ?? null, points: null }];
     })
     .sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''));
 
@@ -395,7 +400,7 @@ export default function PointsHistoryModal({
   };
 
   // one wishlist-style card + claimed-date bubble, used by both redeemed sections
-  const renderClaimedCard = ({ reward, date }: ClaimEntry, index: number) => {
+  const renderClaimedCard = ({ reward, date, points }: ClaimEntry, index: number) => {
     const bgColor = reward.backgroundColor || '#FFF3D0';
     return (
       <View key={`${reward.id}-${date ?? 'legacy'}-${index}`} style={s.gridItem}>
@@ -413,7 +418,7 @@ export default function PointsHistoryModal({
                 style={{ width: 11, height: 11, tintColor: COLORS.Rewards }}
               />
               <Text style={[globalStyles.label, { fontSize: 9, opacity: 1 }]}>
-                {reward.costPoints} pts
+                {points ?? reward.costPoints} pts
               </Text>
             </View>
 

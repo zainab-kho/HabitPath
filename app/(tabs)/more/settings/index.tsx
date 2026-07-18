@@ -14,7 +14,8 @@ import ShadowBox from '@/ui/ShadowBox';
 import { TimeWheel, pickerStyles } from '@/ui/TimeWheel';
 import { getResetTime } from '@/lib/supabase/queries';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { clearWishlist, resetPointsBalance } from '@/services/rewards/rewards';
+import { clearWishlist, resetPointsBalance, getExchangeRate, saveExchangeRate } from '@/services/rewards/rewards';
+import ExchangeRateModal from '@/modals/rewards/ExchangeRateModal';
 import { STORAGE_KEYS } from '@/storage/keys';
 import { setWeekStartDay } from '@/utils/dateUtils';
 
@@ -23,8 +24,7 @@ const WEEK_DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Frid
 
 export default function SettingsPage() {
     const router = useRouter();
-    const { user } = useAuth();
-    const { signOut } = useAuth()
+    const { user, signOut, startCodeRecovery } = useAuth();
 
     const HOURS = Array.from({ length: 12 }, (_, i) => String(i + 1));
     const MINUTES = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0'));
@@ -39,6 +39,22 @@ export default function SettingsPage() {
     // which day the user's week starts on (weekly goals, week views, etc.)
     const [weekStartDay, setWeekStartDayState] = useState('Sunday');
     const [showWeekStartPicker, setShowWeekStartPicker] = useState(false);
+
+    // points exchange rate (points per $1) — editable via the same modal rewards uses
+    const [showExchangeModal, setShowExchangeModal] = useState(false);
+    const [exchangeRate, setExchangeRate] = useState<number | null>(null);
+
+    const openExchangeModal = async () => {
+        const rate = await getExchangeRate();
+        setExchangeRate(rate);
+        setShowExchangeModal(true);
+    };
+
+    const handleExchangeRateSet = async (rate: number) => {
+        await saveExchangeRate(rate);
+        setExchangeRate(rate);
+        setShowExchangeModal(false);
+    };
 
     // load saved time on mount
     useEffect(() => {
@@ -151,16 +167,16 @@ export default function SettingsPage() {
 
         Alert.alert(
             'Reset Password',
-            `A password reset link will be sent to ${email}.`,
+            `We'll email a code to ${email}.`,
             [
                 { text: 'Cancel', style: 'cancel' },
                 {
-                    text: 'Send Link',
+                    text: 'Send Code',
                     onPress: async () => {
                         try {
-                            const { error } = await supabase.auth.resetPasswordForEmail(email);
-                            if (error) throw error;
-                            Alert.alert('Email Sent', 'Check your inbox for the password reset link.');
+                            // flips into recovery mode — the root layout routes to the
+                            // ResetPassword screen, which collects the code + new password
+                            await startCodeRecovery(email);
                         } catch (err) {
                             Alert.alert('Error', 'Something went wrong. Please try again.');
                         }
@@ -359,6 +375,20 @@ export default function SettingsPage() {
                         </Pressable>
                     </ShadowBox>
 
+                    {/* points exchange rate */}
+                    <ShadowBox
+                        contentBorderRadius={20}
+                        shadowBorderRadius={20}
+                        contentBackgroundColor={BUTTON_COLORS.Quiet}
+                    >
+                        <Pressable
+                            onPress={openExchangeModal}
+                            style={{ paddingVertical: 5, paddingHorizontal: 15, flex: 1, alignItems: 'center' }}
+                        >
+                            <Text style={globalStyles.body1}>Points Exchange Rate</Text>
+                        </Pressable>
+                    </ShadowBox>
+
                                         <Text style={[globalStyles.h4, { textAlign: 'center', marginTop: 10 }]}>
                         Security
                     </Text>
@@ -401,6 +431,13 @@ export default function SettingsPage() {
                         </Pressable>
                     </ShadowBox>
                 </ScrollView>
+
+                <ExchangeRateModal
+                    visible={showExchangeModal}
+                    initialRate={exchangeRate ?? undefined}
+                    onComplete={handleExchangeRateSet}
+                    onCancel={() => setShowExchangeModal(false)}
+                />
 
                 <ShadowBox
                     contentBackgroundColor={COLORS.Primary}

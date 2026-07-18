@@ -16,6 +16,7 @@ import {
     getPointsResetDate,
     getRedeemedPoints,
     getRewards,
+    makeClaimEntry,
     saveExchangeRate,
     updateReward,
 } from '@/services/rewards/rewards';
@@ -99,7 +100,23 @@ export default function RewardsPage() {
         // Load rewards from Supabase
         if (user) {
             const loadedRewards = await getRewards(user.id);
-            setRewards(loadedRewards);
+
+            // one-time backfill: legacy claim entries are date-only (no locked price),
+            // so history displayed them at the reward's CURRENT cost. Lock them at the
+            // current cost now so future cost edits can't rewrite old history.
+            const backfilled = await Promise.all(loadedRewards.map(async r => {
+                if (!r.claimHistory?.some(e => !e.includes(':'))) return r;
+                const locked = {
+                    ...r,
+                    claimHistory: r.claimHistory.map(e =>
+                        e.includes(':') ? e : makeClaimEntry(e, r.costPoints)
+                    ),
+                };
+                await updateReward(locked, user.id);
+                return locked;
+            }));
+
+            setRewards(backfilled);
         }
         setLoading(false);
     };
@@ -139,8 +156,10 @@ export default function RewardsPage() {
                                 // Recurring rewards stay unclaimed so they remain in the wishlist
                                 isClaimed: reward.recurring ? false : true,
                                 dateClaimed: claimDate,
-                                // every redemption is kept so recurring rewards show up once per claim
-                                claimHistory: [...(reward.claimHistory ?? []), claimDate],
+                                // every redemption is kept so recurring rewards show up once per
+                                // claim; the entry records the points paid at claim time so later
+                                // cost edits don't rewrite history
+                                claimHistory: [...(reward.claimHistory ?? []), makeClaimEntry(claimDate, reward.costPoints)],
                             };
                             await updateReward(claimedReward, user!.id);
                             await addRedeemedPoints(reward.costPoints);
@@ -164,6 +183,17 @@ export default function RewardsPage() {
     const handleDeleteReward = async (id: string) => {
         try {
             const target = rewards.find(r => r.id === id);
+
+            // a reward that's been claimed keeps its record (so redeemed history still
+            // adds up) — deleting just retires it from the wishlist
+            const hasClaims = !!(target?.claimHistory?.length || target?.dateClaimed);
+            if (target && hasClaims) {
+                const retired = { ...target, isClaimed: true, recurring: false };
+                await updateReward(retired, user!.id);
+                setRewards(prev => prev.map(r => (r.id === id ? retired : r)));
+                return;
+            }
+
             await deleteReward(id, user!.id);
             // best-effort: remove the stored photo too
             deleteRewardPhoto(target?.photoUri);

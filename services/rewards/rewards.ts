@@ -52,6 +52,23 @@ function rewardToRow(reward: Reward, userId: string) {
   };
 }
 
+// ─── claim history entries ───────────────────────────────────────────────────
+// Stored as strings so they fit the existing claim_history column regardless of
+// its type: legacy entries are plain dates ("2026-07-18"), newer ones append the
+// points actually paid at claim time ("2026-07-18:450") so later edits to a
+// reward's cost never rewrite displayed history.
+
+export function makeClaimEntry(date: string, points: number): string {
+  return `${date}:${points}`;
+}
+
+export function parseClaimEntry(entry: string): { date: string; points: number | null } {
+  const idx = entry.indexOf(':');
+  if (idx < 0) return { date: entry, points: null };
+  const points = parseInt(entry.slice(idx + 1), 10);
+  return { date: entry.slice(0, idx), points: Number.isFinite(points) ? points : null };
+}
+
 // ─── rewards CRUD ────────────────────────────────────────────────────────────
 
 export async function getRewards(userId: string): Promise<Reward[]> {

@@ -15,7 +15,7 @@ import PageContainer from '@/ui/PageContainer';
 import PageHeader from '@/ui/PageHeader';
 import ShadowBox from '@/ui/ShadowBox';
 import { getHabitDate, formatDisplayDateString, formatLocalDate, parseLocalDate, getWeekDatesForDate, getWeekStartDow } from '@/utils/dateUtils';
-import { isHabitActiveToday, getHabitStatus, getHabitCycleStart } from '@/utils/habitUtils';
+import { isHabitActiveToday, getHabitStatus, getHabitCycleStart, matchesNthWeekday } from '@/utils/habitUtils';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -334,6 +334,13 @@ export default function PathDetail() {
         const startMonday = getWeekDatesForDate(h.startDate)[0];
         if (weekStart < startMonday) return false;
         if (h.endDate && weekStart > getWeekDatesForDate(h.endDate)[0]) return false;
+        // monthly-cadence goal: only the week containing its anchor day, once a month
+        if (h.monthlyDay || (h.monthlyWeek && h.monthlyWeekday)) {
+            const weekDates = getWeekDatesForDate(weekAnchor);
+            return h.monthlyDay
+                ? weekDates.some(d => parseInt(d.split('-')[2], 10) === h.monthlyDay)
+                : weekDates.some(d => matchesNthWeekday(d, h.monthlyWeek!, h.monthlyWeekday!));
+        }
         return true;
       })
     : [];

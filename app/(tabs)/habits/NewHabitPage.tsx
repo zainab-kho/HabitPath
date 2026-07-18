@@ -96,7 +96,11 @@ export default function NewHabitPage() {
     // scheduling
     const editFreq = editHabit?.frequency;
     const [selectedFrequency, setSelectedFrequency] = useState<Frequency>(() => {
-        if (!editFreq || editFreq === 'Weekly Goal') return 'None';
+        if (editFreq === 'Weekly Goal') {
+            // a monthly-cadence goal (has a monthly anchor) round-trips as Monthly
+            return (editHabit?.monthlyDay || (editHabit?.monthlyWeek && editHabit?.monthlyWeekday)) ? 'Monthly' : 'None';
+        }
+        if (!editFreq) return 'None';
         if (FREQUENCIES.includes(editFreq as Frequency)) return editFreq as Frequency;
         return 'None';
     });
@@ -359,6 +363,10 @@ export default function NewHabitPage() {
 
             // Time-tracking habits should be Daily frequency so they show every day
             const finalFrequency = incrementType === 'Time' ? 'Daily' : isWeeklyGoal ? 'Weekly Goal' : selectedFrequency;
+            // a Monthly frequency, OR a week goal with Monthly picked (a "monthly goal" that
+            // only appears in the week containing its anchor day), carries a monthly anchor
+            const usesMonthly = finalFrequency === 'Monthly'
+                || (finalFrequency === 'Weekly Goal' && selectedFrequency === 'Monthly');
             const finalSelectedDays = incrementType === 'Time'
                 ? []
                 : (selectedFrequency === 'Weekly' || (selectedFrequency === 'Custom' && customType === 'weekly'))
@@ -391,9 +399,9 @@ export default function NewHabitPage() {
                 path_ids: selectedPathId ? [selectedPathId] : [],
                 custom_type: finalFrequency === 'Custom' ? customType : null,
                 custom_interval: finalFrequency === 'Custom' ? customInterval : null,
-                monthly_week: finalFrequency === 'Monthly' && monthlyMode === 'nthWeekday' ? monthlyWeek : null,
-                monthly_weekday: finalFrequency === 'Monthly' && monthlyMode === 'nthWeekday' ? monthlyWeekday : null,
-                monthly_day: finalFrequency === 'Monthly' && monthlyMode === 'dayOfMonth' ? monthlyDay : null,
+                monthly_week: usesMonthly && monthlyMode === 'nthWeekday' ? monthlyWeek : null,
+                monthly_weekday: usesMonthly && monthlyMode === 'nthWeekday' ? monthlyWeekday : null,
+                monthly_day: usesMonthly && monthlyMode === 'dayOfMonth' ? monthlyDay : null,
                 // optional end date: null = repeats forever. ignore an end that lands before
                 // the start (avoids a habit that can never occur).
                 end_date:

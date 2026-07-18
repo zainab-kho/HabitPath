@@ -495,7 +495,16 @@ export function isHabitActiveToday(
       const endMonday = getWeekDatesForDate(habit.endDate)[0];
       if (dateMonday > endMonday) return false;
     }
-    // no endDate = recurring weekly goal: shows every week from the start week on,
+    // monthly-cadence goal: only appears in the week that contains its monthly anchor
+    // (a day-of-month like the 16th, or an nth-weekday) — i.e. one week per month.
+    if (habit.monthlyDay || (habit.monthlyWeek && habit.monthlyWeekday)) {
+      const weekDates = getWeekDatesForDate(todayStr);
+      if (habit.monthlyDay) {
+        return weekDates.some(d => parseInt(d.split('-')[2], 10) === habit.monthlyDay);
+      }
+      return weekDates.some(d => matchesNthWeekday(d, habit.monthlyWeek!, habit.monthlyWeekday!));
+    }
+    // no anchor = plain recurring weekly goal: shows every week from the start week on,
     // with per-week increments that reset each Monday (see getHabitStatus).
     // a one-week goal instead carries endDate = the Sunday of its start week.
     return true;

@@ -123,11 +123,11 @@ export function RootDrawer() {
         //     icon: SYSTEM_ICONS.quest,
         //     params: { from: 'drawer' },
         // },
-        {
-            label: 'All Goals',
-            path: '/(tabs)/more/goals',
-            icon: SYSTEM_ICONS.list,
-        },
+        // {
+        //     label: 'All Goals',
+        //     path: '/(tabs)/more/goals',
+        //     icon: SYSTEM_ICONS.list,
+        // },
         {
             label: 'Rewards',
             path: '/(tabs)/more/rewards',

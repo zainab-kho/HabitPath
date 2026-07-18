@@ -246,6 +246,7 @@ export default function SettingsPage() {
 
                 <ScrollView contentContainerStyle={{
                     paddingHorizontal: 30,
+                    paddingBottom: 100,
                     gap: 20,
                 }}>
                     {/* <View style={{gap: 10}} */}
@@ -445,6 +446,24 @@ export default function SettingsPage() {
                             style={{ paddingVertical: 5, paddingHorizontal: 15, flex: 1, alignItems: 'center' }}
                         >
                             <Text style={globalStyles.body1}>Reset Password</Text>
+                        </Pressable>
+                    </ShadowBox>
+
+                    <Text style={[globalStyles.h4, { textAlign: 'center', marginTop: 10 }]}>
+                        About
+                    </Text>
+
+                    {/* credits — app author + required icon attribution */}
+                    <ShadowBox
+                        contentBorderRadius={20}
+                        shadowBorderRadius={20}
+                        contentBackgroundColor={BUTTON_COLORS.Quiet}
+                    >
+                        <Pressable
+                            onPress={() => router.push('/more/settings/Credentials')}
+                            style={{ paddingVertical: 5, paddingHorizontal: 15, flex: 1, alignItems: 'center' }}
+                        >
+                            <Text style={globalStyles.body1}>Credentials</Text>
                         </Pressable>
                     </ShadowBox>
                 </ScrollView>

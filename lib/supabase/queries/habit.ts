@@ -90,6 +90,7 @@ export function mapHabitRow(row: any): Habit {
     customInterval: row.custom_interval ?? undefined,
     monthlyWeek: row.monthly_week ?? undefined,
     monthlyWeekday: row.monthly_weekday ?? undefined,
+    monthlyDay: row.monthly_day ?? undefined,
     endDate: row.end_date ?? undefined,
     created_at: row.created_at,
     // quest linkage (real columns; null for normal habits)

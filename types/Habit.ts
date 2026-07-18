@@ -58,9 +58,10 @@ export interface Habit {
   customInterval?: number;
 
   // monthly repeat on the nth weekday (e.g. 1st Sunday); when unset, monthly
-  // habits repeat on the start date's day of the month
+  // habits repeat on `monthlyDay` (or the start date's day for legacy habits)
   monthlyWeek?: number;    // 1-4, 5 = last
   monthlyWeekday?: string; // 'Sunday'…'Saturday'
+  monthlyDay?: number;     // 1-31, day-of-month for "specific date" monthly repeat
 
   // end date (for any repeating habit)
   endDate?: string;

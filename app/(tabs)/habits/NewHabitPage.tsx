@@ -122,10 +122,10 @@ export default function NewHabitPage() {
         if (editFreq === 'Weekly Goal') return true;
         return editHabit.startDate !== habitToday && editHabit.startDate !== habitTomorrowStr;
     });
+    // a "Week goal" is a one-off, week-scoped goal (frequency 'Weekly Goal') that does
+    // NOT repeat — it ends on the Sunday of its start week. To repeat weekly, use the
+    // 'Weekly' frequency instead.
     const [isWeeklyGoal, setIsWeeklyGoal] = useState(editFreq === 'Weekly Goal');
-    // recurring weekly goal = a weekly goal with no end date (repeats every week,
-    // increments reset each Monday). a one-week goal instead ends on its start Sunday.
-    const [weeklyRepeat, setWeeklyRepeat] = useState(editFreq === 'Weekly Goal' && !editHabit?.endDate);
 
     // inbox habit: created without a start date, lives on the inbox page until scheduled
     const [noStartDate, setNoStartDate] = useState(!!editHabit && !editHabit.startDate);
@@ -133,9 +133,9 @@ export default function NewHabitPage() {
     const startDateStr = formatLocalDate(startDate);
     const startDateOption: 'today' | 'tomorrow' | 'custom' | 'none' =
         noStartDate ? 'none'
-        : startDateStr === habitToday ? 'today'
-        : startDateStr === habitTomorrowStr ? 'tomorrow'
-        : 'custom';
+            : startDateStr === habitToday ? 'today'
+                : startDateStr === habitTomorrowStr ? 'tomorrow'
+                    : 'custom';
 
     const getCustomDateLabel = (date: Date): string => {
         return date.toLocaleDateString('en-US', {
@@ -155,14 +155,34 @@ export default function NewHabitPage() {
     );
     const [monthlyWeek, setMonthlyWeek] = useState<number>(editHabit?.monthlyWeek ?? 1);
     const [monthlyWeekday, setMonthlyWeekday] = useState<string>(editHabit?.monthlyWeekday ?? 'Sunday');
+    // the specific day-of-month a monthly habit repeats on — independent of the start date
+    const [monthlyDay, setMonthlyDay] = useState<number>(editHabit?.monthlyDay ?? startDate.getDate());
+    const [showMonthlyCalendar, setShowMonthlyCalendar] = useState(false);
+    // date the monthly calendar highlights (UI only); we read its day / weekday-of-month
+    const [monthlyPickDate, setMonthlyPickDate] = useState<Date>(() => {
+        if (editHabit?.monthlyDay) {
+            const base = new Date();
+            const daysInMonth = new Date(base.getFullYear(), base.getMonth() + 1, 0).getDate();
+            return new Date(base.getFullYear(), base.getMonth(), Math.min(editHabit.monthlyDay, daysInMonth), 12);
+        }
+        return startDate;
+    });
 
-    // end date
+    // which occurrence of a weekday within its month a date falls on (1st..4th, or "last")
+    const nthWeekOfDate = (date: Date) => Math.ceil(date.getDate() / 7);
+    const nthWeekLabel = (w: number) => (w === 5 ? 'last' : (['', '1st', '2nd', '3rd', '4th'][w] ?? `${w}th`));
+
+    // end date — optional. off by default: a habit with no end date repeats forever at
+    // its frequency's cadence (weekly goal → every week, monthly → every month, etc.).
     const [endDate, setEndDate] = useState<Date | null>(() => {
         if (!editHabit?.endDate) return null;
         const [y, m, d] = editHabit.endDate.split('-').map(Number);
         return new Date(y, m - 1, d, 12);
     });
-    const [showEndDateCalendar, setShowEndDateCalendar] = useState(false);
+    const [addEndDate, setAddEndDate] = useState<boolean>(!!editHabit?.endDate);
+    // whether the end-date calendar is expanded (separate from addEndDate so collapsing
+    // it doesn't wipe the chosen end date)
+    const [showEndCalendar, setShowEndCalendar] = useState(false);
 
     // Resolve path selection for edit mode
     React.useEffect(() => {
@@ -257,6 +277,15 @@ export default function NewHabitPage() {
 
     const handleFrequencyChange = (freq: Frequency) => {
         setSelectedFrequency(freq);
+
+        // Monthly opens its "repeats on" calendar right away; keep one calendar open at a time
+        if (freq === 'Monthly') {
+            setShowCalendar(false);
+            setShowEndCalendar(false);
+            setShowMonthlyCalendar(true);
+        } else {
+            setShowMonthlyCalendar(false);
+        }
 
         if (freq === 'Weekly') {
             const dayIndex = startDate.getDay();
@@ -364,7 +393,13 @@ export default function NewHabitPage() {
                 custom_interval: finalFrequency === 'Custom' ? customInterval : null,
                 monthly_week: finalFrequency === 'Monthly' && monthlyMode === 'nthWeekday' ? monthlyWeek : null,
                 monthly_weekday: finalFrequency === 'Monthly' && monthlyMode === 'nthWeekday' ? monthlyWeekday : null,
-                end_date: endDate ? formatLocalDate(endDate) : null,
+                monthly_day: finalFrequency === 'Monthly' && monthlyMode === 'dayOfMonth' ? monthlyDay : null,
+                // optional end date: null = repeats forever. ignore an end that lands before
+                // the start (avoids a habit that can never occur).
+                end_date:
+                    addEndDate && endDate && formatLocalDate(endDate) >= formatLocalDate(startDate)
+                        ? formatLocalDate(endDate)
+                        : null,
                 // quest linkage — when created from a quest phase, the scope drives the
                 // effective end date (overriding the picker above)
                 ...(params.questId ? {
@@ -373,8 +408,8 @@ export default function NewHabitPage() {
                     quest_scope: questScope,
                     end_date:
                         questScope === 'forever' ? null :
-                        questScope === 'carry' ? (params.questEndDate ?? null) :
-                        (params.phaseEndDate ?? null),
+                            questScope === 'carry' ? (params.questEndDate ?? null) :
+                                (params.phaseEndDate ?? null),
                 } : {}),
             };
 
@@ -421,354 +456,354 @@ export default function NewHabitPage() {
                     showsVerticalScrollIndicator={false}
                     keyboardShouldPersistTaps="handled"
                 >
-                        <View>
-                            {/* main card */}
+                    <View>
+                        {/* main card */}
+                        <View style={{
+                            backgroundColor: '#fff',
+                            borderWidth: 1,
+                            // borderColor: PAGE.habits.border[0],
+                            borderRadius: 20,
+                            padding: 30,
+                            gap: 20,
+                        }}>
+                            {/* icon + name */}
                             <View style={{
-                                backgroundColor: '#fff',
-                                borderWidth: 1,
-                                // borderColor: PAGE.habits.border[0],
-                                borderRadius: 20,
-                                padding: 30,
-                                gap: 20,
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                gap: 15,
                             }}>
-                                {/* icon + name */}
-                                <View style={{
-                                    flexDirection: 'row',
-                                    alignItems: 'center',
-                                    gap: 15,
-                                }}>
-                                    <Pressable
-                                        onPress={() => router.push('/(tabs)/habits/IconPickerPage' as any)}
+                                <Pressable
+                                    onPress={() => router.push('/(tabs)/habits/IconPickerPage' as any)}
+                                    style={{
+                                        width: 50,
+                                        height: 50,
+                                        borderRadius: 25,
+                                        borderWidth: 1,
+                                        justifyContent: 'center',
+                                        alignItems: 'center',
+                                        backgroundColor: PAGE.habits.primary[1],
+                                    }}
+                                >
+                                    <Image
+                                        source={getIconFile(selectedIcon)}
                                         style={{
-                                            width: 50,
-                                            height: 50,
-                                            borderRadius: 25,
-                                            borderWidth: 1,
-                                            justifyContent: 'center',
-                                            alignItems: 'center',
-                                            backgroundColor: PAGE.habits.primary[1],
+                                            width: ICON_SIZE,
+                                            height: ICON_SIZE,
                                         }}
-                                    >
-                                        <Image
-                                            source={getIconFile(selectedIcon)}
-                                            style={{
-                                                width: ICON_SIZE,
-                                                height: ICON_SIZE,
-                                            }}
-                                        />
-                                    </Pressable>
-
-                                    <TextInput
-                                        ref={inputRef}
-                                        style={[
-                                            globalStyles.body,
-                                            {
-                                                flex: 1,
-                                                borderBottomWidth: 1,
-                                                borderBottomColor: COLORS.PrimaryLight,
-                                                paddingVertical: 10,
-                                            }
-                                        ]}
-                                        placeholder="Enter habit name..."
-                                        placeholderTextColor="rgba(0,0,0,0.4)"
-                                        value={habitName}
-                                        onChangeText={setHabitName}
-                                        autoFocus={false}
-                                        cursorColor={PAGE.habits.border[0]}
-                                        selectionColor={PAGE.habits.border[0]}
-                                        onFocus={(e) => scrollRef.current?.scrollToFocusedInput(e.nativeEvent.target)}
-
                                     />
-                                </View>
+                                </Pressable>
 
-                                {/* start date */}
-                                <View style={{ gap: 10 }}>
-                                    <Text style={[globalStyles.label]}>START DATE</Text>
+                                <TextInput
+                                    ref={inputRef}
+                                    style={[
+                                        globalStyles.body,
+                                        {
+                                            flex: 1,
+                                            borderBottomWidth: 1,
+                                            borderBottomColor: COLORS.PrimaryLight,
+                                            paddingVertical: 10,
+                                        }
+                                    ]}
+                                    placeholder="Enter habit name..."
+                                    placeholderTextColor="rgba(0,0,0,0.4)"
+                                    value={habitName}
+                                    onChangeText={setHabitName}
+                                    autoFocus={false}
+                                    cursorColor={PAGE.habits.border[0]}
+                                    selectionColor={PAGE.habits.border[0]}
+                                    onFocus={(e) => scrollRef.current?.scrollToFocusedInput(e.nativeEvent.target)}
 
-                                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                                        {(['today', 'tomorrow', 'custom', 'none'] as const).map((option) => {
-                                            const isSelected = startDateOption === option;
-                                            const label = option === 'today' ? 'Today'
-                                                : option === 'tomorrow' ? 'Tomorrow'
+                                />
+                            </View>
+
+                            {/* start date */}
+                            <View style={{ gap: 10 }}>
+                                <Text style={[globalStyles.label]}>START DATE</Text>
+
+                                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                                    {(['today', 'tomorrow', 'custom', 'none'] as const).map((option) => {
+                                        const isSelected = startDateOption === option;
+                                        const label = option === 'today' ? 'Today'
+                                            : option === 'tomorrow' ? 'Tomorrow'
                                                 : option === 'none' ? 'No date'
-                                                : startDateOption === 'custom' ? getCustomDateLabel(startDate)
-                                                : 'Custom';
+                                                    : startDateOption === 'custom' ? getCustomDateLabel(startDate)
+                                                        : 'Custom';
 
-                                            return (
-                                                <Pressable
-                                                    key={option}
-                                                    onPress={() => {
-                                                        if (option === 'today') {
-                                                            setNoStartDate(false);
-                                                            setStartDate(parseLocalDate(habitToday));
-                                                            setShowCalendar(false);
-                                                            if (isWeeklyGoal) {
-                                                                setIsWeeklyGoal(false);
-                                                                setEndDate(null);
-                                                            }
-                                                        } else if (option === 'tomorrow') {
-                                                            setNoStartDate(false);
-                                                            setStartDate(parseLocalDate(habitTomorrowStr));
-                                                            setShowCalendar(false);
-                                                            if (isWeeklyGoal) {
-                                                                setIsWeeklyGoal(false);
-                                                                setEndDate(null);
-                                                            }
-                                                        } else if (option === 'none') {
-                                                            // inbox habit — schedule it later
-                                                            setNoStartDate(true);
-                                                            setShowCalendar(false);
-                                                            if (isWeeklyGoal) {
-                                                                setIsWeeklyGoal(false);
-                                                                setEndDate(null);
-                                                            }
-                                                        } else {
-                                                            setNoStartDate(false);
-                                                            setShowCalendar(!showCalendar);
-                                                        }
-                                                    }}
-                                                >
-                                                    <ShadowBox
-                                                        contentBackgroundColor={isSelected ? PAGE.habits.primary[0] : '#fff'}
-                                                        contentBorderColor={isSelected ? '#000' : PAGE.habits.primary[0]}
-                                                        shadowBorderColor={isSelected ? '#000' : PAGE.habits.primary[0]}
-                                                        shadowColor={isSelected ? '#000' : PAGE.habits.primary[0]}
-                                                    >
-                                                        <View style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
-                                                            <Text style={globalStyles.body1}>{label}</Text>
-                                                        </View>
-                                                    </ShadowBox>
-                                                </Pressable>
-                                            );
-                                        })}
-                                    </View>
-
-                                    {showCalendar && (
-                                        <View style={{ marginVertical: 5, gap: 8 }}>
-                                            <View style={{
-                                                flexDirection: 'row',
-                                                alignItems: 'center',
-                                                justifyContent: 'space-between',
-                                                paddingVertical: 4,
-                                                paddingHorizontal: 2,
-                                            }}>
-                                                <Text style={globalStyles.body1}>Weekly goal?</Text>
-                                                <Switch
-                                                    value={isWeeklyGoal}
-                                                    onValueChange={(val) => {
-                                                        setIsWeeklyGoal(val);
-                                                        if (val) {
-                                                            const monday = snapToMonday(startDate);
-                                                            setStartDate(monday);
-                                                            // default to a one-week goal unless "repeat every week" is on
-                                                            setEndDate(weeklyRepeat ? null : getSundayOfWeek(monday));
-                                                            if (selectedFrequency === 'Daily') {
-                                                                setSelectedFrequency('None');
-                                                            }
-                                                            if (customType === 'daily') {
-                                                                setCustomType('weekly');
-                                                            }
-                                                        } else {
-                                                            setEndDate(null);
-                                                            setWeeklyRepeat(false);
-                                                        }
-                                                    }}
-                                                    trackColor={{ false: '#ddd', true: PAGE.habits.primary[0] }}
-                                                    thumbColor="#fff"
-                                                />
-                                            </View>
-
-                                            {/* recurring weekly goal: no end date, repeats every week */}
-                                            {isWeeklyGoal && (
-                                                <View style={{
-                                                    flexDirection: 'row',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'space-between',
-                                                    paddingVertical: 4,
-                                                    paddingHorizontal: 2,
-                                                }}>
-                                                    <Text style={globalStyles.body1}>Repeat every week?</Text>
-                                                    <Switch
-                                                        value={weeklyRepeat}
-                                                        onValueChange={(val) => {
-                                                            setWeeklyRepeat(val);
-                                                            // recurring = no end date; one-week = ends on the start Sunday
-                                                            setEndDate(val ? null : getSundayOfWeek(startDate));
-                                                        }}
-                                                        trackColor={{ false: '#ddd', true: PAGE.habits.primary[0] }}
-                                                        thumbColor="#fff"
-                                                    />
-                                                </View>
-                                            )}
-                                            <ShadowBox>
-                                                <SimpleCalendar
-                                                    selectedDate={startDate}
-                                                    onSelectDate={(date) => {
+                                        return (
+                                            <Pressable
+                                                key={option}
+                                                onPress={() => {
+                                                    if (option === 'today') {
+                                                        setNoStartDate(false);
+                                                        setStartDate(parseLocalDate(habitToday));
+                                                        setShowCalendar(false);
                                                         if (isWeeklyGoal) {
-                                                            setStartDate(date);
-                                                            // keep it open-ended when repeating; otherwise scope to that week
-                                                            setEndDate(weeklyRepeat ? null : getSundayOfWeek(date));
-                                                        } else {
-                                                            setStartDate(date);
-                                                            setShowCalendar(false);
+                                                            setIsWeeklyGoal(false);
+                                                            setEndDate(null);
                                                         }
-                                                    }}
-                                                    selectedDateColor={PAGE.habits.primary[0]}
-                                                    weekSelectMode={isWeeklyGoal}
-                                                />
-                                            </ShadowBox>
-                                        </View>
-                                    )}
+                                                    } else if (option === 'tomorrow') {
+                                                        setNoStartDate(false);
+                                                        setStartDate(parseLocalDate(habitTomorrowStr));
+                                                        setShowCalendar(false);
+                                                        if (isWeeklyGoal) {
+                                                            setIsWeeklyGoal(false);
+                                                            setEndDate(null);
+                                                        }
+                                                    } else if (option === 'none') {
+                                                        // inbox habit — schedule it later
+                                                        setNoStartDate(true);
+                                                        setShowCalendar(false);
+                                                        if (isWeeklyGoal) {
+                                                            setIsWeeklyGoal(false);
+                                                            setEndDate(null);
+                                                        }
+                                                    } else {
+                                                        setNoStartDate(false);
+                                                        setShowMonthlyCalendar(false);
+                                                        setShowEndCalendar(false);
+                                                        setShowCalendar(!showCalendar);
+                                                    }
+                                                }}
+                                            >
+                                                <ShadowBox
+                                                    contentBackgroundColor={isSelected ? PAGE.habits.primary[0] : '#fff'}
+                                                    contentBorderColor={isSelected ? '#000' : PAGE.habits.primary[0]}
+                                                    shadowBorderColor={isSelected ? '#000' : PAGE.habits.primary[0]}
+                                                    shadowColor={isSelected ? '#000' : PAGE.habits.primary[0]}
+                                                >
+                                                    <View style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
+                                                        <Text style={globalStyles.body1}>{label}</Text>
+                                                    </View>
+                                                </ShadowBox>
+                                            </Pressable>
+                                        );
+                                    })}
                                 </View>
 
-                                {/* rewards */}
-                                <View style={{ gap: 10 }}>
-                                    <Text style={[globalStyles.label]}>
-                                        REWARD POINTS
-                                    </Text>
-                                    <Pressable onPress={() => setShowRewardsPicker(!showRewardsPicker)}>
-                                        <ShadowBox
-                                            contentBackgroundColor={
-                                                rewardPoints === 0 ?
-                                                    '#fff' :
-                                                    COLORS.RewardsAccent}
-                                            contentBorderRadius={10}
-                                        >
-                                            <View style={{
-                                                flexDirection: 'row',
-                                                alignItems: 'center',
-                                                gap: 10,
-                                                paddingVertical: 5,
-                                                paddingHorizontal: 15,
-                                            }}>
-                                                <Image
-                                                    source={SYSTEM_ICONS.reward}
-                                                    style={{ width: 17, height: 17, tintColor: COLORS.Rewards }}
-                                                />
-                                                <Text style={globalStyles.body1}>
-                                                    {rewardPoints} {rewardPoints === 1 ? 'point' : 'points'}
-                                                </Text>
-                                            </View>
-                                        </ShadowBox>
-                                    </Pressable>
-
-                                    {showRewardsPicker && (
+                                {showCalendar && (
+                                    <View style={{ marginVertical: 5, gap: 8 }}>
                                         <View style={{
                                             flexDirection: 'row',
-                                            flexWrap: 'wrap',
-                                            gap: 8,
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            paddingVertical: 4,
+                                            paddingHorizontal: 2,
                                         }}>
-                                            {REWARD_OPTIONS.map((points) => (
-                                                <Pressable
-                                                    key={points}
-                                                    onPress={() => {
-                                                        setRewardPoints(points);
-                                                        setShowRewardsPicker(false);
-                                                    }}
-                                                    style={{ width: '22%' }}
-                                                >
-                                                    <ShadowBox
-                                                        contentBackgroundColor={
-                                                            rewardPoints === points
-                                                                ? COLORS.Rewards
-                                                                : '#fff'
+                                            <Text style={globalStyles.body1}>Week goal?</Text>
+                                            <Switch
+                                                value={isWeeklyGoal}
+                                                onValueChange={(val) => {
+                                                    setIsWeeklyGoal(val);
+                                                    if (val) {
+                                                        const monday = snapToMonday(startDate);
+                                                        setStartDate(monday);
+                                                        // no end date by default → recurs every week. if an end
+                                                        // date is set, a week goal ends on a whole week (Sunday).
+                                                        if (addEndDate && endDate) setEndDate(getSundayOfWeek(endDate));
+                                                        if (selectedFrequency === 'Daily') {
+                                                            setSelectedFrequency('None');
                                                         }
-                                                        contentBorderColor={
-                                                            rewardPoints === points
-                                                                ? '#000'
-                                                                : COLORS.Rewards
+                                                        if (customType === 'daily') {
+                                                            setCustomType('weekly');
                                                         }
-                                                        shadowBorderColor={
-                                                            rewardPoints === points
-                                                                ? '#000'
-                                                                : COLORS.Rewards
-                                                        }
-                                                        shadowColor={
-                                                            rewardPoints === points
-                                                                ? '#000'
-                                                                : COLORS.Rewards
-                                                        }
-                                                    >
-                                                        <View style={{
-                                                            paddingVertical: 6,
-                                                            alignItems: 'center',
-                                                        }}>
-                                                            <Text style={globalStyles.label} numberOfLines={1}>
-                                                                {points} pts
-                                                            </Text>
-                                                        </View>
-                                                    </ShadowBox>
-                                                </Pressable>
-                                            ))}
+                                                    }
+                                                }}
+                                                trackColor={{ false: '#ddd', true: PAGE.habits.primary[0] }}
+                                                thumbColor="#fff"
+                                            />
                                         </View>
-                                    )}
-                                </View>
 
-                                {/* scheduling */}
-                                <View style={{ gap: 10 }}>
-                                    {/* frequency */}
-                                    <Text style={[globalStyles.label]}>
-                                        FREQUENCY
-                                    </Text>
+                                        <ShadowBox>
+                                            <SimpleCalendar
+                                                selectedDate={startDate}
+                                                onSelectDate={(date) => {
+                                                    if (isWeeklyGoal) {
+                                                        // picks the START week; the end (if any) is set below
+                                                        setStartDate(date);
+                                                    } else {
+                                                        setStartDate(date);
+                                                        setShowCalendar(false);
+                                                    }
+                                                }}
+                                                selectedDateColor={PAGE.habits.primary[0]}
+                                                weekSelectMode={isWeeklyGoal}
+                                            />
+                                        </ShadowBox>
+                                    </View>
+                                )}
+                            </View>
+
+                            {/* rewards */}
+                            <View style={{ gap: 10 }}>
+                                <Text style={[globalStyles.label]}>
+                                    REWARD POINTS
+                                </Text>
+                                <Pressable onPress={() => setShowRewardsPicker(!showRewardsPicker)}>
+                                    <ShadowBox
+                                        contentBackgroundColor={
+                                            rewardPoints === 0 ?
+                                                '#fff' :
+                                                COLORS.RewardsAccent}
+                                        contentBorderRadius={10}
+                                    >
+                                        <View style={{
+                                            flexDirection: 'row',
+                                            alignItems: 'center',
+                                            gap: 10,
+                                            paddingVertical: 5,
+                                            paddingHorizontal: 15,
+                                        }}>
+                                            <Image
+                                                source={SYSTEM_ICONS.reward}
+                                                style={{ width: 17, height: 17, tintColor: COLORS.Rewards }}
+                                            />
+                                            <Text style={globalStyles.body1}>
+                                                {rewardPoints} {rewardPoints === 1 ? 'point' : 'points'}
+                                            </Text>
+                                        </View>
+                                    </ShadowBox>
+                                </Pressable>
+
+                                {showRewardsPicker && (
                                     <View style={{
                                         flexDirection: 'row',
                                         flexWrap: 'wrap',
                                         gap: 8,
                                     }}>
-                                        {FREQUENCIES.filter(f => !isWeeklyGoal || f !== 'Daily').map((freq) => (
+                                        {REWARD_OPTIONS.map((points) => (
                                             <Pressable
-                                                key={freq}
-                                                onPress={() => handleFrequencyChange(freq)}
+                                                key={points}
+                                                onPress={() => {
+                                                    setRewardPoints(points);
+                                                    setShowRewardsPicker(false);
+                                                }}
+                                                style={{ width: '22%' }}
                                             >
                                                 <ShadowBox
                                                     contentBackgroundColor={
-                                                        selectedFrequency === freq
-                                                            ? COLORS.Frequency
+                                                        rewardPoints === points
+                                                            ? COLORS.Rewards
                                                             : '#fff'
                                                     }
                                                     contentBorderColor={
-                                                        selectedFrequency === freq
+                                                        rewardPoints === points
                                                             ? '#000'
-                                                            : COLORS.Frequency
+                                                            : COLORS.Rewards
                                                     }
                                                     shadowBorderColor={
-                                                        selectedFrequency === freq
+                                                        rewardPoints === points
                                                             ? '#000'
-                                                            : COLORS.Frequency
+                                                            : COLORS.Rewards
                                                     }
                                                     shadowColor={
-                                                        selectedFrequency === freq
+                                                        rewardPoints === points
                                                             ? '#000'
-                                                            : COLORS.Frequency
+                                                            : COLORS.Rewards
                                                     }
                                                 >
                                                     <View style={{
                                                         paddingVertical: 6,
-                                                        paddingHorizontal: 12,
+                                                        alignItems: 'center',
                                                     }}>
-                                                        <Text style={[
-                                                            globalStyles.body1
-                                                        ]}>
-                                                            {freq}
+                                                        <Text style={globalStyles.label} numberOfLines={1}>
+                                                            {points} pts
                                                         </Text>
                                                     </View>
                                                 </ShadowBox>
                                             </Pressable>
                                         ))}
                                     </View>
+                                )}
+                            </View>
 
-                                    {/* monthly repeat mode: day of month vs nth weekday */}
+                            {/* scheduling */}
+                            <View style={{ gap: 10 }}>
+                                {/* frequency */}
+                                <Text style={[globalStyles.label]}>
+                                    FREQUENCY
+                                </Text>
+                                <View style={{
+                                    flexDirection: 'row',
+                                    flexWrap: 'wrap',
+                                    gap: 8,
+                                }}>
+                                    {FREQUENCIES.filter(f => !isWeeklyGoal || f !== 'Daily').map((freq) => (
+                                        <Pressable
+                                            key={freq}
+                                            onPress={() => handleFrequencyChange(freq)}
+                                        >
+                                            <ShadowBox
+                                                contentBackgroundColor={
+                                                    selectedFrequency === freq
+                                                        ? COLORS.Frequency
+                                                        : '#fff'
+                                                }
+                                                contentBorderColor={
+                                                    selectedFrequency === freq
+                                                        ? '#000'
+                                                        : COLORS.Frequency
+                                                }
+                                                shadowBorderColor={
+                                                    selectedFrequency === freq
+                                                        ? '#000'
+                                                        : COLORS.Frequency
+                                                }
+                                                shadowColor={
+                                                    selectedFrequency === freq
+                                                        ? '#000'
+                                                        : COLORS.Frequency
+                                                }
+                                            >
+                                                <View style={{
+                                                    paddingVertical: 6,
+                                                    paddingHorizontal: 12,
+                                                }}>
+                                                    <Text style={[
+                                                        globalStyles.body1
+                                                    ]}>
+                                                        {freq}
+                                                    </Text>
+                                                </View>
+                                            </ShadowBox>
+                                        </Pressable>
+                                    ))}
+                                </View>
+
+                                {selectedFrequency !== 'None' && (
+                                <View style={{
+                                    gap: 15,
+                                    padding: 15,
+                                    backgroundColor: PAGE.habits.primary[0],
+                                    borderRadius: 15
+
+                                }}>
+
+                                    {/* monthly repeat: pick one date — repeat on that exact day of the
+                                        month, or on the weekday-of-month that date falls on (e.g. 3rd Tue) */}
                                     {selectedFrequency === 'Monthly' && (
                                         <>
                                             <Text style={globalStyles.label}>REPEATS ON</Text>
                                             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                                                 {([
-                                                    { mode: 'dayOfMonth' as const, label: `Day ${startDate.getDate()}` },
+                                                    { mode: 'dayOfMonth' as const, label: 'Specific date' },
                                                     { mode: 'nthWeekday' as const, label: 'Day of week' },
                                                 ]).map(({ mode, label }) => {
                                                     const isSelected = monthlyMode === mode;
                                                     return (
-                                                        <Pressable key={mode} onPress={() => setMonthlyMode(mode)}>
+                                                        <Pressable
+                                                            key={mode}
+                                                            onPress={() => {
+                                                                setMonthlyMode(mode);
+                                                                if (mode === 'nthWeekday') {
+                                                                    // derive the weekday-of-month from the picked date
+                                                                    setMonthlyWeekday(WEEK_DAYS[monthlyPickDate.getDay()]);
+                                                                    setMonthlyWeek(nthWeekOfDate(monthlyPickDate));
+                                                                }
+                                                                setShowCalendar(false);
+                                                                setShowEndCalendar(false);
+                                                                setShowMonthlyCalendar(true);
+                                                            }}
+                                                        >
                                                             <ShadowBox
                                                                 contentBackgroundColor={isSelected ? COLORS.Frequency : '#fff'}
                                                                 contentBorderColor={isSelected ? '#000' : COLORS.Frequency}
@@ -784,56 +819,32 @@ export default function NewHabitPage() {
                                                 })}
                                             </View>
 
-                                            {monthlyMode === 'nthWeekday' && (
-                                                <>
-                                                    <Text style={globalStyles.label}>WHICH WEEK</Text>
-                                                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                                                        {[
-                                                            { week: 1, label: '1st' },
-                                                            { week: 2, label: '2nd' },
-                                                            { week: 3, label: '3rd' },
-                                                            { week: 4, label: '4th' },
-                                                            { week: 5, label: 'Last' },
-                                                        ].map(({ week, label }) => {
-                                                            const isSelected = monthlyWeek === week;
-                                                            return (
-                                                                <Pressable key={week} onPress={() => setMonthlyWeek(week)}>
-                                                                    <ShadowBox
-                                                                        contentBackgroundColor={isSelected ? COLORS.Frequency : '#fff'}
-                                                                        contentBorderColor={isSelected ? '#000' : COLORS.Frequency}
-                                                                        shadowBorderColor={isSelected ? '#000' : COLORS.Frequency}
-                                                                        shadowColor={isSelected ? '#000' : COLORS.Frequency}
-                                                                    >
-                                                                        <View style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
-                                                                            <Text style={globalStyles.body1}>{label}</Text>
-                                                                        </View>
-                                                                    </ShadowBox>
-                                                                </Pressable>
-                                                            );
-                                                        })}
-                                                    </View>
+                                            {/* current selection — tap to change */}
+                                            <Pressable onPress={() => { setShowCalendar(false); setShowEndCalendar(false); setShowMonthlyCalendar(true); }}>
+                                                <Text style={globalStyles.body1}>
+                                                    {monthlyMode === 'dayOfMonth'
+                                                        ? `Every month on day ${monthlyDay}`
+                                                        : `Every month on the ${nthWeekLabel(monthlyWeek)} ${monthlyWeekday}`}
+                                                </Text>
+                                            </Pressable>
 
-                                                    <Text style={globalStyles.label}>WHICH DAY</Text>
-                                                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                                                        {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((day) => {
-                                                            const isSelected = monthlyWeekday === day;
-                                                            return (
-                                                                <Pressable key={day} onPress={() => setMonthlyWeekday(day)}>
-                                                                    <ShadowBox
-                                                                        contentBackgroundColor={isSelected ? COLORS.Frequency : '#fff'}
-                                                                        contentBorderColor={isSelected ? '#000' : COLORS.Frequency}
-                                                                        shadowBorderColor={isSelected ? '#000' : COLORS.Frequency}
-                                                                        shadowColor={isSelected ? '#000' : COLORS.Frequency}
-                                                                    >
-                                                                        <View style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
-                                                                            <Text style={globalStyles.body1}>{day.slice(0, 3)}</Text>
-                                                                        </View>
-                                                                    </ShadowBox>
-                                                                </Pressable>
-                                                            );
-                                                        })}
-                                                    </View>
-                                                </>
+                                            {showMonthlyCalendar && (
+                                                <ShadowBox>
+                                                    <SimpleCalendar
+                                                        selectedDate={monthlyPickDate}
+                                                        onSelectDate={(date) => {
+                                                            setMonthlyPickDate(date);
+                                                            if (monthlyMode === 'nthWeekday') {
+                                                                setMonthlyWeekday(WEEK_DAYS[date.getDay()]);
+                                                                setMonthlyWeek(nthWeekOfDate(date));
+                                                            } else {
+                                                                setMonthlyDay(date.getDate());
+                                                            }
+                                                            setShowMonthlyCalendar(false);
+                                                        }}
+                                                        selectedDateColor={PAGE.habits.primary[0]}
+                                                    />
+                                                </ShadowBox>
                                             )}
                                         </>
                                     )}
@@ -956,451 +967,510 @@ export default function NewHabitPage() {
                                         </>
                                     )}
 
-                                    {/* end date removed — a habit's lifespan is now driven by
-                                        its quest phase (scope), not a manual per-habit end date */}
-                                </View>
-
-                                {!isWeeklyGoal && <View style={{ gap: 10 }}>
-                                    {/* time of day */}
-                                    <Text style={[globalStyles.label]}>
-                                        TIME OF DAY
-                                    </Text>
-                                    <View style={{
-                                        flexDirection: 'row',
-                                        flexWrap: 'wrap',
-                                        gap: 8,
-                                    }}>
-                                        {TIME_OPTIONS.map((time) => (
-                                            <Pressable
-                                                key={time}
-                                                onPress={() => setSelectedTimeOfDay(time)}
-                                            >
-                                                <ShadowBox
-                                                    contentBackgroundColor={
-                                                        selectedTimeOfDay === time
-                                                            ? COLORS.TimeOfDay
-                                                            : '#fff'
-                                                    }
-                                                    contentBorderColor={
-                                                        selectedTimeOfDay === time
-                                                            ? '#000'
-                                                            : COLORS.TimeOfDay
-                                                    }
-                                                    shadowBorderColor={
-                                                        selectedTimeOfDay === time
-                                                            ? '#000'
-                                                            : COLORS.TimeOfDay
-                                                    }
-                                                    shadowColor={
-                                                        selectedTimeOfDay === time
-                                                            ? '#000'
-                                                            : COLORS.TimeOfDay
-                                                    }
-                                                >
-                                                    <View style={{
-                                                        paddingVertical: 5,
-                                                        paddingHorizontal: 12,
-                                                    }}>
-                                                        <Text style={[
-                                                            globalStyles.body1
-                                                        ]}>
-                                                            {time}
-                                                        </Text>
-                                                    </View>
-                                                </ShadowBox>
-                                            </Pressable>
-                                        ))}
-                                    </View>
-                                </View>}
-
-                                <View style={{ gap: 10 }}>
-
-                                    {/* paths — hidden for quest goals */}
-                                    {!isQuestMode && (
-                                        <>
-                                            <Text style={[globalStyles.label]}>
-                                                PATHS
-                                            </Text>
+                                    {/* optional end date — off = repeats forever at its cadence.
+                                        week goals pick a whole week; other habits pick a single day.
+                                        always rendered here since the wrapper only shows when a
+                                        frequency (not None) is selected. */}
+                                    <>
                                             <View style={{
                                                 flexDirection: 'row',
-                                                flexWrap: 'wrap',
-                                                gap: 8,
+                                                alignItems: 'center',
+                                                justifyContent: 'space-between',
+                                                paddingVertical: 4,
+                                                paddingHorizontal: 2,
                                             }}>
-                                                {paths.length === 0 ? (
-                                                    <Text style={[globalStyles.label, { opacity: 0.4 }]}>No paths yet</Text>
-                                                ) : (
-                                                    paths.map((path) => {
-                                                        const selected = selectedPathId === path.id;
-                                                        const colorHex = PATH_COLORS[path.color as PathColorKey] ?? '#999';
-                                                        return (
-                                                            <Pressable key={path.id} onPress={() => togglePath(path.id)}>
-                                                                <ShadowBox
-                                                                    contentBackgroundColor={selected ? colorHex : '#fff'}
-                                                                    contentBorderColor={selected ? '#000' : colorHex}
-                                                                    shadowBorderColor={selected ? '#000' : colorHex}
-                                                                    shadowColor={selected ? '#000' : colorHex}
-                                                                >
-                                                                    <View style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
-                                                                        <Text style={globalStyles.body1}>{path.name}</Text>
-                                                                    </View>
-                                                                </ShadowBox>
-                                                            </Pressable>
-                                                        );
-                                                    })
-                                                )}
-
+                                                <Text style={globalStyles.body1}>Add end date?</Text>
+                                                <Switch
+                                                    value={addEndDate}
+                                                    onValueChange={(val) => {
+                                                        setAddEndDate(val);
+                                                        if (val) {
+                                                            // seed a sensible default when first enabled
+                                                            if (!endDate) setEndDate(isWeeklyGoal ? getSundayOfWeek(startDate) : startDate);
+                                                            // opening the end-date calendar closes the others
+                                                            setShowCalendar(false);
+                                                            setShowMonthlyCalendar(false);
+                                                            setShowEndCalendar(true);
+                                                        } else {
+                                                            setShowEndCalendar(false);
+                                                        }
+                                                    }}
+                                                    trackColor={{ false: '#ddd', true: PAGE.habits.border[0] }}
+                                                    thumbColor="#fff"
+                                                />
                                             </View>
-                                        </>
-                                    )}
 
-                                    {/* quest goal: what happens to this habit when its phase ends */}
-                                    {isQuestMode && inPhase && (
-                                        <>
-                                            <Text style={[globalStyles.label]}>WHEN THIS PHASE ENDS</Text>
-                                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                                                {([['phase', 'End with phase'], ['carry', 'Carry forward'], ['forever', 'Keep forever']] as const).map(([val, lbl]) => {
-                                                    const sel = questScope === val;
-                                                    return (
-                                                        <Pressable key={val} onPress={() => setQuestScope(val)}>
-                                                            <ShadowBox
-                                                                contentBackgroundColor={sel ? PAGE.quest.primary[0] : '#fff'}
-                                                                contentBorderColor={sel ? '#000' : PAGE.quest.primary[0]}
-                                                                shadowBorderColor={sel ? '#000' : PAGE.quest.primary[0]}
-                                                                shadowColor={sel ? '#000' : PAGE.quest.primary[0]}
-                                                            >
-                                                                <View style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
-                                                                    <Text style={globalStyles.body1}>{lbl}</Text>
-                                                                </View>
-                                                            </ShadowBox>
-                                                        </Pressable>
-                                                    );
-                                                })}
-                                            </View>
-                                        </>
-                                    )}
-
-                                    {/* **TODO: create More options logic */}
-                                    <Pressable
-                                        onPress={() => setMoreOptions(!moreOptions)}
-                                        style={{
-                                            marginTop: 10,
-                                            alignSelf: 'center',
-                                            opacity: 0.6,
-                                        }}>
-                                        <Text style={globalStyles.label}>{moreOptions ? 'Less options' : 'More options'}</Text>
-                                    </Pressable>
-
-                                    {moreOptions && (
-                                        <>
-                                            <View style={{ gap: 10 }}>
-                                                {/* keep until until */}
-                                                <View style={{
-                                                    flexDirection: 'row',
-                                                    justifyContent: 'space-between',
-                                                    alignItems: 'center',
-                                                    marginBottom: 10,
+                                            {addEndDate && !showEndCalendar && (
+                                                <Pressable onPress={() => {
+                                                    setShowCalendar(false);
+                                                    setShowMonthlyCalendar(false);
+                                                    setShowEndCalendar(true);
                                                 }}>
-                                                    <Text style={globalStyles.body}>Keep until finished?</Text>
-                                                    <Switch
-                                                        trackColor={{ true: PAGE.habits.primary[1] }}
-                                                        value={keepUntil}
-                                                        onValueChange={setKeepUntil}
+                                                    <Text style={globalStyles.body1}>
+                                                        Ends {getCustomDateLabel(endDate ?? startDate)}
+                                                    </Text>
+                                                </Pressable>
+                                            )}
+
+                                            {addEndDate && showEndCalendar && (
+                                                <ShadowBox>
+                                                    <SimpleCalendar
+                                                        selectedDate={endDate ?? startDate}
+                                                        onSelectDate={(date) => {
+                                                            setEndDate(isWeeklyGoal ? getSundayOfWeek(date) : date);
+                                                            setShowEndCalendar(false);
+                                                        }}
+                                                        selectedDateColor={PAGE.habits.primary[0]}
+                                                        weekSelectMode={isWeeklyGoal}
                                                     />
-                                                </View>
-
-                                                {/* increment tracking toggle */}
-                                                <View style={{
-                                                    flexDirection: 'row',
-                                                    justifyContent: 'space-between',
-                                                    alignItems: 'center',
-                                                    marginBottom: 10,
-                                                }}>
-                                                    <Text style={globalStyles.body}>Track in increments?</Text>
-                                                    <Switch
-                                                        trackColor={{ true: PAGE.habits.primary[1] }}
-                                                        value={increment}
-                                                        onValueChange={setIncrement}
-                                                    />
-                                                </View>
-
-                                                {/* increment type & amount (only if increment enabled) */}
-                                                {increment && (
-                                                    <View style={{ gap: 30 }}>
-                                                        <View style={{ gap: 10 }}>
-
-                                                            <Text style={globalStyles.label}>INCREMENT TYPE</Text>
-                                                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                                                                {['None', 'Time', 'Minutes', 'Miles', 'Sips'].map((type) => (
-                                                                    <Pressable key={type} onPress={() => setIncrementType(type as Habit['incrementType'])}>
-                                                                        <ShadowBox
-                                                                            contentBackgroundColor={incrementType === type ? PAGE.habits.primary[1] : '#fff'}
-                                                                            contentBorderColor={incrementType === type ? '#000' : PAGE.habits.primary[1]}
-                                                                            shadowBorderColor={incrementType === type ? '#000' : PAGE.habits.primary[1]}
-                                                                            shadowColor={incrementType === type ? '#000' : PAGE.habits.primary[1]}
-                                                                        >
-                                                                            <View style={{ paddingVertical: 6, paddingHorizontal: 10 }}>
-                                                                                <Text style={globalStyles.body1}>{type}</Text>
-                                                                            </View>
-                                                                        </ShadowBox>
-                                                                    </Pressable>
-                                                                ))}
-                                                            </View>
-                                                        </View>
-
-                                                        {/* Weekly time goal (only for Time type) */}
-                                                        {incrementType === 'Time' && (
-                                                            <View style={{ gap: 10 }}>
-                                                                <Text style={globalStyles.label}>WEEKLY TIME GOAL</Text>
-                                                                <Text style={[globalStyles.label, { opacity: 0.5, fontSize: 11 }]}>
-                                                                    Set the total hours and minutes you want to log each week.
-                                                                </Text>
-
-                                                                <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 12, marginTop: 5 }}>
-                                                                    {/* hours */}
-                                                                    <View style={{ alignItems: 'center', gap: 6 }}>
-                                                                        <Text style={[globalStyles.label, { fontSize: 10 }]}>HOURS</Text>
-                                                                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                                                            <ShadowBox shadowColor={PAGE.habits.primary[1]}>
-                                                                                <Pressable
-                                                                                    onPress={() => setTimeGoalHours(prev => Math.max(0, prev - 1))}
-                                                                                    style={{ paddingVertical: 4, paddingHorizontal: 10 }}
-                                                                                >
-                                                                                    <Text style={globalStyles.body}>-</Text>
-                                                                                </Pressable>
-                                                                            </ShadowBox>
-
-                                                                            <ShadowBox shadowColor={PAGE.habits.primary[1]}>
-                                                                                <View style={{
-                                                                                    borderWidth: 2,
-                                                                                    borderColor: PAGE.habits.primary[0],
-                                                                                    width: 60,
-                                                                                    borderRadius: 20,
-                                                                                    justifyContent: 'center',
-                                                                                }}>
-                                                                                    <TextInput
-                                                                                        style={[globalStyles.body, { textAlign: 'center' }]}
-                                                                                        keyboardType="numeric"
-                                                                                        value={timeGoalHours.toString()}
-                                                                                        onChangeText={text => setTimeGoalHours(Number(text) || 0)}
-                                                                                        onFocus={(e) => scrollRef.current?.scrollToFocusedInput(e.nativeEvent.target)}
-                                                                                    />
-                                                                                </View>
-                                                                            </ShadowBox>
-
-                                                                            <ShadowBox shadowColor={PAGE.habits.primary[1]}>
-                                                                                <Pressable
-                                                                                    onPress={() => setTimeGoalHours(prev => prev + 1)}
-                                                                                    style={{ paddingVertical: 4, paddingHorizontal: 10 }}
-                                                                                >
-                                                                                    <Text style={globalStyles.body}>+</Text>
-                                                                                </Pressable>
-                                                                            </ShadowBox>
-                                                                        </View>
-                                                                    </View>
-
-                                                                    <Text style={[globalStyles.h2, { marginTop: 16 }]}>:</Text>
-
-                                                                    {/* minutes */}
-                                                                    <View style={{ alignItems: 'center', gap: 6 }}>
-                                                                        <Text style={[globalStyles.label, { fontSize: 10 }]}>MINUTES</Text>
-                                                                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                                                            <ShadowBox shadowColor={PAGE.habits.primary[1]}>
-                                                                                <Pressable
-                                                                                    onPress={() => setTimeGoalMinutes(prev => {
-                                                                                        const val = prev - 15;
-                                                                                        return val < 0 ? 0 : val;
-                                                                                    })}
-                                                                                    style={{ paddingVertical: 4, paddingHorizontal: 10 }}
-                                                                                >
-                                                                                    <Text style={globalStyles.body}>-</Text>
-                                                                                </Pressable>
-                                                                            </ShadowBox>
-
-                                                                            <ShadowBox shadowColor={PAGE.habits.primary[1]}>
-                                                                                <View style={{
-                                                                                    borderWidth: 2,
-                                                                                    borderColor: PAGE.habits.primary[0],
-                                                                                    width: 60,
-                                                                                    borderRadius: 20,
-                                                                                    justifyContent: 'center',
-                                                                                }}>
-                                                                                    <TextInput
-                                                                                        style={[globalStyles.body, { textAlign: 'center' }]}
-                                                                                        keyboardType="numeric"
-                                                                                        value={timeGoalMinutes.toString()}
-                                                                                        onChangeText={text => setTimeGoalMinutes(Number(text) || 0)}
-                                                                                        onFocus={(e) => scrollRef.current?.scrollToFocusedInput(e.nativeEvent.target)}
-                                                                                    />
-                                                                                </View>
-                                                                            </ShadowBox>
-
-                                                                            <ShadowBox shadowColor={PAGE.habits.primary[1]}>
-                                                                                <Pressable
-                                                                                    onPress={() => setTimeGoalMinutes(prev => prev + 15)}
-                                                                                    style={{ paddingVertical: 4, paddingHorizontal: 10 }}
-                                                                                >
-                                                                                    <Text style={globalStyles.body}>+</Text>
-                                                                                </Pressable>
-                                                                            </ShadowBox>
-                                                                        </View>
-                                                                    </View>
-                                                                </View>
-                                                            </View>
-                                                        )}
-
-                                                        {incrementType !== 'Time' && (
-                                                            <View style={{ gap: 30 }}>
-                                                                <View style={{ gap: 30 }}>
-                                                                    <Text style={globalStyles.label}>INCREMENT AMOUNT</Text>
-
-                                                                    <View style={{ flexDirection: 'row', alignSelf: 'center', gap: 10 }}>
-                                                                        <ShadowBox shadowColor={PAGE.habits.primary[1]}>
-                                                                            <Pressable
-                                                                                onPress={() => setincrementStep(prev => Math.max(0, prev - 1))}
-                                                                                style={{
-                                                                                    paddingVertical: 3,
-                                                                                    paddingHorizontal: 8,
-                                                                                    alignItems: 'center',
-                                                                                    justifyContent: 'center'
-                                                                                }}>
-                                                                                <Text style={globalStyles.body}>-</Text>
-                                                                            </Pressable>
-                                                                        </ShadowBox>
-
-                                                                        <ShadowBox shadowColor={PAGE.habits.primary[1]}>
-                                                                            <View style={{
-                                                                                paddingVertical: 2,
-                                                                                width: 100,
-                                                                                borderRadius: 20,
-                                                                                justifyContent: 'center'
-                                                                            }}>
-                                                                                <TextInput
-                                                                                    style={[globalStyles.body, { textAlign: 'center' }]}
-                                                                                    keyboardType="numeric"
-                                                                                    value={incrementStep.toString()}
-                                                                                    onChangeText={text => setincrementStep(Number(text))}
-                                                                                    onFocus={(e) => scrollRef.current?.scrollToFocusedInput(e.nativeEvent.target)}
-                                                                                />
-                                                                            </View>
-                                                                        </ShadowBox>
-
-                                                                        <ShadowBox shadowColor={PAGE.habits.primary[1]}>
-                                                                            <Pressable
-                                                                                onPress={() => setincrementStep(prev => prev + 1)}
-                                                                                style={{
-                                                                                    paddingVertical: 3,
-                                                                                    paddingHorizontal: 8,
-                                                                                    alignItems: 'center',
-                                                                                    justifyContent: 'center'
-                                                                                }}>
-                                                                                <Text style={globalStyles.body}>+</Text>
-                                                                            </Pressable>
-                                                                        </ShadowBox>
-                                                                    </View>
-                                                                </View>
-
-                                                                <View style={{ gap: 30 }}>
-                                                                    <Text style={globalStyles.label}>INCREMENT GOAL (OPTIONAL)</Text>
-
-                                                                    <View style={{ flexDirection: 'row', alignSelf: 'center', gap: 10 }}>
-                                                                        <ShadowBox shadowColor={PAGE.habits.primary[0]}>
-                                                                            <Pressable
-                                                                                onPress={() => setIncrementGoal(prev => Math.max(0, prev - 1))}
-                                                                                style={{
-                                                                                    paddingVertical: 3,
-                                                                                    paddingHorizontal: 8,
-                                                                                    alignItems: 'center',
-                                                                                    justifyContent: 'center'
-                                                                                }}>
-                                                                                <Text style={globalStyles.body}>-</Text>
-                                                                            </Pressable>
-                                                                        </ShadowBox>
-
-                                                                        <ShadowBox shadowColor={PAGE.habits.primary[0]}>
-                                                                            <View style={{
-                                                                                paddingVertical: 2,
-                                                                                width: 100,
-                                                                                borderRadius: 20,
-                                                                                justifyContent: 'center'
-                                                                            }}>
-                                                                                <TextInput
-                                                                                    style={[globalStyles.body, { textAlign: 'center' }]}
-                                                                                    keyboardType="numeric"
-                                                                                    value={incrementGoal.toString()}
-                                                                                    onChangeText={text => setIncrementGoal(Number(text))}
-                                                                                    onFocus={(e) => scrollRef.current?.scrollToFocusedInput(e.nativeEvent.target)}
-                                                                                />
-                                                                            </View>
-                                                                        </ShadowBox>
-
-                                                                        <ShadowBox shadowColor={PAGE.habits.primary[0]}>
-                                                                            <Pressable
-                                                                                onPress={() => setIncrementGoal(prev => prev + 1)}
-                                                                                style={{
-                                                                                    paddingVertical: 3,
-                                                                                    paddingHorizontal: 8,
-                                                                                    alignItems: 'center',
-                                                                                    justifyContent: 'center'
-                                                                                }}>
-                                                                                <Text style={globalStyles.body}>+</Text>
-                                                                            </Pressable>
-                                                                        </ShadowBox>
-                                                                    </View>
-                                                                </View>
-                                                            </View>
-                                                        )}
-                                                    </View>
-                                                )}
-                                            </View>
+                                                </ShadowBox>
+                                            )}
                                         </>
-                                    )}
+                                </View>
+                                )}
+                            </View>
 
-
-
-
-                                    {/* save and cancel button */}
-                                    <View style={{
-                                        flexDirection: 'row',
-                                        gap: 10,
-                                        marginTop: 30,
-                                        justifyContent: 'center',
-                                    }}>
+                            {!isWeeklyGoal && <View style={{ gap: 10 }}>
+                                {/* time of day */}
+                                <Text style={[globalStyles.label]}>
+                                    TIME OF DAY
+                                </Text>
+                                <View style={{
+                                    flexDirection: 'row',
+                                    flexWrap: 'wrap',
+                                    gap: 8,
+                                }}>
+                                    {TIME_OPTIONS.map((time) => (
                                         <Pressable
-                                            onPress={() => router.back()}
-                                            style={{ flex: 1, maxWidth: 100 }}
-                                        >
-                                            <ShadowBox
-                                                contentBackgroundColor={BUTTON_COLORS.Cancel}
-                                                shadowBorderRadius={20}
-                                            >
-                                                <View style={{ paddingVertical: 5, alignItems: 'center' }}>
-                                                    <Text style={globalStyles.body}>Cancel</Text>
-                                                </View>
-                                            </ShadowBox>
-                                        </Pressable>
-
-                                        <Pressable
-                                            onPress={handleSave}
-                                            disabled={isSaving}
-                                            style={{ flex: 1, maxWidth: 100 }}
+                                            key={time}
+                                            onPress={() => setSelectedTimeOfDay(time)}
                                         >
                                             <ShadowBox
                                                 contentBackgroundColor={
-                                                    isSaving ? BUTTON_COLORS.Disabled : BUTTON_COLORS.Save
+                                                    selectedTimeOfDay === time
+                                                        ? COLORS.TimeOfDay
+                                                        : '#fff'
                                                 }
-                                                shadowBorderRadius={20}
+                                                contentBorderColor={
+                                                    selectedTimeOfDay === time
+                                                        ? '#000'
+                                                        : COLORS.TimeOfDay
+                                                }
+                                                shadowBorderColor={
+                                                    selectedTimeOfDay === time
+                                                        ? '#000'
+                                                        : COLORS.TimeOfDay
+                                                }
+                                                shadowColor={
+                                                    selectedTimeOfDay === time
+                                                        ? '#000'
+                                                        : COLORS.TimeOfDay
+                                                }
                                             >
-                                                <View style={{ paddingVertical: 5, alignItems: 'center' }}>
-                                                    <Text style={globalStyles.body}>
-                                                        {isSaving ? 'Saving...' : 'Save'}
+                                                <View style={{
+                                                    paddingVertical: 5,
+                                                    paddingHorizontal: 12,
+                                                }}>
+                                                    <Text style={[
+                                                        globalStyles.body1
+                                                    ]}>
+                                                        {time}
                                                     </Text>
                                                 </View>
                                             </ShadowBox>
                                         </Pressable>
-                                    </View>
+                                    ))}
+                                </View>
+                            </View>}
+
+                            <View style={{ gap: 10 }}>
+
+                                {/* paths — hidden for quest goals */}
+                                {!isQuestMode && (
+                                    <>
+                                        <Text style={[globalStyles.label]}>
+                                            PATHS
+                                        </Text>
+                                        <View style={{
+                                            flexDirection: 'row',
+                                            flexWrap: 'wrap',
+                                            gap: 8,
+                                        }}>
+                                            {paths.length === 0 ? (
+                                                <Text style={[globalStyles.label, { opacity: 0.4 }]}>No paths yet</Text>
+                                            ) : (
+                                                paths.map((path) => {
+                                                    const selected = selectedPathId === path.id;
+                                                    const colorHex = PATH_COLORS[path.color as PathColorKey] ?? '#999';
+                                                    return (
+                                                        <Pressable key={path.id} onPress={() => togglePath(path.id)}>
+                                                            <ShadowBox
+                                                                contentBackgroundColor={selected ? colorHex : '#fff'}
+                                                                contentBorderColor={selected ? '#000' : colorHex}
+                                                                shadowBorderColor={selected ? '#000' : colorHex}
+                                                                shadowColor={selected ? '#000' : colorHex}
+                                                            >
+                                                                <View style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
+                                                                    <Text style={globalStyles.body1}>{path.name}</Text>
+                                                                </View>
+                                                            </ShadowBox>
+                                                        </Pressable>
+                                                    );
+                                                })
+                                            )}
+
+                                        </View>
+                                    </>
+                                )}
+
+                                {/* quest goal: what happens to this habit when its phase ends */}
+                                {isQuestMode && inPhase && (
+                                    <>
+                                        <Text style={[globalStyles.label]}>WHEN THIS PHASE ENDS</Text>
+                                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                                            {([['phase', 'End with phase'], ['carry', 'Carry forward'], ['forever', 'Keep forever']] as const).map(([val, lbl]) => {
+                                                const sel = questScope === val;
+                                                return (
+                                                    <Pressable key={val} onPress={() => setQuestScope(val)}>
+                                                        <ShadowBox
+                                                            contentBackgroundColor={sel ? PAGE.quest.primary[0] : '#fff'}
+                                                            contentBorderColor={sel ? '#000' : PAGE.quest.primary[0]}
+                                                            shadowBorderColor={sel ? '#000' : PAGE.quest.primary[0]}
+                                                            shadowColor={sel ? '#000' : PAGE.quest.primary[0]}
+                                                        >
+                                                            <View style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
+                                                                <Text style={globalStyles.body1}>{lbl}</Text>
+                                                            </View>
+                                                        </ShadowBox>
+                                                    </Pressable>
+                                                );
+                                            })}
+                                        </View>
+                                    </>
+                                )}
+
+                                {/* **TODO: create More options logic */}
+                                <Pressable
+                                    onPress={() => setMoreOptions(!moreOptions)}
+                                    style={{
+                                        marginTop: 10,
+                                        alignSelf: 'center',
+                                        opacity: 0.6,
+                                    }}>
+                                    <Text style={globalStyles.label}>{moreOptions ? 'Less options' : 'More options'}</Text>
+                                </Pressable>
+
+                                {moreOptions && (
+                                    <>
+                                        <View style={{ gap: 10 }}>
+                                            {/* keep until until */}
+                                            <View style={{
+                                                flexDirection: 'row',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center',
+                                                marginBottom: 10,
+                                            }}>
+                                                <Text style={globalStyles.body}>Keep until finished?</Text>
+                                                <Switch
+                                                    trackColor={{ true: PAGE.habits.primary[1] }}
+                                                    value={keepUntil}
+                                                    onValueChange={setKeepUntil}
+                                                />
+                                            </View>
+
+                                            {/* increment tracking toggle */}
+                                            <View style={{
+                                                flexDirection: 'row',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center',
+                                                marginBottom: 10,
+                                            }}>
+                                                <Text style={globalStyles.body}>Track in increments?</Text>
+                                                <Switch
+                                                    trackColor={{ true: PAGE.habits.primary[1] }}
+                                                    value={increment}
+                                                    onValueChange={setIncrement}
+                                                />
+                                            </View>
+
+                                            {/* increment type & amount (only if increment enabled) */}
+                                            {increment && (
+                                                <View style={{ gap: 30 }}>
+                                                    <View style={{ gap: 10 }}>
+
+                                                        <Text style={globalStyles.label}>INCREMENT TYPE</Text>
+                                                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                                                            {['None', 'Time', 'Minutes', 'Miles', 'Sips'].map((type) => (
+                                                                <Pressable key={type} onPress={() => setIncrementType(type as Habit['incrementType'])}>
+                                                                    <ShadowBox
+                                                                        contentBackgroundColor={incrementType === type ? PAGE.habits.primary[1] : '#fff'}
+                                                                        contentBorderColor={incrementType === type ? '#000' : PAGE.habits.primary[1]}
+                                                                        shadowBorderColor={incrementType === type ? '#000' : PAGE.habits.primary[1]}
+                                                                        shadowColor={incrementType === type ? '#000' : PAGE.habits.primary[1]}
+                                                                    >
+                                                                        <View style={{ paddingVertical: 6, paddingHorizontal: 10 }}>
+                                                                            <Text style={globalStyles.body1}>{type}</Text>
+                                                                        </View>
+                                                                    </ShadowBox>
+                                                                </Pressable>
+                                                            ))}
+                                                        </View>
+                                                    </View>
+
+                                                    {/* Weekly time goal (only for Time type) */}
+                                                    {incrementType === 'Time' && (
+                                                        <View style={{ gap: 10 }}>
+                                                            <Text style={globalStyles.label}>WEEKLY TIME GOAL</Text>
+                                                            <Text style={[globalStyles.label, { opacity: 0.5, fontSize: 11 }]}>
+                                                                Set the total hours and minutes you want to log each week.
+                                                            </Text>
+
+                                                            <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', gap: 12, marginTop: 5 }}>
+                                                                {/* hours */}
+                                                                <View style={{ alignItems: 'center', gap: 6 }}>
+                                                                    <Text style={[globalStyles.label, { fontSize: 10 }]}>HOURS</Text>
+                                                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                                                        <ShadowBox shadowColor={PAGE.habits.primary[1]}>
+                                                                            <Pressable
+                                                                                onPress={() => setTimeGoalHours(prev => Math.max(0, prev - 1))}
+                                                                                style={{ paddingVertical: 4, paddingHorizontal: 10 }}
+                                                                            >
+                                                                                <Text style={globalStyles.body}>-</Text>
+                                                                            </Pressable>
+                                                                        </ShadowBox>
+
+                                                                        <ShadowBox shadowColor={PAGE.habits.primary[1]}>
+                                                                            <View style={{
+                                                                                borderWidth: 2,
+                                                                                borderColor: PAGE.habits.primary[0],
+                                                                                width: 60,
+                                                                                borderRadius: 20,
+                                                                                justifyContent: 'center',
+                                                                            }}>
+                                                                                <TextInput
+                                                                                    style={[globalStyles.body, { textAlign: 'center' }]}
+                                                                                    keyboardType="numeric"
+                                                                                    value={timeGoalHours.toString()}
+                                                                                    onChangeText={text => setTimeGoalHours(Number(text) || 0)}
+                                                                                    onFocus={(e) => scrollRef.current?.scrollToFocusedInput(e.nativeEvent.target)}
+                                                                                />
+                                                                            </View>
+                                                                        </ShadowBox>
+
+                                                                        <ShadowBox shadowColor={PAGE.habits.primary[1]}>
+                                                                            <Pressable
+                                                                                onPress={() => setTimeGoalHours(prev => prev + 1)}
+                                                                                style={{ paddingVertical: 4, paddingHorizontal: 10 }}
+                                                                            >
+                                                                                <Text style={globalStyles.body}>+</Text>
+                                                                            </Pressable>
+                                                                        </ShadowBox>
+                                                                    </View>
+                                                                </View>
+
+                                                                <Text style={[globalStyles.h2, { marginTop: 16 }]}>:</Text>
+
+                                                                {/* minutes */}
+                                                                <View style={{ alignItems: 'center', gap: 6 }}>
+                                                                    <Text style={[globalStyles.label, { fontSize: 10 }]}>MINUTES</Text>
+                                                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                                                        <ShadowBox shadowColor={PAGE.habits.primary[1]}>
+                                                                            <Pressable
+                                                                                onPress={() => setTimeGoalMinutes(prev => {
+                                                                                    const val = prev - 15;
+                                                                                    return val < 0 ? 0 : val;
+                                                                                })}
+                                                                                style={{ paddingVertical: 4, paddingHorizontal: 10 }}
+                                                                            >
+                                                                                <Text style={globalStyles.body}>-</Text>
+                                                                            </Pressable>
+                                                                        </ShadowBox>
+
+                                                                        <ShadowBox shadowColor={PAGE.habits.primary[1]}>
+                                                                            <View style={{
+                                                                                borderWidth: 2,
+                                                                                borderColor: PAGE.habits.primary[0],
+                                                                                width: 60,
+                                                                                borderRadius: 20,
+                                                                                justifyContent: 'center',
+                                                                            }}>
+                                                                                <TextInput
+                                                                                    style={[globalStyles.body, { textAlign: 'center' }]}
+                                                                                    keyboardType="numeric"
+                                                                                    value={timeGoalMinutes.toString()}
+                                                                                    onChangeText={text => setTimeGoalMinutes(Number(text) || 0)}
+                                                                                    onFocus={(e) => scrollRef.current?.scrollToFocusedInput(e.nativeEvent.target)}
+                                                                                />
+                                                                            </View>
+                                                                        </ShadowBox>
+
+                                                                        <ShadowBox shadowColor={PAGE.habits.primary[1]}>
+                                                                            <Pressable
+                                                                                onPress={() => setTimeGoalMinutes(prev => prev + 15)}
+                                                                                style={{ paddingVertical: 4, paddingHorizontal: 10 }}
+                                                                            >
+                                                                                <Text style={globalStyles.body}>+</Text>
+                                                                            </Pressable>
+                                                                        </ShadowBox>
+                                                                    </View>
+                                                                </View>
+                                                            </View>
+                                                        </View>
+                                                    )}
+
+                                                    {incrementType !== 'Time' && (
+                                                        <View style={{ gap: 30 }}>
+                                                            <View style={{ gap: 30 }}>
+                                                                <Text style={globalStyles.label}>INCREMENT AMOUNT</Text>
+
+                                                                <View style={{ flexDirection: 'row', alignSelf: 'center', gap: 10 }}>
+                                                                    <ShadowBox shadowColor={PAGE.habits.primary[1]}>
+                                                                        <Pressable
+                                                                            onPress={() => setincrementStep(prev => Math.max(0, prev - 1))}
+                                                                            style={{
+                                                                                paddingVertical: 3,
+                                                                                paddingHorizontal: 8,
+                                                                                alignItems: 'center',
+                                                                                justifyContent: 'center'
+                                                                            }}>
+                                                                            <Text style={globalStyles.body}>-</Text>
+                                                                        </Pressable>
+                                                                    </ShadowBox>
+
+                                                                    <ShadowBox shadowColor={PAGE.habits.primary[1]}>
+                                                                        <View style={{
+                                                                            paddingVertical: 2,
+                                                                            width: 100,
+                                                                            borderRadius: 20,
+                                                                            justifyContent: 'center'
+                                                                        }}>
+                                                                            <TextInput
+                                                                                style={[globalStyles.body, { textAlign: 'center' }]}
+                                                                                keyboardType="numeric"
+                                                                                value={incrementStep.toString()}
+                                                                                onChangeText={text => setincrementStep(Number(text))}
+                                                                                onFocus={(e) => scrollRef.current?.scrollToFocusedInput(e.nativeEvent.target)}
+                                                                            />
+                                                                        </View>
+                                                                    </ShadowBox>
+
+                                                                    <ShadowBox shadowColor={PAGE.habits.primary[1]}>
+                                                                        <Pressable
+                                                                            onPress={() => setincrementStep(prev => prev + 1)}
+                                                                            style={{
+                                                                                paddingVertical: 3,
+                                                                                paddingHorizontal: 8,
+                                                                                alignItems: 'center',
+                                                                                justifyContent: 'center'
+                                                                            }}>
+                                                                            <Text style={globalStyles.body}>+</Text>
+                                                                        </Pressable>
+                                                                    </ShadowBox>
+                                                                </View>
+                                                            </View>
+
+                                                            <View style={{ gap: 30 }}>
+                                                                <Text style={globalStyles.label}>INCREMENT GOAL (OPTIONAL)</Text>
+
+                                                                <View style={{ flexDirection: 'row', alignSelf: 'center', gap: 10 }}>
+                                                                    <ShadowBox shadowColor={PAGE.habits.primary[0]}>
+                                                                        <Pressable
+                                                                            onPress={() => setIncrementGoal(prev => Math.max(0, prev - 1))}
+                                                                            style={{
+                                                                                paddingVertical: 3,
+                                                                                paddingHorizontal: 8,
+                                                                                alignItems: 'center',
+                                                                                justifyContent: 'center'
+                                                                            }}>
+                                                                            <Text style={globalStyles.body}>-</Text>
+                                                                        </Pressable>
+                                                                    </ShadowBox>
+
+                                                                    <ShadowBox shadowColor={PAGE.habits.primary[0]}>
+                                                                        <View style={{
+                                                                            paddingVertical: 2,
+                                                                            width: 100,
+                                                                            borderRadius: 20,
+                                                                            justifyContent: 'center'
+                                                                        }}>
+                                                                            <TextInput
+                                                                                style={[globalStyles.body, { textAlign: 'center' }]}
+                                                                                keyboardType="numeric"
+                                                                                value={incrementGoal.toString()}
+                                                                                onChangeText={text => setIncrementGoal(Number(text))}
+                                                                                onFocus={(e) => scrollRef.current?.scrollToFocusedInput(e.nativeEvent.target)}
+                                                                            />
+                                                                        </View>
+                                                                    </ShadowBox>
+
+                                                                    <ShadowBox shadowColor={PAGE.habits.primary[0]}>
+                                                                        <Pressable
+                                                                            onPress={() => setIncrementGoal(prev => prev + 1)}
+                                                                            style={{
+                                                                                paddingVertical: 3,
+                                                                                paddingHorizontal: 8,
+                                                                                alignItems: 'center',
+                                                                                justifyContent: 'center'
+                                                                            }}>
+                                                                            <Text style={globalStyles.body}>+</Text>
+                                                                        </Pressable>
+                                                                    </ShadowBox>
+                                                                </View>
+                                                            </View>
+                                                        </View>
+                                                    )}
+                                                </View>
+                                            )}
+                                        </View>
+                                    </>
+                                )}
+
+
+
+
+                                {/* save and cancel button */}
+                                <View style={{
+                                    flexDirection: 'row',
+                                    gap: 10,
+                                    marginTop: 30,
+                                    justifyContent: 'center',
+                                }}>
+                                    <Pressable
+                                        onPress={() => router.back()}
+                                        style={{ flex: 1, maxWidth: 100 }}
+                                    >
+                                        <ShadowBox
+                                            contentBackgroundColor={BUTTON_COLORS.Cancel}
+                                            shadowBorderRadius={20}
+                                        >
+                                            <View style={{ paddingVertical: 5, alignItems: 'center' }}>
+                                                <Text style={globalStyles.body}>Cancel</Text>
+                                            </View>
+                                        </ShadowBox>
+                                    </Pressable>
+
+                                    <Pressable
+                                        onPress={handleSave}
+                                        disabled={isSaving}
+                                        style={{ flex: 1, maxWidth: 100 }}
+                                    >
+                                        <ShadowBox
+                                            contentBackgroundColor={
+                                                isSaving ? BUTTON_COLORS.Disabled : BUTTON_COLORS.Save
+                                            }
+                                            shadowBorderRadius={20}
+                                        >
+                                            <View style={{ paddingVertical: 5, alignItems: 'center' }}>
+                                                <Text style={globalStyles.body}>
+                                                    {isSaving ? 'Saving...' : 'Save'}
+                                                </Text>
+                                            </View>
+                                        </ShadowBox>
+                                    </Pressable>
                                 </View>
                             </View>
                         </View>
+                    </View>
                 </KeyboardAwareScrollView>
             </PageContainer>
 

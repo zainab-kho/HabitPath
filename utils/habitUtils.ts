@@ -67,6 +67,15 @@ export async function updateAppStreak(
  * True when dateStr is the nth occurrence of a weekday in its month
  * (week 5 = last occurrence, whether that's the 4th or 5th).
  */
+/**
+ * Day-of-month a Monthly (specific-date mode) habit repeats on. Uses its own
+ * `monthlyDay` field, falling back to the start date's day for habits created
+ * before that field existed.
+ */
+export function monthlyAnchorDay(habit: Habit): number {
+  return habit.monthlyDay ?? parseInt(habit.startDate.split('-')[2], 10);
+}
+
 export function matchesNthWeekday(dateStr: string, week: number, weekday: string): boolean {
   const d = parseLocalDate(dateStr);
   if (WEEK_DAYS[d.getDay()] !== weekday) return false;
@@ -129,9 +138,9 @@ function isHabitScheduledForDate(
     if (habit.monthlyWeek && habit.monthlyWeekday) {
       return matchesNthWeekday(dateStr, habit.monthlyWeek, habit.monthlyWeekday);
     }
-    const startDay = parseInt(habit.startDate.split('-')[2], 10);
+    const repeatDay = monthlyAnchorDay(habit);
     const thisDay = parseInt(dateStr.split('-')[2], 10);
-    return startDay === thisDay;
+    return repeatDay === thisDay;
   }
 
   // Custom habits
@@ -287,7 +296,7 @@ export function getHabitCycleStart(
       return startStr;
     }
 
-    const startDay = parseInt(startStr.split('-')[2], 10);
+    const startDay = monthlyAnchorDay(habit);
     const todayDay = parseInt(todayStr.split('-')[2], 10);
 
     const cycleDate = new Date(date);
@@ -410,13 +419,19 @@ export function isHabitActiveToday(
     // completionHistory), so it can drift into a later week than the recorded
     // completion and keep a finished goal visible. fall back to it only when
     // there's no recorded history (e.g. a pure-increment goal).
+    const actualThisMonday = getWeekDatesForDate(actualTodayStr)[0];
+
     const latestCompletion = [...(habit.completionHistory ?? [])].sort().at(-1)
       ?? habit.lastCompletedDate
       ?? null;
     if (latestCompletion) {
+      // completed: visible through the week it was finished (for history), gone after
       return thisMonday <= getWeekDatesForDate(latestCompletion)[0];
     }
-    return true;
+    // not completed: carries forward only up to the ACTUAL current week — never into a
+    // future week you're merely browsing (it hasn't happened yet, so there's nothing
+    // to carry). Mirrors the daily/one-time keepUntil branch's `<= actualTodayStr` cap.
+    return thisMonday <= actualThisMonday;
   }
 
   // For repeating keepUntil habits, check if there's incomplete work carrying over
@@ -493,9 +508,9 @@ export function isHabitActiveToday(
     if (habit.monthlyWeek && habit.monthlyWeekday) {
       return matchesNthWeekday(todayStr, habit.monthlyWeek, habit.monthlyWeekday);
     }
-    const startDay = parseInt(habit.startDate.split('-')[2], 10);
+    const repeatDay = monthlyAnchorDay(habit);
     const todayDay = parseInt(todayStr.split('-')[2], 10);
-    return startDay === todayDay;
+    return repeatDay === todayDay;
   }
 
   // Custom habits — delegate to isHabitScheduledForDate

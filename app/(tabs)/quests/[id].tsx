@@ -8,7 +8,7 @@ import {
     ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, View,
 } from 'react-native';
 
-import { PAGE } from '@/constants/colors';
+import { BUTTON_COLORS, PAGE } from '@/constants/colors';
 import { HABIT_ICONS } from '@/constants/icons';
 import { useAuth } from '@/contexts/AuthContext';
 import { loadHabitsByQuest, setHabitPhase, toggleHabitCompletion } from '@/lib/supabase/queries/habit';
@@ -115,28 +115,37 @@ export default function QuestDetailPage() {
         ]);
     };
 
+    const qColor = PAGE.quest.primary[0];
+
+    // matches the paths detail habit card: white card that fills with the page
+    // color when done, icon left, name + frequency bubble stacked
     const renderGoal = (g: Habit) => {
         const done = (g.completionHistory ?? []).includes(todayStr);
         const iconFile = g.icon ? HABIT_ICONS[g.icon] : null;
         return (
-            <Pressable key={g.id} onPress={() => toggleGoal(g)} style={{ marginBottom: 10 }}>
+            <Pressable key={g.id} onPress={() => toggleGoal(g)}>
                 <ShadowBox
-                    contentBackgroundColor="#fff"
+                    contentBackgroundColor={done ? qColor : '#fff'}
                     contentBorderColor="#000"
                     contentBorderWidth={1}
-                    shadowColor={PAGE.quest.primary[0]}
                     shadowBorderRadius={15}
+                    shadowOffset={done ? { x: 0, y: 0 } : { x: 0, y: 5 }}
+                    shadowColor={done ? '#000' : qColor}
+                    style={{ marginBottom: 12 }}
                 >
-                    <View style={styles.item}>
-                        <View style={[styles.check, done && styles.checkDone]}>
-                            {done && <Text style={styles.checkMark}>✓</Text>}
+                    <View style={styles.habitRow}>
+                        <View style={styles.habitIconWrap}>
+                            {iconFile
+                                ? <Image source={iconFile} style={styles.habitIcon} />
+                                : <Text style={{ fontSize: 24 }}>✦</Text>}
                         </View>
-                        {iconFile
-                            ? <Image source={iconFile} style={styles.icon} />
-                            : <Text style={{ fontSize: 22 }}>✦</Text>}
-                        <Text style={[globalStyles.body, { flex: 1 }, done && styles.itemDone]} numberOfLines={1}>{g.name}</Text>
-                        <View style={styles.freqBubble}>
-                            <Text style={[globalStyles.label, { opacity: 1 }]}>{isTask(g) ? 'Task' : g.frequency}</Text>
+                        <View style={{ flex: 1, gap: 6 }}>
+                            <Text style={[globalStyles.body, { fontSize: 15 }]} numberOfLines={1}>{g.name}</Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                <View style={[globalStyles.bubbleLabel, { backgroundColor: PAGE.quest.background[1], borderColor: qColor }]}>
+                                    <Text style={globalStyles.label}>{isTask(g) ? '1×' : `↻ ${g.frequency}`}</Text>
+                                </View>
+                            </View>
                         </View>
                     </View>
                 </ShadowBox>
@@ -144,16 +153,16 @@ export default function QuestDetailPage() {
         );
     };
 
-    const pillButton = (label: string, onPress: () => void, filled?: boolean) => (
-        <Pressable onPress={onPress} style={{ marginTop: 14 }}>
+    // small section-header chip, same as the paths page's Edit/Archived buttons
+    const chip = (label: string, onPress: () => void, filled?: boolean) => (
+        <Pressable onPress={onPress}>
             <ShadowBox
-                contentBackgroundColor={filled ? PAGE.quest.primary[1] : '#fff'}
-                contentBorderColor={PAGE.quest.primary[0]}
-                shadowColor={PAGE.quest.primary[0]}
+                contentBackgroundColor={filled ? qColor : BUTTON_COLORS.Cancel}
                 shadowBorderRadius={15}
+                shadowOffset={{ x: 0, y: 3 }}
             >
-                <View style={{ paddingVertical: 11, alignItems: 'center' }}>
-                    <Text style={globalStyles.body}>{label}</Text>
+                <View style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
+                    <Text style={globalStyles.body1}>{label}</Text>
                 </View>
             </ShadowBox>
         </Pressable>
@@ -183,32 +192,34 @@ export default function QuestDetailPage() {
     return (
         <AppLinearGradient variant="quest.background">
             <PageContainer>
-                <PageHeader title="" showBackButton />
+                <PageHeader title={quest.name} showBackButton />
 
-                <ScrollView contentContainerStyle={{ paddingHorizontal: 3, paddingBottom: 60 }} showsVerticalScrollIndicator={false}>
-                    {/* header */}
+                <ScrollView contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+                    {/* main/side badge + end date */}
                     <View style={styles.badgeRow}>
-                        <ShadowBox
-                            contentBackgroundColor={PAGE.quest.primary[0]}
-                            contentBorderColor="#000"
-                            shadowColor="#000"
-                            shadowBorderRadius={12}
-                        >
-                            <View style={{ paddingHorizontal: 12, paddingVertical: 4 }}>
-                                <Text style={[globalStyles.label, { color: '#fff', opacity: 1 }]}>
-                                    {quest.type === 'main' ? 'MAIN QUEST' : 'SIDE QUEST'}
-                                </Text>
-                            </View>
-                        </ShadowBox>
+                        <View style={[globalStyles.bubbleLabel, { backgroundColor: PAGE.quest.background[1], borderColor: qColor }]}>
+                            <Text style={globalStyles.label}>
+                                {quest.type === 'main' ? 'MAIN QUEST' : 'SIDE QUEST'}
+                            </Text>
+                        </View>
                         {quest.endDate && (
-                            <Text style={[globalStyles.body2, { opacity: 0.7 }]}>by {formatDisplayDate(new Date(quest.endDate))}</Text>
+                            <View style={[globalStyles.bubbleLabel, { backgroundColor: '#97AFB9', borderColor: qColor }]}>
+                                <Text style={globalStyles.label}>by {formatDisplayDate(new Date(quest.endDate))}</Text>
+                            </View>
                         )}
                     </View>
-                    <Text style={[globalStyles.h1, { fontSize: 24, marginBottom: 16 }]}>{quest.name}</Text>
 
                     {/* phase pager */}
                     {phased && (
-                        <ShadowBox contentBackgroundColor="#fff" shadowColor={PAGE.quest.primary[0]} shadowBorderRadius={16} style={{ marginBottom: phase?.endDate ? 4 : 8 }}>
+                        <ShadowBox
+                            contentBackgroundColor="#fff"
+                            contentBorderColor="#000"
+                            contentBorderWidth={1}
+                            shadowColor={qColor}
+                            shadowBorderRadius={15}
+                            shadowOffset={{ x: 0, y: 5 }}
+                            style={{ marginBottom: phase?.endDate ? 6 : 16 }}
+                        >
                             <View style={styles.pager}>
                                 <Pressable disabled={phaseIndex === 0} onPress={() => setPhaseIndex(i => i - 1)} hitSlop={12}>
                                     <Text style={[styles.arrow, phaseIndex === 0 && { opacity: 0.25 }]}>‹</Text>
@@ -221,33 +232,55 @@ export default function QuestDetailPage() {
                         </ShadowBox>
                     )}
                     {phased && phase?.endDate && (
-                        <Text style={[globalStyles.label, { textAlign: 'center', marginBottom: 10 }]}>
+                        <Text style={[globalStyles.label, { textAlign: 'center', marginBottom: 12 }]}>
                             Ends {formatDisplayDate(new Date(phase.endDate))}
                         </Text>
                     )}
 
                     {/* goals — habits + one-time tasks, unified */}
-                    {goals.length > 0 && <Text style={[globalStyles.label, styles.section]}>GOALS</Text>}
-                    {goals.map(renderGoal)}
-                    {goals.length === 0 && <Text style={[globalStyles.body2, { opacity: 0.5, marginLeft: 4 }]}>No goals yet.</Text>}
-
-                    {pillButton('+ Add goal', () => addGoal(phase?.id ?? null))}
+                    <View style={styles.sectionHeader}>
+                        <Text style={styles.sectionLabel}>Goals</Text>
+                        <View style={{ flexDirection: 'row', gap: 8 }}>
+                            {quest.type === 'main' && chip('Add phase', () => setPhaseModalOpen(true))}
+                            {chip('Add goal', () => addGoal(phase?.id ?? null), true)}
+                        </View>
+                    </View>
+                    {goals.length === 0 ? (
+                        <ShadowBox
+                            contentBackgroundColor="#fff"
+                            shadowBorderRadius={15}
+                            shadowOffset={{ x: 0, y: 5 }}
+                            shadowColor={qColor}
+                            style={{ marginBottom: 12 }}
+                        >
+                            <View style={{ alignItems: 'center', paddingVertical: 24 }}>
+                                <Text style={[globalStyles.label, { opacity: 0.5 }]}>
+                                    No goals yet — tap Add goal to get started
+                                </Text>
+                            </View>
+                        </ShadowBox>
+                    ) : goals.map(renderGoal)}
 
                     {/* loose goals not yet sorted into a phase */}
                     {phased && unassigned.length > 0 && (
                         <>
-                            <Text style={[globalStyles.label, styles.section]}>NOT IN A PHASE</Text>
+                            <View style={[styles.sectionHeader, { marginTop: 20 }]}>
+                                <Text style={styles.sectionLabel}>Not in a phase</Text>
+                            </View>
                             {unassigned.map(renderGoal)}
                         </>
                     )}
 
-                    {/* add phase — Main quests only */}
-                    {quest.type === 'main' && pillButton('+ Add phase', () => setPhaseModalOpen(true), true)}
-
-                    {/* delete */}
-                    <Pressable style={styles.deleteBtn} onPress={confirmDelete}>
-                        <Text style={[globalStyles.body2, { color: '#FF7A7A' }]}>Delete quest</Text>
-                    </Pressable>
+                    {/* delete — same action-row style as the paths page */}
+                    <View style={{ flexDirection: 'row', justifyContent: 'center', marginTop: 20 }}>
+                        <Pressable onPress={confirmDelete} style={{ flex: 1, maxWidth: 100 }}>
+                            <ShadowBox contentBackgroundColor={BUTTON_COLORS.Delete} shadowBorderRadius={20}>
+                                <View style={{ paddingVertical: 5, alignItems: 'center' }}>
+                                    <Text style={globalStyles.body}>Delete</Text>
+                                </View>
+                            </ShadowBox>
+                        </Pressable>
+                    </View>
                 </ScrollView>
             </PageContainer>
 
@@ -262,18 +295,42 @@ export default function QuestDetailPage() {
     );
 }
 
+// mirrors the paths detail page styles so quest and path detail read as siblings
 const styles = StyleSheet.create({
     center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-    badgeRow: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4, marginBottom: 12 },
-    section: { marginTop: 18, marginBottom: 8, marginLeft: 4 },
+    badgeRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 },
     pager: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 18, paddingVertical: 12 },
     arrow: { fontSize: 26, fontFamily: 'p1' },
-    item: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 12 },
-    icon: { width: 30, height: 30, resizeMode: 'contain' },
-    itemDone: { textDecorationLine: 'line-through', opacity: 0.5 },
-    freqBubble: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8, borderWidth: 1, borderColor: PAGE.quest.primary[0], backgroundColor: PAGE.quest.primary[1] },
-    check: { width: 22, height: 22, borderRadius: 7, borderWidth: 2, borderColor: PAGE.quest.primary[0], alignItems: 'center', justifyContent: 'center' },
-    checkDone: { backgroundColor: PAGE.quest.primary[0] },
-    checkMark: { color: '#fff', fontSize: 13, fontFamily: 'p1' },
-    deleteBtn: { marginTop: 30, alignItems: 'center', paddingVertical: 10 },
+    sectionHeader: {
+        flexDirection: 'row',
+        alignItems: 'flex-end',
+        justifyContent: 'space-between',
+        marginBottom: 10,
+    },
+    sectionLabel: {
+        fontFamily: 'label',
+        fontSize: 12,
+        fontWeight: '600' as const,
+        textTransform: 'uppercase' as const,
+        opacity: 0.7,
+        letterSpacing: 0.5,
+    },
+    habitRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 15,
+        padding: 12,
+    },
+    habitIconWrap: {
+        width: 40,
+        height: 40,
+        borderRadius: 20,
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    habitIcon: {
+        width: 40,
+        height: 40,
+        resizeMode: 'contain' as const,
+    },
 });

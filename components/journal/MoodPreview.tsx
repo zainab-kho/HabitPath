@@ -94,7 +94,7 @@ export default function MoodPreview({ entries }: MoodPreviewProps) {
       style={{ marginBottom: 20 }}
     >
       {/* **TODO: re-enable navigation once the YearInPixels page exists */}
-      <Pressable
+      <View
         style={styles.container}
       >
         <View style={styles.header}>
@@ -144,7 +144,7 @@ export default function MoodPreview({ entries }: MoodPreviewProps) {
         <Text style={styles.stats}>
           {entries.length} {entries.length === 1 ? 'entry' : 'entries'} in {currentYear}
         </Text>
-      </Pressable>
+      </View>
     </ShadowBox>
   );
 }

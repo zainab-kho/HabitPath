@@ -57,22 +57,34 @@ html, body {
 .ProseMirror h3 { font-size: 17px; font-weight: 400; margin: 6px 0 4px; }
 /* the note title (first line) keeps the wider gap below it */
 .ProseMirror > h1:first-child { margin-bottom: 15px; }
-.ProseMirror ul, .ProseMirror ol { padding-left: 22px; margin: 0 0 4px 0; }
+.ProseMirror ul { padding-left: 22px; margin: 0 0 4px 0; }
+/* extra room so two-digit markers ("10.") aren't clipped */
+.ProseMirror ol { padding-left: 28px; margin: 0 0 4px 0; }
 .ProseMirror li { margin: 0; }
 .ProseMirror li p { margin: 0; }
-/* task list: checkbox sits on the LEFT, aligned like bullet / numbered lists */
+/* task list: checkbox sits on the LEFT, aligned to the FIRST line of the item
+   (flex-start), not centered over the whole multi-line block */
 .ProseMirror ul[data-type="taskList"] { list-style: none; padding-left: 2px; margin: 0 0 4px 0; }
-.ProseMirror ul[data-type="taskList"] li { display: flex; flex-direction: row; align-items: center; gap: 6px; margin-bottom: 5px; }
-.ProseMirror ul[data-type="taskList"] li > label { flex: 0 0 auto; margin: 0; user-select: none; }
+.ProseMirror ul[data-type="taskList"] li { display: flex; flex-direction: row; align-items: flex-start; gap: 6px; margin-bottom: 5px; }
+/* padding + negative margin = bigger tap target (~30px) without moving the layout;
+   margin-top aligns the 18px box with the 20px first text line */
+.ProseMirror ul[data-type="taskList"] li > label {
+  flex: 0 0 auto;
+  margin: -5px;
+  /* net 0px from the item top: centers the 18px box on the first 20px text line */
+  margin-top: -6px;
+  padding: 6px;
+  user-select: none;
+}
 /* custom checkbox: unchecked = primary[1] pink, checked = primary[0] blue with a white check */
 .ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"] {
   -webkit-appearance: none;
   appearance: none;
-  width: 26px;
-  height: 26px;
+  width: 18px;
+  height: 18px;
   margin: 0;
   border: 2px solid #FFA4D8;
-  border-radius: 7px;
+  border-radius: 5px;
   background-color: #ffffff;
   position: relative;
   cursor: pointer;
@@ -85,12 +97,12 @@ html, body {
 .ProseMirror ul[data-type="taskList"] li > label input[type="checkbox"]:checked::after {
   content: "";
   position: absolute;
-  left: 8px;
-  top: 3px;
-  width: 6px;
-  height: 12px;
+  left: 4px;
+  top: 1px;
+  width: 4px;
+  height: 8px;
   border: solid #ffffff;
-  border-width: 0 2.5px 2.5px 0;
+  border-width: 0 2px 2px 0;
   transform: rotate(45deg);
 }
 .ProseMirror ul[data-type="taskList"] li > div { flex: 1 1 auto; margin-top: -1px; }

@@ -8,6 +8,7 @@ import {
     editorHtmlToStorage,
     noteToEditorHtml,
 } from "@/lib/editor/noteContent";
+import { TASKLIST_BACKSPACE_FIX_JS } from "@/lib/editor/taskListBackspaceFix";
 import { getCachedNote, upsertCachedNote } from "@/lib/notes/notesCache";
 import { createNote, getNote, updateNoteContent } from "@/lib/supabase/queries/notes";
 import { globalStyles } from "@/styles";
@@ -129,6 +130,7 @@ function NoteEditor({
     const noteIdRef = useRef<string | null>(initialNoteId); // null until a new note is created
     const creatingRef = useRef(false);                       // guards double-create before the id lands
     const hydratedRef = useRef(false);                       // ignore change events from loading content
+    const everFocusedRef = useRef(false);                    // no user focus yet → nothing to save
     const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // ignore the change events fired while the initial content hydrates the editor,
@@ -138,10 +140,15 @@ function NoteEditor({
         return () => clearTimeout(t);
     }, []);
 
+    // last content we saved (or the content as loaded) — persisting is skipped when
+    // nothing actually changed, so focusing a note without editing doesn't bump time
+    const savedHtmlRef = useRef<string | null>(null);
+
     const persist = useCallback(async () => {
         if (!userId) return;
         const html = await editor.getHTML();
         if (!editorHasContent(html)) return; // don't create/keep an empty note
+        if (savedHtmlRef.current !== null && html === savedHtmlRef.current) return; // no change
         const { title, blocks } = editorHtmlToStorage(html);
         const now = new Date().toISOString();
         try {
@@ -156,6 +163,7 @@ function NoteEditor({
                 const existing = getCachedNote(noteIdRef.current);
                 if (existing) upsertCachedNote({ ...existing, title, blocks, updatedAt: now });
             }
+            savedHtmlRef.current = html;
             setEditedAt(now);
         } catch (err) {
             console.error('Error saving note:', err);
@@ -166,6 +174,10 @@ function NoteEditor({
 
     const scheduleSave = useCallback(() => {
         if (!hydratedRef.current) return;
+        // slow WebView loads can fire hydration change events after the timer above —
+        // until the user has actually tapped into the note there's nothing to save,
+        // so opening a note to read it never bumps its "last edited" time
+        if (!everFocusedRef.current) return;
         if (saveTimer.current) clearTimeout(saveTimer.current);
         saveTimer.current = setTimeout(persist, 600);
     }, [persist]);
@@ -184,6 +196,7 @@ function NoteEditor({
     const { isFocused } = useBridgeState(editor);
     const wasFocusedRef = useRef(false);
     useEffect(() => {
+        if (isFocused) everFocusedRef.current = true;
         if (wasFocusedRef.current && !isFocused) flush();
         wasFocusedRef.current = isFocused;
     }, [isFocused, flush]);
@@ -199,9 +212,13 @@ function NoteEditor({
     const [ready, setReady] = useState(false);
     const revealTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const markReady = useCallback(() => {
+        // add the checkbox-backspace fix AFTER load via the ref — passing
+        // injectedJavaScript as a prop would override TenTap's own bootstrap
+        // script and break all the editor styling
+        editor.webviewRef?.current?.injectJavaScript?.(TASKLIST_BACKSPACE_FIX_JS);
         if (revealTimer.current) return;
         revealTimer.current = setTimeout(() => setReady(true), 250);
-    }, []);
+    }, [editor]);
     useEffect(() => {
         const fallback = setTimeout(() => setReady(true), 2500);
         return () => {
@@ -209,6 +226,12 @@ function NoteEditor({
             if (revealTimer.current) clearTimeout(revealTimer.current);
         };
     }, []);
+
+    // once rendered, snapshot the loaded content as the "already saved" baseline
+    useEffect(() => {
+        if (!ready) return;
+        editor.getHTML().then(h => { if (savedHtmlRef.current === null) savedHtmlRef.current = h; }).catch(() => {});
+    }, [ready, editor]);
 
     const localDate = formatDisplayDate(new Date(editedAt));
     const localTime = formatDisplayTime(new Date(editedAt));

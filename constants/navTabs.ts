@@ -34,13 +34,17 @@ export const NAV_DESTINATIONS: Record<NavTabId, NavDestination> = {
 // slot 1 is always Habits and can't be changed
 export const FIXED_TAB: NavTabId = 'habits';
 
-// the three configurable slots (2–4), default matches the original layout
-export const DEFAULT_NAV_TABS: NavTabId[] = ['paths', 'assignments', 'quests'];
+// temporarily hidden from all user-facing entry points (nav bar, settings picker,
+// drawer) until the feature ships — the pages and data model stay intact.
+export const HIDDEN_TABS: NavTabId[] = ['quests'];
+
+// the three configurable slots (2–4)
+export const DEFAULT_NAV_TABS: NavTabId[] = ['paths', 'assignments', 'journal'];
 
 // destinations the user may assign to slots 2–4 (everything except the fixed one)
 export const SELECTABLE_TABS: NavTabId[] = (
   Object.keys(NAV_DESTINATIONS) as NavTabId[]
-).filter(id => id !== FIXED_TAB);
+).filter(id => id !== FIXED_TAB && !HIDDEN_TABS.includes(id));
 
 // how many slots the user configures (slots 2–4)
 export const CONFIGURABLE_SLOT_COUNT = 3;

@@ -115,12 +115,14 @@ export function RootDrawer() {
             // drawer access shows a back button instead of the bottom nav
             params: { from: 'drawer' },
         },
-        {
-            label: 'Quests',
-            path: '/(tabs)/quests',
-            icon: SYSTEM_ICONS.quest,
-            params: { from: 'drawer' },
-        },
+        // Quests is hidden until the feature ships — restore this item (and remove
+        // 'quests' from HIDDEN_TABS in constants/navTabs.ts) to bring it back.
+        // {
+        //     label: 'Quests',
+        //     path: '/(tabs)/quests',
+        //     icon: SYSTEM_ICONS.quest,
+        //     params: { from: 'drawer' },
+        // },
         {
             label: 'All Goals',
             path: '/(tabs)/more/goals',

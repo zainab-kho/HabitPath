@@ -508,7 +508,7 @@ export default function HabitsList({
             letterSpacing: 0.5,
             opacity: 0.7,
             marginBottom: 8,
-          }}>Weekly Goals</Text>
+          }}>Goals of the week</Text>
 
           {weeklyCollapsed ? (
             // collapsed: same shape as a habit card, with the week's points progress

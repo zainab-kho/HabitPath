@@ -16,6 +16,7 @@ import { getResetTime } from '@/lib/supabase/queries';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { clearWishlist, resetPointsBalance, getExchangeRate, saveExchangeRate } from '@/services/rewards/rewards';
 import ExchangeRateModal from '@/modals/rewards/ExchangeRateModal';
+import FeedbackModal from '@/modals/FeedbackModal';
 import { STORAGE_KEYS } from '@/storage/keys';
 import { setWeekStartDay } from '@/utils/dateUtils';
 
@@ -39,6 +40,8 @@ export default function SettingsPage() {
     // which day the user's week starts on (weekly goals, week views, etc.)
     const [weekStartDay, setWeekStartDayState] = useState('Sunday');
     const [showWeekStartPicker, setShowWeekStartPicker] = useState(false);
+
+    const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
     // points exchange rate (points per $1) — editable via the same modal rewards uses
     const [showExchangeModal, setShowExchangeModal] = useState(false);
@@ -389,7 +392,21 @@ export default function SettingsPage() {
                         </Pressable>
                     </ShadowBox>
 
-                                        <Text style={[globalStyles.h4, { textAlign: 'center', marginTop: 10 }]}>
+                    {/* send feedback */}
+                    <ShadowBox
+                        contentBorderRadius={20}
+                        shadowBorderRadius={20}
+                        contentBackgroundColor={BUTTON_COLORS.Quiet}
+                    >
+                        <Pressable
+                            onPress={() => setShowFeedbackModal(true)}
+                            style={{ paddingVertical: 5, paddingHorizontal: 15, flex: 1, alignItems: 'center' }}
+                        >
+                            <Text style={globalStyles.body1}>Send Feedback</Text>
+                        </Pressable>
+                    </ShadowBox>
+
+                    <Text style={[globalStyles.h4, { textAlign: 'center', marginTop: 10 }]}>
                         Security
                     </Text>
 
@@ -431,6 +448,11 @@ export default function SettingsPage() {
                         </Pressable>
                     </ShadowBox>
                 </ScrollView>
+
+                <FeedbackModal
+                    visible={showFeedbackModal}
+                    onClose={() => setShowFeedbackModal(false)}
+                />
 
                 <ExchangeRateModal
                     visible={showExchangeModal}

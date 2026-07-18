@@ -3,6 +3,7 @@
 // the journal encryption relies on. Nothing crypto-related may run before this.
 import 'react-native-get-random-values';
 
+import FeedbackButton from '@/components/FeedbackButton';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { DrawerProvider } from '@/navigation/DrawerContext';
 import { NavTabsProvider } from '@/navigation/NavTabsContext';
@@ -65,6 +66,9 @@ function RootLayoutNav() {
 
           {/* global drawer */}
           <RootDrawer />
+
+          {/* floating feedback tab on every page */}
+          <FeedbackButton />
         </View>
       </DrawerProvider>
     </NavTabsProvider>

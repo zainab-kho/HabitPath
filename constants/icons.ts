@@ -379,6 +379,7 @@ export const SYSTEM_ICONS = {
     more: require('@/assets/icons/system/more-icon.png'),
     back: require('@/assets/icons/system/back.png'),
 
+    feedback: require('@/assets/icons/system/feedback.png'),
     fire: require('@/assets/icons/system/fire.png'),
     fireBlue: require('@/assets/icons/system/fire-blue.png'),
     folder: require('@/assets/icons/system/folder.png'),

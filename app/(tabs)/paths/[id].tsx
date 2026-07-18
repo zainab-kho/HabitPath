@@ -294,7 +294,18 @@ export default function PathDetail() {
       if (h.startDate > todayStr) return formatDisplayDateString(h.startDate);
       return 'Today';
     }
-    return null; // recurring — the frequency badge is enough
+    // recurring: walk forward to the next scheduled day so the badge says WHEN
+    for (let i = 0; i <= 31; i++) {
+      const d = new Date();
+      d.setDate(d.getDate() + i);
+      d.setHours(12, 0, 0, 0);
+      if (isHabitActiveToday(h, d, resetHour, resetMin)) {
+        if (i === 0) return 'Today';
+        if (i === 1) return 'Tomorrow';
+        return formatDisplayDateString(getHabitDate(d, resetHour, resetMin));
+      }
+    }
+    return null;
   };
 
   // visible habits in this path, sorted: one-time → recurring → snoozed
@@ -317,19 +328,24 @@ export default function PathDetail() {
   const weekAnchor = selectedDay ?? todayStr;
   const weekStart = getWeekDatesForDate(weekAnchor)[0];
 
+  // week range only labels the section when a specific day is selected — the
+  // default view lists all week goals, so a single week's dates would mislead
   const weekRangeLabel = useMemo(() => {
+    if (!selectedDay) return 'Goals of the week';
     const monday = parseLocalDate(weekStart);
     const sunday = new Date(monday);
     sunday.setDate(monday.getDate() + 6);
     const fmt = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     return `${fmt(monday)} – ${fmt(sunday)}`;
-  }, [weekStart]);
+  }, [weekStart, selectedDay]);
 
-  // weekly goal habits shown in their own section, scoped to the anchor week
+  // weekly goal habits shown in their own section. With no day selected this is
+  // an overview: EVERY (non-archived) weekly goal in the path, including ones
+  // whose week has passed. Selecting a day scopes the list to that week.
   const weeklyGoalHabits = path
     ? allHabitsAll.filter(h => {
         if (h.path !== path.name || h.frequency !== 'Weekly Goal') return false;
-        if (!selectedDay) return isVisible(h);
+        if (!selectedDay) return !h.archivedAt;
         // for a selected day, show goals that existed during that week
         const startMonday = getWeekDatesForDate(h.startDate)[0];
         if (weekStart < startMonday) return false;
@@ -457,7 +473,7 @@ export default function PathDetail() {
   if (pathLoading || !path) {
     return (
       <AppLinearGradient variant="path.background">
-        <PageContainer showBottomNav>
+        <PageContainer showBottomNav={false}>
           <PageHeader title="" showBackButton />
           <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
             <ActivityIndicator />
@@ -582,7 +598,7 @@ export default function PathDetail() {
 
   return (
     <AppLinearGradient variant="path.background">
-      <PageContainer showBottomNav>
+      <PageContainer showBottomNav={false}>
         <PageHeader
           title={path.name}
           showBackButton
@@ -787,28 +803,18 @@ export default function PathDetail() {
                 ) : (
                   pathHabits.map(habit => {
                     const iconFile = habit.icon ? HABIT_ICONS[habit.icon] : null;
-                    // keepUntil habits record completion against their cycle start, not today
-                    const effectiveDate = habit.keepUntil
-                      ? getHabitCycleStart(habit, new Date(), resetHour, resetMin)
-                      : habitToday;
-                    let isDoneToday = habit.completionHistory?.includes(effectiveDate) ?? false;
-                    if (!isDoneToday && habit.increment) {
-                      const amount = habit.incrementHistory?.[effectiveDate] ?? 0;
-                      const goal = habit.keepUntil
-                        ? (habit.incrementGoal && habit.incrementGoal > 0 ? habit.incrementGoal : 1)
-                        : (habit.incrementGoal ?? 0);
-                      isDoneToday = goal > 0 && amount >= goal;
-                    }
+                    // the default list is an overview — completion state only shows
+                    // when a specific day is selected on the heat map above
 
                     return (
                       <ShadowBox
                         key={habit.id}
-                        contentBackgroundColor={isDoneToday ? colorHex : '#fff'}
+                        contentBackgroundColor="#fff"
                         contentBorderColor="#000"
                         contentBorderWidth={1}
                         shadowBorderRadius={15}
-                        shadowOffset={isDoneToday ? { x: 0, y: 0 } : { x: 0, y: 5 }}
-                        shadowColor={isDoneToday ? '#000' : colorHex}
+                        shadowOffset={{ x: 0, y: 5 }}
+                        shadowColor={colorHex}
                         style={{ marginBottom: 12 }}
                       >
                         <View style={styles.habitRow}>
@@ -857,7 +863,7 @@ export default function PathDetail() {
                 letterSpacing: 0.5,
                 opacity: 0.7,
                 marginBottom: 8,
-              }}>Weekly Goals</Text>
+              }}>Goals of the week</Text>
 
               {weeklyCollapsed ? (
                 // collapsed: same shape as a habit card, with the week's points progress

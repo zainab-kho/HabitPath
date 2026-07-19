@@ -270,15 +270,18 @@ function NoteEditor({
                 </View>
             </PageContainer>
 
-            {/* toolbar — pinned to the bottom; shown only once the editor is ready */}
-            {ready && (
-                <KeyboardAvoidingView
-                    behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-                    style={styles.toolbarContainer}
-                >
-                    <NoteToolbar editor={editor} />
-                </KeyboardAvoidingView>
-            )}
+            {/* toolbar — pinned above the keyboard. The KeyboardAvoidingView must be
+                mounted from the START: it only learns the keyboard height from
+                keyboard-show events, and a new note's autofocus pops the keyboard
+                before `ready` — mounting late made the toolbar sit at the page
+                bottom. Only the toolbar itself waits for `ready`. */}
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                style={styles.toolbarContainer}
+                pointerEvents="box-none"
+            >
+                {ready && <NoteToolbar editor={editor} />}
+            </KeyboardAvoidingView>
         </AppLinearGradient>
     );
 }

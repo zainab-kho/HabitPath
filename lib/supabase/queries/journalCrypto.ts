@@ -54,3 +54,12 @@ export async function updateLockboxPassphrase(userId: string, lockbox: string): 
     .eq('user_id', userId);
   if (error) throw error;
 }
+
+/** Re-wrap the master key under a new recovery key (leaves the passphrase lockbox alone). */
+export async function updateLockboxRecovery(userId: string, lockbox: string): Promise<void> {
+  const { error } = await supabase
+    .from('journal_vault')
+    .update({ lockbox_recovery: lockbox, updated_at: new Date().toISOString() })
+    .eq('user_id', userId);
+  if (error) throw error;
+}

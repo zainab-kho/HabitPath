@@ -1,4 +1,5 @@
 // @/contexts/AuthContext.tsx
+import { lockThisDevice } from '@/lib/crypto/journalVault'
 import { supabase } from '@/lib/supabase'
 import { CURRENT_CACHE_VERSION, STORAGE_KEYS } from '@/storage/keys'
 import AsyncStorage from '@react-native-async-storage/async-storage'
@@ -181,6 +182,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       STORAGE_KEYS.REDEEMED_POINTS,
       STORAGE_KEYS.EXCHANGE_RATE,
     ])
+    // lock the encrypted journal on this device: clear the master key from the
+    // keychain so signing back in requires the passphrase again
+    if (user?.id) {
+      try { await lockThisDevice(user.id) } catch (err) {
+        console.error('[auth] failed to lock journal on sign-out:', err)
+      }
+    }
     const { error } = await supabase.auth.signOut()
     if (error) throw error
     setUser(null)

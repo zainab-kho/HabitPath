@@ -20,6 +20,7 @@ import {
   fetchVault,
   saveVault,
   updateLockboxPassphrase,
+  updateLockboxRecovery,
 } from '@/lib/supabase/queries/journalCrypto';
 
 // in-memory cache of the unlocked master key for the current session
@@ -117,6 +118,34 @@ export async function changePassphrase(userId: string, newPassphrase: string): P
   });
   await updateLockboxPassphrase(userId, C.wrapKey(master, passKey));
   return true;
+}
+
+/**
+ * Issue a NEW recovery key, invalidating the old one. Requires the current
+ * passphrase — both as proof it's the owner asking (not just someone holding an
+ * unlocked phone) and to recover the master key for re-wrapping. Only the
+ * recovery lockbox changes; the passphrase and all entries are untouched.
+ * Returns the new key to SHOW ONCE, or null if the passphrase is wrong.
+ */
+export async function regenerateRecoveryKey(
+  userId: string,
+  passphrase: string,
+): Promise<{ recoveryDisplay: string } | null> {
+  const vault = await fetchVault(userId);
+  if (!vault) return null;
+
+  const salt = C.base64ToBytes(vault.salt);
+  const passKey = await C.derivePassphraseKey(passphrase, salt, {
+    t: vault.argon_t,
+    m: vault.argon_m,
+    p: vault.argon_p,
+  });
+  const master = C.unwrapKey(vault.lockbox_passphrase, passKey);
+  if (!master) return null; // wrong passphrase
+
+  const recovery = C.generateRecoveryKey();
+  await updateLockboxRecovery(userId, C.wrapKey(master, recovery.key));
+  return { recoveryDisplay: recovery.display };
 }
 
 /** The master key for encrypting/decrypting entries, or null if the vault is locked here. */

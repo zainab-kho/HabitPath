@@ -7,12 +7,13 @@
 //
 // This screen only manages KEYS. Actual entry encryption comes in Phase 2.
 
+import * as Clipboard from 'expo-clipboard';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { useAuth } from '@/contexts/AuthContext';
-import { BUTTON_COLORS } from '@/constants/colors';
+import { BUTTON_COLORS, COLORS, PAGE } from '@/constants/colors';
 import { passphraseStrength, generateRandomPassword } from '@/lib/crypto/journalCrypto';
 import * as Vault from '@/lib/crypto/journalVault';
 import { migrateJournalEntries } from '@/lib/journal/migrateJournal';
@@ -22,12 +23,11 @@ import PageContainer from '@/ui/PageContainer';
 import PageHeader from '@/ui/PageHeader';
 import ShadowBox from '@/ui/ShadowBox';
 
-type Screen = 'loading' | 'create' | 'recovery' | 'unlock' | 'unlockRecovery' | 'ready';
+type Screen = 'loading' | 'create' | 'recovery' | 'unlock' | 'unlockRecovery' | 'ready' | 'regen';
 
 // Match the Settings page palette: blue "Save" accent, neutral borders.
 const ACCENT = BUTTON_COLORS.Save;
 const DANGER = BUTTON_COLORS.Delete;
-const BORDER = '#e0e0e0';
 
 export default function SetUpEncryption() {
   const router = useRouter();
@@ -43,12 +43,43 @@ export default function SetUpEncryption() {
   const [showPass, setShowPass] = useState(true);
   const [recoveryDisplay, setRecoveryDisplay] = useState('');
   const [savedChecked, setSavedChecked] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const copyRecoveryKey = async () => {
+    await Clipboard.setStringAsync(recoveryDisplay);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const regen = () => setPassphrase(generateRandomPassword());
 
   // unlock
   const [unlockPass, setUnlockPass] = useState('');
   const [recoveryInput, setRecoveryInput] = useState('');
+
+  // regenerate recovery key — passphrase confirmation
+  const [regenPass, setRegenPass] = useState('');
+
+  const handleRegenerate = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const result = await Vault.regenerateRecoveryKey(userId, regenPass);
+      if (result) {
+        setRegenPass('');
+        setSavedChecked(false);
+        setCopied(false);
+        setRecoveryDisplay(result.recoveryDisplay);
+        setScreen('recovery'); // reuse the save-your-recovery-key flow
+      } else {
+        setError('That passphrase didn’t work. Check it and try again.');
+      }
+    } catch {
+      setError('Could not reach the server. Try again.');
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const safeBack = () => {
     if (router.canGoBack()) router.back();
@@ -83,6 +114,8 @@ export default function SetUpEncryption() {
       migrateJournalEntries(userId).catch(() => {});
       setRecoveryDisplay(recoveryDisplay);
       setPassphrase('');
+      setSavedChecked(false);
+      setCopied(false);
       setScreen('recovery');
     } catch {
       setError('Something went wrong setting up encryption. Please try again.');
@@ -194,9 +227,13 @@ export default function SetUpEncryption() {
                 a password manager. We can&apos;t show it again.
               </Text>
 
-              <ShadowBox contentBackgroundColor="#fff" contentBorderColor={BORDER} shadowColor={ACCENT} shadowBorderRadius={20}>
+              <ShadowBox contentBorderColor={BUTTON_COLORS.Save} shadowColor={BUTTON_COLORS.Save} shadowBorderColor={BUTTON_COLORS.Save}>
                 <Text selectable style={styles.recovery}>{recoveryDisplay}</Text>
               </ShadowBox>
+
+              <Pressable onPress={copyRecoveryKey} style={styles.centerLink}>
+                <Text style={styles.link}>{copied ? 'Copied!' : 'Copy to clipboard'}</Text>
+              </Pressable>
 
               <Pressable onPress={() => setSavedChecked(v => !v)} style={styles.checkRow}>
                 <View style={[styles.checkbox, savedChecked && styles.checkboxOn]}>
@@ -287,10 +324,56 @@ export default function SetUpEncryption() {
               <Button label="Done" onPress={safeBack} />
 
               <Pressable
+                onPress={() => { setError(null); setRegenPass(''); setScreen('regen'); }}
+                style={styles.centerLink}
+              >
+                <Text style={styles.link}>Generate new recovery key</Text>
+              </Pressable>
+
+              <Pressable
                 onPress={async () => { await Vault.lockThisDevice(userId); setScreen('unlock'); }}
                 style={styles.centerLink}
               >
                 <Text style={[styles.link, { color: DANGER }]}>Lock this device (for testing)</Text>
+              </Pressable>
+            </>
+          )}
+
+          {/* ── REGENERATE RECOVERY KEY ────────────────────────────── */}
+          {screen === 'regen' && (
+            <>
+              <Text style={[globalStyles.h4, styles.heading]}>New recovery key</Text>
+              <Text style={styles.body}>
+                Enter your passphrase to confirm, and we&apos;ll issue a fresh recovery key.
+                Your old recovery key stops working immediately — the new one is shown once,
+                so save it somewhere safe.
+              </Text>
+
+              <View style={styles.field}>
+                <Text style={globalStyles.label}>PASSPHRASE</Text>
+                <TextInput
+                  style={styles.input}
+                  value={regenPass}
+                  onChangeText={setRegenPass}
+                  placeholder="your passphrase"
+                  placeholderTextColor="rgba(0,0,0,0.35)"
+                  secureTextEntry
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  onSubmitEditing={handleRegenerate}
+                />
+              </View>
+
+              {error && <Text style={styles.errorText}>{error}</Text>}
+
+              <Button
+                label={busy ? 'Generating…' : 'Generate new recovery key'}
+                disabled={!regenPass || busy}
+                onPress={handleRegenerate}
+              />
+
+              <Pressable onPress={() => { setError(null); setScreen('ready'); }} style={styles.centerLink}>
+                <Text style={styles.link}>Cancel</Text>
               </Pressable>
             </>
           )}
@@ -324,16 +407,16 @@ function Button({ label, onPress, disabled }: { label: string; onPress: () => vo
 const styles = StyleSheet.create({
   scroll: { paddingHorizontal: 30, paddingBottom: 60, gap: 20 },
   heading: { textAlign: 'center' },
-  body: { fontFamily: 'p3', fontSize: 15, lineHeight: 22, color: '#333' },
+  body: { fontFamily: 'p3', fontSize: 15, lineHeight: 22, color: '#333', textAlign: 'center' },
   field: { gap: 8 },
   fieldHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   input: {
-    fontFamily: 'p3',
-    fontSize: 15,
+    fontFamily: 'p2',
+    fontSize: 14,
     color: '#000',
     backgroundColor: '#fff',
     borderWidth: 1.5,
-    borderColor: BORDER,
+    borderColor: BUTTON_COLORS.Save,
     borderRadius: 20,
     paddingHorizontal: 14,
     paddingVertical: 12,
@@ -343,7 +426,7 @@ const styles = StyleSheet.create({
   note: {
     backgroundColor: '#fff',
     borderWidth: 1.5,
-    borderColor: BORDER,
+    borderColor: BUTTON_COLORS.Save,
     borderRadius: 20,
     padding: 14,
   },

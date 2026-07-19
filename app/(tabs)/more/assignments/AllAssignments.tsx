@@ -38,6 +38,7 @@ export default function AllAssignments() {
         courses,
         assignments,
         loading,
+        loadData,
     } = useAssignmentData(user?.id);
 
     // ui state
@@ -219,6 +220,7 @@ export default function AllAssignments() {
                         setShowEditModal(false);
                         setSelectedAssignment(null);
                     }}
+                    onChanged={loadData}
                 />
             </PageContainer>
         </AppLinearGradient>

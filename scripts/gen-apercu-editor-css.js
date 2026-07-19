@@ -49,6 +49,12 @@ html, body {
   padding: 4px 2px;
   caret-color: #000000;
   -webkit-font-smoothing: antialiased;
+  /* no kerning/ligatures: WebKit re-measures text runs split at a selection
+     boundary, so kerning pairs (v/w + next letter) made text shift while
+     selecting. Fixed spacing keeps the text rock-still. */
+  font-kerning: none;
+  font-variant-ligatures: none;
+  text-rendering: optimizeSpeed;
 }
 .ProseMirror p { margin: 0 0 2px 0; }
 .ProseMirror strong, .ProseMirror b { font-weight: 700; }

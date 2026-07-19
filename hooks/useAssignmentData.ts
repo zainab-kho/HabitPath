@@ -33,7 +33,8 @@ export function useAssignmentData(userId?: string) {
 
     const loadData = useCallback(async () => {
         if (!userId) {
-            setLoading(false);
+            // auth not ready yet — stay in the loading state instead of flashing
+            // the "no courses" empty state; loadData re-runs once userId lands
             return;
         }
 

@@ -15,6 +15,7 @@ interface FloatingActionsProps {
     onCancel: () => void;
     onToggleMenu: () => void;
     onAddCourse: () => void;
+    onManageCourses: () => void;
     onAddWeek: () => void;
     onEdit: () => void;
     onAddAssignment: () => void;
@@ -31,6 +32,7 @@ export function FloatingActions({
     onCancel,
     onToggleMenu,
     onAddCourse,
+    onManageCourses,
     onAddWeek,
     onEdit,
     onAddAssignment,
@@ -77,6 +79,12 @@ export function FloatingActions({
                         <Pressable onPress={onAddCourse}>
                             <View style={{ padding: 5, borderBottomWidth: 1 }}>
                                 <Text style={globalStyles.body}>Add New Course</Text>
+                            </View>
+                        </Pressable>
+
+                        <Pressable onPress={onManageCourses}>
+                            <View style={{ padding: 5, borderBottomWidth: 1 }}>
+                                <Text style={globalStyles.body}>Courses</Text>
                             </View>
                         </Pressable>
 

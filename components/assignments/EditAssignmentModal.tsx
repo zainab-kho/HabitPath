@@ -1,30 +1,31 @@
 // @/components/assignments/EditAssignmentModal.tsx
+// Edit an assignment from the All Assignments page. Mirrors the New Assignment
+// page's design: uppercase section labels, selectable color chips for type /
+// progress / course, and the standard modal footer.
 import { ASSIGNMENT_PROGRESS, ASSIGNMENT_TYPE_COLORS, ASSIGNMENT_TYPES, PROGRESS_COLORS } from '@/constants/';
 import { BUTTON_COLORS, PAGE } from '@/constants/colors';
-import { SYSTEM_ICONS } from '@/constants/icons';
 import { useAuth } from '@/contexts/AuthContext';
 import { AssignmentWithCourse, CourseWithColor } from '@/hooks/useAssignmentData';
 import { supabase } from '@/lib/supabase';
 import { globalStyles, uiStyles } from '@/styles';
 import ShadowBox from '@/ui/ShadowBox';
 import React, { useEffect, useState } from 'react';
-import { Alert, Image, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Alert, Modal, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 
 import SimpleCalendar from '@/ui/SimpleCalendar';
 import { TimeWheel } from '@/ui/TimeWheel';
 import { dateToISODateString, formatDateForForm, parseLocalDate } from '@/utils/dateUtils';
-import { router } from 'expo-router';
 
 interface EditAssignmentModalProps {
     visible: boolean;
     assignment: AssignmentWithCourse | null;
     courses: CourseWithColor[];
     onClose: () => void;
+    // called after save/delete so the page can refresh in place
+    onChanged?: () => void;
 }
 
-// **TODO: cleanup file
-
-export default function EditAssignmentModal({ visible, assignment, courses, onClose }: EditAssignmentModalProps) {
+export default function EditAssignmentModal({ visible, assignment, courses, onClose, onChanged }: EditAssignmentModalProps) {
     const { user } = useAuth();
 
     // form state
@@ -35,13 +36,7 @@ export default function EditAssignmentModal({ visible, assignment, courses, onCl
     const [dueDate, setDueDate] = useState<Date | null>(null);
     const [dueTime, setDueTime] = useState('');
     const [showDatePicker, setShowDatePicker] = useState(false);
-    const [showTimePicker, setShowTimePicker] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
-
-    // Dropdown states
-    const [showTypeDropdown, setShowTypeDropdown] = useState(false);
-    const [showProgressDropdown, setShowProgressDropdown] = useState(false);
-    const [showCourseDropdown, setShowCourseDropdown] = useState(false);
 
     // initialize form with assignment data
     useEffect(() => {
@@ -50,9 +45,9 @@ export default function EditAssignmentModal({ visible, assignment, courses, onCl
             setType(assignment.type || '');
             setProgress(assignment.progress || '');
             setCourseId(assignment.course_id || '');
-            // Use centralized date parsing
             setDueDate(assignment.due_date ? parseLocalDate(assignment.due_date) : null);
             setDueTime(assignment.due_time || '');
+            setShowDatePicker(false);
         }
     }, [assignment]);
 
@@ -77,14 +72,11 @@ export default function EditAssignmentModal({ visible, assignment, courses, onCl
 
             if (error) {
                 Alert.alert('Error updating assignment:', error.message);
-            };
+                return;
+            }
 
-            // Alert.alert('Success', 'Assignment updated successfully');
             onClose();
-            // Trigger refresh by reloading the page
-            setTimeout(() => {
-                router.back();
-            }, 500);
+            onChanged?.();
         } catch (error) {
             console.error('Error updating assignment:', error);
             Alert.alert('Error', 'Failed to update assignment');
@@ -106,13 +98,12 @@ export default function EditAssignmentModal({ visible, assignment, courses, onCl
                         if (!assignment?.id || !user) return;
 
                         try {
-                            // Delete from day plans first
+                            // delete from day plans first
                             await supabase
                                 .from('day_plan_assignments')
                                 .delete()
                                 .eq('assignment_id', assignment.id);
 
-                            // Delete the assignment
                             const { error } = await supabase
                                 .from('assignments')
                                 .delete()
@@ -121,11 +112,8 @@ export default function EditAssignmentModal({ visible, assignment, courses, onCl
 
                             if (error) throw error;
 
-                            Alert.alert('Success', 'Assignment deleted');
                             onClose();
-                            setTimeout(() => {
-                                router.back();
-                            }, 500);
+                            onChanged?.();
                         } catch (error) {
                             console.error('Error deleting assignment:', error);
                             Alert.alert('Error', 'Failed to delete assignment');
@@ -136,7 +124,21 @@ export default function EditAssignmentModal({ visible, assignment, courses, onCl
         );
     };
 
-    const getCourseById = (id: string) => courses.find(c => c.id === id);
+    // selectable chip matching the New Assignment page's type/progress pickers
+    const chip = (label: string, selected: boolean, color: string, onPress: () => void) => (
+        <Pressable key={label} onPress={onPress}>
+            <ShadowBox
+                contentBackgroundColor={selected ? color : '#fff'}
+                contentBorderColor={selected ? '#000' : color}
+                shadowColor={selected ? '#000' : color}
+                shadowBorderColor={selected ? '#000' : color}
+            >
+                <View style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
+                    <Text style={globalStyles.body1}>{label}</Text>
+                </View>
+            </ShadowBox>
+        </Pressable>
+    );
 
     return (
         <Modal
@@ -157,197 +159,122 @@ export default function EditAssignmentModal({ visible, assignment, courses, onCl
                     style={{
                         backgroundColor: '#fff',
                         borderRadius: 20,
-                        borderWidth: 3,
-                        borderColor: PAGE.assignments.primary[1],
-                        maxHeight: '75%',
+                        borderWidth: 1.5,
+                        borderColor: PAGE.assignments.primary[0],
+                        maxHeight: '80%',
                         width: '90%',
                         alignSelf: 'center',
                     }}
                     onPress={(e) => e.stopPropagation()}
                 >
-                    <View style={{ marginTop: 20, marginBottom: 10 }}>
-                        <Text style={[globalStyles.h2, { textAlign: 'center', marginBottom: 5 }]}>Edit Assignment</Text>
+                    <View style={{ marginTop: 20, marginHorizontal: 20 }}>
+                        <Text style={[globalStyles.h4, { textAlign: 'center', marginBottom: 10 }]}>
+                            Edit Assignment
+                        </Text>
                     </View>
 
-                    <ScrollView showsVerticalScrollIndicator={false} style={{ padding: 20 }}>
-                        {/* assignment name */}
-                        <View style={{ marginBottom: 20 }}>
-                            <Text style={[globalStyles.label, { marginBottom: 10 }]}>TITLE</Text>
-                            {/* <View style={{globalStyles.inputBox, borderColor: '#000', borderWidth: 1, borderRadius: 10 }}> */}
-                            <View style={uiStyles.inputField}>
-                                <TextInput
-                                    style={[globalStyles.body]}
-                                    value={name}
-                                    onChangeText={setName}
-                                    placeholder="Assignment name"
-                                />
-                                {/* </View> */}
-                            </View>
-                        </View>
+                    <ScrollView showsVerticalScrollIndicator={false} style={{ padding: 20 }} keyboardShouldPersistTaps="handled">
+                        {/* name */}
+                        <Text style={[globalStyles.label, { marginBottom: 10 }]}>ASSIGNMENT NAME</Text>
+                        <TextInput
+                            style={[uiStyles.inputField, {
+                                borderColor: PAGE.assignments.primary[1],
+                                marginBottom: 20,
+                            }]}
+                            value={name}
+                            onChangeText={setName}
+                            placeholder="Assignment name"
+                            cursorColor={PAGE.assignments.primary[1]}
+                            selectionColor={PAGE.assignments.primary[1]}
+                        />
 
-                        {/* Type Dropdown */}
-                        <View style={{ marginBottom: 20 }}>
-                            <Text style={[globalStyles.body, { marginBottom: 8 }]}>Type</Text>
-                            <Pressable onPress={() => setShowTypeDropdown(!showTypeDropdown)}>
-                                <ShadowBox contentBackgroundColor={ASSIGNMENT_TYPE_COLORS[type] || '#fff'}>
-                                    <View style={{ padding: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <Text style={globalStyles.body}>{type || 'Select type'}</Text>
-                                        <Image source={SYSTEM_ICONS.sort} style={{ width: 15, height: 15 }} />
-                                    </View>
-                                </ShadowBox>
-                            </Pressable>
-                            {showTypeDropdown && (
-                                <View style={{ marginTop: 5, gap: 5 }}>
-                                    {ASSIGNMENT_TYPES.map((t) => (
-                                        <Pressable
-                                            key={t}
-                                            onPress={() => {
-                                                setType(t);
-                                                setShowTypeDropdown(false);
-                                            }}
-                                        >
-                                            <ShadowBox contentBackgroundColor={ASSIGNMENT_TYPE_COLORS[t]}>
-                                                <View style={{ padding: 10 }}>
-                                                    <Text style={globalStyles.body}>{t}</Text>
-                                                </View>
-                                            </ShadowBox>
-                                        </Pressable>
-                                    ))}
-                                </View>
+                        {/* course */}
+                        <Text style={[globalStyles.label, { marginBottom: 10 }]}>COURSE</Text>
+                        <View style={{ marginBottom: 20, gap: 8, flexDirection: 'row', flexWrap: 'wrap' }}>
+                            {courses.map(c =>
+                                chip(c.course_number, courseId === c.id, c.color ?? '#fff', () => setCourseId(c.id!))
                             )}
                         </View>
 
-                        {/* Progress Dropdown */}
-                        <View style={{ marginBottom: 20 }}>
-                            <Text style={[globalStyles.body, { marginBottom: 8 }]}>Progress</Text>
-                            <Pressable onPress={() => setShowProgressDropdown(!showProgressDropdown)}>
-                                <ShadowBox contentBackgroundColor={PROGRESS_COLORS[progress]}>
-                                    <View style={{ padding: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <Text style={globalStyles.body}>{progress || 'Select progress'}</Text>
-                                        <Image source={SYSTEM_ICONS.sort} style={{ width: 15, height: 15 }} />
-                                    </View>
-                                </ShadowBox>
-                            </Pressable>
-                            {showProgressDropdown && (
-                                <View style={{ marginTop: 5, gap: 5 }}>
-                                    {ASSIGNMENT_PROGRESS.map((p) => (
-                                        <Pressable
-                                            key={p}
-                                            onPress={() => {
-                                                setProgress(p);
-                                                setShowProgressDropdown(false);
-                                            }}
-                                        >
-                                            <ShadowBox contentBackgroundColor={PROGRESS_COLORS[p]}>
-                                                <View style={{ padding: 10 }}>
-                                                    <Text style={globalStyles.body}>{p}</Text>
-                                                </View>
-                                            </ShadowBox>
-                                        </Pressable>
-                                    ))}
-                                </View>
+                        {/* type */}
+                        <Text style={[globalStyles.label, { marginBottom: 10 }]}>TYPE</Text>
+                        <View style={{ marginBottom: 20, gap: 8, flexDirection: 'row', flexWrap: 'wrap' }}>
+                            {ASSIGNMENT_TYPES.map(t =>
+                                chip(t, type === t, ASSIGNMENT_TYPE_COLORS[t], () => setType(t))
                             )}
                         </View>
 
-                        {/* Course Dropdown */}
-                        <View style={{ marginBottom: 20 }}>
-                            <Text style={[globalStyles.body, { marginBottom: 8 }]}>Course</Text>
-                            <Pressable onPress={() => setShowCourseDropdown(!showCourseDropdown)}>
-                                <ShadowBox contentBackgroundColor={getCourseById(courseId)?.color || '#fff'}>
-                                    <View style={{ padding: 12, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <Text style={globalStyles.body}>
-                                            {getCourseById(courseId)?.course_number || 'Select course'}
-                                        </Text>
-                                        <Image source={SYSTEM_ICONS.sort} style={{ width: 15, height: 15 }} />
-                                    </View>
-                                </ShadowBox>
-                            </Pressable>
-                            {showCourseDropdown && (
-                                <View style={{ marginTop: 5, gap: 5 }}>
-                                    {courses.map((c) => (
-                                        <Pressable
-                                            key={c.id}
-                                            onPress={() => {
-                                                setCourseId(c.id!);
-                                                setShowCourseDropdown(false);
-                                            }}
-                                        >
-                                            <ShadowBox contentBackgroundColor={c.color}>
-                                                <View style={{ padding: 10 }}>
-                                                    <Text style={globalStyles.body}>{c.course_number}</Text>
-                                                </View>
-                                            </ShadowBox>
-                                        </Pressable>
-                                    ))}
-                                </View>
+                        {/* progress */}
+                        <Text style={[globalStyles.label, { marginBottom: 10 }]}>PROGRESS</Text>
+                        <View style={{ marginBottom: 20, gap: 8, flexDirection: 'row', flexWrap: 'wrap' }}>
+                            {ASSIGNMENT_PROGRESS.map(p =>
+                                chip(p, progress === p, PROGRESS_COLORS[p], () => setProgress(p))
                             )}
                         </View>
 
-                        {/* Due Date */}
-                        <View style={{ marginBottom: 20 }}>
-                            <Text style={[globalStyles.body, { marginBottom: 8 }]}>Due Date</Text>
-                            <ShadowBox contentBackgroundColor="#fff">
-                                <Pressable onPress={() => setShowDatePicker(!showDatePicker)}>
-                                    <View style={{ padding: 12 }}>
-                                        <Text style={globalStyles.body}>
-                                            {dueDate
-                                                ? formatDateForForm(dueDate)
-                                                : 'Select date'}
-                                        </Text>
-                                    </View>
-                                </Pressable>
-                            </ShadowBox>
+                        {/* due date */}
+                        <Text style={[globalStyles.label, { marginBottom: 10 }]}>DUE DATE</Text>
+                        <ShadowBox
+                            contentBackgroundColor={PAGE.assignments.primary[1]}
+                            style={{ marginBottom: showDatePicker ? 10 : 20 }}
+                        >
+                            <Pressable
+                                onPress={() => setShowDatePicker(v => !v)}
+                                style={{ paddingVertical: 6, paddingHorizontal: 12, alignItems: 'center' }}
+                            >
+                                <Text style={globalStyles.body}>
+                                    {dueDate ? formatDateForForm(dueDate) : 'Select date'}
+                                </Text>
+                            </Pressable>
+                        </ShadowBox>
 
-                            {showDatePicker && dueDate && (
+                        {showDatePicker && (
+                            <ShadowBox style={{ marginBottom: 20 }}>
                                 <SimpleCalendar
-                                    selectedDate={dueDate}
+                                    selectedDate={dueDate ?? new Date()}
                                     onSelectDate={(date) => {
                                         setDueDate(date);
                                         setShowDatePicker(false);
                                     }}
                                     selectedDateColor={PAGE.assignments.primary[0]}
                                 />
-                            )}
+                            </ShadowBox>
+                        )}
+
+                        {/* due time */}
+                        <Text style={[globalStyles.label, { marginBottom: 10 }]}>DUE TIME (OPTIONAL)</Text>
+                        <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 10, marginBottom: 24 }}>
+                            <TimeWheel
+                                data={Array.from({ length: 12 }, (_, i) => `${i === 0 ? 12 : i}`)}
+                                selected={dueTime.split(':')[0] || '12'}
+                                onSelect={(hour) => {
+                                    const [, minutes = '00'] = dueTime.split(':');
+                                    setDueTime(`${hour}:${minutes}`);
+                                }}
+                            />
+                            <Text style={{ alignSelf: 'center', fontSize: 16 }}>:</Text>
+                            <TimeWheel
+                                data={['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55']}
+                                selected={dueTime.split(':')[1] || '00'}
+                                onSelect={(minute) => {
+                                    const [hour = '12'] = dueTime.split(':');
+                                    setDueTime(`${hour}:${minute}`);
+                                }}
+                            />
+                            <TimeWheel
+                                data={['AM', 'PM']}
+                                selected={dueTime.includes('PM') ? 'PM' : 'AM'}
+                                onSelect={(ampm) => {
+                                    const [hourMinute] = dueTime.split(' ');
+                                    setDueTime(`${hourMinute || '12:00'} ${ampm}`);
+                                }}
+                            />
                         </View>
 
-                        {/* Due Time */}
-                        <View style={{ marginBottom: 30 }}>
-                            <Text style={[globalStyles.body, { marginBottom: 8 }]}>Due Time (Optional)</Text>
-                            <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 10 }}>
-                                <TimeWheel
-                                    data={Array.from({ length: 12 }, (_, i) => `${i === 0 ? 12 : i}`)}
-                                    selected={dueTime.split(':')[0] || '12'}
-                                    onSelect={(hour) => {
-                                        const [, minutes = '00'] = dueTime.split(':');
-                                        setDueTime(`${hour}:${minutes}`);
-                                    }}
-                                />
-                                <Text style={{ alignSelf: 'center', fontSize: 16 }}>:</Text>
-                                <TimeWheel
-                                    data={['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55']}
-                                    selected={dueTime.split(':')[1] || '00'}
-                                    onSelect={(minute) => {
-                                        const [hour = '12'] = dueTime.split(':');
-                                        setDueTime(`${hour}:${minute}`);
-                                    }}
-                                />
-                                <TimeWheel
-                                    data={['AM', 'PM']}
-                                    selected={dueTime.includes('PM') ? 'PM' : 'AM'}
-                                    onSelect={(ampm) => {
-                                        const [hourMinute] = dueTime.split(' ');
-                                        setDueTime(`${hourMinute || '12:00'} ${ampm}`);
-                                    }}
-                                />
-                            </View>
-                        </View>
-
-                        <Pressable
-                            onPress={handleDelete}
-                            style={{ flex: 1, margin: 10 }}
-                        >
-                            <ShadowBox contentBackgroundColor={BUTTON_COLORS.Delete}>
-                                <View style={{ paddingVertical: 6, alignItems: 'center' }}>
+                        {/* delete */}
+                        <Pressable onPress={handleDelete} style={{ alignSelf: 'center', width: 140, marginBottom: 10 }}>
+                            <ShadowBox contentBackgroundColor={BUTTON_COLORS.Delete} shadowBorderRadius={20}>
+                                <View style={{ paddingVertical: 5, alignItems: 'center' }}>
                                     <Text style={globalStyles.body}>Delete</Text>
                                 </View>
                             </ShadowBox>
@@ -357,33 +284,22 @@ export default function EditAssignmentModal({ visible, assignment, courses, onCl
                     {/* action buttons */}
                     <View style={{ flexDirection: 'row', borderTopWidth: 1, padding: 10, gap: 10 }}>
                         <Pressable onPress={onClose} style={{ flex: 1 }}>
-                            <ShadowBox
-                                contentBackgroundColor={PAGE.assignments.background[1]}
-                                shadowBorderRadius={15}
-                            >
+                            <ShadowBox contentBackgroundColor={BUTTON_COLORS.Quiet} shadowBorderRadius={15}>
                                 <View style={{ paddingVertical: 6 }}>
-                                    <Text style={[globalStyles.body, { textAlign: 'center' }]}>
-                                        Cancel
-                                    </Text>
+                                    <Text style={[globalStyles.body, { textAlign: 'center' }]}>Cancel</Text>
                                 </View>
                             </ShadowBox>
                         </Pressable>
 
-                        <Pressable
-                            onPress={handleSave}
-                            style={{ flex: 1 }}
-                            disabled={isSaving}
-                        >
+                        <Pressable onPress={handleSave} style={{ flex: 1 }} disabled={isSaving}>
                             <ShadowBox
-                                contentBackgroundColor={isSaving ? '#ccc' : BUTTON_COLORS.Save
-                                }
+                                contentBackgroundColor={BUTTON_COLORS.Save}
                                 shadowBorderRadius={15}
+                                style={{ opacity: isSaving ? 0.5 : 1 }}
                             >
                                 <View style={{ paddingVertical: 6 }}>
                                     <Text style={[globalStyles.body, { textAlign: 'center' }]}>
-                                        {isSaving
-                                            ? 'Saving...'
-                                            : 'Save'}
+                                        {isSaving ? 'Saving...' : 'Save'}
                                     </Text>
                                 </View>
                             </ShadowBox>

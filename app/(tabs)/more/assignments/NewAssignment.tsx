@@ -172,225 +172,206 @@ export default function NewAssignment() {
                             COURSE
                         </Text> */}
 
-                        {courses.length === 0 ? (
-                            <>
-                                <Text style={[globalStyles.body2, { textAlign: 'center', opacity: 0.6, marginBottom: 10 }]}>
-                                    No courses yet. Create one first!
+
+                        <ShadowBox
+                            contentBackgroundColor={selectedCourse ? PAGE.assignments.primary[1] : '#fff'}
+                            style={{ marginBottom: 20 }}
+                        >
+                            <Pressable
+                                onPress={() => showCourseDropdown(true)}
+                                style={{ paddingVertical: 6, paddingHorizontal: 12, alignItems: 'center' }}
+                            >
+                                <Text
+                                    numberOfLines={1}
+                                    ellipsizeMode="tail"
+                                    style={globalStyles.body}
+                                >
+                                    {selectedCourse
+                                        ? `${selectedCourse.course_number}`
+                                        : 'Select course'}
                                 </Text>
+                            </Pressable>
+                        </ShadowBox>
 
+                        {/* TYPE DROPDOWN */}
+                        <Text style={[globalStyles.label, { marginBottom: 10 }]}>
+                            TYPE
+                        </Text>
+
+                        <View style={{ marginBottom: 20, gap: 8, flexDirection: 'row', flexWrap: 'wrap' }}>
+                            {ASSIGNMENT_TYPES.map((assignmentType) => (
                                 <Pressable
+                                    key={assignmentType}
                                     onPress={() => {
-                                        router.push('/(tabs)/more/assignments/NewCourse')
+                                        setType(assignmentType);
                                     }}
                                 >
-                                <ShadowBox contentBackgroundColor={PAGE.assignments.primary[0]} shadowBorderRadius={20}>
-                                    <View style={{ paddingVertical: 5, alignItems: 'center' }}>
-                                        <Text style={globalStyles.body}>Add New Course</Text>
-                                    </View>
-                                </ShadowBox>
-                            </Pressable>
-                    </>
-                    ) : (
-                    <ShadowBox
-                        contentBackgroundColor={selectedCourse ? PAGE.assignments.primary[1] : '#fff'}
-                        style={{ marginBottom: 20 }}
-                    >
-                        <Pressable
-                            onPress={() => showCourseDropdown(true)}
-                            style={{ paddingVertical: 6, paddingHorizontal: 12, alignItems: 'center' }}
-                        >
-                            <Text
-                                numberOfLines={1}
-                                ellipsizeMode="tail"
-                                style={globalStyles.body}
-                            >
-                                {selectedCourse
-                                    ? `${selectedCourse.course_number}`
-                                    : 'Select course'}
-                            </Text>
-                        </Pressable>
-                    </ShadowBox>
-                        )}
-
-                    {/* TYPE DROPDOWN */}
-                    <Text style={[globalStyles.label, { marginBottom: 10 }]}>
-                        TYPE
-                    </Text>
-
-                    <View style={{ marginBottom: 20, gap: 8, flexDirection: 'row', flexWrap: 'wrap' }}>
-                        {ASSIGNMENT_TYPES.map((assignmentType) => (
-                            <Pressable
-                                key={assignmentType}
-                                onPress={() => {
-                                    setType(assignmentType);
-                                }}
-                            >
-                                <ShadowBox
-                                    contentBackgroundColor={
-                                        type === assignmentType
-                                            ? ASSIGNMENT_TYPE_COLORS[assignmentType]
-                                            : '#fff'
-                                    }
-                                    contentBorderColor={
-                                        type === assignmentType
-                                            ? '#000'
-                                            : ASSIGNMENT_TYPE_COLORS[assignmentType]
-                                    }
-                                    shadowColor={
-                                        type === assignmentType
-                                            ? '#000'
-                                            : ASSIGNMENT_TYPE_COLORS[assignmentType]
-                                    }
-                                    shadowBorderColor={
-                                        type === assignmentType
-                                            ? '#000'
-                                            : ASSIGNMENT_TYPE_COLORS[assignmentType]
-                                    }
-                                >
-                                    <View style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
-                                        <Text style={globalStyles.body1}>{assignmentType}</Text>
-                                    </View>
-                                </ShadowBox>
-                            </Pressable>
-                        ))}
-                    </View>
-
-
-                    {/* PROGRESS DROPDOWN */}
-                    <Text style={[globalStyles.label, { marginBottom: 10 }]}>
-                        PROGRESS
-                    </Text>
-
-                    <View style={{ marginBottom: 20, gap: 8, flexDirection: 'row', flexWrap: 'wrap' }}>
-                        {ASSIGNMENT_PROGRESS.map((progressOption) => (
-                            <Pressable
-                                key={progressOption}
-                                onPress={() => {
-                                    setProgress(progressOption);
-                                }}
-                            >
-                                <ShadowBox
-                                    contentBackgroundColor={
-                                        progress === progressOption
-                                            ? PROGRESS_COLORS[progressOption]
-                                            : '#fff'
-                                    }
-                                    contentBorderColor={
-                                        progress === progressOption
-                                            ? '#000'
-                                            : PROGRESS_COLORS[progressOption]
-                                    }
-                                    shadowColor={
-                                        progress === progressOption
-                                            ? '#000'
-                                            : PROGRESS_COLORS[progressOption]
-                                    }
-                                    shadowBorderColor={
-                                        progress === progressOption
-                                            ? '#000'
-                                            : PROGRESS_COLORS[progressOption]
-                                    }
-                                >
-                                    <View style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
-                                        <Text style={globalStyles.body1}>{progressOption}</Text>
-                                    </View>
-                                </ShadowBox>
-                            </Pressable>
-                        ))}
-                    </View>
-
-
-                    {/* DUE DATE */}
-                    <Text style={[globalStyles.label, { marginBottom: 10 }]}>
-                        DUE DATE
-                    </Text>
-
-                    <View style={{}}>
-
-                        {/* Simple Calendar Dropdown */}
-                        <View style={{
-                            margin: 2, marginBottom: 15
-                        }}>
-                            <ShadowBox>
-                                <SimpleCalendar
-                                    selectedDate={dueDate ? parseLocalDate(dueDate) : new Date()}
-                                    onSelectDate={(date) => {
-                                        const dateString = formatLocalDate(date);
-                                        setDueDate(dateString);
-                                        setShowCalendar(false);
-                                    }}
-                                    selectedDateColor={PAGE.assignments.primary[0]}
-                                />
-                            </ShadowBox>
-                        </View>
-
-                    </View>
-
-                    {/* DUE TIME TOGGLE */}
-                    <View style={{
-                        flexDirection: 'row',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        marginBottom: 10,
-                    }}>
-                        <Text style={globalStyles.body1}>Add due time?</Text>
-                        <Switch
-                            value={hasDueTime}
-                            onValueChange={setHasDueTime}
-                            trackColor={{ false: '#ddd', true: PAGE.assignments.primary[1] }}
-                            thumbColor="#fff"
-                        />
-                    </View>
-
-                    {/* TIME PICKER */}
-                    {hasDueTime && (
-                        <View style={{ marginBottom: 15 }}>
-                            <ShadowBox
-                                contentBackgroundColor={PAGE.assignments.primary[2]}
-                                style={{ width: 120, alignSelf: 'center', marginBottom: 10 }}>
-                                <Pressable
-                                    onPress={() => setShowTimePicker(prev => !prev)}
-                                    style={{ paddingVertical: 5, paddingHorizontal: 15, alignItems: 'center' }}>
-                                    <Text style={globalStyles.body}>
-                                        {hour}:{minute} {meridiem}
-                                    </Text>
+                                    <ShadowBox
+                                        contentBackgroundColor={
+                                            type === assignmentType
+                                                ? ASSIGNMENT_TYPE_COLORS[assignmentType]
+                                                : '#fff'
+                                        }
+                                        contentBorderColor={
+                                            type === assignmentType
+                                                ? '#000'
+                                                : ASSIGNMENT_TYPE_COLORS[assignmentType]
+                                        }
+                                        shadowColor={
+                                            type === assignmentType
+                                                ? '#000'
+                                                : ASSIGNMENT_TYPE_COLORS[assignmentType]
+                                        }
+                                        shadowBorderColor={
+                                            type === assignmentType
+                                                ? '#000'
+                                                : ASSIGNMENT_TYPE_COLORS[assignmentType]
+                                        }
+                                    >
+                                        <View style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
+                                            <Text style={globalStyles.body1}>{assignmentType}</Text>
+                                        </View>
+                                    </ShadowBox>
                                 </Pressable>
-                            </ShadowBox>
-
-                            {showTimePicker && (
-                                <View style={{ flexDirection: 'row', alignSelf: 'center', gap: 5 }}>
-                                    <TimeWheel data={HOURS} selected={hour} onSelect={setHour} />
-                                    <Text style={{ fontSize: 24, alignSelf: 'center' }}>:</Text>
-                                    <TimeWheel data={MINUTES} selected={minute} onSelect={setMinute} />
-                                    <TimeWheel data={MERIDIEM} selected={meridiem} onSelect={setMeridiem} />
-                                </View>
-                            )}
+                            ))}
                         </View>
-                    )}
-                    {/* cancel / save — standard page button dimensions */}
-                    <View style={{ flexDirection: 'row', gap: 10, marginTop: 30, marginBottom: 20, justifyContent: 'center' }}>
-                        <Pressable onPress={() => router.back()} style={{ flex: 1, maxWidth: 100 }}>
-                            <ShadowBox contentBackgroundColor={BUTTON_COLORS.Cancel} shadowBorderRadius={20}>
-                                <View style={{ paddingVertical: 5, alignItems: 'center' }}>
-                                    <Text style={globalStyles.body}>Cancel</Text>
-                                </View>
-                            </ShadowBox>
-                        </Pressable>
 
-                        <Pressable
-                            onPress={handleSave}
-                            disabled={isSaving}
-                            style={{ flex: 1, maxWidth: 100, opacity: isSaving ? 0.6 : 1 }}
-                        >
-                            <ShadowBox contentBackgroundColor={BUTTON_COLORS.Save} shadowBorderRadius={20}>
-                                <View style={{ paddingVertical: 5, alignItems: 'center' }}>
-                                    <Text style={globalStyles.body}>
-                                        {isSaving ? 'Saving...' : 'Save'}
-                                    </Text>
-                                </View>
-                            </ShadowBox>
-                        </Pressable>
-                    </View>
+
+                        {/* PROGRESS DROPDOWN */}
+                        <Text style={[globalStyles.label, { marginBottom: 10 }]}>
+                            PROGRESS
+                        </Text>
+
+                        <View style={{ marginBottom: 20, gap: 8, flexDirection: 'row', flexWrap: 'wrap' }}>
+                            {ASSIGNMENT_PROGRESS.map((progressOption) => (
+                                <Pressable
+                                    key={progressOption}
+                                    onPress={() => {
+                                        setProgress(progressOption);
+                                    }}
+                                >
+                                    <ShadowBox
+                                        contentBackgroundColor={
+                                            progress === progressOption
+                                                ? PROGRESS_COLORS[progressOption]
+                                                : '#fff'
+                                        }
+                                        contentBorderColor={
+                                            progress === progressOption
+                                                ? '#000'
+                                                : PROGRESS_COLORS[progressOption]
+                                        }
+                                        shadowColor={
+                                            progress === progressOption
+                                                ? '#000'
+                                                : PROGRESS_COLORS[progressOption]
+                                        }
+                                        shadowBorderColor={
+                                            progress === progressOption
+                                                ? '#000'
+                                                : PROGRESS_COLORS[progressOption]
+                                        }
+                                    >
+                                        <View style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
+                                            <Text style={globalStyles.body1}>{progressOption}</Text>
+                                        </View>
+                                    </ShadowBox>
+                                </Pressable>
+                            ))}
+                        </View>
+
+
+                        {/* DUE DATE */}
+                        <Text style={[globalStyles.label, { marginBottom: 10 }]}>
+                            DUE DATE
+                        </Text>
+
+                        <View style={{}}>
+
+                            {/* Simple Calendar Dropdown */}
+                            <View style={{
+                                margin: 2, marginBottom: 15
+                            }}>
+                                <ShadowBox>
+                                    <SimpleCalendar
+                                        selectedDate={dueDate ? parseLocalDate(dueDate) : new Date()}
+                                        onSelectDate={(date) => {
+                                            const dateString = formatLocalDate(date);
+                                            setDueDate(dateString);
+                                            setShowCalendar(false);
+                                        }}
+                                        selectedDateColor={PAGE.assignments.primary[0]}
+                                    />
+                                </ShadowBox>
+                            </View>
+
+                        </View>
+
+                        {/* DUE TIME TOGGLE */}
+                        <View style={{
+                            flexDirection: 'row',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginBottom: 10,
+                        }}>
+                            <Text style={globalStyles.body1}>Add due time?</Text>
+                            <Switch
+                                value={hasDueTime}
+                                onValueChange={setHasDueTime}
+                                trackColor={{ false: '#ddd', true: PAGE.assignments.primary[1] }}
+                                thumbColor="#fff"
+                            />
+                        </View>
+
+                        {/* TIME PICKER */}
+                        {hasDueTime && (
+                            <View style={{ marginBottom: 15 }}>
+                                <ShadowBox
+                                    contentBackgroundColor={PAGE.assignments.primary[2]}
+                                    style={{ width: 120, alignSelf: 'center', marginBottom: 10 }}>
+                                    <Pressable
+                                        onPress={() => setShowTimePicker(prev => !prev)}
+                                        style={{ paddingVertical: 5, paddingHorizontal: 15, alignItems: 'center' }}>
+                                        <Text style={globalStyles.body}>
+                                            {hour}:{minute} {meridiem}
+                                        </Text>
+                                    </Pressable>
+                                </ShadowBox>
+
+                                {showTimePicker && (
+                                    <View style={{ flexDirection: 'row', alignSelf: 'center', gap: 5 }}>
+                                        <TimeWheel data={HOURS} selected={hour} onSelect={setHour} />
+                                        <Text style={{ fontSize: 24, alignSelf: 'center' }}>:</Text>
+                                        <TimeWheel data={MINUTES} selected={minute} onSelect={setMinute} />
+                                        <TimeWheel data={MERIDIEM} selected={meridiem} onSelect={setMeridiem} />
+                                    </View>
+                                )}
+                            </View>
+                        )}
+                        {/* cancel / save — standard page button dimensions */}
+                        <View style={{ flexDirection: 'row', gap: 10, marginTop: 30, marginBottom: 20, justifyContent: 'center' }}>
+                            <Pressable onPress={() => router.back()} style={{ flex: 1, maxWidth: 100 }}>
+                                <ShadowBox contentBackgroundColor={BUTTON_COLORS.Cancel} shadowBorderRadius={20}>
+                                    <View style={{ paddingVertical: 5, alignItems: 'center' }}>
+                                        <Text style={globalStyles.body}>Cancel</Text>
+                                    </View>
+                                </ShadowBox>
+                            </Pressable>
+
+                            <Pressable
+                                onPress={handleSave}
+                                disabled={isSaving}
+                                style={{ flex: 1, maxWidth: 100, opacity: isSaving ? 0.6 : 1 }}
+                            >
+                                <ShadowBox contentBackgroundColor={BUTTON_COLORS.Save} shadowBorderRadius={20}>
+                                    <View style={{ paddingVertical: 5, alignItems: 'center' }}>
+                                        <Text style={globalStyles.body}>
+                                            {isSaving ? 'Saving...' : 'Save'}
+                                        </Text>
+                                    </View>
+                                </ShadowBox>
+                            </Pressable>
+                        </View>
                     </View>
                 </ScrollView>
 

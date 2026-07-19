@@ -1,7 +1,7 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useRef, useState } from 'react';
-import { ActivityIndicator, ScrollView, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native';
 
 // hooks
 import { useAssignmentActions } from '@/hooks/useAssignmentActions';
@@ -29,12 +29,15 @@ import WeekPlanView from '@/components/assignments/WeekPlanView';
 // modals
 import AddAssignmentToDaySheet from '@/modals/AddAssignmentToDaySheet';
 import AddWeekModal from '@/modals/AddWeekModal';
+import { ManageCoursesModal } from '@/modals/ManageCoursesModal';
 
 // ui
+import { globalStyles } from '@/styles';
 import { AppLinearGradient } from '@/ui/AppLinearGradient';
 import EmptyStateView from '@/ui/EmptyStateView';
 import PageContainer from '@/ui/PageContainer';
 import PageHeader from '@/ui/PageHeader';
+import ShadowBox from '@/ui/ShadowBox';
 
 // constants
 import { PAGE } from '@/constants/colors';
@@ -93,6 +96,7 @@ export default function Assignments() {
     const [selectedDayForSheet, setSelectedDayForSheet] = useState<{ date: string; label: string } | null>(null);
     const [showSaveButton, setShowSaveButton] = useState(false);
     const [showMoreMenu, setShowMoreMenu] = useState(false);
+    const [showCoursesModal, setShowCoursesModal] = useState(false);
     const [editMode, setEditMode] = useState(false);
     const [showStatusModal, setShowStatusModal] = useState(false);
     const [selectedAssignmentForStatus, setSelectedAssignmentForStatus] = useState<AssignmentWithCourse | null>(null);
@@ -262,6 +266,10 @@ export default function Assignments() {
                         setShowMoreMenu(false);
                         router.push('/(tabs)/more/assignments/NewCourse');
                     }}
+                    onManageCourses={() => {
+                        setShowMoreMenu(false);
+                        setShowCoursesModal(true);
+                    }}
                     onAddWeek={() => {
                         setShowMoreMenu(false);
                         setShowAddWeekModal(true);
@@ -273,6 +281,13 @@ export default function Assignments() {
                 />
 
                 {/* Modals */}
+                <ManageCoursesModal
+                    visible={showCoursesModal}
+                    courses={courses}
+                    onClose={() => setShowCoursesModal(false)}
+                    onChanged={loadData}
+                />
+
                 <StatusModal
                     visible={showStatusModal}
                     selectedAssignment={selectedAssignmentForStatus}

@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { Habit } from '@/types/Habit';
-import { getHabitDate } from '@/utils/dateUtils';
+import { getHabitDate, getWeekDatesForDate } from '@/utils/dateUtils';
 import uuid from 'react-native-uuid';
 
 
@@ -333,6 +333,13 @@ export async function skipHabit(
   const target = habits.find(h => h.id === habitId);
   if (!target) return habits;
 
+  // week goals are week-scoped: the skip is recorded on the week's start day,
+  // which is what getHabitStatus checks — so the whole week reads as skipped
+  // and the goal comes back fresh on its next occurrence (next week / next month)
+  if (target.frequency === 'Weekly Goal') {
+    dateStr = getWeekDatesForDate(dateStr)[0];
+  }
+
   const isOneTime = (!target.frequency || target.frequency === 'None') && !target.keepUntil;
 
   if (isOneTime) {
@@ -393,6 +400,12 @@ export async function unskipHabit(
   dateStr: string,
   userId: string
 ): Promise<Habit[]> {
+  // mirror skipHabit: week goals record their skip on the week's start day
+  const unskipTarget = habits.find(h => h.id === habitId);
+  if (unskipTarget?.frequency === 'Weekly Goal') {
+    dateStr = getWeekDatesForDate(dateStr)[0];
+  }
+
   const updated = habits.map(h => {
     if (h.id !== habitId) return h;
     return {

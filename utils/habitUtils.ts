@@ -356,6 +356,10 @@ export function isHabitActiveToday(
   const isViewingToday = todayStr === actualTodayStr;
 
   if (habit.archivedAt) {
+    // archived week goals are hidden outright — without this, a keepUntil week
+    // goal fell through to its visibility branch and kept showing every week,
+    // making archive appear to do nothing
+    if (habit.frequency === 'Weekly Goal') return false;
     if (habit.keepUntil) {
     } else {
       const isOneTime = !habit.frequency || habit.frequency === 'None';

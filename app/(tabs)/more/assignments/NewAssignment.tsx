@@ -1,5 +1,5 @@
 import { useAuth } from '@/contexts/AuthContext';
-import { useFocusEffect, useRouter } from 'expo-router';
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useState } from 'react';
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 // gesture-handler scroll + root view so scrolling works inside the course modal
@@ -22,15 +22,25 @@ export default function NewAssignment() {
     const { user } = useAuth();
     const router = useRouter();
 
+    // edit mode: opened from All Assignments with the assignment prefilled
+    const params = useLocalSearchParams<{ editId?: string; editData?: string }>();
+    const isEditMode = !!params.editId;
+    const editAssignment = React.useMemo(
+        () => (params.editData ? JSON.parse(params.editData) : null),
+        [params.editData]
+    );
+    // due_time is stored as "H:MM AM/PM"
+    const editTime = editAssignment?.due_time?.match(/^(\d+):(\d+)\s*(AM|PM)$/i) ?? null;
+
     const [courses, setCourses] = useState<Course[]>([]);
     const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
 
-    const [name, setName] = useState('');
-    const [type, setType] = useState('Assignment');
-    const [subject, setSubject] = useState('');
-    const [progress, setProgress] = useState('Not started');
-    const [dueDate, setDueDate] = useState(formatLocalDate(new Date())); // Initialize to today
-    const [hasDueTime, setHasDueTime] = useState(false);
+    const [name, setName] = useState(editAssignment?.name ?? '');
+    const [type, setType] = useState(editAssignment?.type ?? 'Assignment');
+    const [subject, setSubject] = useState(editAssignment?.subject ?? '');
+    const [progress, setProgress] = useState(editAssignment?.progress ?? 'Not started');
+    const [dueDate, setDueDate] = useState(editAssignment?.due_date ?? formatLocalDate(new Date()));
+    const [hasDueTime, setHasDueTime] = useState(!!editAssignment?.due_time);
 
     const [courseDropdown, showCourseDropdown] = useState(false);
     const [showCalendar, setShowCalendar] = useState(false);
@@ -40,9 +50,9 @@ export default function NewAssignment() {
     const MINUTES = ['00', '15', '30', '45'];
     const MERIDIEM = ['AM', 'PM'];
 
-    const [hour, setHour] = useState('11');
-    const [minute, setMinute] = useState('59');
-    const [meridiem, setMeridiem] = useState('PM');
+    const [hour, setHour] = useState(editTime ? editTime[1] : '11');
+    const [minute, setMinute] = useState(editTime ? editTime[2] : '59');
+    const [meridiem, setMeridiem] = useState(editTime ? editTime[3].toUpperCase() : 'PM');
 
     const [showTimePicker, setShowTimePicker] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -62,6 +72,11 @@ export default function NewAssignment() {
                 console.error('Error loading courses:', error);
             } else {
                 setCourses(data || []);
+                // edit mode: preselect the assignment's course once courses arrive
+                if (editAssignment?.course_id) {
+                    const match = (data || []).find((c: Course) => c.id === editAssignment.course_id);
+                    if (match) setSelectedCourse(prev => prev ?? match);
+                }
             }
         } catch (error) {
             console.error('Error loading courses:', error);
@@ -73,6 +88,40 @@ export default function NewAssignment() {
             loadCourses();
         }, [user])
     );
+
+    const handleDelete = () => {
+        Alert.alert(
+            'Delete Assignment',
+            'Are you sure you want to delete this assignment?',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: async () => {
+                        if (!params.editId || !user) return;
+                        try {
+                            // remove day-plan links first so nothing dangles
+                            await supabase
+                                .from('day_plan_assignments')
+                                .delete()
+                                .eq('assignment_id', params.editId);
+                            const { error } = await supabase
+                                .from('assignments')
+                                .delete()
+                                .eq('id', params.editId)
+                                .eq('user_id', user.id);
+                            if (error) throw error;
+                            router.back();
+                        } catch (err) {
+                            console.error('Error deleting assignment:', err);
+                            Alert.alert('Error', 'Failed to delete assignment');
+                        }
+                    },
+                },
+            ]
+        );
+    };
 
     const handleSave = async () => {
         if (!name) {
@@ -100,22 +149,30 @@ export default function NewAssignment() {
         try {
             const dueTimeString = hasDueTime ? `${hour}:${minute} ${meridiem}` : null;
 
-            const { data, error } = await supabase
-                .from('assignments')
-                .insert([
-                    {
-                        user_id: user.id,
-                        course_id: selectedCourse.id,
-                        name: name,
-                        type: type,
-                        subject: subject || null,
-                        progress: progress,
-                        due_date: dueDate || null,
-                        due_time: dueTimeString,
-                    }
-                ])
-                .select()
-                .single();
+            const row = {
+                user_id: user.id,
+                course_id: selectedCourse.id,
+                name: name,
+                type: type,
+                subject: subject || null,
+                progress: progress,
+                due_date: dueDate || null,
+                due_time: dueTimeString,
+            };
+
+            const { data, error } = isEditMode
+                ? await supabase
+                    .from('assignments')
+                    .update({ ...row, updated_at: new Date().toISOString() })
+                    .eq('id', params.editId!)
+                    .eq('user_id', user.id)
+                    .select()
+                    .single()
+                : await supabase
+                    .from('assignments')
+                    .insert([row])
+                    .select()
+                    .single();
 
             if (error) {
                 console.error('Supabase error:', error);
@@ -136,7 +193,7 @@ export default function NewAssignment() {
     return (
         <AppLinearGradient variant={"assignments.backgroundAssignment"}>
             <PageContainer>
-                <PageHeader title="New Assignment" showBackButton />
+                <PageHeader title={isEditMode ? 'Edit Assignment' : 'New Assignment'} showBackButton />
 
                 <ScrollView
                     showsVerticalScrollIndicator={false}
@@ -348,7 +405,7 @@ export default function NewAssignment() {
                                 )}
                             </View>
                         )}
-                        {/* cancel / save — standard page button dimensions */}
+                        {/* cancel / (delete) / save — standard page button dimensions */}
                         <View style={{ flexDirection: 'row', gap: 10, marginTop: 30, marginBottom: 20, justifyContent: 'center' }}>
                             <Pressable onPress={() => router.back()} style={{ flex: 1, maxWidth: 100 }}>
                                 <ShadowBox contentBackgroundColor={BUTTON_COLORS.Cancel} shadowBorderRadius={20}>
@@ -357,6 +414,16 @@ export default function NewAssignment() {
                                     </View>
                                 </ShadowBox>
                             </Pressable>
+
+                            {isEditMode && (
+                                <Pressable onPress={handleDelete} style={{ flex: 1, maxWidth: 100 }}>
+                                    <ShadowBox contentBackgroundColor={BUTTON_COLORS.Delete} shadowBorderRadius={20}>
+                                        <View style={{ paddingVertical: 5, alignItems: 'center' }}>
+                                            <Text style={globalStyles.body}>Delete</Text>
+                                        </View>
+                                    </ShadowBox>
+                                </Pressable>
+                            )}
 
                             <Pressable
                                 onPress={handleSave}

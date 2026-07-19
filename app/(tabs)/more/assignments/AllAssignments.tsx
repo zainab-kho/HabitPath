@@ -9,7 +9,6 @@ import { useAssignmentData } from '@/hooks/useAssignmentData';
 
 // components
 import { AssignmentCard } from '@/components/assignments/AssignmentCard';
-import EditAssignmentModal from '@/components/assignments/EditAssignmentModal';
 
 // ui
 import { AppLinearGradient } from '@/ui/AppLinearGradient';
@@ -43,8 +42,6 @@ export default function AllAssignments() {
 
     // ui state
     const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming');
-    const [selectedAssignment, setSelectedAssignment] = useState<AssignmentWithCourse | null>(null);
-    const [showEditModal, setShowEditModal] = useState(false);
 
     // filter and sort assignments
     const upcomingAssignments = sortByDueDate(
@@ -60,9 +57,13 @@ export default function AllAssignments() {
         scrollViewRef.current?.scrollTo({ x: tabIndex * TAB_WIDTH, animated: true });
     };
 
+    // open the New Assignment page prefilled for editing; the list refreshes on
+    // focus return (useAssignmentData reloads via useFocusEffect)
     const handleAssignmentPress = (assignment: AssignmentWithCourse) => {
-        setSelectedAssignment(assignment);
-        setShowEditModal(true);
+        router.push({
+            pathname: '/(tabs)/more/assignments/NewAssignment',
+            params: { editId: assignment.id, editData: JSON.stringify(assignment) },
+        } as any);
     };
 
     const renderAssignmentCard = (assignment: AssignmentWithCourse) => {
@@ -211,17 +212,6 @@ export default function AllAssignments() {
                     </View>
                 </View>
 
-                {/* edit assignment modal */}
-                <EditAssignmentModal
-                    visible={showEditModal}
-                    assignment={selectedAssignment}
-                    courses={courses}
-                    onClose={() => {
-                        setShowEditModal(false);
-                        setSelectedAssignment(null);
-                    }}
-                    onChanged={loadData}
-                />
             </PageContainer>
         </AppLinearGradient>
     );

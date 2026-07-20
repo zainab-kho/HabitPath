@@ -219,7 +219,6 @@ export default function JournalPage() {
                 console.log('**LOG: Saved to Supabase (cloud)');
             }
 
-            console.log('**LOG: Journal entry saved:', newEntry);
             router.back();
 
         } catch (error) {

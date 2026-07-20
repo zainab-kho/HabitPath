@@ -24,8 +24,9 @@ export default function CredentialsPage() {
                     </Text>
 
                     <ShadowBox
-                        contentBorderRadius={20}
-                        shadowBorderRadius={20}
+                        // contentBorderRadius={20}
+                        // shadowBorderRadius={20}
+                        shadowOffset={{x:0, y:0}}
                         contentBackgroundColor="#fff"
                     >
                         <View style={{ paddingVertical: 16, paddingHorizontal: 15, alignItems: 'center', gap: 6 }}>

@@ -11,7 +11,7 @@ import { Habit } from '@/types/Habit';
 import ShadowBox from '@/ui/ShadowBox';
 import { HabitWithStatus } from '@/hooks/useHabits';
 import { formatMinutesAsTime } from '@/utils/dateUtils';
-import { getHabitCycleStart, isTimeTrackingHabit, getWeeklyTimeTotal } from '@/utils/habitUtils';
+import { getHabitCycleStart, getIncrementAmount, isTimeTrackingHabit, getWeeklyTimeTotal } from '@/utils/habitUtils';
 import UnskipHabitModal from '@/modals/habits/UnskipHabit';
 
 interface HabitItemProps {
@@ -83,8 +83,9 @@ export default function HabitItem({
       ? habit.snoozedFrom!
       : dateStr;
 
-  // source of truth for today's increment progress
-  const currentAmount = habit.incrementHistory?.[effectiveDateStr] ?? 0;
+  // source of truth for today's increment progress (one-time habits sum every
+  // bucket — snoozing scatters their increments across dates)
+  const currentAmount = getIncrementAmount(habit, effectiveDateStr);
 
   // weekly total for time-tracking habits
   const weeklyTimeTotal = isTimeTracking

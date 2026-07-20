@@ -224,13 +224,17 @@ export function applyIncrementUpdate(
       else lastCompletedDate = undefined;
     }
 
+    // one-time habits have a single lifetime total (their readers SUM all
+    // buckets) — consolidate into one bucket on every write so the stored
+    // history matches the newAmount instead of double-counting old buckets
+    const isOneTime = !habit.frequency || habit.frequency === 'None';
+
     return {
       ...habit,
       incrementAmount: newAmount,
-      incrementHistory: {
-        ...incrementHistory,
-        [dateStr]: newAmount,
-      },
+      incrementHistory: isOneTime
+        ? { [dateStr]: newAmount }
+        : { ...incrementHistory, [dateStr]: newAmount },
       lastCompletedDate,
     };
   });

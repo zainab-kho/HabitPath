@@ -18,7 +18,7 @@ import { clearWishlist, resetPointsBalance, getExchangeRate, saveExchangeRate } 
 import ExchangeRateModal from '@/modals/rewards/ExchangeRateModal';
 import FeedbackModal from '@/modals/FeedbackModal';
 import { STORAGE_KEYS } from '@/storage/keys';
-import { setWeekStartDay } from '@/utils/dateUtils';
+import { getWeekStartDow, setWeekStartDay } from '@/utils/dateUtils';
 
 const WEEK_DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
@@ -37,8 +37,10 @@ export default function SettingsPage() {
     const [meridiem, setMeridiem] = useState<'AM' | 'PM'>('AM');
     const [showTimePicker, setShowTimePicker] = useState(false);
 
-    // which day the user's week starts on (weekly goals, week views, etc.)
-    const [weekStartDay, setWeekStartDayState] = useState('Sunday');
+    // which day the user's week starts on (weekly goals, week views, etc.).
+    // seed from the in-memory value (loaded at login) so there's no flash of
+    // the default before the async load lands
+    const [weekStartDay, setWeekStartDayState] = useState(WEEK_DAYS[getWeekStartDow()] ?? 'Sunday');
     const [showWeekStartPicker, setShowWeekStartPicker] = useState(false);
 
     const [showFeedbackModal, setShowFeedbackModal] = useState(false);
@@ -466,6 +468,22 @@ export default function SettingsPage() {
                             <Text style={globalStyles.body1}>Credentials</Text>
                         </Pressable>
                     </ShadowBox>
+
+                    <ShadowBox
+                        contentBackgroundColor={COLORS.Primary}
+                        contentBorderRadius={20}
+                        shadowBorderRadius={20}
+                    >
+                        <Pressable
+                            onPress={signOut}
+                            style={{
+                                alignItems: 'center',
+                                paddingVertical: 5,
+                                paddingHorizontal: 15
+                            }}>
+                            <Text style={globalStyles.body}>Sign Out</Text>
+                        </Pressable>
+                    </ShadowBox>
                 </ScrollView>
 
                 <FeedbackModal
@@ -479,21 +497,6 @@ export default function SettingsPage() {
                     onComplete={handleExchangeRateSet}
                     onCancel={() => setShowExchangeModal(false)}
                 />
-
-                <ShadowBox
-                    contentBackgroundColor={COLORS.Primary}
-                    style={{ marginBottom: 100, marginHorizontal: 30 }}
-                >
-                    <Pressable
-                        onPress={signOut}
-                        style={{
-                            alignItems: 'center',
-                            paddingVertical: 5,
-                            paddingHorizontal: 15
-                        }}>
-                        <Text style={globalStyles.body}>Sign Out</Text>
-                    </Pressable>
-                </ShadowBox>
             </PageContainer>
         </AppLinearGradient >
     );

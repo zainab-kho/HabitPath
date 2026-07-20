@@ -68,6 +68,19 @@ export async function updateAppStreak(
  * (week 5 = last occurrence, whether that's the 4th or 5th).
  */
 /**
+ * Current increment progress for a habit. One-time habits (no frequency) have a
+ * single lifetime goal, but snoozing can scatter their increments across several
+ * date buckets (each snooze re-points the effective day) — so for them progress
+ * is the SUM of every bucket. Repeating habits keep per-day buckets.
+ */
+export function getIncrementAmount(habit: Habit, effectiveDate: string): number {
+  if (!habit.frequency || habit.frequency === 'None') {
+    return Object.values(habit.incrementHistory ?? {}).reduce((s, n) => s + (n ?? 0), 0);
+  }
+  return habit.incrementHistory?.[effectiveDate] ?? 0;
+}
+
+/**
  * Day-of-month a Monthly (specific-date mode) habit repeats on. Uses its own
  * `monthlyDay` field, falling back to the start date's day for habits created
  * before that field existed.
@@ -395,7 +408,7 @@ export function isHabitActiveToday(
       let isCompleted = habit.completionHistory?.includes(cycleStart) ?? false;
 
       if (habit.increment && !isCompleted) {
-        const currentAmount = habit.incrementHistory?.[cycleStart] ?? 0;
+        const currentAmount = getIncrementAmount(habit, cycleStart);
         const goal = habit.incrementGoal && habit.incrementGoal > 0 ? habit.incrementGoal : 1;
         isCompleted = currentAmount >= goal;
       }
@@ -598,7 +611,7 @@ export const getHabitStatus = (
     // Time-tracking habits: check weekly total instead of daily
     const amount = isTimeTrackingHabit(habit)
       ? getWeeklyTimeTotal(habit.incrementHistory, dateStr)
-      : (habit.incrementHistory?.[effectiveDateStr] ?? 0);
+      : getIncrementAmount(habit, effectiveDateStr);
 
     // goal logic must match HabitItem:
     // - keepUntil increments: goal defaults to 1
@@ -797,7 +810,7 @@ export const getProgressUnitsForDay = (
 
       const currentAmount = isTimeTrackingHabit(h)
         ? getWeeklyTimeTotal(h.incrementHistory, dateStr)
-        : (h.incrementHistory?.[effectiveDate] ?? 0);
+        : getIncrementAmount(h, effectiveDate);
       const goal = h.keepUntil
         ? (h.incrementGoal && h.incrementGoal > 0 ? h.incrementGoal : 1)
         : (h.incrementGoal ?? 0);

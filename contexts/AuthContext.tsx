@@ -2,6 +2,7 @@
 import { lockThisDevice } from '@/lib/crypto/journalVault'
 import { supabase } from '@/lib/supabase'
 import { CURRENT_CACHE_VERSION, STORAGE_KEYS } from '@/storage/keys'
+import { setWeekStartDay } from '@/utils/dateUtils'
 import AsyncStorage from '@react-native-async-storage/async-storage'
 import type { User } from '@supabase/supabase-js'
 import * as Linking from 'expo-linking'
@@ -88,6 +89,27 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setRecoveryEmail(email)
     setIsPasswordRecovery(true)
   }
+
+  // week-start day drives all week math (weekly goals, temp moves, heat maps).
+  // It must load with the session — previously only the Settings page loaded it,
+  // so a fresh install/login computed Sunday-based weeks until Settings was opened,
+  // breaking week-keyed data like "moved this week" days.
+  useEffect(() => {
+    if (!user) return
+    ;(async () => {
+      try {
+        const { data } = await supabase
+          .from('user_settings')
+          .select('week_start_day')
+          .eq('user_id', user.id)
+          .single()
+        if (data?.week_start_day) {
+          setWeekStartDay(data.week_start_day)
+          await AsyncStorage.setItem(STORAGE_KEYS.USER_DAY_OF_WEEK_CHOICE, data.week_start_day)
+        }
+      } catch {}
+    })()
+  }, [user])
 
   useEffect(() => {
     // run one-time cache migration before checking session

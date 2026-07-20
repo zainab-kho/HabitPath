@@ -1,6 +1,7 @@
 // @/app/auth/ResetPassword.tsx
 import { PAGE } from '@/constants/colors'
 import { useAuth } from '@/contexts/AuthContext'
+import { passwordPolicyError } from '@/utils/passwordPolicy'
 import { supabase } from '@/lib/supabase'
 import { buttonStyles, globalStyles, uiStyles } from '@/styles'
 import { AppLinearGradient } from '@/ui/AppLinearGradient'
@@ -39,8 +40,9 @@ export default function ResetPassword() {
       Alert.alert('Error', 'Please enter a new password')
       return
     }
-    if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters')
+    const policyError = passwordPolicyError(password)
+    if (policyError) {
+      Alert.alert('Error', policyError)
       return
     }
     if (password !== confirmPassword) {
@@ -146,7 +148,7 @@ export default function ResetPassword() {
                     borderColor: PAGE.auth.border[0],
                     marginBottom: 15,
                   }]}
-                  placeholder="At least 6 characters"
+                  placeholder="8+ characters, a letter & a number"
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry

@@ -1,6 +1,7 @@
 // @/app/auth/LoginScreen.tsx
 import { PAGE } from '@/constants/colors'
 import { useAuth } from '@/contexts/AuthContext'
+import { passwordPolicyError } from '@/utils/passwordPolicy'
 import { buttonStyles, globalStyles, uiStyles } from '@/styles'
 import { AppLinearGradient } from '@/ui/AppLinearGradient'
 import AsyncStorage from '@react-native-async-storage/async-storage'
@@ -41,8 +42,9 @@ export default function LoginScreen() {
         Alert.alert('Error', 'Passwords do not match')
         return
       }
-      if (password.length < 6) {
-        Alert.alert('Error', 'Password must be at least 6 characters')
+      const policyError = passwordPolicyError(password)
+      if (policyError) {
+        Alert.alert('Error', policyError)
         return
       }
     }
@@ -154,7 +156,7 @@ export default function LoginScreen() {
                     borderColor: PAGE.auth.border[0],
                     marginBottom: 15,
                   }]}
-                  placeholder={isSignUp ? "At least 6 characters" : "Password"}
+                  placeholder={isSignUp ? "8+ characters, a letter & a number" : "Password"}
                   value={password}
                   onChangeText={setPassword}
                   secureTextEntry

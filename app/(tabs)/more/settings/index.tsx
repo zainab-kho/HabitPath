@@ -248,7 +248,7 @@ export default function SettingsPage() {
 
                 <ScrollView contentContainerStyle={{
                     paddingHorizontal: 30,
-                    paddingBottom: 100,
+                    paddingBottom: 70,
                     gap: 20,
                 }}>
                     {/* <View style={{gap: 10}} */}
@@ -473,6 +473,7 @@ export default function SettingsPage() {
                         contentBackgroundColor={COLORS.Primary}
                         contentBorderRadius={20}
                         shadowBorderRadius={20}
+                        style={{marginTop: 50}}
                     >
                         <Pressable
                             onPress={signOut}

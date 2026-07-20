@@ -20,6 +20,7 @@
 // that secure randomness exists on the device (see app/_layout.tsx).
 
 import { argon2idAsync } from '@noble/hashes/argon2.js';
+import { sha256 } from '@noble/hashes/sha2.js';
 import { xchacha20poly1305 } from '@noble/ciphers/chacha.js';
 import { randomBytes } from '@noble/hashes/utils.js';
 import { utf8ToBytes, bytesToUtf8, concatBytes } from '@noble/ciphers/utils.js';
@@ -35,11 +36,13 @@ const NONCE_BYTES = 24;  // XChaCha20 nonce; 24 bytes is big enough to pick at r
 
 // ── How hard Argon2id works ─────────────────────────────────────────────────
 // This runs rarely (first setup, and once when adding a new device), never on
-// every entry. t = passes, m = memory in KiB. Because it runs in pure JS on the
-// phone's engine, we keep memory modest (8 MiB / 2 passes ≈ 1–2s on device) —
-// still a strong Argon2id, and the passphrase's own entropy does the heavy work.
-// Each vault stores the params it was made with, so this is safe to tune.
-export const ARGON2 = { t: 2, m: 8192, p: 1 } as const;
+// every entry. t = passes, m = memory in KiB. It runs in PURE JS on Hermes
+// (no JIT), which measured ~40s at m=8192 on a real device — so the cost is
+// kept minimal. That's fine security-wise: the app REFUSES weak passphrases
+// (12+ chars, mixed classes / 20-char random), so the passphrase's own entropy
+// does the heavy lifting, not the KDF. Each vault stores the params it was made
+// with; unlocking auto-upgrades older heavy vaults to these params.
+export const ARGON2 = { t: 1, m: 1024, p: 1 } as const;
 
 // ════════════════════════════════════════════════════════════════════════════
 // Random material
@@ -148,16 +151,23 @@ export function unwrapKey(sealedB64: string, wrappingKey: Uint8Array): Uint8Arra
 // chunks so it's readable and typo-resistant.
 
 /** Make a recovery key: the raw bytes (to wrap the master key) + a display string. */
+// 80-bit recovery codes: 16 base32 chars → "XXXX-XXXX-XXXX-XXXX". Plenty against
+// offline attack (2^80), and short enough to actually write down. The code is
+// stretched to a full 256-bit wrapping key via SHA-256.
+const RECOVERY_BYTES = 10;
+
 export function generateRecoveryKey(): { key: Uint8Array; display: string } {
-  const key = randomBytes(KEY_BYTES);
-  return { key, display: toCrockford(key) };
+  const raw = randomBytes(RECOVERY_BYTES);
+  return { key: sha256(raw), display: toCrockford(raw) };
 }
 
 /** Turn a user-typed recovery string back into key bytes, or null if it's malformed. */
 export function parseRecoveryKey(display: string): Uint8Array | null {
   try {
     const bytes = fromCrockford(display);
-    return bytes.length === KEY_BYTES ? bytes : null;
+    if (bytes.length === KEY_BYTES) return bytes;           // legacy 52-char keys
+    if (bytes.length === RECOVERY_BYTES) return sha256(bytes); // current short codes
+    return null;
   } catch {
     return null;
   }

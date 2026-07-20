@@ -20,6 +20,7 @@ import {
   fetchVault,
   saveVault,
   updateLockboxPassphrase,
+  updateLockboxPassphraseAndParams,
   updateLockboxRecovery,
 } from '@/lib/supabase/queries/journalCrypto';
 
@@ -79,6 +80,15 @@ export async function unlockWithPassphrase(userId: string, passphrase: string): 
 
   await saveMasterKey(userId, C.bytesToBase64(master));
   cached = { userId, key: master };
+
+  // vault made with heavier (slower) Argon2 params than current? rewrap the
+  // passphrase lockbox with today's params so future unlocks are fast
+  if (vault.argon_t !== C.ARGON2.t || vault.argon_m !== C.ARGON2.m || vault.argon_p !== C.ARGON2.p) {
+    try {
+      const newPassKey = await C.derivePassphraseKey(passphrase, salt, C.ARGON2);
+      await updateLockboxPassphraseAndParams(userId, C.wrapKey(master, newPassKey), C.ARGON2);
+    } catch {} // upgrade is best-effort; the vault still works with old params
+  }
   return true;
 }
 
@@ -111,12 +121,10 @@ export async function changePassphrase(userId: string, newPassphrase: string): P
   if (!vault) return false;
 
   const salt = C.base64ToBytes(vault.salt);
-  const passKey = await C.derivePassphraseKey(newPassphrase, salt, {
-    t: vault.argon_t,
-    m: vault.argon_m,
-    p: vault.argon_p,
-  });
-  await updateLockboxPassphrase(userId, C.wrapKey(master, passKey));
+  // always derive with CURRENT params (and record them) so a passphrase change
+  // also upgrades old heavy vaults to the fast settings
+  const passKey = await C.derivePassphraseKey(newPassphrase, salt, C.ARGON2);
+  await updateLockboxPassphraseAndParams(userId, C.wrapKey(master, passKey), C.ARGON2);
   return true;
 }
 

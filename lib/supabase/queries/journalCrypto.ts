@@ -55,6 +55,26 @@ export async function updateLockboxPassphrase(userId: string, lockbox: string): 
   if (error) throw error;
 }
 
+/** Re-wrap the passphrase lockbox AND update the Argon2 params it was derived
+ *  with (used when unlocking upgrades an old heavy vault to lighter params). */
+export async function updateLockboxPassphraseAndParams(
+  userId: string,
+  lockbox: string,
+  argon: ArgonParams,
+): Promise<void> {
+  const { error } = await supabase
+    .from('journal_vault')
+    .update({
+      lockbox_passphrase: lockbox,
+      argon_t: argon.t,
+      argon_m: argon.m,
+      argon_p: argon.p,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('user_id', userId);
+  if (error) throw error;
+}
+
 /** Re-wrap the master key under a new recovery key (leaves the passphrase lockbox alone). */
 export async function updateLockboxRecovery(userId: string, lockbox: string): Promise<void> {
   const { error } = await supabase

@@ -63,6 +63,7 @@ export default function SetUpEncryption() {
   const handleRegenerate = async () => {
     setBusy(true);
     setError(null);
+    await paintBusy();
     try {
       const result = await Vault.regenerateRecoveryKey(userId, regenPass);
       if (result) {
@@ -80,6 +81,10 @@ export default function SetUpEncryption() {
       setBusy(false);
     }
   };
+
+  // let React paint the busy state ("Setting up…") before the CPU-heavy key
+  // derivation starts — without this the button looks dead while Argon2 runs
+  const paintBusy = () => new Promise(r => setTimeout(r, 30));
 
   const safeBack = () => {
     if (router.canGoBack()) router.back();
@@ -108,6 +113,7 @@ export default function SetUpEncryption() {
   const handleCreate = async () => {
     setBusy(true);
     setError(null);
+    await paintBusy();
     try {
       const { recoveryDisplay } = await Vault.setUpVault(userId, passphrase.trim());
       // start converting existing plaintext entries in the background
@@ -127,6 +133,7 @@ export default function SetUpEncryption() {
   const handleUnlock = async () => {
     setBusy(true);
     setError(null);
+    await paintBusy();
     try {
       const ok = await Vault.unlockWithPassphrase(userId, unlockPass);
       if (ok) { setUnlockPass(''); setScreen('ready'); }
@@ -141,6 +148,7 @@ export default function SetUpEncryption() {
   const handleUnlockRecovery = async () => {
     setBusy(true);
     setError(null);
+    await paintBusy();
     try {
       const ok = await Vault.unlockWithRecovery(userId, recoveryInput);
       if (ok) { setRecoveryInput(''); setScreen('ready'); }
@@ -239,7 +247,7 @@ export default function SetUpEncryption() {
                 <View style={[styles.checkbox, savedChecked && styles.checkboxOn]}>
                   {savedChecked && <Text style={styles.checkmark}>✓</Text>}
                 </View>
-                <Text style={styles.body}>I&apos;ve saved my recovery key somewhere safe.</Text>
+                <Text style={styles.body}>I&apos;ve saved my recovery key.</Text>
               </Pressable>
 
               <Button label="Done" disabled={!savedChecked} onPress={() => setScreen('ready')} />
@@ -324,17 +332,17 @@ export default function SetUpEncryption() {
               <Button label="Done" onPress={safeBack} />
 
               <Pressable
-                onPress={() => { setError(null); setRegenPass(''); setScreen('regen'); }}
-                style={styles.centerLink}
+                onPress={async () => { await Vault.lockThisDevice(userId); setScreen('unlock'); }}
+                style={[styles.centerLink]}
               >
-                <Text style={styles.link}>Generate new recovery key</Text>
+                <Text style={[styles.link, { color: DANGER }]}>Lock journal on this device</Text>
               </Pressable>
 
               <Pressable
-                onPress={async () => { await Vault.lockThisDevice(userId); setScreen('unlock'); }}
-                style={styles.centerLink}
+                onPress={() => { setError(null); setRegenPass(''); setScreen('regen'); }}
+                style={[styles.centerLink, { marginTop: -7 }]}
               >
-                <Text style={[styles.link, { color: DANGER }]}>Lock this device (for testing)</Text>
+                <Text style={styles.link}>Generate new recovery key</Text>
               </Pressable>
             </>
           )}

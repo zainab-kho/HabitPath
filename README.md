@@ -14,7 +14,9 @@ A habit tracker that also handles journaling, notes, and coursework. Built with 
 
 ## Why I built it
 
-Most habit apps assume every habit is the same shape: do this every day, don't break the streak. Mine aren't like that. Some are "three times this week, I don't care which days." Some carry over until they're actually done. Some happen in whatever week the 16th falls in. I wanted a tracker that could express those without flattening them into daily streaks, and it grew from there into the rest of the things I was tracking across four different apps.
+Most habit apps assume every habit is the same shape: do this every day, don't break the streak. Mine aren't like that. Some are "three times this week, I don't care which days." Some carry over until they're actually done. Some happen in whatever week the 16th falls in. I wanted a tracker that could express those without flattening them into daily streaks.
+
+The other half is Paths, and it's the part I actually care about. A checklist tells you what you did today. It doesn't tell you whether you've been putting real time into the parts of your life you said mattered — and it's easy to keep checking off the easy stuff while an entire area goes quiet for a month without you noticing. Paths group habits into areas you're trying to invest in, then show you how each one is trending, so that going quiet is visible instead of invisible.
 
 ## What it does
 
@@ -22,9 +24,11 @@ Most habit apps assume every habit is the same shape: do this every day, don't b
 
 **Week goals** are scoped to a whole week instead of a day — "read 3 times this week" fills up as you go and resets when the week rolls over. They can repeat weekly, or only in the week containing a particular day of the month.
 
-**Paths** group related habits and give you a completion heat map plus week-over-week and month-over-month trends.
+**Paths** are the organizing layer. Each one is an area of your life — Fitness, School, whatever you're working on — and habits belong to it. The detail page gives that area a completion heat map, week-over-week and month-over-month trends, and its own week goals, so you can tell at a glance whether you're actually investing in it or just telling yourself you are. Paths can be paused when you're deliberately setting one down for a while, and archived when you're done with them.
 
-**Journal** has moods, optional end-to-end encryption, and works offline. **Notes** is a rich-text editor with folders and checklists. **Assignments** tracks courses, due dates, and weekly planning. There's also a focus timer, a points-based rewards wishlist, and a stats page.
+**Rewards** are what the points are for. Every habit can carry a point value, so the work you put into a path adds up to a balance you actually spend. You write the wishlist yourself — real things you want, priced in dollars and converted to points at an exchange rate you set — and redeem them when you've earned it. Recurring rewards stay on the list so you can work toward them again. The idea is that showing up for an area of your life pays for something you're looking forward to, instead of the app handing you a badge for it.
+
+**Journal** has moods, optional end-to-end encryption, and works offline. **Notes** is a rich-text editor with folders and checklists. **Assignments** tracks courses, due dates, and weekly planning. There's also a focus timer and a stats page.
 
 ## The parts that were actually interesting
 
@@ -104,7 +108,7 @@ utils/
 
 ## Status
 
-In beta on TestFlight. Built and tested on iOS; Android isn't ruled out, I just haven't tried it.
+In beta on TestFlight. Built and tested on iOS.
 
 Not done yet:
 

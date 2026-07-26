@@ -648,11 +648,6 @@ export default function PathDetail() {
             style={{ marginBottom: 16 }}
           >
             <View style={[styles.card, { paddingBottom: 10 }]}>
-              {allPathHabits.length === 0 ? (
-                <Text style={[globalStyles.label, { opacity: 0.4, marginTop: 8 }]}>
-                  Add habits to see your progress
-                </Text>
-              ) : (
                 <HeatMap
                   habits={allPathHabits}
                   color={colorHex}
@@ -661,7 +656,7 @@ export default function PathDetail() {
                   selectedDay={selectedDay}
                   onSelectDay={setSelectedDay}
                 />
-              )}
+              {/* )} */}
 
             </View>
           </ShadowBox>
@@ -796,7 +791,7 @@ export default function PathDetail() {
                   >
                     <View style={[styles.card, { alignItems: 'center', paddingVertical: 24 }]}>
                       <Text style={[globalStyles.label, { opacity: 0.5 }]}>
-                        No habits yet — tap Add to get started
+                        No habits for this path yet! Add a habit to get started.
                       </Text>
                     </View>
                   </ShadowBox>

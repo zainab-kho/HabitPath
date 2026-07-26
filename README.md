@@ -1,253 +1,119 @@
-# Habit Tracker & Productivity Suite
+# HabitPath
 
-A comprehensive React Native mobile application for habit tracking, assignment management, journaling, and goal setting with intelligent scheduling and progress visualization.
-
-![React Native](https://img.shields.io/badge/React%20Native-0.76-blue)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)
-![Expo](https://img.shields.io/badge/Expo-52-black)
-![Supabase](https://img.shields.io/badge/Supabase-Backend-green)
-
-## 🎯 Overview
-
-A full-stack mobile productivity app that helps users build better habits, manage coursework, track mood, and achieve long-term goals through an intuitive, visually engaging interface.
+A habit tracker that also handles journaling, notes, and coursework. Built with React Native and Expo, currently in beta on TestFlight.
 
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/c967af7a-262d-4049-a7ad-ee3fa2707350" width="300" />
-  <img src="https://github.com/user-attachments/assets/82dbe02b-c61d-40cf-bf36-70800cbb5007" width="300" />
-  <img src="https://github.com/user-attachments/assets/3c77dac7-da57-4d72-ab19-1237d7ad654d" width="300" />
+  <img src="https://github.com/user-attachments/assets/c967af7a-262d-4049-a7ad-ee3fa2707350" width="250" />
+  <img src="https://github.com/user-attachments/assets/82dbe02b-c61d-40cf-bf36-70800cbb5007" width="250" />
+  <img src="https://github.com/user-attachments/assets/3c77dac7-da57-4d72-ab19-1237d7ad654d" width="250" />
 </p>
 <p align="center">
-  <img src="https://github.com/user-attachments/assets/fe505ee0-0faf-4729-8df1-f0fb9a95a352" width="300" />
-  <img src="https://github.com/user-attachments/assets/f77bb4b1-0bcb-4664-bfd2-7f0d406f2059" width="300" />
+  <img src="https://github.com/user-attachments/assets/fe505ee0-0faf-4729-8df1-f0fb9a95a352" width="250" />
+  <img src="https://github.com/user-attachments/assets/f77bb4b1-0bcb-4664-bfd2-7f0d406f2059" width="250" />
 </p>
 
+## Why I built it
 
-## ✨ Key Features
+Most habit apps assume every habit is the same shape: do this every day, don't break the streak. Mine aren't like that. Some are "three times this week, I don't care which days." Some carry over until they're actually done. Some happen in whatever week the 16th falls in. I wanted a tracker that could express those without flattening them into daily streaks, and it grew from there into the rest of the things I was tracking across four different apps.
 
-### 📊 Smart Habit Tracking
-- **Flexible Scheduling**: Daily, weekly, monthly, and custom frequency options
-- **Time-of-Day Organization**: Habits grouped by Wake Up, Morning, Afternoon, Evening, and Bed Time
-- **Intelligent Date Handling**: Custom day-reset time (e.g., day ends at 4 AM for night owls)
-- **Streak Tracking**: Visual streak indicators and best streak records
-- **Reward System**: Customizable point values for gamification
-- **Progress Visualization**: Real-time completion percentage and daily progress bars
+## What it does
 
-### 📚 Assignment & Course Management
-- **Course Organization**: Color-coded courses with schedules and instructor details
-- **Smart Due Date System**: Assignments categorized by "Due", "This Week", and "Upcoming"
-- **Week Planning**: Create weekly schedules with drag-and-drop assignment placement
-- **Today's Focus**: Daily assignment view with completion checkboxes
-- **Progress Tracking**: Status labels (Not Started, In Progress, Will Do Later, Done)
-- **Calendar Integration**: Visual calendar for due date selection
+**Habits** run on daily, weekly, monthly, or every-N-days schedules. Monthly ones can anchor to a date or to a weekday-of-month ("third Tuesday"). Beyond plain checkboxes there are counters with goals, time tracking, snooze, skip, and habits that keep carrying forward until you actually finish them. Each one can be worth reward points.
 
-### 📝 Mood Journaling
-- **Rich Entry Creation**: Date, time, location, mood, and free-form text entries
-- **Mood Tracking**: 12 distinct moods with color-coded visualization
-- **Year in Pixels**: Visual mood calendar showing the last 3 months at a glance
-- **Entry Management**: Edit, delete, and browse entries by month
+**Week goals** are scoped to a whole week instead of a day — "read 3 times this week" fills up as you go and resets when the week rolls over. They can repeat weekly, or only in the week containing a particular day of the month.
 
-### 🎮 Gamification & Motivation
-- **Point System**: Earn points for completing habits
-- **Streak Badges**: Fire emoji badges for 3+ day streaks
-- **App-Wide Streak**: Track consecutive days of any habit completion
-- **Visual Feedback**: Color-coded completion states and animations
+**Paths** group related habits and give you a completion heat map plus week-over-week and month-over-month trends.
 
-## 🏗️ Technical Architecture
+**Journal** has moods, optional end-to-end encryption, and works offline. **Notes** is a rich-text editor with folders and checklists. **Assignments** tracks courses, due dates, and weekly planning. There's also a focus timer, a points-based rewards wishlist, and a stats page.
 
-### Frontend
-- **Framework**: React Native with Expo 52
-- **Language**: TypeScript
-- **Navigation**: Expo Router (file-based routing)
-- **State Management**: React Hooks with custom hooks pattern
-- **UI Components**: Custom shadow-box design system with gradient backgrounds
-- **Gestures**: React Native Gesture Handler for swipe navigation
-- **Storage**: AsyncStorage for offline caching
+## The parts that were actually interesting
 
-### Backend & Database
-- **Backend**: Supabase (PostgreSQL)
-- **Authentication**: Supabase Auth with email/password
-- **Real-time Sync**: Background syncing with optimistic UI updates
-- **Caching Strategy**: Smart 7-day cache window (±3 days from today)
+### End-to-end encrypted journal
 
-### Key Technical Features
-- **Offline-First Architecture**: AsyncStorage caching with background Supabase sync
-- **Optimistic Updates**: Instant UI feedback with rollback on error
-- **Smart Data Loading**: Cache-first strategy with stale-while-revalidate pattern
-- **Timezone Handling**: Custom date utilities to prevent timezone bugs
-- **Performance Optimization**: Memoization, FlatList virtualization, and efficient re-renders
+Journal entries are encrypted on the device, so Supabase only ever stores ciphertext. I can't read them either — that was the point.
 
-## 📁 Project Structure
+Turning it on generates a random 256-bit master key and wraps it twice: once under a key derived from your passphrase with Argon2id, once under a randomly generated recovery code. Both wrapped copies go in Postgres, and neither is worth anything without the matching secret. The master key itself lives in the iOS Keychain, so day to day the journal just opens normally — you only re-enter the passphrase on a new device or after signing out.
 
-```
-├── app/                          # Expo Router screens
-│   ├── (tabs)/                  # Tab-based navigation
-│   │   ├── habits/              # Habit tracking screens
-│   │   ├── assignments/         # Assignment management
-│   │   ├── quests/              # Quest system (in progress)
-│   │   └── profile/             # User profile
-│   ├── auth/                    # Authentication screens
-│   └── _layout.tsx              # Root layout with auth routing
-├── components/                   # Reusable components
-│   ├── habits/                  # Habit-specific components
-│   ├── assignments/             # Assignment components
-│   └── journal/                 # Journal components
-├── hooks/                       # Custom React hooks
-│   ├── useHabits.ts            # Main habits data hook
-│   ├── useAssignmentData.ts    # Assignment data management
-│   └── useAssignmentActions.ts # Assignment CRUD operations
-├── modals/                      # Modal components
-├── navigation/                  # Navigation components
-│   ├── DrawerContext.tsx       # Drawer state management
-│   └── BottomNav.tsx           # Bottom tab navigation
-├── styles/                      # Global styles
-├── types/                       # TypeScript type definitions
-├── ui/                         # Reusable UI components
-├── utils/                      # Utility functions
-│   ├── dateUtils.ts           # Centralized date handling
-│   ├── habitsActions.ts       # Habit CRUD operations
-│   └── gradients.ts           # Time-based gradient colors
-└── constants/                  # App constants and config
-```
+Entries are encrypted field by field with XChaCha20-Poly1305 before they leave the phone, and the offline cache is encrypted as a whole blob under the same key. Ciphertext carries a version prefix (`enc1:`), which is what let me migrate the plaintext entries I'd already written in the background while both formats coexisted.
 
-## 🔧 Installation & Setup
+The tradeoff worth naming: there's no password reset. Lose both the passphrase and the recovery code and those entries are gone for good. That's what "I can't read them either" actually costs.
 
-### Prerequisites
-- Node.js 18+ and npm
-- Expo CLI (`npm install -g expo-cli`)
-- iOS Simulator (Mac) or Android Studio (for emulator)
-- Supabase account
+### Dates are harder than they look
 
-### Environment Setup
+A habit day doesn't end at midnight, it ends at whatever hour you set (4 AM by default), so something you check off at 1 AM still counts for the day before. Weeks start on whichever day you pick, which matters more than it sounds — week goals and "move this habit to Thursday" are both keyed to the start of the week, so if that setting hasn't loaded by the time the habit list renders, moved habits quietly snap back to their original day.
 
-1. Clone the repository:
+All of it goes through `utils/dateUtils.ts` instead of raw `Date` math. Every time I've bypassed that I've gotten an off-by-one, usually around midnight or the week rollover.
+
+### Offline-first
+
+Reads come from an AsyncStorage cache first and sync to Supabase in the background. Writes hit local state immediately and get flagged `pendingSync` if the request fails, then retry on the next load. It isn't real-time — there are no subscriptions — but the app opens instantly and keeps working with no connection.
+
+## Stack
+
+- **React Native** 0.81.5 / **Expo** 54, **TypeScript**, **React** 19
+- **expo-router** for file-based navigation
+- **Supabase** — Postgres, Auth, and row-level security on every table
+- **AsyncStorage** for the offline cache, **expo-secure-store** for the encryption key
+- [`@noble/ciphers`](https://github.com/paulmillr/noble-ciphers) and [`@noble/hashes`](https://github.com/paulmillr/noble-hashes) for XChaCha20-Poly1305 and Argon2id
+- [`@10play/tentap-editor`](https://github.com/10play/10tap-editor) for the notes editor
+
+## Running it
+
+You'll need Node 18+, a Supabase project, and Xcode for iOS builds.
+
 ```bash
-git clone https://github.com/yourusername/habit-tracker.git
-cd habit-tracker
-```
-
-2. Install dependencies:
-```bash
+git clone https://github.com/zainab-kho/HabitPath.git
+cd HabitPath
 npm install
 ```
 
-3. Create a `.env` file in the root directory:
+Add a `.env` in the root:
+
 ```env
 EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
 EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
-4. Set up Supabase:
-- Create a new Supabase project
-- Run the provided SQL schema (see `database/schema.sql`)
-- Enable Row Level Security (RLS) policies
+Run the SQL files in `supabase/` against your project to create the tables and policies, then:
 
-5. Start the development server:
 ```bash
-npx expo start
+npx expo run:ios
 ```
 
-## 🗄️ Database Schema
+This needs a development build rather than Expo Go, since it uses native modules (secure storage, the editor WebView). On macOS, CocoaPods can fail on a locale issue — running `export LANG=en_US.UTF-8 LC_ALL=en_US.UTF-8` first fixes it.
 
-### Core Tables
-- `habits` - User habits with frequency, scheduling, and completion tracking
-- `assignments` - Academic assignments with due dates and progress
-- `courses` - Course information with colors and schedules
-- `week_plans` - Weekly planning structures
-- `day_plan_assignments` - Assignment-to-day mappings
-- `journal_entries` - Mood journal entries
-- `user_settings` - User preferences (day reset time, etc.)
+## Layout
 
-### Key Features
-- Row Level Security (RLS) for user data isolation
-- Composite indexes for performance
-- JSON fields for flexible data (selected_days, completion_history)
-
-## 🎨 Design System
-
-- **Color-Coded Sections**: Each feature has distinct gradient backgrounds
-- **Shadow Box Pattern**: Consistent elevated UI elements with customizable shadows
-- **Time-Based Gradients**: Background colors change throughout the day
-- **Smooth Animations**: Spring animations for drawer, loading states, and interactions
-
-## 🚀 Key Technical Implementations
-
-### Smart Caching System
-```typescript
-// 7-day cache window strategy
-const CACHE_WINDOW_DAYS = 3; // ±3 days from today
-- Load from cache instantly (no loading state for recent dates)
-- Fetch fresh data in background
-- Show loading only when viewing dates outside cache window
+```
+app/                    Expo Router screens
+  (tabs)/habits/        habit list, new/edit habit, inbox
+  (tabs)/paths/         path list and detail with heat map
+  (tabs)/more/          journal, notes, assignments, focus, rewards, stats, settings
+  auth/                 login, forgot/reset password
+components/             habit rows, assignment cards, journal pieces
+hooks/                  useHabits, useAssignmentData, useAssignmentActions
+lib/
+  crypto/               journal encryption — key derivation, vault, keychain
+  journal/              entry encryption, migration, offline cache
+  supabase/queries/     all database access
+modals/                 detail and picker modals
+utils/
+  dateUtils.ts          all date math (day reset, week starts, formatting)
+  habitUtils.ts         scheduling, visibility, status, streaks
 ```
 
-### Custom Date Handling
-```typescript
-// Prevents timezone bugs with local date utilities
-- formatLocalDate(date): YYYY-MM-DD in local timezone
-- parseLocalDate(string): Date object without timezone conversion
-- getHabitDate(date, resetHour, resetMinute): Respects custom day boundaries
-```
+## Status
 
-### Optimistic Updates
-```typescript
-// Instant UI feedback with automatic rollback
-1. Update UI immediately
-2. Send request to Supabase in background
-3. Update cache
-4. Rollback on error
-```
+In beta on TestFlight. Built and tested on iOS; Android isn't ruled out, I just haven't tried it.
 
-## 📱 Screens & Navigation
+Not done yet:
 
-- **Habits**: Main habit tracking with date navigation
-- **Assignments**: Course and assignment management with week planning
-- **Quests**: Long-term goal system (in development)
-- **Profile**: User statistics and achievements
-- **More Drawer**: Journal, Focus Timer, Settings, All Goals, Rewards
+- **Quests** — a long-term goal system with phases. Mostly built, but hidden behind a flag until I finish it.
+- **Profile** — still a stub.
+- Push notifications, data export, and dark mode.
 
-## 🔐 Authentication & Security
+## License
 
-- Supabase Auth with email/password
-- Protected routes with automatic redirect
-- Row Level Security on all database tables
-- User-specific data isolation
+MIT — see [LICENSE](LICENSE).
 
-## 📊 Performance Optimizations
-
-- FlatList virtualization for long lists
-- Memoized components and callbacks
-- Debounced async operations
-- Lazy loading of images and heavy components
-- Background data syncing
-
-## 🐛 Known Issues & Future Improvements
-
-- [ ] Quest system implementation
-- [ ] Path/category system for habit organization
-- [ ] Social features (habit sharing, friend streaks)
-- [ ] Push notifications for reminders
-- [ ] Data export functionality
-- [ ] Dark mode support
-
-## 🤝 Contributing
-
-This is a personal project, but suggestions and feedback are welcome! Feel free to open issues for bugs or feature requests.
-
-## 📄 License
-
-MIT License - see LICENSE file for details
-
-## 👨‍💻 Author
-
-Zainab Khoshnaw
-- GitHub: [@zainabkho](https://github.com/zainabkho)
-- LinkedIn: [Your LinkedIn](https://linkedin.com/in/zainab-khoshnaw)
-
-## 🙏 Acknowledgments
-
-- Icons from Flaticon
-- Fonts: Apercu and Inter
-
----
-
-**Built with React Native, TypeScript, and Supabase**
+Icons from [Icons8](https://icons8.com). Fonts are Apercu and Inter.

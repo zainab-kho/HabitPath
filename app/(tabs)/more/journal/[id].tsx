@@ -398,7 +398,7 @@ export default function JournalEntryDetail() {
         <PageContainer>
           <PageHeader title="" showBackButton />
           <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-            <ActivityIndicator color={PAGE.journal.primary[0]} />
+            <ActivityIndicator color={'#fff'} />
           </View>
         </PageContainer>
       </AppLinearGradient>

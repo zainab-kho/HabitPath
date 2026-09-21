@@ -436,7 +436,7 @@ export default function JournalPage() {
             onNavigatePress={handleHeaderLockPress}
           />
           <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-            <ActivityIndicator size="small" color={PAGE.journal.primary[0]} />
+            <ActivityIndicator size="small" color={'#fff'} />
           </View>
         </PageContainer>
       </AppLinearGradient>
@@ -701,7 +701,7 @@ export default function JournalPage() {
             {/* loading more spinner */}
             {hasMore && (
               <View style={{ paddingVertical: 15, alignItems: 'center' }}>
-                <ActivityIndicator size="small" color={PAGE.journal.primary[0]} />
+                <ActivityIndicator size="small" color={'#fff'} />
               </View>
             )}
 

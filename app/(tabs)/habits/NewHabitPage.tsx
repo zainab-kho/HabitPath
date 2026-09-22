@@ -4,14 +4,18 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
     Alert,
+    Dimensions,
     Image,
+    Keyboard,
+    LayoutAnimation,
+    Platform,
     Pressable,
+    ScrollView,
     Switch,
     Text,
     TextInput,
     View
 } from 'react-native';
-import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 import uuid from 'react-native-uuid';
 
 
@@ -38,6 +42,10 @@ type Frequency = typeof FREQUENCIES[number];
 type TimeOfDay = typeof TIME_OPTIONS[number];
 
 const ICON_SIZE = 30;
+// space under the card when the keyboard is hidden
+const CARD_MARGIN_BOTTOM = 40;
+// space between the card and the top of the keyboard when it's up
+const KEYBOARD_GAP = 8;
 
 export default function NewHabitPage() {
     const router = useRouter();
@@ -49,7 +57,69 @@ export default function NewHabitPage() {
         phaseEndDate?: string; questEndDate?: string;
     }>();
     const inputRef = useRef<TextInput>(null);
-    const scrollRef = useRef<KeyboardAwareScrollView>(null);
+    const scrollRef = useRef<ScrollView>(null);
+    const scrollY = useRef(0);
+    const scrollViewportHeight = useRef(0);
+    const cardRef = useRef<View>(null);
+    // distance from the card's bottom edge to the bottom of the screen, excluding its margin
+    const cardOffsetFromBottom = useRef(0);
+    const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+    // lift the card (and its pinned Cancel/Save footer) so it sits right above the keyboard
+    useEffect(() => {
+        const showEvent = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+        const hideEvent = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+        const animate = (duration?: number) => {
+            if (Platform.OS === 'ios') {
+                LayoutAnimation.configureNext({
+                    duration: duration || 250,
+                    update: { type: LayoutAnimation.Types.keyboard },
+                });
+            }
+        };
+        const showSub = Keyboard.addListener(showEvent, (e) => {
+            animate(e.duration);
+            setKeyboardHeight(e.endCoordinates.height);
+        });
+        const hideSub = Keyboard.addListener(hideEvent, (e) => {
+            animate(e.duration);
+            setKeyboardHeight(0);
+        });
+        return () => {
+            showSub.remove();
+            hideSub.remove();
+        };
+    }, []);
+
+    const cardMarginBottom = keyboardHeight > 0
+        ? Math.max(CARD_MARGIN_BOTTOM, keyboardHeight + KEYBOARD_GAP - cardOffsetFromBottom.current)
+        : CARD_MARGIN_BOTTOM;
+
+    const measureCardOffset = () => {
+        if (keyboardHeight > 0) return; // only measure the resting position
+        cardRef.current?.measureInWindow((_x, y, _w, h) => {
+            const bottomGap = Dimensions.get('window').height - (y + h);
+            cardOffsetFromBottom.current = Math.max(0, bottomGap - CARD_MARGIN_BOTTOM);
+        });
+    };
+
+    // scroll the focused input into the visible part of the card
+    const scrollToFocusedInput = () => {
+        const input = TextInput.State.currentlyFocusedInput();
+        // getInnerViewRef exists at runtime but is missing from the ScrollView types
+        const inner = (scrollRef.current as unknown as { getInnerViewRef?: () => View | null })?.getInnerViewRef?.();
+        if (!input || !inner) return;
+        input.measureLayout(inner, (_x, y, _w, h) => {
+            const pad = 24;
+            const visibleTop = scrollY.current;
+            const visibleBottom = visibleTop + scrollViewportHeight.current;
+            if (y + h + pad > visibleBottom) {
+                scrollRef.current?.scrollTo({ y: y + h + pad - scrollViewportHeight.current, animated: true });
+            } else if (y - pad < visibleTop) {
+                scrollRef.current?.scrollTo({ y: Math.max(0, y - pad), animated: true });
+            }
+        }, () => { });
+    };
     const hasNavigatedAway = useRef(false);
 
     const isEditMode = !!params.editId;
@@ -208,6 +278,7 @@ export default function NewHabitPage() {
 
     // more options
     const [moreOptions, setMoreOptions] = useState(!!(editHabit?.increment || editHabit?.keepUntil));
+    const [remindMe, setRemindMe] = useState(editHabit?.remindMe ?? false);
     const [keepUntil, setKeepUntil] = useState(editHabit?.keepUntil ?? false);
     const [increment, setIncrement] = useState(editHabit?.increment ?? false);
     const [incrementStep, setincrementStep] = useState(editHabit?.incrementStep ?? 1);
@@ -455,25 +526,32 @@ export default function NewHabitPage() {
             <PageContainer>
                 <PageHeader title={isQuestMode ? "New Goal" : (isEditMode ? "Edit Habit" : "New Habit")} showBackButton />
 
-                <KeyboardAwareScrollView
-                    ref={scrollRef}
-                    contentContainerStyle={{ flexGrow: 1, paddingBottom: 50 }}
-                    enableOnAndroid={true} // scrolls on Android too
-                    extraHeight={120}       // adjust based on your header or bottom spacing
-                    keyboardOpeningTime={0} // faster scrolling when keyboard opens
-                    showsVerticalScrollIndicator={false}
-                    keyboardShouldPersistTaps="handled"
-                >
-                    <View>
-                        {/* main card */}
-                        <View style={{
-                            backgroundColor: '#fff',
-                            borderWidth: 1,
-                            // borderColor: PAGE.habits.border[0],
-                            borderRadius: 20,
-                            padding: 30,
-                            gap: 20,
-                        }}>
+                {/* main card — content scrolls inside, buttons stay pinned at the bottom */}
+                <View
+                    ref={cardRef}
+                    onLayout={measureCardOffset}
+                    style={{
+                    flex: 1,
+                    marginBottom: cardMarginBottom,
+                    backgroundColor: '#fff',
+                    borderWidth: 1,
+                    // borderColor: PAGE.habits.border[0],
+                    borderRadius: 20,
+                    overflow: 'hidden',
+                }}>
+                        <ScrollView
+                            ref={scrollRef}
+                            contentContainerStyle={{ padding: 30, gap: 20 }}
+                            showsVerticalScrollIndicator={false}
+                            keyboardShouldPersistTaps="handled"
+                            scrollEventThrottle={16}
+                            onScroll={(e) => { scrollY.current = e.nativeEvent.contentOffset.y; }}
+                            onLayout={(e) => {
+                                scrollViewportHeight.current = e.nativeEvent.layout.height;
+                                // the card just resized for the keyboard — keep the focused input visible
+                                scrollToFocusedInput();
+                            }}
+                        >
                             {/* icon + name */}
                             <View style={{
                                 flexDirection: 'row',
@@ -519,7 +597,7 @@ export default function NewHabitPage() {
                                     autoFocus={false}
                                     cursorColor={PAGE.habits.border[0]}
                                     selectionColor={PAGE.habits.border[0]}
-                                    onFocus={(e) => scrollRef.current?.scrollToFocusedInput(e.nativeEvent.target)}
+                                    onFocus={scrollToFocusedInput}
 
                                 />
                             </View>
@@ -904,7 +982,7 @@ export default function NewHabitPage() {
                                                             keyboardType="numeric"
                                                             value={customInterval.toString()}
                                                             onChangeText={text => setCustomInterval(Math.max(1, Number(text) || 1))}
-                                                            onFocus={(e) => scrollRef.current?.scrollToFocusedInput(e.nativeEvent.target)}
+                                                            onFocus={scrollToFocusedInput}
                                                         />
                                                     </View>
                                                 </ShadowBox>
@@ -1170,7 +1248,22 @@ export default function NewHabitPage() {
 
                                 {moreOptions && (
                                     <>
-                                        <View style={{ gap: 10 }}>
+                                        <View style={{ gap: 10 }}> 
+                                           {/* remind me */}
+                                            <View style={{
+                                                flexDirection: 'row',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center',
+                                                marginBottom: 10,
+                                            }}>
+                                                <Text style={globalStyles.body}>Remind me</Text>
+                                                <Switch
+                                                    trackColor={{ true: PAGE.habits.primary[1] }}
+                                                    value={keepUntil}
+                                                    onValueChange={setKeepUntil}
+                                                />
+                                            </View>
+
                                             {/* keep until until */}
                                             <View style={{
                                                 flexDirection: 'row',
@@ -1260,7 +1353,7 @@ export default function NewHabitPage() {
                                                                                     keyboardType="numeric"
                                                                                     value={timeGoalHours.toString()}
                                                                                     onChangeText={text => setTimeGoalHours(Number(text) || 0)}
-                                                                                    onFocus={(e) => scrollRef.current?.scrollToFocusedInput(e.nativeEvent.target)}
+                                                                                    onFocus={scrollToFocusedInput}
                                                                                 />
                                                                             </View>
                                                                         </ShadowBox>
@@ -1307,7 +1400,7 @@ export default function NewHabitPage() {
                                                                                     keyboardType="numeric"
                                                                                     value={timeGoalMinutes.toString()}
                                                                                     onChangeText={text => setTimeGoalMinutes(Number(text) || 0)}
-                                                                                    onFocus={(e) => scrollRef.current?.scrollToFocusedInput(e.nativeEvent.target)}
+                                                                                    onFocus={scrollToFocusedInput}
                                                                                 />
                                                                             </View>
                                                                         </ShadowBox>
@@ -1357,7 +1450,7 @@ export default function NewHabitPage() {
                                                                                 keyboardType="numeric"
                                                                                 value={incrementStep.toString()}
                                                                                 onChangeText={text => setincrementStep(Number(text))}
-                                                                                onFocus={(e) => scrollRef.current?.scrollToFocusedInput(e.nativeEvent.target)}
+                                                                                onFocus={scrollToFocusedInput}
                                                                             />
                                                                         </View>
                                                                     </ShadowBox>
@@ -1406,7 +1499,7 @@ export default function NewHabitPage() {
                                                                                 keyboardType="numeric"
                                                                                 value={incrementGoal.toString()}
                                                                                 onChangeText={text => setIncrementGoal(Number(text))}
-                                                                                onFocus={(e) => scrollRef.current?.scrollToFocusedInput(e.nativeEvent.target)}
+                                                                                onFocus={scrollToFocusedInput}
                                                                             />
                                                                         </View>
                                                                     </ShadowBox>
@@ -1432,54 +1525,44 @@ export default function NewHabitPage() {
                                         </View>
                                     </>
                                 )}
-
-
-
-
-                                {/* save and cancel button */}
-                                <View style={{
-                                    flexDirection: 'row',
-                                    gap: 10,
-                                    marginTop: 30,
-                                    justifyContent: 'center',
-                                }}>
-                                    <Pressable
-                                        onPress={() => router.back()}
-                                        style={{ flex: 1, maxWidth: 100 }}
-                                    >
-                                        <ShadowBox
-                                            contentBackgroundColor={BUTTON_COLORS.Cancel}
-                                            shadowBorderRadius={20}
-                                        >
-                                            <View style={{ paddingVertical: 5, alignItems: 'center' }}>
-                                                <Text style={globalStyles.body}>Cancel</Text>
-                                            </View>
-                                        </ShadowBox>
-                                    </Pressable>
-
-                                    <Pressable
-                                        onPress={handleSave}
-                                        disabled={isSaving}
-                                        style={{ flex: 1, maxWidth: 100 }}
-                                    >
-                                        <ShadowBox
-                                            contentBackgroundColor={
-                                                isSaving ? BUTTON_COLORS.Disabled : BUTTON_COLORS.Save
-                                            }
-                                            shadowBorderRadius={20}
-                                        >
-                                            <View style={{ paddingVertical: 5, alignItems: 'center' }}>
-                                                <Text style={globalStyles.body}>
-                                                    {isSaving ? 'Saving...' : 'Save'}
-                                                </Text>
-                                            </View>
-                                        </ShadowBox>
-                                    </Pressable>
-                                </View>
                             </View>
-                        </View>
+                        </ScrollView>
+
+                    {/* action buttons — pinned footer, matches AddAssignmentToDaySheet */}
+                    <View style={{ flexDirection: 'row', borderTopWidth: 1, padding: 10, gap: 10, backgroundColor: '#fff' }}>
+                        <Pressable onPress={() => router.back()} style={{ flex: 1 }}>
+                            <ShadowBox
+                                contentBackgroundColor={BUTTON_COLORS.Cancel}
+                                shadowBorderRadius={15}
+                            >
+                                <View style={{ paddingVertical: 6 }}>
+                                    <Text style={[globalStyles.body, { textAlign: 'center' }]}>
+                                        Cancel
+                                    </Text>
+                                </View>
+                            </ShadowBox>
+                        </Pressable>
+
+                        <Pressable
+                            onPress={handleSave}
+                            style={{ flex: 1 }}
+                            disabled={isSaving}
+                        >
+                            <ShadowBox
+                                contentBackgroundColor={
+                                    isSaving ? BUTTON_COLORS.Disabled : BUTTON_COLORS.Save
+                                }
+                                shadowBorderRadius={15}
+                            >
+                                <View style={{ paddingVertical: 6 }}>
+                                    <Text style={[globalStyles.body, { textAlign: 'center' }]}>
+                                        {isSaving ? 'Saving...' : 'Save'}
+                                    </Text>
+                                </View>
+                            </ShadowBox>
+                        </Pressable>
                     </View>
-                </KeyboardAwareScrollView>
+                </View>
             </PageContainer>
 
         </AppLinearGradient >

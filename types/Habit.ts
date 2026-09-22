@@ -43,6 +43,7 @@ export interface Habit {
   archivedAt?: string; // ISO date string when the habit was archived (for skipped one-time habits)
 
   // more complex habit types
+  remindMe?: boolean; // remind user at a specific time
   keepUntil?: boolean; // keep until user checks off
 
   // **TODO: make increment? an array of { date, amount } so we can track history of increments and not just the current day

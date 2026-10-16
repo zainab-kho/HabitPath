@@ -3,7 +3,7 @@ import { BUTTON_COLORS, PAGE } from '@/constants/colors';
 import { globalStyles } from '@/styles';
 import ShadowBox from '@/ui/ShadowBox';
 import React, { useState } from 'react';
-import { Alert, Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { WeekPlan } from '@/hooks/useAssignmentData';
 import WeekCalendar from '@/ui/WeekCalendar';
@@ -111,16 +111,19 @@ export default function AddWeekModal({ visible, weekPlans, onClose, onSave }: Ad
             animationType="none"
             onRequestClose={onClose}
         >
-            <Pressable
+            <View
                 style={{
                     flex: 1,
                     backgroundColor: 'rgba(0, 0, 0, 0.5)',
                     justifyContent: 'center',
                     alignItems: 'center',
                 }}
-                onPress={handleCancel}
             >
-                <Pressable
+                {/* backdrop sits behind the card, not around it — a Pressable parent would
+                    claim the touch on press-down and the week calendar could never scroll */}
+                <Pressable style={StyleSheet.absoluteFill} onPress={handleCancel} />
+
+                <View
                     style={{
                         width: '90%',
                         maxHeight: '75%',
@@ -130,7 +133,6 @@ export default function AddWeekModal({ visible, weekPlans, onClose, onSave }: Ad
                         borderWidth: 1.5,
                         borderColor: PAGE.assignments.primary[0],
                     }}
-                    onPress={(e) => e.stopPropagation()}
                 >
                     <Text style={[globalStyles.h2, { marginBottom: 20, textAlign: 'center' }]}>
                         Add Week Plan
@@ -248,8 +250,8 @@ export default function AddWeekModal({ visible, weekPlans, onClose, onSave }: Ad
                             </ShadowBox>
                         </Pressable>
                     </View>
-                </Pressable>
-            </Pressable>
+                </View>
+            </View>
         </Modal>
     );
 }

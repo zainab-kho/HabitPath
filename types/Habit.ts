@@ -44,6 +44,7 @@ export interface Habit {
 
   // more complex habit types
   remindMe?: boolean; // remind user at a specific time
+  reminderTime?: string; // "HH:MM" (24h) local time for the reminder
   keepUntil?: boolean; // keep until user checks off
 
   // **TODO: make increment? an array of { date, amount } so we can track history of increments and not just the current day

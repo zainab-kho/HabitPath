@@ -4,7 +4,7 @@ import { BUTTON_COLORS, PAGE } from '@/constants/colors';
 import { globalStyles } from '@/styles';
 import ShadowBox from '@/ui/ShadowBox';
 import React, { useState } from 'react';
-import { Modal, Pressable, ScrollView, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AssignmentWithCourse } from '@/hooks/useAssignmentData';
 import { parseLocalDate } from '@/utils/dateUtils';
@@ -128,8 +128,12 @@ export default function AddAssignmentToDaySheet({
 
     return (
         <Modal visible={visible} transparent animationType="none" onRequestClose={handleCancel}>
-            <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center' }} onPress={handleCancel}>
-                <Pressable
+            <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center' }}>
+                {/* backdrop sits behind the card, not around it — a Pressable parent would
+                    claim the touch on press-down and the list could never scroll */}
+                <Pressable style={StyleSheet.absoluteFill} onPress={handleCancel} />
+
+                <View
                     style={{
                         backgroundColor: '#fff',
                         borderRadius: 20,
@@ -139,7 +143,6 @@ export default function AddAssignmentToDaySheet({
                         width: '90%',
                         alignSelf: 'center',
                     }}
-                    onPress={(e) => e.stopPropagation()}
                 >
                     <View style={{ marginTop: 20, marginBottom: 10 }}>
                         <Text style={[globalStyles.h2, { textAlign: 'center', marginBottom: 5 }]}>Add to {dayLabel}</Text>
@@ -223,8 +226,8 @@ export default function AddAssignmentToDaySheet({
                             </ShadowBox>
                         </Pressable>
                     </View>
-                </Pressable>
-            </Pressable>
+                </View>
+            </View>
         </Modal>
     );
 }

@@ -78,6 +78,8 @@ export function mapHabitRow(row: any): Habit {
     skippedDates: row.skipped_dates || [],
     archivedAt: row.archived_at,
     keepUntil: row.keep_until || false,
+    remindMe: row.remind_me || false,
+    reminderTime: row.reminder_time ?? undefined,
     increment: row.increment || false,
     incrementAmount: row.increment_amount || 0,
     incrementGoal: row.increment_goal || undefined,

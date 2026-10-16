@@ -28,6 +28,12 @@ export function TimeWheel({ data, selected, onSelect }: Props) {
         }
     }, [selected, data]);
 
+    // commits whichever value the wheel came to rest on
+    const settle = (offsetY: number) => {
+        const index = Math.max(0, Math.min(data.length - 1, Math.round(offsetY / ITEM_HEIGHT)));
+        if (data[index] !== selected) onSelect(data[index]);
+    };
+
     return (
         <View style={[pickerStyles.wheelContainer, { height: WHEEL_HEIGHT }]}>
 
@@ -49,11 +55,12 @@ export function TimeWheel({ data, selected, onSelect }: Props) {
                 contentContainerStyle={{
                     paddingVertical: WHEEL_HEIGHT / 2 - ITEM_HEIGHT / 2,
                 }}
-                onMomentumScrollEnd={e => {
-                    const index = Math.round(
-                        e.nativeEvent.contentOffset.y / ITEM_HEIGHT
-                    );
-                    onSelect(data[index]);
+                onMomentumScrollEnd={e => settle(e.nativeEvent.contentOffset.y)}
+                // a slow drag that doesn't fling never fires onMomentumScrollEnd,
+                // so the wheel would snap into place without committing the value
+                onScrollEndDrag={e => {
+                    const { velocity, contentOffset } = e.nativeEvent;
+                    if (!velocity || Math.abs(velocity.y) < 0.1) settle(contentOffset.y);
                 }}
             >
                 {data.map(value => (

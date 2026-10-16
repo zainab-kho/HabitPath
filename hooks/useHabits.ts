@@ -5,6 +5,7 @@ import { unstable_batchedUpdates } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { Habit } from '@/types/Habit';
 import { formatLocalDate, getHabitDate, getWeekDatesForDate, parseLocalDate } from '@/utils/dateUtils';
+import { syncHabitReminders } from '@/lib/notifications';
 import { getResetTime } from '@/lib/supabase/queries';
 import {
   addStatusToHabits,
@@ -68,6 +69,8 @@ export function useHabits(viewingDate: Date = new Date()) {
   const applyHabitsUpdate = useCallback(
     (updatedHabits: Habit[], reset: { hour: number; minute: number }) => {
       rawHabitsRef.current = updatedHabits;
+      // every habit change flows through here, so reminders stay in step (e.g. completing cancels today's)
+      syncHabitReminders(updatedHabits, reset.hour, reset.minute);
       const ds = getHabitDate(viewingDate, reset.hour, reset.minute);
 
       const activeHabits = updatedHabits.filter(h =>

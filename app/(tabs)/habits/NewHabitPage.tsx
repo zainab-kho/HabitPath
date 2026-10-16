@@ -28,6 +28,8 @@ import { formatDisplayDate, formatLocalDate, getHabitDate, getWeekDatesForDate, 
 import { getResetTime } from '@/lib/supabase/queries';
 
 import { getIconFile } from '@/components/habits/iconUtils';
+import { DEFAULT_REMINDER_TIME, ensureNotificationPermission, formatReminderTime } from '@/lib/notifications';
+import ReminderModal from '@/modals/habits/ReminderModal';
 import { BUTTON_COLORS, COLORS, PAGE } from '@/constants/colors';
 import { CUSTOM_TYPES, FREQUENCIES, REWARD_OPTIONS, TIME_OPTIONS, WEEK_DAYS } from '@/constants/habits';
 import { SYSTEM_ICONS } from '@/constants/icons';
@@ -277,8 +279,10 @@ export default function NewHabitPage() {
     const [showRewardsPicker, setShowRewardsPicker] = useState(false);
 
     // more options
-    const [moreOptions, setMoreOptions] = useState(!!(editHabit?.increment || editHabit?.keepUntil));
+    const [moreOptions, setMoreOptions] = useState(!!(editHabit?.increment || editHabit?.keepUntil || editHabit?.remindMe));
     const [remindMe, setRemindMe] = useState(editHabit?.remindMe ?? false);
+    const [reminderTime, setReminderTime] = useState(editHabit?.reminderTime ?? DEFAULT_REMINDER_TIME);
+    const [showReminderModal, setShowReminderModal] = useState(false);
     const [keepUntil, setKeepUntil] = useState(editHabit?.keepUntil ?? false);
     const [increment, setIncrement] = useState(editHabit?.increment ?? false);
     const [incrementStep, setincrementStep] = useState(editHabit?.incrementStep ?? 1);
@@ -461,6 +465,8 @@ export default function NewHabitPage() {
                 selected_date: selectedDateLabel,
                 reward_points: rewardPoints,
                 keep_until: keepUntil,
+                remind_me: remindMe,
+                reminder_time: remindMe ? reminderTime : null,
                 increment,
                 increment_step: incrementType === 'Time' ? 1 : incrementStep,
                 increment_type: incrementType,
@@ -1250,18 +1256,35 @@ export default function NewHabitPage() {
                                     <>
                                         <View style={{ gap: 10 }}> 
                                            {/* remind me */}
-                                            <View style={{
-                                                flexDirection: 'row',
-                                                justifyContent: 'space-between',
-                                                alignItems: 'center',
-                                                marginBottom: 10,
-                                            }}>
-                                                <Text style={globalStyles.body}>Remind me</Text>
-                                                <Switch
-                                                    trackColor={{ true: PAGE.habits.primary[1] }}
-                                                    value={keepUntil}
-                                                    onValueChange={setKeepUntil}
-                                                />
+                                            <View style={{ marginBottom: 10, gap: 5 }}>
+                                                <View style={{
+                                                    flexDirection: 'row',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center',
+                                                }}>
+                                                    <Text style={globalStyles.body}>Remind me</Text>
+                                                    <Switch
+                                                        trackColor={{ true: PAGE.habits.primary[1] }}
+                                                        value={remindMe}
+                                                        onValueChange={(val) => {
+                                                            if (val) {
+                                                                // pick the time first — the switch turns on when it's saved
+                                                                setShowReminderModal(true);
+                                                            } else {
+                                                                setRemindMe(false);
+                                                            }
+                                                        }}
+                                                    />
+                                                </View>
+
+                                                {/* tap the time to change it */}
+                                                {remindMe && (
+                                                    <Pressable onPress={() => setShowReminderModal(true)} style={{ alignSelf: 'flex-start' }}>
+                                                        <Text style={[globalStyles.label, { opacity: 0.6 }]}>
+                                                            AT {formatReminderTime(reminderTime)}
+                                                        </Text>
+                                                    </Pressable>
+                                                )}
                                             </View>
 
                                             {/* keep until until */}
@@ -1565,6 +1588,24 @@ export default function NewHabitPage() {
                 </View>
             </PageContainer>
 
+            <ReminderModal
+                visible={showReminderModal}
+                initialTime={reminderTime}
+                onClose={() => setShowReminderModal(false)}
+                onSave={async (time) => {
+                    setReminderTime(time);
+                    setRemindMe(true);
+                    setShowReminderModal(false);
+
+                    const granted = await ensureNotificationPermission();
+                    if (!granted) {
+                        Alert.alert(
+                            'Notifications are off',
+                            'Turn on notifications for HabitPath in your device settings to get this reminder.'
+                        );
+                    }
+                }}
+            />
         </AppLinearGradient >
     );
 }

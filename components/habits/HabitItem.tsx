@@ -243,31 +243,33 @@ export default function HabitItem({
         >
           <View style={styles.content}>
             <View style={styles.mainRow}>
-              <View style={styles.leftSection}>
-                <View style={styles.iconContainer}>
-                  {habitIconFile ? (
-                    <Image source={habitIconFile} style={styles.iconImage} />
-                  ) : (
-                    <Text style={styles.icon} />
-                  )}
-                </View>
-                <View style={styles.textSection}>
-                  <Text style={[globalStyles.body, styles.habitName]}>
-                    {habit.name}
-                  </Text>
-                  <View style={styles.badgesRow}>
-                    {!!habit.rewardPoints && habit.rewardPoints > 0 && (
-                      <View style={[styles.badge, styles.pointsBadge]}>
-                        <Image
-                          source={SYSTEM_ICONS.reward}
-                          style={[styles.badgeIcon, { tintColor: COLORS.Rewards }]}
-                        />
-                        <Text style={styles.badgeText}>{habit.rewardPoints}</Text>
-                      </View>
+              <Pressable onPress={onPress} style={{ flex: 1 }}>
+                <View style={styles.leftSection}>
+                  <View style={styles.iconContainer}>
+                    {habitIconFile ? (
+                      <Image source={habitIconFile} style={styles.iconImage} />
+                    ) : (
+                      <Text style={styles.icon} />
                     )}
                   </View>
+                  <View style={styles.textSection}>
+                    <Text style={[globalStyles.body, styles.habitName]}>
+                      {habit.name}
+                    </Text>
+                    <View style={styles.badgesRow}>
+                      {!!habit.rewardPoints && habit.rewardPoints > 0 && (
+                        <View style={[styles.badge, styles.pointsBadge]}>
+                          <Image
+                            source={SYSTEM_ICONS.reward}
+                            style={[styles.badgeIcon, { tintColor: COLORS.Rewards }]}
+                          />
+                          <Text style={styles.badgeText}>{habit.rewardPoints}</Text>
+                        </View>
+                      )}
+                    </View>
+                  </View>
                 </View>
-              </View>
+              </Pressable>
 
               {/* red X to unskip */}
               <Pressable onPress={() => setUnskipModalVisible(true)}>

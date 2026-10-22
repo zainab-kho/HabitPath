@@ -71,7 +71,7 @@ function getNextAssignedDate(habit: HabitWithStatus, resetHour: number, resetMin
     // one-time habits are only due on their start date
     if (!habit.frequency || habit.frequency === 'None') {
         if (habit.completionHistory?.length) return 'Completed';
-        if (habit.startDate === todayStr) return 'Today';
+        if (habit.startDate === todayStr) return 'None';
         if (habit.startDate > todayStr) return fmt(parseLocalDate(habit.startDate));
         return `Was due ${fmt(parseLocalDate(habit.startDate))}`;
     }
@@ -311,7 +311,7 @@ export default function HabitDetailModal({ visible, habit, resetHour, resetMin, 
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                             <Image source={SYSTEM_ICONS.calendar} style={{ width: ICON_SIZE, height: ICON_SIZE, tintColor: ICON_TINT }} />
                             <Text style={[globalStyles.body, { fontSize: 14, opacity: 0.7 }]}>
-                                {habit.keepUntil ? 'Keep until finished' : getNextAssignedDate(habit, resetHour, resetMin)}
+                                {getNextAssignedDate(habit, resetHour, resetMin)}
                             </Text>
                         </View>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>

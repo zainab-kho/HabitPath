@@ -219,6 +219,12 @@ export function getHabitCycleStart(
     return startStr;
   }
 
+  // Weekly Goals use one Monday-anchored cycle for the entire week,
+  // including when keepUntil is enabled.
+  if (habit.frequency === 'Weekly Goal') {
+    return getWeekDatesForDate(todayStr)[0];
+  }
+
   // For keepUntil habits, find the earliest incomplete scheduled day after the last completion
   if (habit.keepUntil) {
     const history = habit.completionHistory ?? [];
@@ -255,7 +261,7 @@ export function getHabitCycleStart(
         break;
       }
       if (habit.skippedDates?.includes(dStr)) {
-        break;
+        return earliestIncomplete ?? dStr;
       }
       earliestIncomplete = dStr;
     }
@@ -274,11 +280,6 @@ export function getHabitCycleStart(
   // Daily habits
   if (habit.frequency === 'Daily') {
     return todayStr;
-  }
-
-  // Weekly Goal — cycle start is Monday of the current week
-  if (habit.frequency === 'Weekly Goal') {
-    return getWeekDatesForDate(todayStr)[0];
   }
 
   // Weekly habits (based on selectedDays)
@@ -432,6 +433,8 @@ export function isHabitActiveToday(
     const thisMonday = getWeekDatesForDate(todayStr)[0];
     const startMonday = getWeekDatesForDate(habit.startDate)[0];
     if (thisMonday < startMonday) return false;
+    const actualThisMonday = getWeekDatesForDate(actualTodayStr)[0];
+    if (habit.skippedDates?.includes(thisMonday)) return thisMonday <= actualThisMonday;
 
     // anchor on completionHistory (the recorded per-week completions) so this
     // visibility check agrees with getHabitStatus. lastCompletedDate tracks the
@@ -439,8 +442,6 @@ export function isHabitActiveToday(
     // completionHistory), so it can drift into a later week than the recorded
     // completion and keep a finished goal visible. fall back to it only when
     // there's no recorded history (e.g. a pure-increment goal).
-    const actualThisMonday = getWeekDatesForDate(actualTodayStr)[0];
-
     const latestCompletion = [...(habit.completionHistory ?? [])].sort().at(-1)
       ?? habit.lastCompletedDate
       ?? null;
@@ -470,7 +471,10 @@ export function isHabitActiveToday(
       }
 
       const isSkipped = habit.skippedDates?.includes(cycleStart) ?? false;
-      if (!isCompleted && !isSkipped && isViewingToday) {
+      if (isSkipped && isViewingToday) {
+        return true;
+      }
+      if (!isCompleted && isViewingToday) {
         return true; // Carry over to actual today only
       }
     }
@@ -572,10 +576,10 @@ export const getHabitStatus = (
   const isSnoozedNow = habit.snoozedFrom && snoozeDay &&
     (habit.increment ? dateStr <= snoozeDay : dateStr < snoozeDay);
   const effectiveDateStr =
-    (habit.keepUntil && viewingDate && resetHour !== undefined && resetMinute !== undefined)
-      ? getHabitCycleStart(habit, viewingDate, resetHour, resetMinute)
-      : habit.frequency === 'Weekly Goal'
-        ? getWeekDatesForDate(dateStr)[0]
+    habit.frequency === 'Weekly Goal'
+      ? getWeekDatesForDate(dateStr)[0]
+      : (habit.keepUntil && viewingDate && resetHour !== undefined && resetMinute !== undefined)
+        ? getHabitCycleStart(habit, viewingDate, resetHour, resetMinute)
         : isSnoozedNow
           ? habit.snoozedFrom!
           : dateStr;
@@ -628,12 +632,19 @@ export const getHabitStatus = (
     if (goal > 0 && amount >= goal) return 'completed';
   }
 
-  // Explicit skips on keepUntil habits apply to the skipped occurrence only,
-  // not every day that shares its carried-over cycle. Weekly goals stay week-scoped.
-  const skippedDateStr = habit.keepUntil && habit.frequency !== 'Weekly Goal'
-    ? dateStr
-    : effectiveDateStr;
-  if (habit.skippedDates?.includes(skippedDateStr)) return 'skipped';
+  // Keep-until skips follow their occurrence cycle; weekly goals use Monday.
+  // A later scheduled occurrence starts a fresh cycle even if an older skip is
+  // still the effective key while carry-over state is being recalculated.
+  const hasNewScheduledOccurrence =
+    !!habit.keepUntil &&
+    habit.frequency !== 'Weekly Goal' &&
+    dateStr > effectiveDateStr &&
+    resetHour !== undefined &&
+    resetMinute !== undefined &&
+    isHabitScheduledForDate(habit, parseLocalDate(dateStr), resetHour, resetMinute);
+  if (habit.skippedDates?.includes(effectiveDateStr) && !hasNewScheduledOccurrence) {
+    return 'skipped';
+  }
 
   // past date and never completed = missed
   // uses todayStr (reset-hour-aware) not raw UTC to avoid off-by-one around midnight
@@ -667,6 +678,8 @@ function computeHabitStreak(
       const monday = formatLocalDate(d);
       if (monday < startMonday) break;
 
+      if (habit.skippedDates?.includes(monday)) break;
+
       if (history.includes(monday)) {
         streak++;
       } else {
@@ -689,7 +702,7 @@ function computeHabitStreak(
 
     if (ds < habit.startDate) break;
 
-    if (habit.skippedDates?.includes(ds)) continue;
+    if (habit.skippedDates?.includes(ds)) break;
 
     if (history.includes(ds)) {
       streak++;
@@ -742,7 +755,10 @@ function computeBestStreak(
 
     if (ds < habit.startDate) continue;
     if (!isHabitScheduledForDate(habit, d, resetHour, resetMinute)) continue;
-    if (habit.skippedDates?.includes(ds)) continue;
+    if (habit.skippedDates?.includes(ds)) {
+      current = 0;
+      continue;
+    }
 
     if (history.includes(ds)) {
       current++;

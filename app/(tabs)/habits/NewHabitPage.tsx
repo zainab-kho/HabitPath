@@ -355,6 +355,7 @@ export default function NewHabitPage() {
     };
 
     const handleFrequencyChange = (freq: Frequency) => {
+        setIsWeeklyGoal(false);
         setSelectedFrequency(freq);
 
         // Monthly opens its "repeats on" calendar right away; keep one calendar open at a time
@@ -375,6 +376,21 @@ export default function NewHabitPage() {
             setSelectedDays([]);
         } else {
             setSelectedDays([]);
+        }
+    };
+
+    const handleWeeklyGoalChange = () => {
+        const nextWeeklyGoal = !isWeeklyGoal;
+        setIsWeeklyGoal(nextWeeklyGoal);
+
+        if (nextWeeklyGoal) {
+            if (selectedFrequency !== 'Monthly') setSelectedFrequency('None');
+            setNoStartDate(false);
+            setStartDate(snapToMonday(startDate));
+            setShowCalendar(true);
+            setShowMonthlyCalendar(false);
+            setShowEndCalendar(false);
+            if (addEndDate && endDate) setEndDate(getSundayOfWeek(endDate));
         }
     };
 
@@ -608,6 +624,16 @@ export default function NewHabitPage() {
                                 />
                             </View>
 
+                            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <Text style={globalStyles.body1}>Goal for the week?</Text>
+                                <Switch
+                                    value={isWeeklyGoal}
+                                    onValueChange={handleWeeklyGoalChange}
+                                    trackColor={{ false: '#ddd', true: PAGE.habits.primary[0] }}
+                                    thumbColor="#fff"
+                                />
+                            </View>
+
                             {/* start date */}
                             <View style={{ gap: 10 }}>
                                 <Text style={[globalStyles.label]}>START DATE</Text>
@@ -674,37 +700,6 @@ export default function NewHabitPage() {
 
                                 {showCalendar && (
                                     <View style={{ marginVertical: 5, gap: 8 }}>
-                                        <View style={{
-                                            flexDirection: 'row',
-                                            alignItems: 'center',
-                                            justifyContent: 'space-between',
-                                            paddingVertical: 4,
-                                            paddingHorizontal: 2,
-                                        }}>
-                                            <Text style={globalStyles.body1}>Week goal?</Text>
-                                            <Switch
-                                                value={isWeeklyGoal}
-                                                onValueChange={(val) => {
-                                                    setIsWeeklyGoal(val);
-                                                    if (val) {
-                                                        const monday = snapToMonday(startDate);
-                                                        setStartDate(monday);
-                                                        // no end date by default → recurs every week. if an end
-                                                        // date is set, a week goal ends on a whole week (Sunday).
-                                                        if (addEndDate && endDate) setEndDate(getSundayOfWeek(endDate));
-                                                        if (selectedFrequency === 'Daily') {
-                                                            setSelectedFrequency('None');
-                                                        }
-                                                        if (customType === 'daily') {
-                                                            setCustomType('weekly');
-                                                        }
-                                                    }
-                                                }}
-                                                trackColor={{ false: '#ddd', true: PAGE.habits.primary[0] }}
-                                                thumbColor="#fff"
-                                            />
-                                        </View>
-
                                         <ShadowBox>
                                             <SimpleCalendar
                                                 selectedDate={startDate}
@@ -1059,11 +1054,6 @@ export default function NewHabitPage() {
                                         </>
                                     )}
 
-                                    {/* optional end date — off = repeats forever at its cadence.
-                                        week goals pick a whole week; other habits pick a single day.
-                                        always rendered here since the wrapper only shows when a
-                                        frequency (not None) is selected. */}
-                                    <>
                                             <View style={{
                                                 flexDirection: 'row',
                                                 alignItems: 'center',
@@ -1117,7 +1107,6 @@ export default function NewHabitPage() {
                                                     />
                                                 </ShadowBox>
                                             )}
-                                        </>
                                 </View>
                                 )}
                             </View>

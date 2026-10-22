@@ -41,12 +41,14 @@ type FrequencyFilter = typeof FREQUENCY_FILTERS[number];
 const STATUS_FILTERS = ['Scheduled', 'Inbox', 'Snoozed', 'Completed', 'Past', 'Archived'] as const;
 type StatusFilter = typeof STATUS_FILTERS[number];
 
-// a one-off habit — no frequency, so it happens once and is then done for good
+// one-time habits, plus keep-until weekly goals, are finished after completion
 const isOneTime = (habit: Habit) => !habit.frequency || habit.frequency === 'None';
 
-// one-off habits that have been ticked off: finished, nothing left to manage
+// finished habits have nothing left to do; completed keep-until weekly goals
+// retire after their first completed week instead of recurring indefinitely.
 const isFinished = (habit: Habit) =>
-    isOneTime(habit) && (habit.completionHistory?.length ?? 0) > 0;
+    ((isOneTime(habit) || (habit.frequency === 'Weekly Goal' && habit.keepUntil))
+        && (habit.completionHistory?.length ?? 0) > 0);
 
 // habits that can never come up again: a one-off that was skipped (dismissed,
 // so it won't return), a one-off whose day has passed (a keepUntil one carries
@@ -59,7 +61,7 @@ const isPast = (habit: Habit, todayStr: string) => {
 };
 
 // 'My order' is the permanent arrangement — the only sort you can drag in
-const SORTS = ['My order', 'Name', 'Recent', 'Start date', 'Points'] as const;
+const SORTS = ['My order', 'Name', 'Recent', 'Start date', 'Path', 'Points'] as const;
 type Sort = typeof SORTS[number];
 
 type TimeOfDay = typeof TIME_OPTIONS[number];
@@ -126,6 +128,7 @@ export default function AllGoalsPage() {
     const { allHabits, loading, resetTime, loadHabits, deleteHabit, archiveHabit } = useHabits(today);
 
     const [filterOpen, setFilterOpen] = useState(false);
+    const [sortOpen, setSortOpen] = useState(false);
     // inline search — expands from the search button, same as the journal
     const [searchOpen, setSearchOpen] = useState(false);
     const [search, setSearch] = useState('');
@@ -152,14 +155,22 @@ export default function AllGoalsPage() {
         });
     }, []);
 
-    // the sort pill steps through the sorts, like the journal's Latest/Earliest toggle
-    const cycleSort = () => setSort(prev => SORTS[(SORTS.indexOf(prev) + 1) % SORTS.length]);
-
     const todayStr = getHabitDate(today, resetTime.hour, resetTime.minute);
 
     // toggles one value in a multi-select filter
     const toggle = <T,>(list: T[], setList: (next: T[]) => void, value: T) => {
         setList(list.includes(value) ? list.filter(v => v !== value) : [...list, value]);
+    };
+
+    const toggleStatus = (status: StatusFilter) => {
+        if (status === 'Archived') {
+            setStatuses(statuses.includes('Archived') ? [] : ['Archived']);
+            return;
+        }
+        const withoutArchived = statuses.filter(value => value !== 'Archived');
+        setStatuses(withoutArchived.includes(status)
+            ? withoutArchived.filter(value => value !== status)
+            : [...withoutArchived, status]);
     };
 
     // every path currently in use, for the path filter
@@ -237,6 +248,10 @@ export default function AllGoalsPage() {
                     if (!a.startDate) return b.startDate ? 1 : 0;
                     if (!b.startDate) return -1;
                     return a.startDate.localeCompare(b.startDate);
+                case 'Path':
+                    if (!a.path) return b.path ? 1 : (a.name || '').localeCompare(b.name || '');
+                    if (!b.path) return -1;
+                    return a.path.localeCompare(b.path) || (a.name || '').localeCompare(b.name || '');
                 case 'Points':
                     return (b.rewardPoints ?? 0) - (a.rewardPoints ?? 0);
                 default:
@@ -246,6 +261,22 @@ export default function AllGoalsPage() {
 
         return sorted;
     }, [allHabits, search, paths, frequencies, timesOfDay, statuses, sort, todayStr, dayFilter, resetTime]);
+
+    const pathGroups = useMemo(() => {
+        if (sort !== 'Path') return [];
+
+        const groups: { name: string; habits: Habit[] }[] = [];
+        visible.forEach(habit => {
+            const name = habit.path || 'No path';
+            const group = groups[groups.length - 1];
+            if (group?.name === name) {
+                group.habits.push(habit);
+            } else {
+                groups.push({ name, habits: [habit] });
+            }
+        });
+        return groups;
+    }, [visible, sort]);
 
     // next scheduled day per habit — walks the calendar forward, so it's worked
     // out once per list change rather than on every row render
@@ -368,8 +399,8 @@ export default function AllGoalsPage() {
                         </View>
                     ) : (
                         <>
-                            {/* sort — tap to step through the orders */}
-                            <Pressable onPress={cycleSort}>
+                            {/* sort */}
+                            <Pressable onPress={() => setSortOpen(true)}>
                                 <ShadowBox
                                     contentBorderRadius={20}
                                     shadowBorderRadius={20}
@@ -489,7 +520,23 @@ export default function AllGoalsPage() {
                     </Sortable.PortalProvider>
                 ) : (
                     <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 60, paddingTop: 5 }}>
-                        {visible.map(habit => (
+                        {sort === 'Path' ? pathGroups.map(group => (
+                            <View key={group.name}>
+                                <HabitSectionHeader title={group.name} count={group.habits.length} />
+                                {group.habits.map(habit => (
+                                    <GoalRow
+                                        key={habit.id}
+                                        habit={habit}
+                                        nextDate={nextDates[habit.id]}
+                                        todayStr={todayStr}
+                                        onPress={() => {
+                                            setSelectedHabit(habit);
+                                            setModalVisible(true);
+                                        }}
+                                    />
+                                ))}
+                            </View>
+                        )) : visible.map(habit => (
                             <GoalRow
                                 key={habit.id}
                                 habit={habit}
@@ -505,6 +552,52 @@ export default function AllGoalsPage() {
                         )}
                     </>
                 )}
+
+                {/* sort sheet */}
+                <Modal
+                    visible={sortOpen}
+                    transparent
+                    animationType="none"
+                    onRequestClose={() => setSortOpen(false)}
+                >
+                    <View style={styles.filterOverlay}>
+                        <Pressable style={StyleSheet.absoluteFill} onPress={() => setSortOpen(false)} />
+                        <View style={styles.filterCard}>
+                            <View style={{ marginTop: 20 }}>
+                                <Text style={{ fontFamily: 'p2', fontSize: 18, textAlign: 'center', marginBottom: 16 }}>
+                                    Sort Goals
+                                </Text>
+                            </View>
+
+                            <View style={{ paddingHorizontal: 20, paddingBottom: 20, gap: 8 }}>
+                                {SORTS.map(option => {
+                                    const selected = sort === option;
+                                    return (
+                                        <Pressable
+                                            key={option}
+                                            onPress={() => {
+                                                setSort(option);
+                                                setSortOpen(false);
+                                            }}
+                                        >
+                                            <ShadowBox
+                                                contentBackgroundColor={selected ? PAGE.habits.primary[0] : '#fff'}
+                                                contentBorderColor={selected ? '#000' : PAGE.habits.primary[0]}
+                                                shadowBorderColor={selected ? '#000' : PAGE.habits.primary[0]}
+                                                shadowColor={selected ? '#000' : PAGE.habits.primary[0]}
+                                                shadowBorderRadius={12}
+                                            >
+                                                <View style={{ paddingVertical: 9, paddingHorizontal: 12 }}>
+                                                    <Text style={[globalStyles.body1, { textAlign: 'center' }]}>{option}</Text>
+                                                </View>
+                                            </ShadowBox>
+                                        </Pressable>
+                                    );
+                                })}
+                            </View>
+                        </View>
+                    </View>
+                </Modal>
 
                 {/* filter sheet — same shape as the journal's */}
                 <Modal
@@ -616,7 +709,7 @@ export default function AllGoalsPage() {
                                                 label={option}
                                                 selected={statuses.includes(option)}
                                                 color={COLORS.PrimaryLight}
-                                                onPress={() => toggle(statuses, setStatuses, option)}
+                                                onPress={() => toggleStatus(option)}
                                             />
                                         ))}
                                     </FilterGroup>

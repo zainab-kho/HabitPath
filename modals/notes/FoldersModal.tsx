@@ -1,6 +1,6 @@
 // @/modals/notes/FoldersModal.tsx
 import React, { useMemo, useState } from 'react';
-import { Image, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Image, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { GestureHandlerRootView, ScrollView as GHScrollView } from 'react-native-gesture-handler';
 
 import { BUTTON_COLORS, PAGE } from '@/constants/colors';
@@ -18,6 +18,7 @@ interface FoldersModalProps {
     onSelectFolder: (folderId: string | null) => void;
     onOpenDeleted?: () => void;   // hidden in assign mode
     onAddFolder: (name: string) => void;
+    onDeleteFolder: (folderId: string) => void;
     assignMode?: boolean;
 }
 
@@ -32,6 +33,7 @@ export default function FoldersModal({
     onSelectFolder,
     onOpenDeleted,
     onAddFolder,
+    onDeleteFolder,
     assignMode = false,
 }: FoldersModalProps) {
     const [addingFolder, setAddingFolder] = useState(false);
@@ -60,6 +62,17 @@ export default function FoldersModal({
         setAddingFolder(false);
         setNewFolderName('');
         onClose();
+    };
+
+    const confirmDeleteFolder = (folder: NoteFolder) => {
+        Alert.alert(
+            'Delete folder?',
+            `Delete "${folder.name}"? Notes in this folder will be moved to No folder.`,
+            [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'Delete', style: 'destructive', onPress: () => onDeleteFolder(folder.id) },
+            ]
+        );
     };
 
     return (
@@ -93,29 +106,45 @@ export default function FoldersModal({
                             {/* folder cards */}
                             {sortedFolders.map(folder => (
                                 <ShadowBox key={folder.id}>
-                                    <Pressable
-                                        onPress={() => onSelectFolder(folder.id)}
-                                        style={styles.folderCard}
-                                    >
-                                        <View style={styles.folderRow}>
-                                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
-                                                {folder.pinned && (
-                                                    <Image
-                                                        source={SYSTEM_ICONS.pin}
-                                                        style={{ width: 13, height: 13, tintColor: PAGE.notes.primary[0] }}
-                                                    />
-                                                )}
-                                                <Text style={styles.folderTitle} numberOfLines={1}>{folder.name}</Text>
+                                    <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                        <Pressable
+                                            onPress={() => onSelectFolder(folder.id)}
+                                            style={[styles.folderCard, { flex: 1 }]}
+                                        >
+                                            <View style={styles.folderRow}>
+                                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
+                                                    {folder.pinned && (
+                                                        <Image
+                                                            source={SYSTEM_ICONS.pin}
+                                                            style={{ width: 13, height: 13, tintColor: PAGE.notes.primary[0] }}
+                                                        />
+                                                    )}
+                                                    <Text style={styles.folderTitle} numberOfLines={1}>{folder.name}</Text>
+                                                </View>
+                                                <Text style={styles.folderDate}>{formatShortDate(folder.createdAt)}</Text>
                                             </View>
-                                            <Text style={styles.folderDate}>{formatShortDate(folder.createdAt)}</Text>
-                                        </View>
-                                        <View style={styles.folderRow}>
-                                            <Text style={styles.folderCount}>
-                                                {countInFolder(folder.id)} {countInFolder(folder.id) === 1 ? 'note' : 'notes'}
-                                            </Text>
-                                            <Text style={styles.folderCount}>edited {formatShortDate(folder.updatedAt)}</Text>
-                                        </View>
-                                    </Pressable>
+                                            <View style={styles.folderRow}>
+                                                <Text style={styles.folderCount}>
+                                                    {countInFolder(folder.id)} {countInFolder(folder.id) === 1 ? 'note' : 'notes'}
+                                                </Text>
+                                                <Text style={styles.folderCount}>edited {formatShortDate(folder.updatedAt)}</Text>
+                                            </View>
+                                        </Pressable>
+                                        {!assignMode && (
+                                            <Pressable
+                                                onPress={() => confirmDeleteFolder(folder)}
+                                                hitSlop={8}
+                                                accessibilityRole="button"
+                                                accessibilityLabel={`Delete ${folder.name} folder`}
+                                                style={styles.deleteFolderButton}
+                                            >
+                                                <Image
+                                                    source={SYSTEM_ICONS.trash}
+                                                    style={{ width: 17, height: 17, tintColor: '#777' }}
+                                                />
+                                            </Pressable>
+                                        )}
+                                    </View>
                                 </ShadowBox>
                             ))}
 
@@ -237,6 +266,12 @@ const styles = StyleSheet.create({
     folderDate: {
         fontFamily: 'p2',
         fontSize: 13,
+    },
+    deleteFolderButton: {
+        width: 40,
+        alignSelf: 'stretch',
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     folderCount: {
         fontFamily: 'label',

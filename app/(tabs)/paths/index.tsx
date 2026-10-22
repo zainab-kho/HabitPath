@@ -1,6 +1,6 @@
 // app/(tabs)/paths/index.tsx
 import { PATH_COLORS, type PathColorKey } from '@/colors/pathColors';
-import { isHabitActiveToday, getHabitCycleStart } from '@/utils/habitUtils';
+import { getHabitStatus, isHabitActiveToday, getHabitCycleStart } from '@/utils/habitUtils';
 import { COLORS, PAGE } from '@/constants/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import { useAuth } from '@/contexts/AuthContext';
@@ -49,12 +49,23 @@ function buildWeek(now: Date, resetHour: number, resetMin: number) {
 }
 
 // skipped pill
-function SkippedPill({ opacity }: { opacity?: { opacity: number } | {} }) {
+function SkippedPill({ opacity }: { opacity?: number }) {
     return (
         <View style={[grid.pill, {
-            backgroundColor: 'rgba(0,0,0,0.06)',
-            borderColor: 'rgba(0,0,0,0.10)',
-        }, opacity]} />
+            backgroundColor: 'transparent',
+            borderColor: '#97AFB9',
+            opacity: opacity ?? 0.4,
+        }]} />
+    );
+}
+
+function SnoozedPill({ opacity }: { opacity?: number }) {
+    return (
+        <View style={[grid.pill, {
+            backgroundColor: '#97AFB9',
+            borderColor: 'rgba(0,0,0,0.3)',
+            opacity: opacity ?? 0.4,
+        }]} />
     );
 }
 
@@ -128,27 +139,77 @@ function WeekGrid({ pathName, habits, color, week, todayStr, now, resetHour, res
             {week.map(({ date, str, label, isFuture }) => {
                 const isToday = str === todayStr;
 
-                const scheduledHabits = pathHabits.filter(h =>
-                    isHabitActiveToday(h, date, resetHour, resetMin)
+                const statusForDate = (habit: Habit) => getHabitStatus(
+                    habit,
+                    str,
+                    str === todayStr,
+                    todayStr,
+                    date,
+                    resetHour,
+                    resetMin,
                 );
-
-                // separate regular and increment habits for layered rendering
-                const regularHabits = scheduledHabits.filter(h => !h.increment);
-                const incrementHabits = scheduledHabits.filter(h => h.increment);
-
-                const regularDone = regularHabits.filter(h =>
-                    isHabitCompletedForDate(h, str, date, resetHour, resetMin)
-                ).length;
-                const regularSkipped = regularHabits.filter(h =>
-                    h.skippedDates?.includes(str)
-                ).length;
-                const emptyCount = regularHabits.length - regularDone - regularSkipped;
-                const total = scheduledHabits.length;
-                const done = scheduledHabits.filter(h => isHabitCompletedForDate(h, str, date, resetHour, resetMin)).length;
+                const displayedHabits = pathHabits.filter(habit =>
+                    isHabitActiveToday(habit, date, resetHour, resetMin) || statusForDate(habit) === 'snoozed'
+                );
+                const incompleteHabits = displayedHabits.filter(habit => {
+                    const status = statusForDate(habit);
+                    return status !== 'skipped' && status !== 'snoozed' && status !== 'completed';
+                });
+                const skippedHabits = displayedHabits.filter(habit => statusForDate(habit) === 'skipped');
+                const snoozedHabits = displayedHabits.filter(habit => statusForDate(habit) === 'snoozed');
+                const completedHabits = displayedHabits.filter(habit => statusForDate(habit) === 'completed');
+                const incompleteIncrementHabits = incompleteHabits.filter(habit => !!habit.increment);
+                const completedIncrementHabits = completedHabits.filter(habit => !!habit.increment);
+                const incompleteRegularCount = incompleteHabits.filter(habit => !habit.increment).length;
+                const skippedCount = skippedHabits.length;
+                const snoozedCount = snoozedHabits.length;
+                const completedRegularCount = completedHabits.filter(habit => !habit.increment).length;
+                const activeCount = displayedHabits.length - snoozedCount;
+                const doneCount = completedHabits.length;
 
                 const pillOpacity = isFuture ? { opacity: .75 } : {};
 
-                const allDone = total > 0 && done === total;
+                const allDone = activeCount > 0 && doneCount === activeCount;
+
+                const renderIncrementPill = (h: Habit, key: string) => {
+                    const effectiveDate = h.keepUntil
+                        ? getHabitCycleStart(h, date, resetHour, resetMin)
+                        : str;
+                    const amount = h.incrementHistory?.[effectiveDate] ?? 0;
+                    const goal = h.incrementGoal && h.incrementGoal > 0 ? h.incrementGoal : 0;
+                    const ratio = goal > 0 ? Math.min(amount / goal, 1) : 0;
+                    const isDone = goal > 0
+                        ? ratio >= 1
+                        : isHabitCompletedForDate(h, str, date, resetHour, resetMin);
+
+                    return (
+                        <View key={key} style={grid.pillWrap}>
+                            <View style={[
+                                grid.pill,
+                                {
+                                    borderColor: isToday ? color + 'cc' : color + '66',
+                                    overflow: 'hidden',
+                                },
+                                isDone && { borderColor: color },
+                                pillOpacity,
+                            ]}>
+                                {(ratio > 0 || isDone) && (
+                                    <View style={{
+                                        position: 'absolute',
+                                        left: 0, top: 0, bottom: 0,
+                                        width: isDone ? '100%' : `${Math.round(ratio * 100)}%`,
+                                        backgroundColor: color + (isDone ? 'ff' : '88'),
+                                    }} />
+                                )}
+                            </View>
+                            {goal === 0 && amount > 0 && (
+                                <Text style={[grid.badge, { color }]}>
+                                    {amount > 99 ? '99+' : amount}
+                                </Text>
+                            )}
+                        </View>
+                    );
+                };
 
                 return (
                     <View key={str} style={[
@@ -156,9 +217,9 @@ function WeekGrid({ pathName, habits, color, week, todayStr, now, resetHour, res
                         isToday && grid.todayCol,
                         allDone && !isFuture && { backgroundColor: color + '12', borderRadius: 8 },
                     ]}>
-                        {/* pill stack: empty → skipped → increment → filled */}
+                        {/* pill stack: incomplete → skipped → snoozed → completed */}
                         <View style={grid.pills}>
-                            {total === 0 ? (
+                            {displayedHabits.length === 0 ? (
                                 <View style={[
                                     grid.dot,
                                     isToday && { backgroundColor: color + '30' },
@@ -167,7 +228,7 @@ function WeekGrid({ pathName, habits, color, week, todayStr, now, resetHour, res
                             ) : (
                                 <>
                                     {/* empty pills */}
-                                    {Array.from({ length: emptyCount }, (_, i) => (
+                                    {Array.from({ length: incompleteRegularCount }, (_, i) => (
                                         <View
                                             key={`empty-${i}`}
                                             style={[
@@ -182,55 +243,21 @@ function WeekGrid({ pathName, habits, color, week, todayStr, now, resetHour, res
                                         />
                                     ))}
 
+                                    {/* incomplete increment pills */}
+                                    {incompleteIncrementHabits.map((h, i) => renderIncrementPill(h, `incomplete-inc-${i}`))}
+
                                     {/* skipped pills */}
-                                    {Array.from({ length: regularSkipped }, (_, i) => (
-                                        <SkippedPill key={`skip-${i}`} opacity={pillOpacity} />
+                                    {Array.from({ length: skippedCount }, (_, i) => (
+                                        <SkippedPill key={`skip-${i}`} opacity={isFuture ? 0.25 : 0.4} />
                                     ))}
 
-                                    {/* increment pills */}
-                                    {incrementHabits.map((h, i) => {
-                                        const effectiveDate = h.keepUntil
-                                            ? getHabitCycleStart(h, date, resetHour, resetMin)
-                                            : str;
-                                        const amount = h.incrementHistory?.[effectiveDate] ?? 0;
-                                        const goal = h.incrementGoal && h.incrementGoal > 0
-                                            ? h.incrementGoal : 0;
-                                        const ratio = goal > 0 ? Math.min(amount / goal, 1) : 0;
-                                        const isDone = goal > 0
-                                            ? ratio >= 1
-                                            : isHabitCompletedForDate(h, str, date, resetHour, resetMin);
-
-                                        return (
-                                            <View key={`inc-${i}`} style={grid.pillWrap}>
-                                                <View style={[
-                                                    grid.pill,
-                                                    {
-                                                        borderColor: isToday ? color + 'cc' : color + '66',
-                                                        overflow: 'hidden',
-                                                    },
-                                                    isDone && { borderColor: color },
-                                                    pillOpacity,
-                                                ]}>
-                                                    {(ratio > 0 || isDone) && (
-                                                        <View style={{
-                                                            position: 'absolute',
-                                                            left: 0, top: 0, bottom: 0,
-                                                            width: isDone ? '100%' : `${Math.round(ratio * 100)}%`,
-                                                            backgroundColor: color + (isDone ? 'ff' : '88'),
-                                                        }} />
-                                                    )}
-                                                </View>
-                                                {goal === 0 && amount > 0 && (
-                                                    <Text style={[grid.badge, { color }]}>
-                                                        {amount > 99 ? '99+' : amount}
-                                                    </Text>
-                                                )}
-                                            </View>
-                                        );
-                                    })}
+                                    {/* snoozed pills */}
+                                    {Array.from({ length: snoozedCount }, (_, i) => (
+                                        <SnoozedPill key={`snoozed-${i}`} opacity={isFuture ? 0.25 : 0.4} />
+                                    ))}
 
                                     {/* completed pills */}
-                                    {Array.from({ length: regularDone }, (_, i) => (
+                                    {Array.from({ length: completedRegularCount }, (_, i) => (
                                         <View
                                             key={`filled-${i}`}
                                             style={[
@@ -240,6 +267,7 @@ function WeekGrid({ pathName, habits, color, week, todayStr, now, resetHour, res
                                             ]}
                                         />
                                     ))}
+                                        {completedIncrementHabits.map((h, i) => renderIncrementPill(h, `completed-inc-${i}`))}
                                 </>
                             )}
                         </View>

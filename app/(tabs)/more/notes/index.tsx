@@ -46,6 +46,7 @@ export default function NotesPage() {
         moveToFolder,
         deleteNote,
         addFolder,
+        removeFolder,
     } = useNotes(user?.id);
 
     useFocusEffect(
@@ -396,6 +397,7 @@ export default function NotesPage() {
                             router.push('/(tabs)/more/notes/folder/deleted' as any);
                         }}
                         onAddFolder={addFolder}
+                        onDeleteFolder={removeFolder}
                     />
                 </PageContainer>
             </GestureHandlerRootView>

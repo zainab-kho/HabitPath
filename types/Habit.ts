@@ -28,6 +28,10 @@ export interface Habit {
   lastCompletedDate?: string;
 
 
+  // permanent position in the list (within its time-of-day section); the
+  // per-day tempOrder below overrides it for a single day
+  displayOrder?: number;
+
   // temporary overrides for one day
   tempTimeOfDay?: string;
   tempTimeOfDayDate?: string;

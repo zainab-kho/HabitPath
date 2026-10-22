@@ -63,6 +63,7 @@ export function mapHabitRow(row: any): Habit {
     selectedTimeOfDay: row.selected_time_of_day,
     tempTimeOfDay: row.temp_time_of_day ?? undefined,
     tempTimeOfDayDate: row.temp_time_of_day_date ?? undefined,
+    displayOrder: row.display_order ?? undefined,
     tempOrder: row.temp_order ?? undefined,
     tempOrderDate: row.temp_order_date ?? undefined,
     tempSelectedDays: row.temp_selected_days ?? undefined,
@@ -328,7 +329,9 @@ export async function snoozeHabit(
 /**
  * Skip a habit for a specific date.
  * - Repeating habits: adds dateStr to skippedDates array
- * - One-time habits (freq = None): archives the habit
+ * - One-time habits (freq = None): archives the habit, since its only
+ *   occurrence is now dealt with. That includes keepUntil one-offs — skipping
+ *   one retires it rather than letting it carry forward forever.
  */
 export async function skipHabit(
   habitId: string,
@@ -346,7 +349,7 @@ export async function skipHabit(
     dateStr = getWeekDatesForDate(dateStr)[0];
   }
 
-  const isOneTime = (!target.frequency || target.frequency === 'None') && !target.keepUntil;
+  const isOneTime = !target.frequency || target.frequency === 'None';
 
   if (isOneTime) {
     const archiveIso = new Date().toISOString();
@@ -412,11 +415,15 @@ export async function unskipHabit(
     dateStr = getWeekDatesForDate(dateStr)[0];
   }
 
+  // skipping a one-off archives it, so unskipping has to bring it back
+  const wasArchivedBySkip = !unskipTarget?.frequency || unskipTarget.frequency === 'None';
+
   const updated = habits.map(h => {
     if (h.id !== habitId) return h;
     return {
       ...h,
       skippedDates: (h.skippedDates ?? []).filter(d => d !== dateStr),
+      ...(wasArchivedBySkip ? { archivedAt: undefined } : {}),
     };
   });
 
@@ -424,7 +431,10 @@ export async function unskipHabit(
   if (target) {
     await supabase
       .from('habits')
-      .update({ skipped_dates: target.skippedDates })
+      .update({
+        skipped_dates: target.skippedDates,
+        ...(wasArchivedBySkip ? { archived_at: null } : {}),
+      })
       .eq('id', habitId)
       .eq('user_id', userId);
   }

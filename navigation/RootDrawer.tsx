@@ -109,6 +109,12 @@ export function RootDrawer() {
 
     const menuItems = [
         {
+            label: 'All Goals',
+            path: '/(tabs)/more/goals',
+            icon: SYSTEM_ICONS.list,
+            params: { from: 'drawer' },
+        },
+        {
             label: 'Paths',
             path: '/(tabs)/paths',
             icon: SYSTEM_ICONS.path,
@@ -122,11 +128,6 @@ export function RootDrawer() {
         //     path: '/(tabs)/quests',
         //     icon: SYSTEM_ICONS.quest,
         //     params: { from: 'drawer' },
-        // },
-        // {
-        //     label: 'All Goals',
-        //     path: '/(tabs)/more/goals',
-        //     icon: SYSTEM_ICONS.list,
         // },
         {
             label: 'Rewards',

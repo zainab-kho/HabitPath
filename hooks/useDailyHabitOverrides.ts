@@ -15,10 +15,14 @@ import { Habit } from '@/types/Habit';
 // ─── apply saved order to a habit list ───────────────────────────────────────
 
 /**
- * Sorts habits by temp_order for today, falling back to startDate.
- * Habits whose tempOrderDate doesn't match today are treated as unordered.
+ * Sorts habits by temp_order for today, then by the permanent display_order set
+ * on the All Goals page, then by startDate for habits that have never been
+ * arranged. Habits whose tempOrderDate doesn't match today are treated as
+ * having no daily order.
  */
-export function applyDailyOrder<T extends Pick<Habit, 'id' | 'startDate' | 'tempOrder' | 'tempOrderDate'>>(
+export function applyDailyOrder<
+  T extends Pick<Habit, 'id' | 'startDate' | 'displayOrder' | 'tempOrder' | 'tempOrderDate'>
+>(
   habits: T[],
   dateStr: string,
 ): T[] {
@@ -29,6 +33,15 @@ export function applyDailyOrder<T extends Pick<Habit, 'id' | 'startDate' | 'temp
     if (aHasOrder && bHasOrder) return a.tempOrder! - b.tempOrder!;
     if (aHasOrder && !bHasOrder) return -1;
     if (!aHasOrder && bHasOrder) return 1;
+
+    // permanent order next — habits that have never been arranged sort after
+    // the ones that have, keeping their old startDate ordering among themselves
+    const aPermanent = a.displayOrder ?? null;
+    const bPermanent = b.displayOrder ?? null;
+    if (aPermanent != null && bPermanent != null) return aPermanent - bPermanent;
+    if (aPermanent != null) return -1;
+    if (bPermanent != null) return 1;
+
     return (a.startDate ?? '').localeCompare(b.startDate ?? '');
   });
 }
@@ -60,6 +73,54 @@ export async function saveDailyOrder(
   const failed = results.filter(r => r.error);
   if (failed.length > 0) {
     console.error('[useDailyHabitOverrides] saveDailyOrder errors:', failed.map(r => r.error));
+  }
+}
+
+// ─── permanent order (Supabase) ──────────────────────────────────────────────
+
+/**
+ * Saves the permanent order of habits — the order every day starts from, before
+ * any per-day drag. Set from the All Goals page; `orderedIds` must be the full
+ * list of habits being arranged, in their new order.
+ */
+export async function savePermanentOrder(
+  orderedIds: string[],
+  userId: string,
+): Promise<void> {
+  const results = await Promise.all(
+    orderedIds.map((id, index) =>
+      supabase
+        .from('habits')
+        .update({ display_order: index })
+        .eq('id', id)
+        .eq('user_id', userId)
+    )
+  );
+
+  const failed = results.filter(r => r.error);
+  if (failed.length > 0) {
+    console.error('[useDailyHabitOverrides] savePermanentOrder errors:', failed.map(r => r.error));
+  }
+}
+
+/**
+ * Moves a habit into a different time-of-day section for good (unlike
+ * saveTempTimeOfDay, which only applies to one day).
+ */
+export async function savePermanentTimeOfDay(
+  habitId: string,
+  userId: string,
+  newTimeOfDay: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from('habits')
+    .update({ selected_time_of_day: newTimeOfDay })
+    .eq('id', habitId)
+    .eq('user_id', userId);
+
+  if (error) {
+    console.error('[useDailyHabitOverrides] savePermanentTimeOfDay error:', error);
+    throw error;
   }
 }
 

@@ -830,3 +830,38 @@ export const getProgressUnitsForDay = (
 
   return { progressTotal, progressEarned, progressSkipped };
 };
+
+/* ============================================================================
+   NEXT OCCURRENCE
+============================================================================ */
+
+/**
+ * The next date a habit is scheduled on, as YYYY-MM-DD, or null if it never
+ * comes up again within `maxDays`. Walks forward day by day and asks
+ * isHabitActiveToday, so every frequency (custom intervals, nth-weekday
+ * monthly, week goals, end dates) is handled the same way the lists are.
+ *
+ * `from` defaults to today; pass includeToday = false to skip it.
+ */
+export function getNextOccurrence(
+  habit: Habit,
+  resetHour: number,
+  resetMinute: number,
+  options: { from?: Date; includeToday?: boolean; maxDays?: number } = {},
+): string | null {
+  const { from = new Date(), includeToday = true, maxDays = 400 } = options;
+
+  // inbox habits aren't scheduled anywhere until they're given a start date
+  if (!habit.startDate || habit.archivedAt) return null;
+
+  const start = new Date(from.getFullYear(), from.getMonth(), from.getDate(), 12);
+
+  for (let offset = includeToday ? 0 : 1; offset < maxDays; offset++) {
+    const date = new Date(start.getFullYear(), start.getMonth(), start.getDate() + offset, 12);
+    if (isHabitActiveToday(habit, date, resetHour, resetMinute)) {
+      return getHabitDate(date, resetHour, resetMinute);
+    }
+  }
+
+  return null;
+}

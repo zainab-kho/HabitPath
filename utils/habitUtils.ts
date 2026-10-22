@@ -254,6 +254,9 @@ export function getHabitCycleStart(
       if (completed) {
         break;
       }
+      if (habit.skippedDates?.includes(dStr)) {
+        break;
+      }
       earliestIncomplete = dStr;
     }
 
@@ -466,7 +469,8 @@ export function isHabitActiveToday(
         isCompleted = currentAmount >= goal;
       }
 
-      if (!isCompleted && isViewingToday) {
+      const isSkipped = habit.skippedDates?.includes(cycleStart) ?? false;
+      if (!isCompleted && !isSkipped && isViewingToday) {
         return true; // Carry over to actual today only
       }
     }
@@ -624,8 +628,12 @@ export const getHabitStatus = (
     if (goal > 0 && amount >= goal) return 'completed';
   }
 
-  // explicitly skipped habits
-  if (habit.skippedDates?.includes(effectiveDateStr)) return 'skipped';
+  // Explicit skips on keepUntil habits apply to the skipped occurrence only,
+  // not every day that shares its carried-over cycle. Weekly goals stay week-scoped.
+  const skippedDateStr = habit.keepUntil && habit.frequency !== 'Weekly Goal'
+    ? dateStr
+    : effectiveDateStr;
+  if (habit.skippedDates?.includes(skippedDateStr)) return 'skipped';
 
   // past date and never completed = missed
   // uses todayStr (reset-hour-aware) not raw UTC to avoid off-by-one around midnight

@@ -261,7 +261,9 @@ export function getHabitCycleStart(
         break;
       }
       if (habit.skippedDates?.includes(dStr)) {
-        return dStr;
+        // A skip closes this occurrence, but a newer incomplete scheduled
+        // occurrence takes precedence when scanning backwards from today.
+        return earliestIncomplete ?? dStr;
       }
       earliestIncomplete = dStr;
     }
@@ -469,8 +471,9 @@ export function isHabitActiveToday(
       }
 
       const isSkipped = habit.skippedDates?.includes(cycleStart) ?? false;
-      if (isSkipped && isViewingToday) {
-        return true;
+      if (isSkipped) {
+        // A skipped occurrence is visible on its own date, not carried forward.
+        return isViewingToday && cycleStart === todayStr;
       }
       if (!isCompleted && isViewingToday) {
         return true; // Carry over to actual today only
@@ -514,8 +517,11 @@ export function isHabitActiveToday(
     const dateMonday = getWeekDatesForDate(todayStr)[0];
     const startMonday = getWeekDatesForDate(habit.startDate)[0];
     if (dateMonday < startMonday) return false;
-    if (habit.endDate) {
-      const endMonday = getWeekDatesForDate(habit.endDate)[0];
+    const hasMonthlyAnchor = !!(habit.monthlyDay || (habit.monthlyWeek && habit.monthlyWeekday));
+    const endDate = habit.endDate
+      ?? (!hasMonthlyAnchor ? getWeekDatesForDate(habit.startDate)[6] : undefined);
+    if (endDate) {
+      const endMonday = getWeekDatesForDate(endDate)[0];
       if (dateMonday > endMonday) return false;
     }
     // monthly-cadence goal: only appears in the week that contains its monthly anchor
@@ -558,6 +564,18 @@ export function isHabitActiveToday(
 ============================================================================ */
 
 export type HabitStatus = 'completed' | 'skipped' | 'snoozed' | 'active' | 'missed';
+
+/**
+ * A habit enriched by `addStatusToHabits`. `status`, `streak` and `bestStreak`
+ * are all derived from completionHistory on every pass — they are never loaded
+ * from Supabase, so they only exist on habits that have been through that
+ * function. Components that render a streak must take this type, not `Habit`.
+ */
+export type HabitWithStatus = Habit & {
+  status: HabitStatus;
+  streak: number;
+  bestStreak: number;
+};
 
 export const getHabitStatus = (
   habit: Habit,
@@ -776,7 +794,7 @@ export const addStatusToHabits = (
   viewingDate: Date,
   resetHour: number,
   resetMinute: number
-): (Habit & { status: HabitStatus })[] => {
+): HabitWithStatus[] => {
   const dateStr = getHabitDate(viewingDate, resetHour, resetMinute);
   const todayStr = getHabitDate(new Date(), resetHour, resetMinute);
   const isViewingToday = dateStr === todayStr;
@@ -794,7 +812,7 @@ export const addStatusToHabits = (
 ============================================================================ */
 
 export const getProgressUnitsForDay = (
-  habits: (Habit & { status: HabitStatus })[],
+  habits: HabitWithStatus[],
   dateStr: string,
   viewingDate?: Date,
   resetHour?: number,
@@ -826,7 +844,9 @@ export const getProgressUnitsForDay = (
       const snoozeDay = h.snoozedUntil?.slice(0, 10);
       const isSnoozedNow = !!h.snoozedFrom && !!snoozeDay && dateStr <= snoozeDay;
       const effectiveDate =
-        (h.keepUntil || h.frequency === 'Weekly Goal') && viewingDate && resetHour !== undefined && resetMinute !== undefined
+        // (Weekly Goals already `continue`d out of this loop above, so keepUntil
+        // is the only cycle-based case that can reach here)
+        h.keepUntil && viewingDate && resetHour !== undefined && resetMinute !== undefined
           ? getHabitCycleStart(h, viewingDate, resetHour, resetMinute)
           : isSnoozedNow
             ? h.snoozedFrom!

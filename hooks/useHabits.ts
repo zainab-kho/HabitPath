@@ -11,7 +11,7 @@ import {
   addStatusToHabits,
   getHabitCycleStart,
   getProgressUnitsForDay,
-  HabitStatus,
+  HabitWithStatus,
   isHabitActiveToday,
   updateAppStreak,
 } from '@/utils/habitUtils';
@@ -32,7 +32,9 @@ import { getTotalPoints } from '@/services/habits/cache';
 
 // ─── types ────────────────────────────────────────────────────────────────────
 
-export type HabitWithStatus = Habit & { status: HabitStatus };
+// defined in habitUtils (next to HabitStatus, where the enrichment happens);
+// re-exported here so existing `from '@/hooks/useHabits'` imports keep working
+export type { HabitWithStatus } from '@/utils/habitUtils';
 
 // ─── hook ─────────────────────────────────────────────────────────────────────
 
@@ -80,8 +82,8 @@ export function useHabits(viewingDate: Date = new Date()) {
       const sortedActive = [...activeHabits].sort((a, b) => {
         if (a.startDate !== b.startDate) return a.startDate.localeCompare(b.startDate);
 
-        const ac = (a as any).created_at ?? '';
-        const bc = (b as any).created_at ?? '';
+        const ac = a.created_at ?? '';
+        const bc = b.created_at ?? '';
         if (ac && bc && ac !== bc) return ac.localeCompare(bc);
 
         return (a.name || '').localeCompare(b.name || '');
@@ -115,9 +117,9 @@ export function useHabits(viewingDate: Date = new Date()) {
     [viewingDate]
   );
 
-  // strips the derived `status` field before passing habits to service functions
+  // strips the derived fields before passing habits to service functions
   const stripStatus = (habits: HabitWithStatus[]): Habit[] =>
-    habits.map(({ status, ...rest }) => rest);
+    habits.map(({ status, streak, bestStreak, ...rest }) => rest);
 
   // ─── load ───────────────────────────────────────────────────────────────────
 

@@ -234,12 +234,13 @@ export default function HabitItem({
       <>
         <ShadowBox
           style={styles.container}
-          contentBackgroundColor="#fff"
+          contentBackgroundColor="#bdbbbb"
           contentBorderColor="#000"
           contentBorderWidth={1}
           shadowBorderRadius={15}
-          shadowOffset={{ x: 0, y: 5 }}
-          shadowColor={habitColor}
+          shadowOffset={{ x: 0, y: 0 }}
+          shadowBorderWidth={0}
+          shadowColor="#ccc"
         >
           <View style={styles.content}>
             <View style={styles.mainRow}>
@@ -329,6 +330,7 @@ export default function HabitItem({
             contentBorderWidth={1}
             shadowBorderRadius={15}
             shadowOffset={{ x: 0, y: 0 }}
+            shadowBorderWidth={0}
             shadowColor="#ccc"
           >
             <Pressable onPress={() => habit.questId && onNavigateToQuest?.(habit.questId)} style={styles.content}>

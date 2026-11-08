@@ -52,7 +52,8 @@ export default function InboxPage() {
     return from && until && todayStr >= from && todayStr < until;
   });
 
-  const withStatus = (h: Habit): HabitWithStatus => ({ ...h, status: 'active' });
+  // inbox habits aren't scheduled, so they have no streak to compute
+  const withStatus = (h: Habit): HabitWithStatus => ({ ...h, status: 'active', streak: 0, bestStreak: 0 });
 
   const openSchedule = (habit: Habit) => {
     setScheduleDate(parseLocalDate(todayStr));

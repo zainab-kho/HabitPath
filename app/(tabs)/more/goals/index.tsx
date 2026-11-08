@@ -242,7 +242,7 @@ export default function AllGoalsPage() {
                 case 'My order':
                     return byPermanentOrder(a, b);
                 case 'Recent':
-                    return ((b as any).created_at ?? '').localeCompare((a as any).created_at ?? '');
+                    return (b.created_at ?? '').localeCompare(a.created_at ?? '');
                 case 'Start date':
                     // inbox habits have no start date — park them at the end
                     if (!a.startDate) return b.startDate ? 1 : 0;

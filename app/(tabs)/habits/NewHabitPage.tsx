@@ -463,6 +463,10 @@ export default function NewHabitPage() {
                 : (selectedFrequency === 'Weekly' || (selectedFrequency === 'Custom' && customType === 'weekly'))
                     ? selectedDays
                     : [];
+            const selectedEndDate =
+                addEndDate && endDate && formatLocalDate(endDate) >= formatLocalDate(startDate)
+                    ? formatLocalDate(endDate)
+                    : null;
 
             // Resolve the selected path's name + hex color
             const selectedPath = paths.find(p => p.id === selectedPathId) ?? null;
@@ -495,12 +499,12 @@ export default function NewHabitPage() {
                 monthly_week: usesMonthly && monthlyMode === 'nthWeekday' ? monthlyWeek : null,
                 monthly_weekday: usesMonthly && monthlyMode === 'nthWeekday' ? monthlyWeekday : null,
                 monthly_day: usesMonthly && monthlyMode === 'dayOfMonth' ? monthlyDay : null,
-                // optional end date: null = repeats forever. ignore an end that lands before
-                // the start (avoids a habit that can never occur).
-                end_date:
-                    addEndDate && endDate && formatLocalDate(endDate) >= formatLocalDate(startDate)
-                        ? formatLocalDate(endDate)
-                        : null,
+                // Ignore an end date before the start. Non-monthly week goals
+                // default to ending on the last day of their selected week.
+                end_date: selectedEndDate
+                    ?? (isWeeklyGoal && !usesMonthly
+                        ? getWeekDatesForDate(formatLocalDate(startDate))[6]
+                        : null),
                 // quest linkage — when created from a quest phase, the scope drives the
                 // effective end date (overriding the picker above)
                 ...(params.questId ? {
@@ -814,46 +818,51 @@ export default function NewHabitPage() {
                                     flexWrap: 'wrap',
                                     gap: 8,
                                 }}>
-                                    {FREQUENCIES.filter(f => !isWeeklyGoal || f !== 'Daily').map((freq) => (
-                                        <Pressable
-                                            key={freq}
-                                            onPress={() => handleFrequencyChange(freq)}
-                                        >
-                                            <ShadowBox
-                                                contentBackgroundColor={
-                                                    selectedFrequency === freq
-                                                        ? COLORS.Frequency
-                                                        : '#fff'
-                                                }
-                                                contentBorderColor={
-                                                    selectedFrequency === freq
-                                                        ? '#000'
-                                                        : COLORS.Frequency
-                                                }
-                                                shadowBorderColor={
-                                                    selectedFrequency === freq
-                                                        ? '#000'
-                                                        : COLORS.Frequency
-                                                }
-                                                shadowColor={
-                                                    selectedFrequency === freq
-                                                        ? '#000'
-                                                        : COLORS.Frequency
-                                                }
+                                    {FREQUENCIES.filter(f => !isWeeklyGoal || f !== 'Daily').map((freq) => {
+                                        const isWeekGoalSelection =
+                                            isWeeklyGoal && selectedFrequency === 'None' && freq === 'None';
+                                        return (
+                                            <Pressable
+                                                key={freq}
+                                                disabled={isWeekGoalSelection}
+                                                onPress={() => handleFrequencyChange(freq)}
                                             >
-                                                <View style={{
-                                                    paddingVertical: 6,
-                                                    paddingHorizontal: 12,
-                                                }}>
-                                                    <Text style={[
-                                                        globalStyles.body1
-                                                    ]}>
-                                                        {freq}
-                                                    </Text>
-                                                </View>
-                                            </ShadowBox>
-                                        </Pressable>
-                                    ))}
+                                                <ShadowBox
+                                                    contentBackgroundColor={
+                                                        selectedFrequency === freq
+                                                            ? COLORS.Frequency
+                                                            : '#fff'
+                                                    }
+                                                    contentBorderColor={
+                                                        selectedFrequency === freq
+                                                            ? '#000'
+                                                            : COLORS.Frequency
+                                                    }
+                                                    shadowBorderColor={
+                                                        selectedFrequency === freq
+                                                            ? '#000'
+                                                            : COLORS.Frequency
+                                                    }
+                                                    shadowColor={
+                                                        selectedFrequency === freq
+                                                            ? '#000'
+                                                            : COLORS.Frequency
+                                                    }
+                                                >
+                                                    <View style={{
+                                                        paddingVertical: 6,
+                                                        paddingHorizontal: 12,
+                                                    }}>
+                                                        <Text style={[
+                                                            globalStyles.body1
+                                                        ]}>
+                                                            {isWeekGoalSelection ? 'Weekly Goal' : freq}
+                                                        </Text>
+                                                    </View>
+                                                </ShadowBox>
+                                            </Pressable>
+                                        );
+                                    })}
                                 </View>
 
                                 {selectedFrequency !== 'None' && (

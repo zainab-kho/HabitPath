@@ -13,6 +13,7 @@ import {
 // RN's ScrollView/FlatList don't scroll inside these modals — use gesture-handler's
 import { FlatList, ScrollView } from 'react-native-gesture-handler';
 import { Habit } from '@/types/Habit';
+import { HabitWithStatus } from '@/utils/habitUtils';
 import { Reward } from '@/types/Reward';
 import { parseClaimEntry } from '@/services/rewards/rewards';
 import { HABIT_ICONS, SYSTEM_ICONS } from '@/constants/icons';
@@ -27,9 +28,15 @@ interface Props {
   totalPoints: number;
   redeemedPoints: number;
   rewards: Reward[];
-  recentHabits?: Habit[];
+  recentHabits?: MaybeEnrichedHabit[];
   pointsResetDate?: string | null;
 }
+
+// The rewards screen passes habits straight from loadHabitsFromSupabase, so
+// they have NOT been through addStatusToHabits and carry no streak — which is
+// why the streak badge below has never actually rendered. Typed as optionally
+// enriched: pass HabitWithStatus[] from the caller and the badge starts working.
+type MaybeEnrichedHabit = Habit & Partial<Pick<HabitWithStatus, 'streak' | 'bestStreak'>>;
 
 // One redemption of a reward — recurring rewards produce one entry per claim
 interface ClaimEntry {
@@ -40,7 +47,7 @@ interface ClaimEntry {
 
 // One entry per unique habit after dedup + post-reset aggregation
 interface HabitEntry {
-  habit: Habit;
+  habit: MaybeEnrichedHabit;
   postResetCount: number;       // number of completions strictly after resetDate
   totalEarned: number;          // postResetCount × rewardPoints
   lastCompletedDate: string | null; // most recent post-reset completion, derived from completionHistory

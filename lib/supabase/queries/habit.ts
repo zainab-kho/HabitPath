@@ -56,9 +56,10 @@ export function mapHabitRow(row: any): Habit {
     id: row.id,
     userId: row.user_id,
     name: row.name,
-    habitText: row.name,
     icon: row.icon,
-    frequency: row.frequency,
+    // normalize at the boundary: a null column means a one-time goal, so the
+    // rest of the app can trust `frequency` is always a real HabitFrequency
+    frequency: row.frequency ?? 'None',
     selectedDays: row.selected_days || [],
     selectedTimeOfDay: row.selected_time_of_day,
     tempTimeOfDay: row.temp_time_of_day ?? undefined,
@@ -100,7 +101,7 @@ export function mapHabitRow(row: any): Habit {
     questId: row.quest_id ?? undefined,
     phaseId: row.phase_id ?? undefined,
     questScope: row.quest_scope ?? undefined,
-  } as Habit;
+  };
 }
 
 // assign / move a quest goal into a phase: sets phase_id, scope, and end date

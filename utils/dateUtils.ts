@@ -26,6 +26,10 @@ AsyncStorage.getItem(STORAGE_KEYS.USER_DAY_OF_WEEK_CHOICE)
   .then(day => { if (day) setWeekStartDay(day); })
   .catch(() => {});
 
+/* ============================================================================
+   HABIT DATE
+============================================================================ */
+
 /**
  * get the habit date string respecting custom reset time
  * if current time is before reset time, counts as previous day
@@ -40,31 +44,57 @@ export const getHabitDate = (
   resetHour: number = 4,
   resetMinute: number = 0
 ): string => {
+  // use current date if no date was passed
   if (!date) {
     date = new Date();
   }
 
+  // makes copy of the date so original date isn't modified
   const d = new Date(date);
+  // get current time
   const currentHour = d.getHours();
   const currentMinute = d.getMinutes();
 
   if (currentHour < resetHour || (currentHour === resetHour && currentMinute < resetMinute)) {
+    // if the current time is before the configured reset time,
+    // treat it as part of the previous habit day.
     d.setDate(d.getDate() - 1);
-  }
+  } 
 
   // use local timezone instead of UTC
   return formatLocalDate(d);
 };
 
+/**
+ * get user-friendly label for a date
+ * 
+ * @param date - date to convert
+ * @returns date string in "Sun, Nov 9" format
+ */
 export const getDateLabel = (date: Date): string => {
   const today = new Date();
+  // create a copy of today and adds one day
   const tomorrow = new Date(today);
   tomorrow.setDate(today.getDate() + 1);
 
-  const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const tomorrowOnly = new Date(tomorrow.getFullYear(), tomorrow.getMonth(), tomorrow.getDate());
+  // removes time portion; converts code to 12:00am of that day
+  const dateOnly = new Date(
+     date.getFullYear(), 
+     date.getMonth(), 
+     date.getDate()
+  );
+  const todayOnly = new Date(
+     today.getFullYear(), 
+     today.getMonth(), 
+     today.getDate()
+  );
+  const tomorrowOnly = new Date(
+     tomorrow.getFullYear(), 
+     tomorrow.getMonth(), 
+     tomorrow.getDate()
+  );
 
+  // checks if date is today or tomorrow
   if (dateOnly.getTime() === todayOnly.getTime()) return 'Today';
   if (dateOnly.getTime() === tomorrowOnly.getTime()) return 'Tomorrow';
 
@@ -74,8 +104,6 @@ export const getDateLabel = (date: Date): string => {
     day: 'numeric',
   });
 }
-
-
 
 /**
  * Get the current habit day as a Date object

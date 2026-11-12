@@ -93,6 +93,11 @@ export const PAGE = {
     border: ['#4CE0F6'],
     primary: ['#F5924F', '#EEA2DA', '#4A98E6', '#AF9BE9'],
   },
+  mealPlan: {
+    background: ['#B2D1FF', '#F5FAFF'],
+    primary: ['#A2A5F0', '#F494B2', '#A2ACBD'],
+    mealItem: ['#FCFCD4', '#FCFCD4']
+  },
   settings: {
     background: ['#fdfbfb', '#ebedee'],
     pin: ['#55d7b0ff']

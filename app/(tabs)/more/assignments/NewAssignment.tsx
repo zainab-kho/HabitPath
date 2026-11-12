@@ -191,7 +191,7 @@ export default function NewAssignment() {
     };
 
     return (
-        <AppLinearGradient variant={"assignments.backgroundAssignment"}>
+        <AppLinearGradient variant={"assignments.background"}>
             <PageContainer>
                 <PageHeader title={isEditMode ? 'Edit Assignment' : 'New Assignment'} showBackButton />
 
@@ -199,7 +199,7 @@ export default function NewAssignment() {
                     showsVerticalScrollIndicator={false}
                     contentContainerStyle={{ flexGrow: 1, paddingBottom: 50 }}
                 >
-                    {/* main card — same outline as the new habit page */}
+                    {/* main card */}
                     <View style={{
                         backgroundColor: '#fff',
                         borderWidth: 1,

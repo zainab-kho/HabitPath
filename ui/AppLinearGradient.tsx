@@ -16,6 +16,7 @@ type GradientPath =
   | 'focus.backgroundBreak'
   | 'assignments.background'
   | 'assignments.backgroundAssignment'
+  | 'mealPlan.background'
   | 'settings.background'
   | 'rewards.background'
   | 'stats.background';

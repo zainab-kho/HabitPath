@@ -154,6 +154,11 @@ export function RootDrawer() {
             params: { from: 'drawer' },
         },
         {
+            label: 'Meal Plan',
+            path: '/(tabs)/more/meal-plan',
+            icon: SYSTEM_ICONS.grocery,
+        },
+        {
             label: 'Settings',
             path: '/(tabs)/more/settings',
             icon: SYSTEM_ICONS.settings,

@@ -372,6 +372,7 @@ export const SYSTEM_ICONS = {
   assignment: require('@/assets/icons/system/assignment.png'),
   journal: require('@/assets/icons/system/journal-icon.png'),
   lists: require('@/assets/icons/system/lists.png'),
+  grocery: require('@/assets/icons/system/grocery.png'),
   stats: require('@/assets/icons/system/stats.png'),
 
   path: require('@/assets/icons/system/path-icon.png'),
@@ -402,6 +403,7 @@ export const SYSTEM_ICONS = {
   lock: require('@/assets/icons/system/lock.png'),
   padlock: require('@/assets/icons/system/padlock.png'),
 
+  shoppingCart: require('@/assets/icons/system/shopping-cart.png'),
   sort: require('@/assets/icons/system/sort.png'),
   sortLeft: require('@/assets/icons/system/sort-left.png'),
   sortRight: require('@/assets/icons/system/sort-right.png'),

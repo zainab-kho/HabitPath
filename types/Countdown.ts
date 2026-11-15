@@ -4,17 +4,26 @@ export interface Countdown {
     id: string;
     userId: string;
     title: string;
-    targetAt: string;   // ISO timestamp — when the countdown hits zero
-    hasTime: boolean;   // false = counts down to midnight of the picked day
-    color: string | null; // card color from PRESET_COLORS (null = default countdown pink)
-    showProgress: boolean; // progress bar filling from createdAt → targetAt
-    remindMe: boolean;     // daily "X days left" notification
-    reminderTime: string | null; // "HH:MM" 24h
+
+    // when the countdown hits zero (ISO timestamp).
+    // with no time picked, that's midnight at the start of the chosen day
+    targetAt: string;
+    hasTime: boolean;
+
+    // card color from PRESET_COLORS — null falls back to the countdown pink
+    color: string | null;
+    // progress bar that fills from createdAt to targetAt
+    showProgress: boolean;
+
+    // daily "x days left" notification, and when to send it ("HH:MM", 24h)
+    remindMe: boolean;
+    reminderTime: string | null;
+
     createdAt: string;
     updatedAt: string;
 }
 
-// what the countdown card displays
+// the time left, split into the boxes the countdown card shows
 export interface CountdownParts {
     months: number;
     days: number;

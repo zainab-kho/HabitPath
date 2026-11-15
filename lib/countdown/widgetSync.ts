@@ -1,21 +1,29 @@
 // @/lib/countdown/widgetSync.ts
+// keeps everything outside the app screen up to date with the countdown list:
+// the home / lock screen widget and the daily reminders.
 import { Platform } from 'react-native';
 
 import { syncCountdownReminders } from '@/lib/notifications';
 import { Countdown } from '@/types/Countdown';
 
-// must match app.json (ios.entitlements) and targets/countdown-widget/CountdownData.swift
+// these three have to match the swift side (targets/countdown-widget/CountdownData.swift
+// and CountdownWidget.swift), and the app group also has to match app.json
 const APP_GROUP = 'group.com.zainabkho.habitpath';
 const WIDGET_KEY = 'countdowns';
 const WIDGET_KIND = 'CountdownWidget';
 
-// loaded lazily so a dev client built before the widget existed doesn't crash on launch
-let storage: { set: (key: string, value: string) => void } | null = null;
+type WidgetStorage = { set: (key: string, value: string) => void };
+
+let storage: WidgetStorage | null = null;
 let reloadWidget: ((kind?: string) => void) | null = null;
 
-function getWidgetStorage() {
+// the widget's shared storage, or null when it isn't available (android, web).
+// loaded on first use instead of imported at the top, so a build that doesn't
+// have the native module yet skips the widget instead of crashing on launch
+function getWidgetStorage(): WidgetStorage | null {
     if (Platform.OS !== 'ios') return null;
     if (storage) return storage;
+
     try {
         // eslint-disable-next-line @typescript-eslint/no-require-imports
         const { ExtensionStorage } = require('@bacons/apple-targets');
@@ -23,44 +31,38 @@ function getWidgetStorage() {
         reloadWidget = (kind?: string) => ExtensionStorage.reloadWidget(kind);
         return storage;
     } catch {
-        // native module not in this build yet — rebuild the app after adding the widget
         return null;
     }
 }
 
-// writes every countdown into the App Group for the widget, then asks iOS to redraw it
+// saves the whole list where the widget can read it, then asks ios to redraw the widget
 function syncWidget(countdowns: Countdown[]) {
     const widgetStorage = getWidgetStorage();
-    // the JS package silently no-ops when the native module isn't in the build — log which one ran
-    const hasNative = !!(globalThis as any).expo?.modules?.ExtensionStorage;
-    if (__DEV__) console.log(`[widget] syncing ${countdowns.length} countdown(s) — native module ${hasNative ? 'found' : 'MISSING'}`);
     if (!widgetStorage) return;
 
-    // shape must match SharedCountdown in CountdownData.swift
-    const shared = countdowns.map(c => ({
-        id: c.id,
-        title: c.title,
-        targetMs: new Date(c.targetAt).getTime(),
-        createdMs: new Date(c.createdAt).getTime(),
-        hasTime: c.hasTime,
-        color: c.color,
-        showProgress: c.showProgress,
+    // only what the widget needs. the shape has to match SharedCountdown in CountdownData.swift
+    const shared = countdowns.map(countdown => ({
+        id: countdown.id,
+        title: countdown.title,
+        targetMs: new Date(countdown.targetAt).getTime(),
+        createdMs: new Date(countdown.createdAt).getTime(),
+        hasTime: countdown.hasTime,
+        color: countdown.color,
+        showProgress: countdown.showProgress,
     }));
 
     widgetStorage.set(WIDGET_KEY, JSON.stringify(shared));
     reloadWidget?.(WIDGET_KIND);
 }
 
-/**
- * hands the latest FULL countdown list to everything outside the app screen.
- * called after every load of the countdown page (so after any create / edit / delete),
- * which makes this the one place to keep in step.
- */
+// call this with the full list whenever countdowns load or change.
+// a widget problem should never stop the reminders from syncing, so it's caught on its own
 export async function syncCountdowns(countdowns: Countdown[], userId: string): Promise<void> {
     try {
         syncWidget(countdowns);
     } catch (err) {
         console.error('Error syncing countdown widget:', err);
     }
+
     await syncCountdownReminders(countdowns, userId);
 }

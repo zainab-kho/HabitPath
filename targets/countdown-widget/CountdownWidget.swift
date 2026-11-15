@@ -21,27 +21,50 @@ struct CountdownProvider: AppIntentTimelineProvider {
         return CountdownEntry(date: Date(), countdown: countdown)
     }
 
-    // hands iOS the next month of midnights up front — the number ticks down on its own,
-    // no app launch needed. the app also reloads this whenever a countdown changes.
+    // widgets can't run a live clock, so ios is handed a list of moments ahead of time
+    // and swaps to the next one on its own, without the app being open.
+    // the app also reloads this whenever a countdown changes
     func timeline(for configuration: SelectCountdownIntent, in context: Context) async -> Timeline<CountdownEntry> {
         let countdown = resolve(configuration)
         let now = Date()
-        let calendar = Calendar.current
 
-        var dates = [now]
-        var midnight = calendar.startOfDay(for: now)
-        for _ in 0..<31 {
-            guard let next = calendar.date(byAdding: .day, value: 1, to: midnight) else { break }
-            midnight = next
-            dates.append(midnight)
-        }
-        // flip to "You did it!" at the exact moment when a time was set
-        if let countdown, countdown.hasTime, countdown.targetDate > now, countdown.targetDate < midnight {
+        // the card-style widgets show hours and minutes, the others only show days
+        let showsMinutes = context.family == .systemMedium || context.family == .systemLarge
+        var dates = showsMinutes ? minuteDates(from: now) : midnightDates(from: now)
+
+        // switch to "you did it!" at the exact moment the countdown ends
+        if let countdown, let last = dates.last, countdown.targetDate > now, countdown.targetDate < last {
             dates.append(countdown.targetDate)
         }
 
         let entries = dates.sorted().map { CountdownEntry(date: $0, countdown: countdown) }
         return Timeline(entries: entries, policy: .atEnd)
+    }
+
+    // now, then every midnight for the next month. enough for a days-left number
+    private func midnightDates(from now: Date) -> [Date] {
+        let calendar = Calendar.current
+        var dates = [now]
+        var midnight = calendar.startOfDay(for: now)
+
+        for _ in 0..<31 {
+            guard let next = calendar.date(byAdding: .day, value: 1, to: midnight) else { break }
+            midnight = next
+            dates.append(midnight)
+        }
+        return dates
+    }
+
+    // now, then the start of every minute for the next 3 hours.
+    // when those run out, ios asks for a fresh timeline
+    private func minuteDates(from now: Date) -> [Date] {
+        let startOfMinute = Date(timeIntervalSince1970: (now.timeIntervalSince1970 / 60).rounded(.down) * 60)
+        var dates = [now]
+
+        for minute in 1...180 {
+            dates.append(startOfMinute.addingTimeInterval(Double(minute) * 60))
+        }
+        return dates
     }
 
     // the countdown picked in Edit Widget — or the soonest one if none was picked (or it was deleted)
@@ -69,6 +92,7 @@ struct CountdownWidget: Widget {
         .supportedFamilies([
             .systemSmall,
             .systemMedium,
+            .systemLarge,
             .accessoryCircular,
             .accessoryRectangular,
             .accessoryInline,
@@ -105,7 +129,10 @@ struct CountdownWidgetView: View {
                 InlineView(countdown: countdown, days: days, isDone: isDone)
                     .containerBackground(for: .widget) { Color.clear }
             case .systemMedium:
-                MediumView(countdown: countdown, days: days, isDone: isDone, now: entry.date)
+                CardView(countdown: countdown, days: days, isDone: isDone, now: entry.date, style: .compact)
+                    .containerBackground(for: .widget) { cardColor(countdown) }
+            case .systemLarge:
+                CardView(countdown: countdown, days: days, isDone: isDone, now: entry.date, style: .full)
                     .containerBackground(for: .widget) { cardColor(countdown) }
             default:
                 SmallView(countdown: countdown, days: days, isDone: isDone)
@@ -131,7 +158,7 @@ private struct NumberBox: View {
 
     var body: some View {
         Text(value)
-            .font(.system(size: size, weight: .bold, design: .rounded))
+            .font(.app(size))
             .minimumScaleFactor(0.4)
             .lineLimit(1)
             .foregroundStyle(.black)
@@ -151,6 +178,7 @@ private struct NumberBox: View {
 private struct ProgressBarView: View {
     let value: Double
     let isDone: Bool
+    var height: CGFloat = 18
 
     var body: some View {
         GeometryReader { geo in
@@ -160,14 +188,14 @@ private struct ProgressBarView: View {
                     .fill(isDone ? WidgetColors.progressDone : WidgetColors.progress)
                     .frame(width: geo.size.width * value)
                 Text("\(isDone ? 100 : Int(value * 100))%")
-                    .font(.system(size: 10, weight: .semibold, design: .rounded))
+                    .font(.app(10))
                     .foregroundStyle(.black)
                     .frame(maxWidth: .infinity)
             }
             .clipShape(Capsule())
             .overlay(Capsule().stroke(.black, lineWidth: 1))
         }
-        .frame(height: 18)
+        .frame(height: height)
     }
 }
 
@@ -179,7 +207,7 @@ private struct SmallView: View {
     var body: some View {
         VStack(spacing: 6) {
             Text(countdown.title)
-                .font(.system(size: 15, weight: .bold, design: .rounded))
+                .font(.app(15))
                 .lineLimit(2)
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.black)
@@ -189,56 +217,89 @@ private struct SmallView: View {
             if isDone {
                 Text("🎉").font(.system(size: 38))
                 Text("YOU DID IT!")
-                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .font(.app(11))
                     .foregroundStyle(.black)
             } else {
                 NumberBox(value: "\(days)", size: 40)
                 Text("\(daysLabel(days).uppercased()) LEFT")
-                    .font(.system(size: 11, weight: .bold, design: .rounded))
+                    .font(.app(11))
                     .foregroundStyle(.black)
             }
         }
     }
 }
 
-private struct MediumView: View {
+// the medium and large widgets: a copy of the countdown card in the app
+// (components/countdown/CountdownCard.tsx), minus the seconds box, since widgets can't update every second.
+// medium fits everything on one row of boxes, large uses the same two rows as the app
+private struct CardView: View {
+    enum Style { case compact, full }
+
     let countdown: SharedCountdown
     let days: Int
     let isDone: Bool
     let now: Date
+    let style: Style
+
+    private var isFull: Bool { style == .full }
 
     var body: some View {
-        HStack(spacing: 16) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(countdown.title)
-                    .font(.system(size: 18, weight: .bold, design: .rounded))
-                    .lineLimit(2)
-                Text(countdown.targetDate, format: dateFormat)
-                    .font(.system(size: 12, weight: .medium, design: .rounded))
-                    .opacity(0.7)
+        let parts = timeParts(until: countdown.targetDate, from: now)
 
-                Spacer(minLength: 0)
+        // same rule as the app: boxes that would only show a leading zero are hidden
+        let showMonths = parts.months > 0
+        let showDays = showMonths || parts.days > 0
+        let showHours = showDays || parts.hours > 0
 
-                if countdown.showProgress {
-                    ProgressBarView(value: progress(of: countdown, at: now), isDone: isDone)
+        VStack(spacing: isFull ? 10 : 4) {
+            Text(countdown.title)
+                .font(.app(isFull ? 20 : 16))
+                .lineLimit(1)
+                // keeps a long title from running under the badge
+                .padding(.horizontal, 62)
+            Text(countdown.targetDate, format: dateFormat)
+                .font(.app(isFull ? 12 : 10))
+                .opacity(0.7)
+
+            Spacer(minLength: 0)
+
+            if isDone {
+                Text("YOU DID IT!").font(.app(isFull ? 20 : 16))
+            } else if isFull {
+                if showDays {
+                    HStack(spacing: 12) {
+                        if showMonths { TimeBox(value: parts.months, label: "MONTHS", isLarge: true) }
+                        TimeBox(value: parts.days, label: "DAYS", isLarge: true)
+                    }
+                }
+                HStack(spacing: 12) {
+                    if showHours { TimeBox(value: parts.hours, label: "HOURS", isLarge: true) }
+                    TimeBox(value: parts.minutes, label: "MINUTES", isLarge: true)
+                }
+            } else {
+                HStack(spacing: 10) {
+                    if showMonths { TimeBox(value: parts.months, label: "MONTHS", isLarge: false) }
+                    if showDays { TimeBox(value: parts.days, label: "DAYS", isLarge: false) }
+                    if showHours { TimeBox(value: parts.hours, label: "HOURS", isLarge: false) }
+                    TimeBox(value: parts.minutes, label: "MINUTES", isLarge: false)
                 }
             }
-            .foregroundStyle(.black)
-            .frame(maxWidth: .infinity, alignment: .leading)
 
-            VStack(spacing: 4) {
-                if isDone {
-                    Text("🎉").font(.system(size: 44))
-                    Text("YOU DID IT!")
-                        .font(.system(size: 11, weight: .bold, design: .rounded))
-                } else {
-                    NumberBox(value: "\(days)", size: 44)
-                    Text("\(daysLabel(days).uppercased()) LEFT")
-                        .font(.system(size: 11, weight: .bold, design: .rounded))
-                }
+            Spacer(minLength: 0)
+
+            if countdown.showProgress {
+                ProgressBarView(
+                    value: progress(of: countdown, at: now),
+                    isDone: isDone,
+                    height: isFull ? 28 : 18
+                )
             }
-            .foregroundStyle(.black)
-            .frame(width: 110)
+        }
+        .foregroundStyle(.black)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // the badge floats in the corner so it doesn't push the title off center
+        .overlay(alignment: .topTrailing) {
+            if !isDone { DaysLeftBadge(days: days) }
         }
     }
 
@@ -246,6 +307,48 @@ private struct MediumView: View {
         countdown.hasTime
             ? .dateTime.month(.abbreviated).day().year().hour().minute()
             : .dateTime.month(.abbreviated).day().year()
+    }
+}
+
+// one white number box with its label underneath, like the boxes on the app's card
+private struct TimeBox: View {
+    let value: Int
+    let label: String
+    let isLarge: Bool
+
+    var body: some View {
+        VStack(spacing: isLarge ? 5 : 3) {
+            Text("\(value)")
+                .font(.app(isLarge ? 24 : 15))
+                .minimumScaleFactor(0.6)
+                .lineLimit(1)
+                .frame(width: isLarge ? 72 : 50, height: isLarge ? 56 : 32)
+                .background(RoundedRectangle(cornerRadius: 10).fill(.white))
+                .overlay(RoundedRectangle(cornerRadius: 10).stroke(.black, lineWidth: 1))
+            Text(label)
+                .font(.app(isLarge ? 11 : 9))
+                .opacity(0.7)
+        }
+    }
+}
+
+// total days left, in the same yellow and green as the badge on the app's card
+private struct DaysLeftBadge: View {
+    let days: Int
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Image(systemName: "calendar")
+                .font(.system(size: 9))
+                .foregroundStyle(WidgetColors.badgeIcon)
+            Text(days == 0 ? "Today" : "\(days) \(daysLabel(days))")
+                .font(.app(10))
+                .foregroundStyle(.black)
+        }
+        .padding(.horizontal, 7)
+        .padding(.vertical, 3)
+        .background(RoundedRectangle(cornerRadius: 8).fill(WidgetColors.badgeBackground))
+        .overlay(RoundedRectangle(cornerRadius: 8).stroke(WidgetColors.badgeBorder, lineWidth: 1))
     }
 }
 
@@ -279,11 +382,11 @@ private struct CircularView: View {
         } else {
             VStack(spacing: -2) {
                 Text("\(days)")
-                    .font(.system(size: 20, weight: .bold, design: .rounded))
+                    .font(.app(20))
                     .minimumScaleFactor(0.5)
                     .widgetAccentable()
                 Text(daysLabel(days))
-                    .font(.system(size: 9, weight: .semibold, design: .rounded))
+                    .font(.app(9))
             }
         }
     }
@@ -297,18 +400,18 @@ private struct RectangularView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 1) {
             Text(countdown.title)
-                .font(.system(size: 15, weight: .bold, design: .rounded))
+                .font(.app(15))
                 .lineLimit(1)
                 .widgetAccentable()
             if isDone {
                 Text("YOU DID IT!")
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .font(.app(14))
             } else {
                 Text("\(days) \(daysLabel(days)) left")
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
+                    .font(.app(14))
             }
             Text(countdown.targetDate, format: .dateTime.month(.abbreviated).day().year())
-                .font(.system(size: 12, design: .rounded))
+                .font(.app(12))
                 .opacity(0.7)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -344,25 +447,18 @@ private struct NoCountdownView: View {
             }
         case .accessoryRectangular:
             VStack(alignment: .leading) {
-                Text("No countdowns yet").font(.system(size: 15, weight: .bold, design: .rounded))
-                Text("Add one in HabitPath").font(.system(size: 13, design: .rounded))
+                Text("No countdowns yet").font(.app(15))
+                Text("Add one in HabitPath").font(.app(13))
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         default:
             VStack(spacing: 6) {
                 Image(systemName: "hourglass").font(.system(size: 28))
                 Text("No countdowns yet")
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .font(.app(14))
                 Text("Add one in HabitPath")
-                    .font(.system(size: 12, design: .rounded))
+                    .font(.app(12))
                     .opacity(0.7)
-                #if DEBUG
-                // TEMP: what the widget actually read from the App Group
-                Text(CountdownStore.debugStatus())
-                    .font(.system(size: 8, design: .monospaced))
-                    .lineLimit(4)
-                    .minimumScaleFactor(0.5)
-                #endif
             }
             .multilineTextAlignment(.center)
             .foregroundStyle(.black)

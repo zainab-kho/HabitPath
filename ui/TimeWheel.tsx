@@ -4,34 +4,34 @@ import React, { useEffect, useMemo, useRef } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 
 const ITEM_HEIGHT = 36;
+const VISIBLE_ITEMS = 3;
+const WHEEL_HEIGHT = VISIBLE_ITEMS * ITEM_HEIGHT;
 
 interface Props {
     data: string[];
     selected: string;
-    /**
-     * wraps = how many times the wheel rolled past `wrapAfter` (+ forward, − backward).
-     * only passed when `wrapAfter` is set — hour wheels use it to flip AM/PM.
-     */
+    // called when the wheel stops on a new value.
+    // wraps is only sent when wrapAfter is set: how many times the wheel rolled past
+    // that point (positive going forward, negative going back)
     onSelect: (value: string, wraps: number) => void;
-    /** the value after which the wheel "wraps" — '11' for hours (11 → 12 flips AM/PM) */
+    // the last value before the wheel "wraps around". hour wheels pass '11',
+    // because going 11 -> 12 (or back) is when AM / PM should flip
     wrapAfter?: string;
-    /** endless wheel — on by default for anything longer than AM/PM */
+    // endless scrolling. on by default for anything longer than AM / PM
     loop?: boolean;
 }
 
-// flips AM ↔ PM — use as setMeridiem(toggleMeridiem) or toggleMeridiem(value)
+// flips AM <-> PM. works as setMeridiem(toggleMeridiem) or toggleMeridiem(value)
 export const toggleMeridiem = <T extends string>(m: T): T => (m === 'AM' ? 'PM' : 'AM') as T;
 
 export function TimeWheel({ data, selected, onSelect, wrapAfter, loop = data.length > 2 }: Props) {
     const scrollRef = useRef<ScrollView>(null);
 
-    const VISIBLE_ITEMS = 3;
-    const WHEEL_HEIGHT = VISIBLE_ITEMS * ITEM_HEIGHT;
-
-    // looping = the list repeated many times; we always sit in the middle copy
-    // and quietly jump back to it after every scroll, so you never hit an end
+    // an endless wheel is really the same list repeated many times. the wheel always
+    // rests in the middle copy and quietly jumps back there after every scroll,
+    // so you can keep scrolling either way without ever reaching an end
     const n = data.length;
-    const cycles = loop ? (Math.max(5, Math.ceil(240 / n)) | 1) : 1; // odd, so there's a true middle
+    const cycles = loop ? (Math.max(5, Math.ceil(240 / n)) | 1) : 1; // always odd, so there's a true middle copy
     const middle = Math.floor(cycles / 2) * n;
     const items = useMemo(
         () => (loop ? Array.from({ length: n * cycles }, (_, i) => data[i % n]) : data),
@@ -43,12 +43,14 @@ export function TimeWheel({ data, selected, onSelect, wrapAfter, loop = data.len
         return i < 0 ? -1 : middle + i;
     };
 
-    // the item index the wheel is currently resting on
+    // where the wheel is resting right now
     const currentIndex = useRef(Math.max(0, indexOfValue(selected)));
     const mounted = useRef(false);
-    // the raw resting index of the current gesture — iOS often reports a stop twice
-    // (finger lift + snap finish); the 2nd report can arrive after we've recentered,
-    // and counting it again looked like a full lap → AM/PM flipped by mistake
+
+    // ios often reports the same stop twice (once when the finger lifts, once when the snap
+    // finishes). the second report can arrive after the wheel has jumped back to the middle,
+    // which used to look like a full lap and flipped AM / PM by mistake. remembering the last
+    // stop lets us ignore the repeat
     const lastSettled = useRef<number | null>(null);
 
     const scrollToIndex = (index: number, animated: boolean) => {
@@ -56,7 +58,7 @@ export function TimeWheel({ data, selected, onSelect, wrapAfter, loop = data.len
         scrollRef.current?.scrollTo({ y: index * ITEM_HEIGHT, animated });
     };
 
-    // keep the wheel on `selected` when it changes (mount, AM/PM flip, presets, edits)
+    // keep the wheel on the selected value whenever it changes (first render, AM / PM flip, presets)
     useEffect(() => {
         const i = data.indexOf(selected);
         if (i < 0) return;
@@ -64,12 +66,12 @@ export function TimeWheel({ data, selected, onSelect, wrapAfter, loop = data.len
         if (!loop) {
             scrollToIndex(i, mounted.current);
         } else if (items[currentIndex.current] === selected) {
-            // already showing it (the user just scrolled here) — silently recenter
+            // already showing it because the user just scrolled here. quietly jump back to the middle copy
             if (currentIndex.current !== middle + i) scrollToIndex(middle + i, false);
         } else if (!mounted.current) {
             scrollToIndex(middle + i, false);
         } else {
-            // changed from outside — roll to the nearest copy instead of jumping
+            // changed from outside (like a preset button). roll to the nearest copy instead of jumping
             const base = currentIndex.current - (currentIndex.current % n) + i;
             const nearest = [base - n, base, base + n].reduce((a, b) =>
                 Math.abs(b - currentIndex.current) < Math.abs(a - currentIndex.current) ? b : a
@@ -80,21 +82,21 @@ export function TimeWheel({ data, selected, onSelect, wrapAfter, loop = data.len
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [selected, data, loop]);
 
-    // which "lap" an index is on, counted from the wrap point (11 | 12 for hours)
+    // which lap of the wheel an index is on, counted from the wrap point (between 11 and 12 for hours)
     const wrapPosition = wrapAfter !== undefined ? data.indexOf(wrapAfter) : -1;
     const lap = (index: number) => Math.floor((index - wrapPosition - 1) / n);
 
-    // commits whichever value the wheel came to rest on
+    // saves whichever value the wheel came to rest on
     const settle = (offsetY: number) => {
         const index = Math.max(0, Math.min(items.length - 1, Math.round(offsetY / ITEM_HEIGHT)));
-        if (index === lastSettled.current) return; // same stop reported again — already handled
+        if (index === lastSettled.current) return; // the same stop reported twice, already handled
         lastSettled.current = index;
         const value = items[index];
         const wraps = loop && wrapPosition >= 0 ? lap(index) - lap(currentIndex.current) : 0;
         currentIndex.current = index;
 
         if (value === selected && loop) {
-            // same value (or a full lap) — the effect won't run, so recenter here
+            // same value as before (or a full lap), so the effect above won't run. jump back to the middle here
             scrollToIndex(middle + data.indexOf(value), false);
         }
         if (value !== selected || wraps !== 0) {
@@ -125,11 +127,11 @@ export function TimeWheel({ data, selected, onSelect, wrapAfter, loop = data.len
                 contentContainerStyle={{
                     paddingVertical: WHEEL_HEIGHT / 2 - ITEM_HEIGHT / 2,
                 }}
-                // a new drag is a new gesture — its stop should always count
+                // a new drag is a new scroll, so its stop should always count
                 onScrollBeginDrag={() => { lastSettled.current = null; }}
                 onMomentumScrollEnd={e => settle(e.nativeEvent.contentOffset.y)}
-                // a slow drag that doesn't fling never fires onMomentumScrollEnd,
-                // so the wheel would snap into place without committing the value
+                // a slow drag with no fling never fires onMomentumScrollEnd, so without this
+                // the wheel would snap into place but the value would never be saved
                 onScrollEndDrag={e => {
                     const { velocity, contentOffset } = e.nativeEvent;
                     if (!velocity || Math.abs(velocity.y) < 0.1) settle(contentOffset.y);

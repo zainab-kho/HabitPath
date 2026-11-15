@@ -1,6 +1,7 @@
 // @/targets/countdown-widget/CountdownData.swift
 // reads the countdown list the app writes (lib/countdown/widgetSync.ts) out of the shared App Group
 import AppIntents
+import CoreText
 import Foundation
 import SwiftUI
 
@@ -33,49 +34,23 @@ struct SharedCountdown: Codable, Identifiable, Hashable {
 }
 
 enum CountdownStore {
-    // soonest first
+    // every countdown the app has saved, soonest first.
+    // comes back empty if nothing is saved yet or the shared storage can't be opened
     static func all() -> [SharedCountdown] {
-        load().countdowns
-    }
+        guard
+            let defaults = UserDefaults(suiteName: appGroupId),
+            let json = defaults.string(forKey: countdownsKey),
+            let data = json.data(using: .utf8),
+            let rawList = try? JSONSerialization.jsonObject(with: data) as? [Any]
+        else { return [] }
 
-    // what the widget saw — shown under "No countdowns yet" in debug builds
-    static func debugStatus() -> String {
-        load().status
-    }
-
-    private static func load() -> (countdowns: [SharedCountdown], status: String) {
-        guard let defaults = UserDefaults(suiteName: appGroupId) else {
-            return ([], "no access to \(appGroupId)")
-        }
-        // the app stores a JSON string; accept raw Data too just in case
-        let data: Data
-        if let json = defaults.string(forKey: countdownsKey), let d = json.data(using: .utf8) {
-            data = d
-        } else if let d = defaults.data(forKey: countdownsKey) {
-            data = d
-        } else {
-            let keys = defaults.dictionaryRepresentation().keys.filter { !$0.hasPrefix("Apple") && !$0.hasPrefix("NS") }
-            return ([], "key '\(countdownsKey)' not found (keys: \(keys.sorted().joined(separator: ",")))")
+        // decoded one at a time, so a single countdown that can't be read doesn't hide the rest
+        let countdowns = rawList.compactMap { item -> SharedCountdown? in
+            guard let itemData = try? JSONSerialization.data(withJSONObject: item) else { return nil }
+            return try? JSONDecoder().decode(SharedCountdown.self, from: itemData)
         }
 
-        // decode one at a time so a single bad entry can't hide the rest
-        guard let raw = try? JSONSerialization.jsonObject(with: data) as? [Any] else {
-            return ([], "not a JSON list (\(data.count) bytes)")
-        }
-        var list: [SharedCountdown] = []
-        var lastError = ""
-        for item in raw {
-            do {
-                let itemData = try JSONSerialization.data(withJSONObject: item)
-                list.append(try JSONDecoder().decode(SharedCountdown.self, from: itemData))
-            } catch {
-                lastError = "\(error)"
-            }
-        }
-        let status = lastError.isEmpty
-            ? "read \(list.count) of \(raw.count)"
-            : "read \(list.count) of \(raw.count) — \(lastError.prefix(120))"
-        return (list.sorted { $0.targetMs < $1.targetMs }, status)
+        return countdowns.sorted { $0.targetMs < $1.targetMs }
     }
 }
 
@@ -97,6 +72,27 @@ func progress(of countdown: SharedCountdown, at now: Date) -> Double {
     let total = countdown.targetDate.timeIntervalSince(countdown.createdDate)
     guard total > 0 else { return 1 }
     return min(1, max(0, now.timeIntervalSince(countdown.createdDate) / total))
+}
+
+// the time left, split into the boxes the card-style widgets show.
+// calendar does the same real-month math as getCountdownParts in the app
+struct TimeParts {
+    let months: Int
+    let days: Int
+    let hours: Int
+    let minutes: Int
+}
+
+func timeParts(until target: Date, from now: Date) -> TimeParts {
+    guard target > now else { return TimeParts(months: 0, days: 0, hours: 0, minutes: 0) }
+
+    let parts = Calendar.current.dateComponents([.month, .day, .hour, .minute], from: now, to: target)
+    return TimeParts(
+        months: max(0, parts.month ?? 0),
+        days: max(0, parts.day ?? 0),
+        hours: max(0, parts.hour ?? 0),
+        minutes: max(0, parts.minute ?? 0)
+    )
 }
 
 func daysLabel(_ days: Int) -> String {
@@ -148,12 +144,44 @@ struct SelectCountdownIntent: WidgetConfigurationIntent {
     var countdown: CountdownEntity?
 }
 
+// ─── font ────────────────────────────────────────────────────────────────────
+// the app's body font (apercu medium, the same one globalStyles.body uses).
+// the font file sits in this folder so it gets bundled with the widget
+
+enum AppFont {
+    // the font's internal name, not its file name
+    static let name = "ApercuPro-Medium"
+    private static let fileName = "apercu_medium_pro"
+
+    // widgets can't see the fonts the app loads, so the widget registers its own copy.
+    // a static let only ever runs once, no matter how many times register() is called
+    private static let isRegistered: Bool = {
+        guard let url = Bundle.main.url(forResource: fileName, withExtension: "otf") else { return false }
+        return CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil)
+    }()
+
+    static func register() {
+        _ = isRegistered
+    }
+}
+
+extension Font {
+    // the app font at a given size. if the font can't be loaded, ios falls back to its own font
+    static func app(_ size: CGFloat) -> Font {
+        AppFont.register()
+        return .custom(AppFont.name, fixedSize: size)
+    }
+}
+
 // ─── colors ──────────────────────────────────────────────────────────────────
 
 enum WidgetColors {
     static let defaultCard = Color(hex: "#ff6868")   // PAGE.countdown.primary[0]
     static let progress = Color(hex: "#9BDEAC")      // COLORS.Primary
     static let progressDone = Color(hex: "#F682A4")  // COLORS.PrimaryLight
+    static let badgeBackground = Color(hex: "#E4E986") // COLORS.RewardsBackground
+    static let badgeBorder = Color(hex: "#7FD1AE")     // COLORS.RewardsAccent
+    static let badgeIcon = Color(hex: "#FF7F50")       // COLORS.Rewards
 }
 
 extension Color {

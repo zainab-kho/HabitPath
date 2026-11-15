@@ -227,8 +227,10 @@ function buildReminders(habits: Habit[], resetHour: number, resetMinute: number)
 }
 
 // ─── countdowns ──────────────────────────────────────────────────────────────
-// countdown reminders ride along with every habit sync, so they share the 64-notification
-// budget and keep getting topped up for the next week whenever habits load
+// countdown reminders are scheduled together with the habit ones, so they share the
+// 64-notification limit and get topped up for the next week every time habits load
+
+// just the parts of a countdown the scheduler needs, saved on the device
 
 type CachedCountdown = Pick<Countdown, 'id' | 'title' | 'targetAt' | 'hasTime' | 'remindMe' | 'reminderTime'>;
 
@@ -260,7 +262,7 @@ function buildCountdownReminders(countdowns: CachedCountdown[]): PendingNotifica
         for (let offset = 0; offset < DAYS_AHEAD; offset++) {
             const fireDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset, hour, minute);
             if (fireDate <= now) continue;
-            // nothing after the big day — and on the day itself, not after the exact time if one was set
+            // stop once the day has passed. on the day itself, stop at the exact time if one was set
             if (fireDate.getTime() >= targetDay.getTime() + 86400000) break;
             if (countdown.hasTime && fireDate >= target) break;
 
@@ -330,7 +332,7 @@ export async function resyncRemindersForUser(userId: string): Promise<void> {
 // syncs run one at a time so overlapping calls can't double-schedule
 let syncQueue: Promise<void> = Promise.resolve();
 
-// the last habit list we synced with — lets a countdown change resync without refetching habits
+// the last habit list we synced with, so a countdown change can resync without fetching habits again
 let lastHabitSync: { habits: Habit[]; resetHour: number; resetMinute: number } | null = null;
 
 export function syncHabitReminders(habits: Habit[], resetHour: number, resetMinute: number): Promise<void> {
@@ -342,7 +344,7 @@ export function syncHabitReminders(habits: Habit[], resetHour: number, resetMinu
     return syncQueue;
 }
 
-// called whenever the countdown list changes — saves what the scheduler needs, then resyncs
+// called whenever the countdown list changes. saves what the scheduler needs, then reschedules everything
 export async function syncCountdownReminders(countdowns: Countdown[], userId: string): Promise<void> {
     const cached: CachedCountdown[] = countdowns.map(({ id, title, targetAt, hasTime, remindMe, reminderTime }) =>
         ({ id, title, targetAt, hasTime, remindMe, reminderTime })

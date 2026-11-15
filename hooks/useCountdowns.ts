@@ -5,11 +5,9 @@ import { syncCountdowns } from '@/lib/countdown/widgetSync';
 import { loadCountdowns } from '@/lib/supabase/queries/countdowns';
 import { Countdown } from '@/types/Countdown';
 
-/**
- * the countdown list page loads through here every time it's focused —
- * so after creating / editing / deleting on NewCountdown, coming back
- * reloads the full list and hands it to the widget in one place.
- */
+// loads the countdown list for the countdown page.
+// the page reloads every time it comes into focus, so coming back from creating,
+// editing or deleting a countdown always shows (and syncs) the latest list
 export function useCountdowns(userId?: string) {
     const [countdowns, setCountdowns] = useState<Countdown[]>([]);
     const [loading, setLoading] = useState(true);
@@ -20,10 +18,12 @@ export function useCountdowns(userId?: string) {
             setLoading(false);
             return;
         }
+
         try {
             const fresh = await loadCountdowns(userId);
             setCountdowns(fresh);
-            // reminders (and later the widget) always get the FULL list, never a partial one
+
+            // keep the widget and reminders in step. not awaited, so the page never waits on it
             syncCountdowns(fresh, userId).catch(err => console.error('Error syncing countdowns:', err));
         } catch (err) {
             console.error('Error loading countdowns:', err);

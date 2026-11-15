@@ -11,17 +11,57 @@ import ShadowBox from '@/ui/ShadowBox';
 
 interface CountdownCardProps {
     countdown: Countdown;
+    // the current time, passed in so every card on the page ticks off the same clock
     now: Date;
     onPress?: () => void;
 }
 
+// one white number box with its label underneath
 function TimeBox({ value, label }: { value: number; label: string }) {
     return (
-        <View style={styles.unit}>
-            <View style={styles.box}>
+        <View style={styles.timeUnit}>
+            <View style={styles.timeBox}>
                 <Text style={globalStyles.body}>{value}</Text>
             </View>
             <Text style={globalStyles.label}>{label}</Text>
+        </View>
+    );
+}
+
+// total days left, in the same style as the rewards badge on a habit
+function DaysLeftBadge({ daysLeft }: { daysLeft: number }) {
+    const label = daysLeft === 0 ? 'Today' : `${daysLeft} ${daysLeft === 1 ? 'day' : 'days'}`;
+
+    return (
+        <View style={styles.daysBadge}>
+            <Image source={SYSTEM_ICONS.calendar} style={[styles.badgeIcon, { tintColor: COLORS.Rewards }]} />
+            <Text style={styles.badgeText}>{label}</Text>
+        </View>
+    );
+}
+
+// how far along the countdown is, in the same style as the progress bar on the habits page
+function CountdownProgressBar({ percent, isDone }: { percent: number; isDone: boolean }) {
+    return (
+        <View style={styles.progressOuter}>
+            <View style={styles.progressBar}>
+                {percent > 0 && (
+                    <View
+                        style={[
+                            styles.progressFill,
+                            {
+                                width: `${percent}%`,
+                                backgroundColor: isDone ? COLORS.PrimaryLight : COLORS.Primary,
+                            },
+                        ]}
+                    />
+                )}
+
+                <View style={styles.progressTextContainer}>
+                    {/* rounded down so it never says 100% before the day actually arrives */}
+                    <Text style={styles.progressText}>{isDone ? 100 : Math.floor(percent)}%</Text>
+                </View>
+            </View>
         </View>
     );
 }
@@ -30,15 +70,12 @@ function CountdownCardBase({ countdown, now, onPress }: CountdownCardProps) {
     const target = new Date(countdown.targetAt);
     const parts = getCountdownParts(target, now);
 
+    // boxes that would only show a leading zero are hidden:
+    // no months box at 0 months, no top row at 0 months and 0 days,
+    // and after that no hours box at 0 hours. minutes and seconds always show
     const showMonths = parts.months > 0;
     const showDaysRow = showMonths || parts.days > 0;
     const showHours = showDaysRow || parts.hours > 0;
-
-    const progressPct = getProgressPct(new Date(countdown.createdAt), target, now);
-
-    // total calendar days left, for the badge
-    const daysLeft = getDaysLeft(target, now);
-    const daysLeftLabel = daysLeft === 0 ? 'Today' : `${daysLeft} ${daysLeft === 1 ? 'day' : 'days'}`;
 
     const dateLabel = target.toLocaleDateString(undefined, {
         month: 'short',
@@ -54,40 +91,25 @@ function CountdownCardBase({ countdown, now, onPress }: CountdownCardProps) {
                 contentBorderRadius={25}
                 shadowBorderRadius={30}
             >
-                <View style={{ padding: 20, alignItems: 'center', }}>
-                    {/* days-left badge — same style as the habit rewards badge.
-                        absolutely positioned so the title stays centered */}
-                    {!parts.isDone && (
-                        <View style={styles.daysBadge}>
-                            <Image
-                                source={SYSTEM_ICONS.calendar}
-                                style={[styles.badgeIcon, { tintColor: COLORS.Rewards }]}
-                            />
-                            <Text style={styles.badgeText}>{daysLeftLabel}</Text>
-                        </View>
-                    )}
+                <View style={styles.card}>
+                    {/* the badge floats in the corner so it doesn't push the title off center */}
+                    {!parts.isDone && <DaysLeftBadge daysLeft={getDaysLeft(target, now)} />}
 
-                    {/* side padding keeps long titles from running under the badge */}
-                    <Text style={[globalStyles.h4, { marginBottom: 2, paddingHorizontal: 70, textAlign: 'center' }]}>
-                        {countdown.title}
-                    </Text>
+                    <Text style={[globalStyles.h4, styles.title]}>{countdown.title}</Text>
                     <Text style={[globalStyles.label, { marginBottom: 10 }]}>{dateLabel}</Text>
 
                     {parts.isDone ? (
                         <Text style={globalStyles.body}>YOU DID IT!</Text>
                     ) : (
                         <>
-                            {/* leading zeros are hidden: 0 months → no MONTHS box,
-                                0 months + 0 days → no top row, and then 0 hours → no HOURS box.
-                                minutes + seconds always show */}
                             {showDaysRow && (
-                                <View style={{ flexDirection: 'row', marginBottom: 15 }}>
+                                <View style={[styles.timeRow, { marginBottom: 15 }]}>
                                     {showMonths && <TimeBox value={parts.months} label="MONTHS" />}
                                     <TimeBox value={parts.days} label="DAYS" />
                                 </View>
                             )}
 
-                            <View style={{ flexDirection: 'row' }}>
+                            <View style={styles.timeRow}>
                                 {showHours && <TimeBox value={parts.hours} label="HOURS" />}
                                 <TimeBox value={parts.minutes} label="MINUTES" />
                                 <TimeBox value={parts.seconds} label="SECONDS" />
@@ -95,29 +117,11 @@ function CountdownCardBase({ countdown, now, onPress }: CountdownCardProps) {
                         </>
                     )}
 
-                    {/* progress since the countdown was created — same look as the habits bar */}
                     {countdown.showProgress && (
-                        <View style={styles.progressOuter}>
-                            <View style={styles.progressBar}>
-                                {progressPct > 0 && (
-                                    <View
-                                        style={[
-                                            styles.progressFill,
-                                            {
-                                                width: `${progressPct}%`,
-                                                backgroundColor: parts.isDone ? COLORS.PrimaryLight : COLORS.Primary,
-                                            },
-                                        ]}
-                                    />
-                                )}
-                                <View style={styles.progressTextContainer}>
-                                    {/* floor so it never says 100% before it's actually here */}
-                                    <Text style={styles.progressText}>
-                                        {parts.isDone ? 100 : Math.floor(progressPct)}%
-                                    </Text>
-                                </View>
-                            </View>
-                        </View>
+                        <CountdownProgressBar
+                            percent={getProgressPct(new Date(countdown.createdAt), target, now)}
+                            isDone={parts.isDone}
+                        />
                     )}
                 </View>
             </ShadowBox>
@@ -125,10 +129,41 @@ function CountdownCardBase({ countdown, now, onPress }: CountdownCardProps) {
     );
 }
 
+// memo so a card only re-renders when its own countdown or the clock changes
 export const CountdownCard = memo(CountdownCardBase);
 
 const styles = StyleSheet.create({
-    // matches badge + pointsBadge in components/habits/HabitItem.tsx
+    card: {
+        padding: 20,
+        alignItems: 'center',
+    },
+    // the side padding keeps a long title from running under the badge
+    title: {
+        marginBottom: 2,
+        paddingHorizontal: 70,
+        textAlign: 'center',
+    },
+
+    // time boxes
+    timeRow: {
+        flexDirection: 'row',
+    },
+    timeUnit: {
+        flexDirection: 'column',
+        marginHorizontal: 5,
+        alignItems: 'center',
+    },
+    timeBox: {
+        padding: 10,
+        marginBottom: 5,
+        alignItems: 'center',
+        borderWidth: 1,
+        borderRadius: 10,
+        width: 50,
+        backgroundColor: '#fff',
+    },
+
+    // days-left badge (copied from badge + pointsBadge in components/habits/HabitItem.tsx)
     daysBadge: {
         position: 'absolute',
         top: 15,
@@ -143,7 +178,16 @@ const styles = StyleSheet.create({
         backgroundColor: COLORS.RewardsBackground,
         borderColor: COLORS.RewardsAccent,
     },
-    // progress bar — matches components/habits/ProgressBar.tsx
+    badgeIcon: {
+        width: 12,
+        height: 12,
+    },
+    badgeText: {
+        fontSize: 10,
+        fontFamily: 'label',
+    },
+
+    // progress bar (copied from components/habits/ProgressBar.tsx)
     progressOuter: {
         alignSelf: 'stretch',
         marginTop: 20,
@@ -175,27 +219,5 @@ const styles = StyleSheet.create({
         fontFamily: 'label',
         color: '#000',
         fontWeight: '600',
-    },
-    badgeIcon: {
-        width: 12,
-        height: 12,
-    },
-    badgeText: {
-        fontSize: 10,
-        fontFamily: 'label',
-    },
-    unit: {
-        flexDirection: 'column',
-        marginHorizontal: 5,
-        alignItems: 'center',
-    },
-    box: {
-        padding: 10,
-        marginBottom: 5,
-        alignItems: 'center',
-        borderWidth: 1,
-        borderRadius: 10,
-        width: 50,
-        backgroundColor: '#fff',
     },
 });

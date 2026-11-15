@@ -74,7 +74,7 @@ function CountdownCardBase({ countdown, now, onPress }: CountdownCardProps) {
                     <Text style={[globalStyles.label, { marginBottom: 10 }]}>{dateLabel}</Text>
 
                     {parts.isDone ? (
-                        <Text style={globalStyles.body}>It's here! 🎉</Text>
+                        <Text style={globalStyles.body}>YOU DID IT!</Text>
                     ) : (
                         <>
                             {/* leading zeros are hidden: 0 months → no MONTHS box,

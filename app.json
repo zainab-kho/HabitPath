@@ -13,7 +13,13 @@
       "bundleIdentifier": "com.zainabkho.habitpath",
       "infoPlist": {
         "ITSAppUsesNonExemptEncryption": false
-      }
+      },
+      "entitlements": {
+        "com.apple.security.application-groups": [
+          "group.com.zainabkho.habitpath"
+        ]
+      },
+      "appleTeamId": "6Q4V22CZL4"
     },
     "android": {
       "adaptiveIcon": {
@@ -42,7 +48,8 @@
       ],
       "expo-font",
       "expo-secure-store",
-      "expo-notifications"
+      "expo-notifications",
+      "@bacons/apple-targets"
     ],
     "experiments": {
       "typedRoutes": true,

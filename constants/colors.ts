@@ -98,6 +98,10 @@ export const PAGE = {
     primary: ['#A2A5F0', '#F494B2', '#A2ACBD'],
     mealItem: ['#FCFCD4', '#FCFCD4']
   },
+  countdown: {
+    background: ['#ec9c9c', '#ec9c9c'],
+    primary: ['#ff6868', '#947591']
+  },
   settings: {
     background: ['#fdfbfb', '#ebedee'],
     pin: ['#55d7b0ff']

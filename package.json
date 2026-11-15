@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@10play/tentap-editor": "^1.0.1",
+    "@bacons/apple-targets": "^5.0.0",
     "@expo/vector-icons": "^15.0.3",
     "@noble/ciphers": "^2.2.0",
     "@noble/hashes": "^2.2.0",

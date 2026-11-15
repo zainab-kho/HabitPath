@@ -356,6 +356,13 @@ private struct NoCountdownView: View {
                 Text("Add one in HabitPath")
                     .font(.system(size: 12, design: .rounded))
                     .opacity(0.7)
+                #if DEBUG
+                // TEMP: what the widget actually read from the App Group
+                Text(CountdownStore.debugStatus())
+                    .font(.system(size: 8, design: .monospaced))
+                    .lineLimit(4)
+                    .minimumScaleFactor(0.5)
+                #endif
             }
             .multilineTextAlignment(.center)
             .foregroundStyle(.black)

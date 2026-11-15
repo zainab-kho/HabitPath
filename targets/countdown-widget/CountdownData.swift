@@ -35,13 +35,47 @@ struct SharedCountdown: Codable, Identifiable, Hashable {
 enum CountdownStore {
     // soonest first
     static func all() -> [SharedCountdown] {
-        guard
-            let defaults = UserDefaults(suiteName: appGroupId),
-            let json = defaults.string(forKey: countdownsKey),
-            let data = json.data(using: .utf8),
-            let list = try? JSONDecoder().decode([SharedCountdown].self, from: data)
-        else { return [] }
-        return list.sorted { $0.targetMs < $1.targetMs }
+        load().countdowns
+    }
+
+    // what the widget saw — shown under "No countdowns yet" in debug builds
+    static func debugStatus() -> String {
+        load().status
+    }
+
+    private static func load() -> (countdowns: [SharedCountdown], status: String) {
+        guard let defaults = UserDefaults(suiteName: appGroupId) else {
+            return ([], "no access to \(appGroupId)")
+        }
+        // the app stores a JSON string; accept raw Data too just in case
+        let data: Data
+        if let json = defaults.string(forKey: countdownsKey), let d = json.data(using: .utf8) {
+            data = d
+        } else if let d = defaults.data(forKey: countdownsKey) {
+            data = d
+        } else {
+            let keys = defaults.dictionaryRepresentation().keys.filter { !$0.hasPrefix("Apple") && !$0.hasPrefix("NS") }
+            return ([], "key '\(countdownsKey)' not found (keys: \(keys.sorted().joined(separator: ",")))")
+        }
+
+        // decode one at a time so a single bad entry can't hide the rest
+        guard let raw = try? JSONSerialization.jsonObject(with: data) as? [Any] else {
+            return ([], "not a JSON list (\(data.count) bytes)")
+        }
+        var list: [SharedCountdown] = []
+        var lastError = ""
+        for item in raw {
+            do {
+                let itemData = try JSONSerialization.data(withJSONObject: item)
+                list.append(try JSONDecoder().decode(SharedCountdown.self, from: itemData))
+            } catch {
+                lastError = "\(error)"
+            }
+        }
+        let status = lastError.isEmpty
+            ? "read \(list.count) of \(raw.count)"
+            : "read \(list.count) of \(raw.count) — \(lastError.prefix(120))"
+        return (list.sorted { $0.targetMs < $1.targetMs }, status)
     }
 }
 

@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@10play/tentap-editor": "^1.0.1",
-    "@bacons/apple-targets": "^5.0.0",
+    "@bacons/apple-targets": "^4.0.7",
     "@expo/vector-icons": "^15.0.3",
     "@noble/ciphers": "^2.2.0",
     "@noble/hashes": "^2.2.0",
@@ -23,6 +23,7 @@
     "@react-navigation/native": "^7.1.8",
     "@supabase/supabase-js": "^2.95.2",
     "expo": "~54.0.32",
+    "expo-build-properties": "~1.0.10",
     "expo-clipboard": "~8.0.8",
     "expo-constants": "~18.0.13",
     "expo-dev-client": "~6.0.20",
@@ -68,5 +69,10 @@
     "eslint-config-expo": "~10.0.0",
     "typescript": "~5.9.2"
   },
-  "private": true
+  "private": true,
+  "overrides": {
+    "expo": "~54.0.32",
+    "expo-router": "~6.0.22",
+    "@expo/dom-webview": "~0.2.0"
+  }
 }

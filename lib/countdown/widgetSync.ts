@@ -31,6 +31,9 @@ function getWidgetStorage() {
 // writes every countdown into the App Group for the widget, then asks iOS to redraw it
 function syncWidget(countdowns: Countdown[]) {
     const widgetStorage = getWidgetStorage();
+    // the JS package silently no-ops when the native module isn't in the build — log which one ran
+    const hasNative = !!(globalThis as any).expo?.modules?.ExtensionStorage;
+    if (__DEV__) console.log(`[widget] syncing ${countdowns.length} countdown(s) — native module ${hasNative ? 'found' : 'MISSING'}`);
     if (!widgetStorage) return;
 
     // shape must match SharedCountdown in CountdownData.swift

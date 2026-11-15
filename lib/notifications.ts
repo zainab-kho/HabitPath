@@ -9,7 +9,10 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 
+import { getDaysLeft } from '@/lib/countdown/countdownMath';
 import { getResetTime } from '@/lib/supabase/queries';
+import { STORAGE_KEYS } from '@/storage/keys';
+import { Countdown } from '@/types/Countdown';
 import { loadHabitsFromSupabase } from '@/lib/supabase/queries/habit';
 import { Habit } from '@/types/Habit';
 import { getHabitDate, getWeekDatesForDate } from '@/utils/dateUtils';
@@ -17,6 +20,7 @@ import { isHabitActiveToday } from '@/utils/habitUtils';
 
 const ID_PREFIX = 'habit-reminder:';
 const NUDGE_PREFIX = 'daily-nudge:';
+const COUNTDOWN_PREFIX = 'countdown-reminder:';
 const ANDROID_CHANNEL_ID = 'habit-reminders';
 // how far ahead to schedule; the app re-syncs on every habit load
 const DAYS_AHEAD = 7;
@@ -222,17 +226,73 @@ function buildReminders(habits: Habit[], resetHour: number, resetMinute: number)
     return reminders;
 }
 
+// ─── countdowns ──────────────────────────────────────────────────────────────
+// countdown reminders ride along with every habit sync, so they share the 64-notification
+// budget and keep getting topped up for the next week whenever habits load
+
+type CachedCountdown = Pick<Countdown, 'id' | 'title' | 'targetAt' | 'hasTime' | 'remindMe' | 'reminderTime'>;
+
+async function getCachedCountdowns(): Promise<CachedCountdown[]> {
+    try {
+        const stored = await AsyncStorage.getItem(STORAGE_KEYS.COUNTDOWNS_CACHE);
+        return stored ? JSON.parse(stored) : [];
+    } catch {
+        return [];
+    }
+}
+
+function countdownText(title: string, daysLeft: number): { title: string; body: string } {
+    if (daysLeft === 0) return { title, body: "It's today! 🎉" };
+    if (daysLeft === 1) return { title, body: 'Tomorrow! 1 day to go.' };
+    return { title, body: `${daysLeft} days to go!` };
+}
+
+function buildCountdownReminders(countdowns: CachedCountdown[]): PendingNotification[] {
+    const now = new Date();
+    const reminders: PendingNotification[] = [];
+
+    for (const countdown of countdowns) {
+        if (!countdown.remindMe || !countdown.reminderTime) continue;
+        const target = new Date(countdown.targetAt);
+        const targetDay = new Date(target.getFullYear(), target.getMonth(), target.getDate());
+        const [hour, minute] = countdown.reminderTime.split(':').map(Number);
+
+        for (let offset = 0; offset < DAYS_AHEAD; offset++) {
+            const fireDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() + offset, hour, minute);
+            if (fireDate <= now) continue;
+            // nothing after the big day — and on the day itself, not after the exact time if one was set
+            if (fireDate.getTime() >= targetDay.getTime() + 86400000) break;
+            if (countdown.hasTime && fireDate >= target) break;
+
+            const dayKey = `${fireDate.getFullYear()}-${fireDate.getMonth() + 1}-${fireDate.getDate()}`;
+            reminders.push({
+                id: `${COUNTDOWN_PREFIX}${countdown.id}:${dayKey}`,
+                fireDate,
+                ...countdownText(countdown.title, getDaysLeft(target, fireDate)),
+                data: { countdownId: countdown.id },
+            });
+        }
+    }
+
+    return reminders;
+}
+
 async function doSync(habits: Habit[], resetHour: number, resetMinute: number) {
     const scheduled = await Notifications.getAllScheduledNotificationsAsync();
     await Promise.all(
         scheduled
-            .filter(n => n.identifier.startsWith(ID_PREFIX) || n.identifier.startsWith(NUDGE_PREFIX))
+            .filter(n =>
+                n.identifier.startsWith(ID_PREFIX) ||
+                n.identifier.startsWith(NUDGE_PREFIX) ||
+                n.identifier.startsWith(COUNTDOWN_PREFIX)
+            )
             .map(n => Notifications.cancelScheduledNotificationAsync(n.identifier))
     );
 
     const pending = [
         ...buildReminders(habits, resetHour, resetMinute),
         ...buildDailyNudges(habits, resetHour, resetMinute, await getNudgePrefs()),
+        ...buildCountdownReminders(await getCachedCountdowns()),
     ]
         .sort((a, b) => a.fireDate.getTime() - b.fireDate.getTime())
         .slice(0, MAX_SCHEDULED);
@@ -270,10 +330,29 @@ export async function resyncRemindersForUser(userId: string): Promise<void> {
 // syncs run one at a time so overlapping calls can't double-schedule
 let syncQueue: Promise<void> = Promise.resolve();
 
+// the last habit list we synced with — lets a countdown change resync without refetching habits
+let lastHabitSync: { habits: Habit[]; resetHour: number; resetMinute: number } | null = null;
+
 export function syncHabitReminders(habits: Habit[], resetHour: number, resetMinute: number): Promise<void> {
     if (!isSupported) return Promise.resolve();
+    lastHabitSync = { habits, resetHour, resetMinute };
     syncQueue = syncQueue
         .then(() => doSync(habits, resetHour, resetMinute))
         .catch(err => console.error('Error syncing habit reminders:', err));
     return syncQueue;
+}
+
+// called whenever the countdown list changes — saves what the scheduler needs, then resyncs
+export async function syncCountdownReminders(countdowns: Countdown[], userId: string): Promise<void> {
+    const cached: CachedCountdown[] = countdowns.map(({ id, title, targetAt, hasTime, remindMe, reminderTime }) =>
+        ({ id, title, targetAt, hasTime, remindMe, reminderTime })
+    );
+    await AsyncStorage.setItem(STORAGE_KEYS.COUNTDOWNS_CACHE, JSON.stringify(cached));
+    if (!isSupported) return;
+
+    if (lastHabitSync) {
+        await syncHabitReminders(lastHabitSync.habits, lastHabitSync.resetHour, lastHabitSync.resetMinute);
+    } else {
+        await resyncRemindersForUser(userId);
+    }
 }

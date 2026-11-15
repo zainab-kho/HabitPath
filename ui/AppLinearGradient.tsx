@@ -17,6 +17,7 @@ type GradientPath =
   | 'assignments.background'
   | 'assignments.backgroundAssignment'
   | 'mealPlan.background'
+  | 'countdown.background'
   | 'settings.background'
   | 'rewards.background'
   | 'stats.background';

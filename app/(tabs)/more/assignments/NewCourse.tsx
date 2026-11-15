@@ -8,7 +8,7 @@ import { AppLinearGradient } from '@/ui/AppLinearGradient';
 import PageContainer from '@/ui/PageContainer';
 import PageHeader from '@/ui/PageHeader';
 import ShadowBox from '@/ui/ShadowBox';
-import { TimeWheel } from '@/ui/TimeWheel';
+import { TimeWheel, toggleMeridiem } from '@/ui/TimeWheel';
 import { useRouter } from 'expo-router';
 import { Alert, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
 
@@ -276,7 +276,7 @@ export default function NewCourse() {
 
                                 {hourTimeWheel && (
                                     <View style={{ flexDirection: 'row', alignSelf: 'center' }}>
-                                        <TimeWheel data={HOURS} selected={startHour} onSelect={setStartHour} />
+                                        <TimeWheel data={HOURS} selected={startHour} wrapAfter="11" onSelect={(h, wraps) => { setStartHour(h); if (wraps % 2) setStartMeridem(toggleMeridiem); }} />
                                         <Text>:</Text>
                                         <TimeWheel data={MINUTES} selected={startMinute} onSelect={setStartMinute} />
                                         <TimeWheel data={MERIDIEM} selected={startMeridem} onSelect={setStartMeridem} />
@@ -300,7 +300,7 @@ export default function NewCourse() {
 
                                 {minTimeWheel && (
                                     <View style={{ flexDirection: 'row', alignSelf: 'center' }}>
-                                        <TimeWheel data={HOURS} selected={endHour} onSelect={setEndHour} />
+                                        <TimeWheel data={HOURS} selected={endHour} wrapAfter="11" onSelect={(h, wraps) => { setEndHour(h); if (wraps % 2) setEndMeridem(toggleMeridiem); }} />
                                         <Text>:</Text>
                                         <TimeWheel data={MINUTES} selected={endMinute} onSelect={setEndMinute} />
                                         <TimeWheel data={MERIDIEM} selected={endMeridem} onSelect={setEndMeridem} />

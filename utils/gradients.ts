@@ -23,7 +23,7 @@ export const getGradientForTime = (): [string, string, ...string[]] => {
 
   // 6pm - 9pm
   if (hour >= 18 && hour < 21)
-    return ['#fffbd5', '#b20a2c'];
+    return ['#FDF1CB', '#B01041'];
 
   // 9pm - 12am
   if (hour >= 21 && hour < 24)

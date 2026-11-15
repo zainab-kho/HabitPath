@@ -11,7 +11,7 @@ import { AppLinearGradient } from '@/ui/AppLinearGradient';
 import PageContainer from '@/ui/PageContainer';
 import PageHeader from '@/ui/PageHeader';
 import ShadowBox from '@/ui/ShadowBox';
-import { TimeWheel, pickerStyles } from '@/ui/TimeWheel';
+import { TimeWheel, pickerStyles, toggleMeridiem } from '@/ui/TimeWheel';
 import { getResetTime } from '@/lib/supabase/queries';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { clearWishlist, resetPointsBalance, getExchangeRate, saveExchangeRate } from '@/services/rewards/rewards';
@@ -272,7 +272,7 @@ export default function SettingsPage() {
                         <View style={{ alignItems: 'center', gap: 10, }}>
                             <View style={pickerStyles.container}>
                                 <View style={{ flexDirection: 'row', justifyContent: 'center' }}>
-                                    <TimeWheel data={HOURS} selected={hour} onSelect={setHour} />
+                                    <TimeWheel data={HOURS} selected={hour} wrapAfter="11" onSelect={(h, wraps) => { setHour(h); if (wraps % 2) setMeridiem(toggleMeridiem); }} />
                                     <TimeWheel data={MINUTES} selected={minute} onSelect={setMinute} />
                                     <TimeWheel
                                         data={MERIDIEM}

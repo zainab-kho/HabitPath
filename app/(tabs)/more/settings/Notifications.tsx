@@ -22,7 +22,7 @@ import { globalStyles } from '@/styles';
 import { AppLinearGradient } from '@/ui/AppLinearGradient';
 import PageContainer from '@/ui/PageContainer';
 import PageHeader from '@/ui/PageHeader';
-import { pickerStyles, TimeWheel } from '@/ui/TimeWheel';
+import { pickerStyles, TimeWheel, toggleMeridiem } from '@/ui/TimeWheel';
 
 const HOURS = Array.from({ length: 12 }, (_, i) => String(i + 1));
 const MINUTES = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0'));
@@ -132,7 +132,13 @@ export default function NotificationSettings() {
                                             <TimeWheel
                                                 data={HOURS}
                                                 selected={parts.hour}
-                                                onSelect={(value) => setTime(slot, joinTime(value, parts.minute, parts.meridiem))}
+                                                wrapAfter="11"
+                                                // rolling past 11 ↔ 12 flips AM/PM in the same update
+                                                onSelect={(value, wraps) => setTime(slot, joinTime(
+                                                    value,
+                                                    parts.minute,
+                                                    wraps % 2 ? toggleMeridiem(parts.meridiem) : parts.meridiem
+                                                ))}
                                             />
                                             <TimeWheel
                                                 data={MINUTES}

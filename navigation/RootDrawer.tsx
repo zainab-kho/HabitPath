@@ -159,6 +159,11 @@ export function RootDrawer() {
             icon: SYSTEM_ICONS.grocery,
         },
         {
+            label: 'Countdown',
+            path: '/(tabs)/more/countdown',
+            icon: SYSTEM_ICONS.stopwatch,
+        },
+        {
             label: 'Settings',
             path: '/(tabs)/more/settings',
             icon: SYSTEM_ICONS.settings,

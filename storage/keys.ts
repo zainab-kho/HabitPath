@@ -18,6 +18,9 @@ export const STORAGE_KEYS = {
   USER_DAY_OF_WEEK_CHOICE: '@user_day_of_week_choice',
   ONBOARDING_COMPLETE: '@onboarding_complete',
 
+  // countdowns with reminders — read by the notification scheduler on every habit sync
+  COUNTDOWNS_CACHE: '@countdowns_cache',
+
   REWARDS: '@rewards',
   REDEEMED_POINTS: '@redeemed_points',
   EXCHANGE_RATE: '@exchange_rate',

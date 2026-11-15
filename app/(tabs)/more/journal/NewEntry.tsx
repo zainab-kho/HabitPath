@@ -35,7 +35,7 @@ import PageContainer from '@/ui/PageContainer';
 import PageHeader from '@/ui/PageHeader';
 import ShadowBox from '@/ui/ShadowBox';
 import SimpleCalendar from '@/ui/SimpleCalendar';
-import { TimeWheel, pickerStyles } from '@/ui/TimeWheel';
+import { TimeWheel, pickerStyles, toggleMeridiem } from '@/ui/TimeWheel';
 import ToggleRow from '@/ui/ToggleRow';
 import { BUTTON_COLORS } from '@/constants/colors';
 
@@ -508,7 +508,7 @@ export default function JournalPage() {
 
                             <View style={pickerStyles.container}>
                                 <View style={{ flexDirection: 'row', justifyContent: 'center' }}>
-                                    <TimeWheel data={HOURS} selected={tempHour} onSelect={setTempHour} />
+                                    <TimeWheel data={HOURS} selected={tempHour} wrapAfter="11" onSelect={(h, wraps) => { setTempHour(h); if (wraps % 2) setTempMeridiem(toggleMeridiem); }} />
                                     <TimeWheel data={MINUTES} selected={tempMinute} onSelect={setTempMinute} />
                                     <TimeWheel
                                         data={MERIDIEM}

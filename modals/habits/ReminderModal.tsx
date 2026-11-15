@@ -3,7 +3,7 @@ import { BUTTON_COLORS, PAGE } from '@/constants/colors';
 import { formatReminderTime, REMINDER_PRESETS } from '@/lib/notifications';
 import { globalStyles } from '@/styles';
 import ShadowBox from '@/ui/ShadowBox';
-import { pickerStyles, TimeWheel } from '@/ui/TimeWheel';
+import { pickerStyles, TimeWheel, toggleMeridiem } from '@/ui/TimeWheel';
 import React, { useEffect, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -32,9 +32,20 @@ interface ReminderModalProps {
     initialTime: string; // "HH:MM" 24h
     onClose: () => void;
     onSave: (time: string) => void;
+    /** line under "Remind me" — defaults to the habit wording */
+    subtitle?: (formattedTime: string) => string;
+    /** border + preset color — defaults to the habits page color */
+    accentColor?: string;
 }
 
-export default function ReminderModal({ visible, initialTime, onClose, onSave }: ReminderModalProps) {
+export default function ReminderModal({
+    visible,
+    initialTime,
+    onClose,
+    onSave,
+    subtitle = (t) => `${t} on the days this habit is due`,
+    accentColor = PAGE.habits.primary[0],
+}: ReminderModalProps) {
     const [hour, setHour] = useState(() => splitTime(initialTime).hour);
     const [minute, setMinute] = useState(() => splitTime(initialTime).minute);
     const [meridiem, setMeridiem] = useState(() => splitTime(initialTime).meridiem);
@@ -69,7 +80,7 @@ export default function ReminderModal({ visible, initialTime, onClose, onSave }:
                         backgroundColor: '#fff',
                         borderRadius: 20,
                         borderWidth: 3,
-                        borderColor: PAGE.habits.primary[0],
+                        borderColor: accentColor,
                         width: '90%',
                         alignSelf: 'center',
                         overflow: 'hidden',
@@ -78,7 +89,7 @@ export default function ReminderModal({ visible, initialTime, onClose, onSave }:
                     <View style={{ marginTop: 20, marginBottom: 15 }}>
                         <Text style={[globalStyles.h2, { textAlign: 'center', marginBottom: 5 }]}>Remind me</Text>
                         <Text style={[globalStyles.body2, { textAlign: 'center', opacity: 0.6 }]}>
-                            {formatReminderTime(time)} on the days this habit is due
+                            {subtitle(formatReminderTime(time))}
                         </Text>
                     </View>
 
@@ -86,7 +97,7 @@ export default function ReminderModal({ visible, initialTime, onClose, onSave }:
                         {/* time wheel */}
                         <View style={pickerStyles.container}>
                             <View style={{ flexDirection: 'row', justifyContent: 'center' }}>
-                                <TimeWheel data={HOURS} selected={hour} onSelect={setHour} />
+                                <TimeWheel data={HOURS} selected={hour} wrapAfter="11" onSelect={(h, wraps) => { setHour(h); if (wraps % 2) setMeridiem(toggleMeridiem); }} />
                                 <TimeWheel data={MINUTES} selected={minute} onSelect={setMinute} />
                                 <TimeWheel data={MERIDIEM} selected={meridiem} onSelect={setMeridiem} />
                             </View>
@@ -103,10 +114,10 @@ export default function ReminderModal({ visible, initialTime, onClose, onSave }:
                                         style={{ flex: 1 }}
                                     >
                                         <ShadowBox
-                                            contentBackgroundColor={selected ? PAGE.habits.primary[0] : '#fff'}
-                                            contentBorderColor={selected ? '#000' : PAGE.habits.primary[0]}
-                                            shadowBorderColor={selected ? '#000' : PAGE.habits.primary[0]}
-                                            shadowColor={selected ? '#000' : PAGE.habits.primary[0]}
+                                            contentBackgroundColor={selected ? accentColor : '#fff'}
+                                            contentBorderColor={selected ? '#000' : accentColor}
+                                            shadowBorderColor={selected ? '#000' : accentColor}
+                                            shadowColor={selected ? '#000' : accentColor}
                                         >
                                             <View style={{ paddingVertical: 6, alignItems: 'center' }}>
                                                 <Text style={globalStyles.body1}>{preset.label}</Text>

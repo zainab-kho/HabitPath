@@ -15,7 +15,7 @@ import PageContainer from '@/ui/PageContainer';
 import PageHeader from '@/ui/PageHeader';
 import ShadowBox from '@/ui/ShadowBox';
 import SimpleCalendar from '@/ui/SimpleCalendar';
-import { TimeWheel } from '@/ui/TimeWheel';
+import { TimeWheel, toggleMeridiem } from '@/ui/TimeWheel';
 import { formatLocalDate, parseLocalDate } from '@/utils/dateUtils';
 
 export default function NewAssignment() {
@@ -397,7 +397,7 @@ export default function NewAssignment() {
 
                                 {showTimePicker && (
                                     <View style={{ flexDirection: 'row', alignSelf: 'center', gap: 5 }}>
-                                        <TimeWheel data={HOURS} selected={hour} onSelect={setHour} />
+                                        <TimeWheel data={HOURS} selected={hour} wrapAfter="11" onSelect={(h, wraps) => { setHour(h); if (wraps % 2) setMeridiem(toggleMeridiem); }} />
                                         <Text style={{ fontSize: 24, alignSelf: 'center' }}>:</Text>
                                         <TimeWheel data={MINUTES} selected={minute} onSelect={setMinute} />
                                         <TimeWheel data={MERIDIEM} selected={meridiem} onSelect={setMeridiem} />

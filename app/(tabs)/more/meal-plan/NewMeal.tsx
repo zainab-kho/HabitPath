@@ -1,182 +1,268 @@
-import { useAuth } from '@/contexts/AuthContext';
+// @/app/(tabs)/more/meal-plan/NewMeal.tsx
+// the new meal page. it doubles as the edit page when a saved meal is passed in
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useState, useRef } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Alert, Pressable, Text, TextInput, View } from 'react-native';
+import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
 
-import { BUTTON_COLORS, PAGE } from '@/constants/colors';
-import { globalStyles } from '@/styles';
-import { NewItemStyles } from '@/styles/NewItemStyles';
+// hooks
+import { useAuth } from '@/contexts/AuthContext';
+
+// data
+import { getMealSections } from '@/lib/mealPlan/mealPlanUtils';
+import { addPlanEntry, createMeal, deleteMeal, updateMeal } from '@/lib/supabase/queries/mealPlan';
+import { Meal, MEAL_TYPES, MealType } from '@/types/Meal';
+
+// ui
+import { fromLines, LineListInput, toLines } from '@/components/mealPlan/LineListInput';
 import { AppLinearGradient } from '@/ui/AppLinearGradient';
 import PageContainer from '@/ui/PageContainer';
 import PageHeader from '@/ui/PageHeader';
 import ShadowBox from '@/ui/ShadowBox';
 
+// constants + styles
+import { BUTTON_COLORS, PAGE } from '@/constants/colors';
+import { globalStyles } from '@/styles';
+import { NewItemStyles } from '@/styles/NewItemStyles';
+
+const ACCENT = PAGE.mealPlan.primary[0];
+
+// one of the buttons in the bar at the bottom of the card
+function FooterButton({ label, color, onPress, disabled }: {
+    label: string;
+    color: string;
+    onPress: () => void;
+    disabled?: boolean;
+}) {
+    return (
+        <Pressable onPress={onPress} disabled={disabled} style={{ flex: 1 }}>
+            <ShadowBox contentBackgroundColor={color} shadowBorderRadius={15}>
+                <View style={{ paddingVertical: 6 }}>
+                    <Text style={[globalStyles.body, { textAlign: 'center' }]}>{label}</Text>
+                </View>
+            </ShadowBox>
+        </Pressable>
+    );
+}
+
 export default function NewMeal() {
     const { user } = useAuth();
     const router = useRouter();
 
-    const inputRef = useRef<TextInput>(null);
-    const scrollRef = useRef<ScrollView>(null);
-    const scrollY = useRef(0);
-    const scrollViewportHeight = useRef(0);
-
-    const scrollToFocusedInput = () => {
-        if (!scrollRef.current) return;
-        scrollRef.current.scrollTo({ y: scrollY.current, animated: false });
-    };
-
-    // edit mode: opened from All Meals with the meal data prefilled
-    const params = useLocalSearchParams<{ editId?: string; editData?: string }>();
+    // editId + editData: opened from a saved meal, to edit it.
+    // planDate + planType: opened from the + on a day, so the new meal goes straight onto that day
+    const params = useLocalSearchParams<{
+        editId?: string;
+        editData?: string;
+        planDate?: string;
+        planType?: string;
+    }>();
     const isEditMode = !!params.editId;
+    const editMeal: Meal | null = useMemo(
+        () => (params.editData ? JSON.parse(params.editData) : null),
+        [params.editData]
+    );
+    const planType = params.planType || null;
 
-    const [mealName, setMealName] = useState('');
+    // the types on offer: the user's own sections first (in their order), then the built-in ones,
+    // then anything this meal already has that isn't in either list
+    const [sections, setSections] = useState<MealType[]>([]);
+    useEffect(() => {
+        getMealSections().then(setSections);
+    }, []);
+    const typeOptions = useMemo(
+        () => [...new Set([...sections, ...MEAL_TYPES, ...(editMeal?.mealTypes ?? [])])],
+        [sections, editMeal]
+    );
+
+    const [name, setName] = useState(editMeal?.name ?? '');
+    // a meal made from a day starts with that day's section already picked
+    const [mealTypes, setMealTypes] = useState<MealType[]>(editMeal?.mealTypes ?? (planType ? [planType] : []));
+    const [ingredients, setIngredients] = useState(() => toLines(editMeal?.ingredients ?? []));
+    const [recipeLink, setRecipeLink] = useState(editMeal?.recipeLink ?? '');
+    const [recipeSteps, setRecipeSteps] = useState(() => toLines(editMeal?.recipeSteps ?? []));
+
     const [isSaving, setIsSaving] = useState(false);
 
-    const mealOptions = ['Breakfast', 'Lunch', 'Snack', 'Dinner', 'Dessert'];
+    const toggleMealType = (type: MealType) =>
+        setMealTypes(prev => (prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]));
 
+    // ─── actions ─────────────────────────────────────────────────────────────
 
+    const handleSave = async () => {
+        if (!user) return;
+
+        if (!name.trim()) {
+            Alert.alert('Missing Info', 'Please enter a meal name');
+            return;
+        }
+        if (mealTypes.length === 0) {
+            Alert.alert('Missing Info', 'Please pick at least one meal type');
+            return;
+        }
+
+        const fields = {
+            name: name.trim(),
+            // saved in the order they're shown, whatever order they were tapped in
+            mealTypes: typeOptions.filter(type => mealTypes.includes(type)),
+            ingredients: fromLines(ingredients),
+            recipeLink: recipeLink.trim() || null,
+            recipeSteps: fromLines(recipeSteps),
+        };
+
+        setIsSaving(true);
+        try {
+            if (isEditMode && params.editId) {
+                await updateMeal(params.editId, user.id, fields);
+            } else {
+                const meal = await createMeal(user.id, fields);
+                if (params.planDate && planType) {
+                    await addPlanEntry(user.id, meal.id, params.planDate, planType);
+                }
+            }
+            router.back();
+        } catch (err) {
+            console.error('Error saving meal:', err);
+            Alert.alert('Error', 'Failed to save meal');
+            setIsSaving(false);
+        }
+    };
+
+    const handleDelete = () => {
+        Alert.alert(
+            'Delete Meal',
+            'This also removes it from every day it was planned on.',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Delete',
+                    style: 'destructive',
+                    onPress: async () => {
+                        if (!params.editId || !user) return;
+                        try {
+                            await deleteMeal(params.editId, user.id);
+                            router.back();
+                        } catch (err) {
+                            console.error('Error deleting meal:', err);
+                            Alert.alert('Error', 'Failed to delete meal');
+                        }
+                    },
+                },
+            ]
+        );
+    };
+
+    // ─── render ──────────────────────────────────────────────────────────────
 
     return (
-        <AppLinearGradient variant={"mealPlan.background"}>
+        <AppLinearGradient variant="mealPlan.background">
             <PageContainer>
                 <PageHeader title={isEditMode ? 'Edit Meal' : 'New Meal'} showBackButton />
-                {/* main card */}
+
+                {/* main card: the fields scroll, the button bar stays pinned at the bottom */}
                 <View style={NewItemStyles.mainCardContainer}>
-                    <ScrollView
-                        ref={scrollRef}
+                    <KeyboardAwareScrollView
                         contentContainerStyle={{ padding: 30, gap: 20 }}
                         showsVerticalScrollIndicator={false}
                         keyboardShouldPersistTaps="handled"
-                        scrollEventThrottle={16}
-                        onScroll={(e) => { scrollY.current = e.nativeEvent.contentOffset.y; }}
-                        onLayout={(e) => {
-                            scrollViewportHeight.current = e.nativeEvent.layout.height;
-                            // the card just resized for the keyboard — keep the focused input visible
-                            scrollToFocusedInput();
-                        }}
+                        // keeps the line being typed on above the keyboard
+                        extraScrollHeight={80}
+                        enableOnAndroid
                     >
-
-                        <View style={{ marginBottom: 10 }}>
-                            <Text style={[globalStyles.label, { marginBottom: 0 }]}>
-                                MEAL NAME
-                            </Text>
-
+                        {/* name */}
+                        <View>
+                            <Text style={[globalStyles.label, { marginBottom: 0 }]}>MEAL NAME</Text>
                             <TextInput
-                                ref={inputRef}
                                 style={[
                                     globalStyles.body,
-                                    {
-                                        flex: 1,
-                                        borderBottomWidth: 1,
-                                        borderBottomColor: PAGE.mealPlan.primary[0],
-                                        paddingVertical: 10
-                                    }
+                                    { borderBottomWidth: 1, borderBottomColor: ACCENT, paddingVertical: 10 },
                                 ]}
                                 placeholder="Enter meal name..."
                                 placeholderTextColor="rgba(0,0,0,0.4)"
-                                value={mealName}
-                                onChangeText={setMealName}
+                                value={name}
+                                onChangeText={setName}
                                 cursorColor={PAGE.mealPlan.primary[1]}
                                 selectionColor={PAGE.mealPlan.primary[1]}
+                                returnKeyType="done"
                             />
                         </View>
 
-                        {/* What meal does this belong to? */}
-                        <View style={{ marginBottom: 10 }}>
-                            <Text style={[globalStyles.label, { marginBottom: 10 }]}>
-                                MEAL TYPE
-                            </Text>
-
-                            {/* **TODO: loop through the list of MealTimes and creates buttosn for each.
-                                    user should be able to select multiple at a time. 
-                                    User HAS to select one tho */}
+                        {/* meal type. more than one can be picked, but at least one is needed */}
+                        <View>
+                            <Text style={[globalStyles.label, { marginBottom: 10 }]}>MEAL TYPE</Text>
+                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+                                {typeOptions.map(type => {
+                                    const isSelected = mealTypes.includes(type);
+                                    return (
+                                        <Pressable key={type} onPress={() => toggleMealType(type)}>
+                                            <ShadowBox
+                                                contentBackgroundColor={isSelected ? ACCENT : '#fff'}
+                                                shadowBorderRadius={15}
+                                            >
+                                                <View style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
+                                                    <Text style={globalStyles.body1}>{type}</Text>
+                                                </View>
+                                            </ShadowBox>
+                                        </Pressable>
+                                    );
+                                })}
+                            </View>
                         </View>
 
-                        {/* Can be null */}
-                        <View style={{ marginBottom: 10 }}>
-                            <Text style={[globalStyles.label, { marginBottom: 10 }]}>
-                                INGREDIENTS (OTIONAL)
-                            </Text>
-
-                            {/* **TODO: user should be able to add an ingredient easily
-                                    the point of this is convenience.
-                                    user types one ingredient, presses enter on the keyboard and
-                                    immediately can start typing the next ingredient
-                                    design: input box with list. background will be a simple light color background
-                                    no border, and the input line. one at first, and when user presses enter, another line appears.
-                                    if user taps away and there's nothing inputted in a line, the line deletes itself.
-                                */}
+                        {/* ingredients. these are what the grocery list is made from */}
+                        <View>
+                            <Text style={[globalStyles.label, { marginBottom: 10 }]}>INGREDIENTS (OPTIONAL)</Text>
+                            <LineListInput
+                                lines={ingredients}
+                                onChange={setIngredients}
+                                placeholder="Add an ingredient..."
+                            />
                         </View>
 
-                        {/* Can be null */}
-                        <View style={{ marginBottom: 10 }}>
-                            <Text style={[globalStyles.label, { marginBottom: 10 }]}>
-                                RECIPE (OTIONAL)
-                            </Text>
-
-                            {/* **TODO: user can add a link to the recipe they're looking at.
-                                    user writes down directions in a step by step format. nothing crazy. just a numbered list. 
-                                    each number will be outlined in its own bubble.
-                                */}
+                        {/* recipe: a link and / or numbered steps */}
+                        <View style={{ gap: 10 }}>
+                            <Text style={globalStyles.label}>RECIPE (OPTIONAL)</Text>
+                            <TextInput
+                                style={[
+                                    globalStyles.body,
+                                    { borderBottomWidth: 1, borderBottomColor: ACCENT, paddingVertical: 10 },
+                                ]}
+                                placeholder="Paste a link to the recipe..."
+                                placeholderTextColor="rgba(0,0,0,0.4)"
+                                value={recipeLink}
+                                onChangeText={setRecipeLink}
+                                autoCapitalize="none"
+                                autoCorrect={false}
+                                keyboardType="url"
+                                cursorColor={PAGE.mealPlan.primary[1]}
+                                selectionColor={PAGE.mealPlan.primary[1]}
+                            />
+                            <LineListInput
+                                lines={recipeSteps}
+                                onChange={setRecipeSteps}
+                                placeholder="Add a step..."
+                                numbered
+                            />
                         </View>
+                    </KeyboardAwareScrollView>
 
-                    </ScrollView>
-
-
-                    {/* cancel / (delete) / save — standard page button dimensions */}
+                    {/* cancel / delete (edit only) / save */}
                     <View style={{ flexDirection: 'row', borderTopWidth: 1, padding: 10, gap: 10, backgroundColor: '#fff' }}>
-                        <Pressable onPress={() => router.back()} style={{ flex: 1 }}>
-                            <ShadowBox
-                                contentBackgroundColor={BUTTON_COLORS.Cancel}
-                                shadowBorderRadius={15}
-                            >
-                                <View style={{ paddingVertical: 6 }}>
-                                    <Text style={[globalStyles.body, { textAlign: 'center' }]}>
-                                        Cancel
-                                    </Text>
-                                </View>
-                            </ShadowBox>
-                        </Pressable>
+                        <FooterButton label="Cancel" color={BUTTON_COLORS.Cancel} onPress={() => router.back()} />
 
-                        <Pressable
-                            // onPress={handleSave}
-                            style={{ flex: 1 }}
+                        {isEditMode && (
+                            <FooterButton label="Delete" color={BUTTON_COLORS.Delete} onPress={handleDelete} />
+                        )}
+
+                        <FooterButton
+                            label={isSaving ? 'Saving...' : 'Save'}
+                            color={isSaving ? BUTTON_COLORS.Disabled : BUTTON_COLORS.Save}
+                            onPress={handleSave}
                             disabled={isSaving}
-                        >
-                            <ShadowBox
-                                contentBackgroundColor={
-                                    isSaving ? BUTTON_COLORS.Disabled : BUTTON_COLORS.Save
-                                }
-                                shadowBorderRadius={15}
-                            >
-                                <View style={{ paddingVertical: 6 }}>
-                                    <Text style={[globalStyles.body, { textAlign: 'center' }]}>
-                                        {isSaving ? 'Saving...' : 'Save'}
-                                    </Text>
-                                </View>
-                            </ShadowBox>
-                        </Pressable>
+                        />
                     </View>
                 </View>
             </PageContainer>
         </AppLinearGradient>
     );
 }
-
-const pickerModal = StyleSheet.create({
-    overlay: {
-        flex: 1,
-        justifyContent: 'center',
-        alignItems: 'center',
-        backgroundColor: 'rgba(0,0,0,0.45)',
-    },
-    card: {
-        maxHeight: '60%',
-        width: '90%',
-        alignSelf: 'center',
-        borderWidth: 3,
-        borderRadius: 20,
-        borderColor: PAGE.assignments.primary[1],
-        backgroundColor: '#fff',
-    },
-});

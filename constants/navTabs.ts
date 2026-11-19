@@ -10,7 +10,9 @@ export type NavTabId =
   | 'assignments'
   | 'notes'
   | 'journal'
-  | 'rewards';
+  | 'rewards'
+  | 'mealPlan'
+  | 'countdown';
 
 export interface NavDestination {
   id: NavTabId;
@@ -29,6 +31,8 @@ export const NAV_DESTINATIONS: Record<NavTabId, NavDestination> = {
   notes: { id: 'notes', label: 'Notes', route: '/(tabs)/more/notes', match: '/more/notes', icon: SYSTEM_ICONS.lists },
   journal: { id: 'journal', label: 'Journal', route: '/(tabs)/more/journal', match: '/more/journal', icon: SYSTEM_ICONS.journal },
   rewards: { id: 'rewards', label: 'Rewards', route: '/(tabs)/more/rewards', match: '/more/rewards', icon: SYSTEM_ICONS.reward },
+  mealPlan: { id: 'mealPlan', label: 'Meal Plan', route: '/(tabs)/more/meal-plan', match: '/more/meal-plan', icon: SYSTEM_ICONS.grocery },
+  countdown: { id: 'countdown', label: 'Countdown', route: '/(tabs)/more/countdown', match: '/more/countdown', icon: SYSTEM_ICONS.stopwatch },
 };
 
 // slot 1 is always Habits and can't be changed

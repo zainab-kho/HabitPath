@@ -21,6 +21,9 @@ export const STORAGE_KEYS = {
   // countdowns with reminders — read by the notification scheduler on every habit sync
   COUNTDOWNS_CACHE: '@countdowns_cache',
 
+  // which meal sections (breakfast, lunch...) show on the meal plan
+  MEAL_PLAN_SECTIONS: '@meal_plan_sections',
+
   REWARDS: '@rewards',
   REDEEMED_POINTS: '@redeemed_points',
   EXCHANGE_RATE: '@exchange_rate',

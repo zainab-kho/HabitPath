@@ -99,7 +99,7 @@ export const PAGE = {
     mealItem: ['#FCFCD4', '#FCFCD4']
   },
   countdown: {
-    background: ['#ec9c9c', '#ec9c9c'],
+    background: ['#DBD9DC', '#DBD9DC'],
     primary: ['#ff6868', '#947591']
   },
   settings: {

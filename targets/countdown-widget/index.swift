@@ -1,5 +1,5 @@
 // @/targets/countdown-widget/index.swift
-// entry point for the widget extension — lists every widget HabitPath offers
+// entry point for the widget extension. every widget habitpath offers is listed here
 import SwiftUI
 import WidgetKit
 
@@ -7,5 +7,6 @@ import WidgetKit
 struct HabitPathWidgets: WidgetBundle {
     var body: some Widget {
         CountdownWidget()
+        MealPlanWidget()
     }
 }

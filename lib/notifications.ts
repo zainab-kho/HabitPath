@@ -307,7 +307,9 @@ async function doSync(habits: Habit[], resetHour: number, resetMinute: number) {
     await Promise.all(pending.map(({ id, fireDate, title, body, data }) =>
         Notifications.scheduleNotificationAsync({
             identifier: id,
-            content: { title, body, data },
+            // sound: true plays the phone's default notification sound.
+            // without it, ios delivers scheduled notifications silently
+            content: { title, body, data, sound: true },
             trigger: {
                 type: Notifications.SchedulableTriggerInputTypes.DATE,
                 date: fireDate,

@@ -157,11 +157,13 @@ export function RootDrawer() {
             label: 'Meal Plan',
             path: '/(tabs)/more/meal-plan',
             icon: SYSTEM_ICONS.grocery,
+            params: { from: 'drawer' },
         },
         {
             label: 'Countdown',
             path: '/(tabs)/more/countdown',
             icon: SYSTEM_ICONS.stopwatch,
+            params: { from: 'drawer' },
         },
         {
             label: 'Settings',

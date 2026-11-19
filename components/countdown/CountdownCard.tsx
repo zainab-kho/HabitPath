@@ -88,6 +88,7 @@ function CountdownCardBase({ countdown, now, onPress }: CountdownCardProps) {
         <Pressable onPress={onPress} style={{ marginBottom: 15 }}>
             <ShadowBox
                 contentBackgroundColor={countdown.color ?? PAGE.countdown.primary[0]}
+                shadowOffset={{x: 0, y: 0}}
                 contentBorderRadius={25}
                 shadowBorderRadius={30}
             >

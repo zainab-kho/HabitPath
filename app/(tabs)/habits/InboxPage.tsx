@@ -1,4 +1,4 @@
-import { BUTTON_COLORS, COLORS, PAGE } from '@/constants/colors';
+import { BUTTON_COLORS, COLORS, PAGE } from '@/colors';
 import { TIME_OPTIONS } from '@/constants/habits';
 import { useAuth } from '@/contexts/AuthContext';
 import HabitItem from '@/components/habits/HabitItem';

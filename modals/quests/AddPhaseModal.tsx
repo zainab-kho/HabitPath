@@ -5,7 +5,7 @@ import React, { useEffect, useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { ScrollView as GHScrollView } from 'react-native-gesture-handler';
 
-import { BUTTON_COLORS, COLORS, PAGE } from '@/constants/colors';
+import { BUTTON_COLORS, COLORS, PAGE } from '@/colors';
 import { globalStyles } from '@/styles';
 import { Habit } from '@/types/Habit';
 import ShadowBox from '@/ui/ShadowBox';

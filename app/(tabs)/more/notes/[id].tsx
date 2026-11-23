@@ -1,6 +1,6 @@
 // @/app/(tabs)/more/notes/[id].tsx
 
-import { PAGE } from "@/constants/colors";
+import { PAGE } from "@/colors";
 import { useAuth } from "@/contexts/AuthContext";
 import { APERCU_EDITOR_CSS } from "@/lib/editor/apercuEditorCss";
 import {

@@ -28,8 +28,7 @@ import MoodPickerModal from '@/modals/MoodPickerModal';
 import SongPickerModal, { SongData } from '@/modals/SongPickerModal';
 import { JournalEntry } from '@/types/JournalEntry';
 
-import { BUTTON_COLORS, COLORS, PAGE } from '@/constants/colors';
-import { MAIN_MOOD_COLORS, MOOD_COLORS } from '@/colors/journalPalette';
+import { BUTTON_COLORS, COLORS, MAIN_MOOD_COLORS, MOOD_COLORS, PAGE } from '@/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import { AppLinearGradient } from '@/ui/AppLinearGradient';
 import PageContainer from '@/ui/PageContainer';

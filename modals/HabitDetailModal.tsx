@@ -10,7 +10,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import { BUTTON_COLORS, COLORS, PAGE } from '@/constants/colors';
+import { BUTTON_COLORS, COLORS, PAGE } from '@/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import ShadowBox from '@/ui/ShadowBox';
 import { globalStyles } from '@/styles';

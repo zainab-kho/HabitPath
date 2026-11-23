@@ -2,7 +2,7 @@
 import React from 'react';
 import { Image, ImageSourcePropType, Pressable, View } from 'react-native';
 
-import { PAGE } from '@/constants/colors';
+import { PAGE } from '@/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import ShadowBox from '@/ui/ShadowBox';
 

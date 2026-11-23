@@ -1,5 +1,5 @@
 import { globalStyles, uiStyles } from '@/styles';
-import { BUTTON_COLORS, PAGE } from '@/constants/colors';
+import { BUTTON_COLORS, PAGE } from '@/colors';
 import React, { useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import ShadowBox from '@/ui/ShadowBox';

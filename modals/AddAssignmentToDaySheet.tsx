@@ -1,6 +1,6 @@
 // @/modals/AddAssignmentToDaySheet.tsx
 import { ASSIGNMENT_TYPE_COLORS, PROGRESS_COLORS } from '@/constants';
-import { BUTTON_COLORS, PAGE } from '@/constants/colors';
+import { BUTTON_COLORS, PAGE } from '@/colors';
 import { globalStyles } from '@/styles';
 import ShadowBox from '@/ui/ShadowBox';
 import React, { useState } from 'react';

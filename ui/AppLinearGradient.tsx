@@ -1,5 +1,5 @@
 // app/components/gradients/AppLinearGradient.tsx
-import { PAGE } from '@/constants/colors';
+import { PAGE } from '@/colors';
 import { layoutStyles } from '@/styles';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StyleProp, ViewStyle } from 'react-native';

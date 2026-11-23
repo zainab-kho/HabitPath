@@ -1,4 +1,4 @@
-import { BUTTON_COLORS, COLORS } from '@/constants/colors'
+import { BUTTON_COLORS, COLORS } from '@/colors'
 import { TIME_OPTIONS } from '@/constants/habits'
 import { SYSTEM_ICONS } from '@/constants/icons'
 import { buttonStyles, globalStyles } from '@/styles'

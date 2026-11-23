@@ -1,5 +1,5 @@
 // @/components/ui/TimeWheel.tsx
-import { BUTTON_COLORS, COLORS } from '@/constants/colors';
+import { BUTTON_COLORS, COLORS } from '@/colors';
 import React, { useEffect, useMemo, useRef } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 

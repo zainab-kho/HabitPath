@@ -13,7 +13,7 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { useAuth } from '@/contexts/AuthContext';
-import { BUTTON_COLORS, COLORS, PAGE } from '@/constants/colors';
+import { BUTTON_COLORS } from '@/colors';
 import { passphraseStrength, generateRandomPassword } from '@/lib/crypto/journalCrypto';
 import * as Vault from '@/lib/crypto/journalVault';
 import { migrateJournalEntries } from '@/lib/journal/migrateJournal';

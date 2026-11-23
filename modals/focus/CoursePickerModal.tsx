@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 
 import { supabase } from '@/lib/supabase';
-import { PAGE, BUTTON_COLORS } from '@/constants/colors';
+import { PAGE, BUTTON_COLORS } from '@/colors';
 import ShadowBox from '@/ui/ShadowBox';
 import { globalStyles } from '@/styles';
 import { formatDisplayDate, formatDisplayDateString } from '@/utils/dateUtils';

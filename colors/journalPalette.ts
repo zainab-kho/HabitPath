@@ -1,3 +1,6 @@
+// @/colors/journalPalette.ts
+// mood colors for the journal
+
 // type helpers for TypeScript autocomplete
 export type MainMoodColor = keyof typeof MAIN_MOOD_COLORS;
 export type MoodColor = keyof typeof MOOD_COLORS;

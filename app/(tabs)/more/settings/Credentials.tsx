@@ -5,7 +5,6 @@
 import React from 'react';
 import { Linking, Pressable, ScrollView, Text, View } from 'react-native';
 
-import { BUTTON_COLORS } from '@/constants/colors';
 import { globalStyles } from '@/styles';
 import { AppLinearGradient } from '@/ui/AppLinearGradient';
 import PageContainer from '@/ui/PageContainer';

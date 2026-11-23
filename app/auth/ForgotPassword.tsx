@@ -1,5 +1,5 @@
 // @/app/auth/ForgotPassword.tsx
-import { PAGE } from '@/constants/colors'
+import { PAGE } from '@/colors'
 import { useAuth } from '@/contexts/AuthContext'
 import { buttonStyles, globalStyles, uiStyles } from '@/styles'
 import { AppLinearGradient } from '@/ui/AppLinearGradient'

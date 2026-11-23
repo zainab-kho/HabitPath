@@ -1,9 +1,9 @@
 // @/modals/NewPathModal.tsx
-import { PATH_COLOR_OPTIONS, PathColorKey } from '@/colors/pathColors';
-import { BUTTON_COLORS, PAGE } from '@/constants/colors';
+import { BUTTON_COLORS, PAGE, PATH_COLOR_OPTIONS, PathColorKey } from '@/colors';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { globalStyles, uiStyles } from '@/styles';
+import ColorPicker from '@/ui/ColorPicker';
 import ShadowBox from '@/ui/ShadowBox';
 import React, { useState } from 'react';
 import {
@@ -86,30 +86,13 @@ export default function NewPathModal({ visible, onClose, onCreated }: NewPathMod
                             </View>
 
                             <Text style={[globalStyles.label, { marginBottom: 12 }]}>COLOR</Text>
-                            <View style={{
-                                flexDirection: 'row',
-                                flexWrap: 'wrap',
-                                gap: 10,
-                                padding: 15,
-                                marginBottom: 20,
-                                backgroundColor: PAGE.path.background[0],
-                                borderRadius: 15
-                            }}>
-                                {PATH_COLOR_OPTIONS.map(({ name, hex }) => (
-                                    <ShadowBox
-                                        key={name}
-                                        contentBackgroundColor={selectedColor === name ? hex : '#fff'}
-                                        contentBorderColor={selectedColor === name ? '#000' : hex}
-                                        contentBorderRadius={18}
-                                        shadowBorderColor={selectedColor === name ? '#000' : hex}
-                                        shadowColor={selectedColor === name ? '#000' : hex}
-                                    >
-                                        <Pressable
-                                            onPress={() => setSelectedColor(name)}
-                                            style={{ width: 25, height: 25 }}
-                                        />
-                                    </ShadowBox>
-                                ))}
+                            <View style={{ marginBottom: 20 }}>
+                                <ColorPicker
+                                    selected={selectedColor}
+                                    onSelect={(value) => setSelectedColor(value as PathColorKey)}
+                                    backgroundColor={PAGE.path.background[0]}
+                                    options={PATH_COLOR_OPTIONS.map(({ name, hex }) => ({ value: name, hex }))}
+                                />
                             </View>
                         </View>
                     </View>

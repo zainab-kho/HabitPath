@@ -2,7 +2,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import React, { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, Image, Pressable, ScrollView, Text, View } from 'react-native';
 
-import { PAGE, TAG_COLORS } from '@/constants/colors';
+import { PAGE, TAG_COLORS } from '@/colors';
 import { LinearGradient } from 'expo-linear-gradient';
 import { layoutStyles } from '@/styles';
 import { SYSTEM_ICONS } from '@/constants/icons';

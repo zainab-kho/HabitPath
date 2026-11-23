@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { BUTTON_COLORS, COLORS, PAGE } from '@/constants/colors';
+import { BUTTON_COLORS, COLORS } from '@/colors';
 import { supabase } from '@/lib/supabase';
 import { globalStyles } from '@/styles';
 import { AppLinearGradient } from '@/ui/AppLinearGradient';

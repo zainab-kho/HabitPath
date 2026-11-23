@@ -10,7 +10,7 @@ import PageContainer from '@/ui/PageContainer';
 import PageHeader from '@/ui/PageHeader';
 import { globalStyles } from '@/styles';
 import { supabase } from '@/lib/supabase';
-import { BUTTON_COLORS, COLORS, PAGE, TAG_COLORS } from '@/constants/colors';
+import { BUTTON_COLORS, COLORS, TAG_COLORS } from '@/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import ShadowBox from '@/ui/ShadowBox';
 

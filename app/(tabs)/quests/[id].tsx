@@ -8,7 +8,7 @@ import {
     ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Text, View,
 } from 'react-native';
 
-import { BUTTON_COLORS, PAGE } from '@/constants/colors';
+import { BUTTON_COLORS, PAGE } from '@/colors';
 import { HABIT_ICONS } from '@/constants/icons';
 import { useAuth } from '@/contexts/AuthContext';
 import { loadHabitsByQuest, setHabitPhase, toggleHabitCompletion } from '@/lib/supabase/queries/habit';

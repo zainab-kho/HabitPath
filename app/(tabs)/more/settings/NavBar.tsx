@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { BUTTON_COLORS, COLORS } from '@/constants/colors';
+import { BUTTON_COLORS, COLORS } from '@/colors';
 import {
     CONFIGURABLE_SLOT_COUNT,
     DEFAULT_NAV_TABS,

@@ -2,7 +2,7 @@
 // Feedback report modal — opened from Settings ("Send Feedback") and from the
 // floating feedback button on every page (which passes the current page so
 // reports say where the problem happened).
-import { BUTTON_COLORS, PAGE } from '@/constants/colors';
+import { BUTTON_COLORS, PAGE } from '@/colors';
 import { useAuth } from '@/contexts/AuthContext';
 import { submitFeedback } from '@/lib/supabase/queries/feedback';
 import { globalStyles, uiStyles } from '@/styles';

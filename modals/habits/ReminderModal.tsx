@@ -1,5 +1,5 @@
 // @/modals/habits/ReminderModal.tsx
-import { BUTTON_COLORS, PAGE } from '@/constants/colors';
+import { BUTTON_COLORS, PAGE } from '@/colors';
 import { formatReminderTime, REMINDER_PRESETS } from '@/lib/notifications';
 import { globalStyles } from '@/styles';
 import ShadowBox from '@/ui/ShadowBox';

@@ -5,7 +5,7 @@
 // commands; active state comes from useBridgeState. Mirrors tentap's default
 // visibility: only shown while the editor is focused and the keyboard is up.
 
-import { PAGE } from "@/constants/colors";
+import { PAGE } from "@/colors";
 import {
     type BridgeState,
     type EditorBridge,

@@ -1,6 +1,6 @@
 // @/modals/AddHabitsToPathModal.tsx
 import { isHabitActiveToday } from '@/utils/habitUtils';
-import { BUTTON_COLORS, COLORS, PAGE } from '@/constants/colors';
+import { BUTTON_COLORS, COLORS, PAGE } from '@/colors';
 import { HABIT_ICONS } from '@/constants/icons';
 import { globalStyles } from '@/styles';
 import { Habit } from '@/types/Habit';

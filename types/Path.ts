@@ -1,4 +1,4 @@
-import type { PathColorKey } from '@/colors/pathColors';
+import type { PathColorKey } from '@/colors';
 
 export interface Path {
   id: string;

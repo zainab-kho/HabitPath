@@ -2,7 +2,7 @@
 import React, { useEffect, useRef } from 'react';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { PAGE } from '@/constants/colors';
+import { PAGE } from '@/colors';
 import { globalStyles } from '@/styles';
 
 // one line of the list. the id stays the same while the text changes,

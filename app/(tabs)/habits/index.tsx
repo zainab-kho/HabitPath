@@ -8,7 +8,7 @@ import { ActivityIndicator, Image, Pressable, Text, View } from 'react-native';
 import HabitsList from '@/components/habits/HabitsList';
 import { isHabitActiveToday } from '@/utils/habitUtils';
 import ProgressBar from '@/components/habits/ProgressBar';
-import { COLORS, PAGE } from '@/constants/colors';
+import { COLORS, PAGE } from '@/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import { useAuth } from '@/contexts/AuthContext';
 import { useHabits, HabitWithStatus } from '@/hooks/useHabits';

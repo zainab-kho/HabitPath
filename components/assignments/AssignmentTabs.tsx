@@ -3,7 +3,7 @@ import { useRouter } from 'expo-router';
 import React, { JSX, RefObject, useRef } from 'react';
 import { Dimensions, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { PAGE } from '@/constants/colors';
+import { PAGE } from '@/colors';
 import { globalStyles } from '@/styles';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');

@@ -1,5 +1,5 @@
 import { globalStyles } from '@/styles';
-import { BUTTON_COLORS, COLORS, PAGE } from '@/constants/colors';
+import { BUTTON_COLORS, COLORS, PAGE } from '@/colors';
 import { lightenColor } from '@/utils';
 import React, { useEffect, useState } from 'react';
 import { Alert, Dimensions, Image, Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';

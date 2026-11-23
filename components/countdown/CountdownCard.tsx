@@ -2,7 +2,7 @@
 import React, { memo } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { COLORS, PAGE } from '@/constants/colors';
+import { COLORS, PAGE } from '@/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import { getCountdownParts, getDaysLeft, getProgressPct } from '@/lib/countdown/countdownMath';
 import { globalStyles } from '@/styles';

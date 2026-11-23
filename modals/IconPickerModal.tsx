@@ -1,4 +1,4 @@
-import { COLORS, PAGE } from '@/constants/colors';
+import { COLORS, PAGE } from '@/colors';
 import { HabitIcon, ICON_CATEGORIES } from '@/constants/icons';
 import { globalStyles } from '@/styles';
 import ShadowBox from '@/ui/ShadowBox';

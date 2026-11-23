@@ -19,7 +19,7 @@ import PageContainer from '@/ui/PageContainer';
 import PageHeader from '@/ui/PageHeader';
 
 // constants + styles
-import { PAGE } from '@/constants/colors';
+import { PAGE } from '@/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import { globalStyles } from '@/styles';
 

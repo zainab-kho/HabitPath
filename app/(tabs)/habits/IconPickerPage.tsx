@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { COLORS, PAGE } from '@/constants/colors';
+import { PAGE } from '@/colors';
 import { HabitIcon, ICON_CATEGORIES } from '@/constants/icons';
 import { globalStyles } from '@/styles';
 import { AppLinearGradient } from '@/ui/AppLinearGradient';

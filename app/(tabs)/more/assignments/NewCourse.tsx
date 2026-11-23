@@ -1,12 +1,13 @@
 import { useAuth } from '@/contexts/AuthContext';
 import React, { useState } from 'react';
 
-import { BUTTON_COLORS, PAGE, PRESET_COLORS } from '@/constants/colors';
+import { BUTTON_COLORS, PAGE, PRESET_COLORS } from '@/colors';
 import { supabase } from '@/lib/supabase';
 import { globalStyles, uiStyles } from '@/styles';
 import { AppLinearGradient } from '@/ui/AppLinearGradient';
 import PageContainer from '@/ui/PageContainer';
 import PageHeader from '@/ui/PageHeader';
+import ColorPicker from '@/ui/ColorPicker';
 import ShadowBox from '@/ui/ShadowBox';
 import { TimeWheel, toggleMeridiem } from '@/ui/TimeWheel';
 import { useRouter } from 'expo-router';
@@ -170,36 +171,12 @@ export default function NewCourse() {
                             marginTop: 10,
                         }]}>COLOR</Text>
 
-                        <View style={{
-                            flexDirection: 'row',
-                            flexWrap: 'wrap',
-                            gap: 10,
-                            padding: 15,
-                            borderRadius: 15,
-                            marginBottom: 15,
-                            backgroundColor: PAGE.assignments.background[0]
-                        }}>
-                            {PRESET_COLORS.map(color => {
-                                const isSelected = selectedColor === color;
-
-                                return (
-                                    <ShadowBox
-                                        key={color}
-                                        contentBackgroundColor={isSelected ? color : '#fff'}
-                                        contentBorderColor={isSelected ? '#000' : color}
-                                        contentBorderWidth={1}
-                                        contentBorderRadius={18}
-                                        shadowBorderColor={isSelected ? '#000' : color}
-                                        shadowColor={isSelected ? '#000' : color}
-                                        shadowBorderRadius={18}
-                                    >
-                                        <Pressable
-                                            onPress={() => setSelectedColor(color)}
-                                            style={{ width: 25, height: 25 }}
-                                        />
-                                    </ShadowBox>
-                                );
-                            })}
+                        <View style={{ marginBottom: 15 }}>
+                            <ColorPicker
+                                selected={selectedColor}
+                                onSelect={setSelectedColor}
+                                backgroundColor={PAGE.assignments.background[0]}
+                            />
                         </View>
 
                         <Text style={[globalStyles.label, {

@@ -1,4 +1,4 @@
-import { BUTTON_COLORS, COLORS, PAGE, PRESET_COLORS } from '@/constants/colors';
+import { BUTTON_COLORS, COLORS, PAGE, PRESET_COLORS } from '@/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import { useAuth } from '@/contexts/AuthContext';
 import { addReward, deleteRewardPhoto, getExchangeRate, updateReward, uploadRewardPhoto } from '@/services/rewards/rewards';
@@ -6,6 +6,7 @@ import { Reward } from '@/types/Reward';
 import { AppLinearGradient } from '@/ui/AppLinearGradient';
 import PageContainer from '@/ui/PageContainer';
 import PageHeader from '@/ui/PageHeader';
+import ColorPicker from '@/ui/ColorPicker';
 import ShadowBox from '@/ui/ShadowBox';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -407,36 +408,11 @@ export default function NewRewardItem() {
                 {/* CARD COLOR */}
                 <View style={{ gap: 10 }}>
                   <Text style={globalStyles.label}>CARD COLOR</Text>
-                  <View style={{
-                    flexDirection: 'row',
-                    flexWrap: 'wrap',
-                    gap: 10,
-                    padding: 15,
-                    backgroundColor: PAGE.rewards.background[1],
-                    borderRadius: 15
-
-                  }}>
-                    {PRESET_COLORS.map(color => {
-                      const isSelected = backgroundColor === color;
-                      return (
-                        <ShadowBox
-                          key={color}
-                          contentBackgroundColor={isSelected ? color : '#fff'}
-                          contentBorderColor={isSelected ? '#000' : color}
-                          contentBorderWidth={1}
-                          contentBorderRadius={18}
-                          shadowBorderColor={isSelected ? '#000' : color}
-                          shadowColor={isSelected ? '#000' : color}
-                          shadowBorderRadius={18}
-                        >
-                          <Pressable
-                            onPress={() => setBackgroundColor(color)}
-                            style={{ width: 25, height: 25 }}
-                          />
-                        </ShadowBox>
-                      );
-                    })}
-                  </View>
+                  <ColorPicker
+                    selected={backgroundColor}
+                    onSelect={setBackgroundColor}
+                    backgroundColor={PAGE.rewards.background[1]}
+                  />
                 </View>
 
                 {/* more options — tags, link, notes, recurring */}

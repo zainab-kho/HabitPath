@@ -28,7 +28,7 @@ import PageHeader from '@/ui/PageHeader';
 import ShadowBox from '@/ui/ShadowBox';
 
 // constants + styles
-import { BUTTON_COLORS, PAGE } from '@/constants/colors';
+import { BUTTON_COLORS, PAGE } from '@/colors';
 import { globalStyles } from '@/styles';
 
 const ACCENT = PAGE.mealPlan.primary[0];

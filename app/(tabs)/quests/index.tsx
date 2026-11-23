@@ -7,7 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useQuests } from '@/hooks/useQuests';
 import { Quest } from '@/types/Quest';
 
-import { PAGE } from '@/constants/colors';
+import { PAGE } from '@/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import { globalStyles } from '@/styles';
 import { AppLinearGradient } from '@/ui/AppLinearGradient';

@@ -2,7 +2,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { PAGE } from '@/constants/colors';
+import { PAGE } from '@/colors';
 import { globalStyles } from '@/styles';
 import { MealPlanEntry, MealType } from '@/types/Meal';
 

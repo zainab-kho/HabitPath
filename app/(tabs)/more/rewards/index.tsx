@@ -5,7 +5,7 @@ import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Tex
 import ExchangeRateModal from '@/modals/rewards/ExchangeRateModal';
 import PointsHistoryModal from '@/modals/rewards/PointsHistoryModal';
 import RewardDetailModal from '@/modals/rewards/RewardDetailModal';
-import { COLORS, PAGE } from '@/constants/colors';
+import { COLORS, PAGE } from '@/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import {
     addRedeemedPoints,

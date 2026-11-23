@@ -17,12 +17,13 @@ import ReminderModal from '@/modals/habits/ReminderModal';
 import { AppLinearGradient } from '@/ui/AppLinearGradient';
 import PageContainer from '@/ui/PageContainer';
 import PageHeader from '@/ui/PageHeader';
+import ColorPicker from '@/ui/ColorPicker';
 import ShadowBox from '@/ui/ShadowBox';
 import SimpleCalendar from '@/ui/SimpleCalendar';
 import { TimeWheel, toggleMeridiem } from '@/ui/TimeWheel';
 
 // constants + styles
-import { BUTTON_COLORS, PAGE, PRESET_COLORS } from '@/constants/colors';
+import { BUTTON_COLORS, PAGE, PRESET_COLORS } from '@/colors';
 import { globalStyles } from '@/styles';
 import { NewItemStyles } from '@/styles/NewItemStyles';
 
@@ -350,35 +351,11 @@ export default function NewCountdown() {
                         {/* card color. same picker as the new reward page */}
                         <View style={{ gap: 10 }}>
                             <Text style={globalStyles.label}>CARD COLOR</Text>
-                            <View style={{
-                                flexDirection: 'row',
-                                flexWrap: 'wrap',
-                                gap: 10,
-                                padding: 15,
-                                backgroundColor: PAGE.countdown.background[1],
-                                borderRadius: 15,
-                            }}>
-                                {PRESET_COLORS.map(preset => {
-                                    const isSelected = color === preset;
-                                    return (
-                                        <ShadowBox
-                                            key={preset}
-                                            contentBackgroundColor={isSelected ? preset : '#fff'}
-                                            contentBorderColor={isSelected ? '#000' : preset}
-                                            contentBorderWidth={1}
-                                            contentBorderRadius={18}
-                                            shadowBorderColor={isSelected ? '#000' : preset}
-                                            shadowColor={isSelected ? '#000' : preset}
-                                            shadowBorderRadius={18}
-                                        >
-                                            <Pressable
-                                                onPress={() => setColor(preset)}
-                                                style={{ width: 25, height: 25 }}
-                                            />
-                                        </ShadowBox>
-                                    );
-                                })}
-                            </View>
+                            <ColorPicker
+                                selected={color}
+                                onSelect={setColor}
+                                backgroundColor={PAGE.countdown.background[1]}
+                            />
                         </View>
                     </ScrollView>
 

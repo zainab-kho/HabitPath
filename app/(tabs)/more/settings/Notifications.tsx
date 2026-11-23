@@ -5,7 +5,7 @@
 import React, { useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 
-import { COLORS } from '@/constants/colors';
+import { COLORS } from '@/colors';
 import { useAuth } from '@/contexts/AuthContext';
 import {
     DEFAULT_NUDGE_PREFS,

@@ -13,7 +13,7 @@ import PageContainer from '@/ui/PageContainer';
 import PageHeader from '@/ui/PageHeader';
 
 // constants
-import { PAGE } from '@/constants/colors';
+import { PAGE } from '@/colors';
 
 export default function Profile() {
     const { user } = useAuth();

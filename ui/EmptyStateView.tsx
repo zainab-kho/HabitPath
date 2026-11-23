@@ -1,7 +1,7 @@
 import React from 'react';
 import { Image, ImageSourcePropType, Pressable, StyleProp, Text, View, ViewStyle } from 'react-native';
 
-import { COLORS, PAGE } from '@/constants/colors';
+import { COLORS } from '@/colors';
 import { globalStyles } from '@/styles';
 import ShadowBox from '@/ui/ShadowBox';
 

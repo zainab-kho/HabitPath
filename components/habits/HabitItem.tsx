@@ -4,7 +4,7 @@ import * as Haptics from 'expo-haptics';
 import { Animated, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 
-import { COLORS, PAGE } from '@/constants/colors';
+import { COLORS, PAGE } from '@/colors';
 import { HABIT_ICONS, SYSTEM_ICONS } from '@/constants/icons';
 import { globalStyles, uiStyles } from '@/styles';
 import { Habit } from '@/types/Habit';

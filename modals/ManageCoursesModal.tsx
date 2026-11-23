@@ -2,7 +2,7 @@
 // View + delete courses, opened from the assignments page's more menu.
 // Styled to match the assignments modals (white card, assignments-primary border,
 // centered h4 title with divider, ShadowBox rows).
-import { PAGE, BUTTON_COLORS } from '@/constants/colors';
+import { PAGE, BUTTON_COLORS } from '@/colors';
 import { CourseWithColor } from '@/hooks/useAssignmentData';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';

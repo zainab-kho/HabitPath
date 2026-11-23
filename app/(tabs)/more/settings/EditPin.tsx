@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 
-import { BUTTON_COLORS } from '@/constants/colors';
+import { BUTTON_COLORS } from '@/colors';
 import { supabase } from '@/lib/supabase';
 import { globalStyles, uiStyles } from '@/styles';
 import { AppLinearGradient } from '@/ui/AppLinearGradient';
@@ -15,7 +15,7 @@ import { getResetTime } from '@/lib/supabase/queries';
 
 export default function SettingsPage() {
     const router = useRouter();
-    const { user, signOut } = useAuth();
+    const { user } = useAuth();
 
     const HOURS = Array.from({ length: 12 }, (_, i) => String(i + 1));
     const MINUTES = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0'));

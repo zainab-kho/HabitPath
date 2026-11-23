@@ -1,5 +1,5 @@
 // @/navigation/BottomNav.tsx
-import { COLORS } from '@/constants/colors';
+import { COLORS } from '@/colors';
 import { FIXED_TAB, NAV_DESTINATIONS } from '@/constants/navTabs';
 import { useNavTabs } from '@/navigation/NavTabsContext';
 import { usePathname, useRouter } from 'expo-router';

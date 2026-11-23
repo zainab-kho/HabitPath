@@ -1,5 +1,5 @@
 // components/habits/ProgressBar.tsx
-import { COLORS } from '@/constants/colors';
+import { COLORS } from '@/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import ShadowBox from '@/ui/ShadowBox';
 import { useRouter } from 'expo-router';

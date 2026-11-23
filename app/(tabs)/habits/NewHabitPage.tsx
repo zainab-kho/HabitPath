@@ -19,7 +19,7 @@ import {
 import uuid from 'react-native-uuid';
 
 
-import { PATH_COLORS, type PathColorKey } from '@/colors/pathColors';
+import { BUTTON_COLORS, COLORS, PAGE, PATH_COLORS, type PathColorKey } from '@/colors';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { STORAGE_KEYS } from '@/storage/keys';
@@ -30,7 +30,6 @@ import { getResetTime } from '@/lib/supabase/queries';
 import { getIconFile } from '@/components/habits/iconUtils';
 import { DEFAULT_REMINDER_TIME, ensureNotificationPermission, formatReminderTime } from '@/lib/notifications';
 import ReminderModal from '@/modals/habits/ReminderModal';
-import { BUTTON_COLORS, COLORS, PAGE } from '@/constants/colors';
 import { CUSTOM_TYPES, FREQUENCIES, REWARD_OPTIONS, TIME_OPTIONS, TimeOfDay, WEEK_DAYS } from '@/constants/habits';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import { globalStyles } from '@/styles';

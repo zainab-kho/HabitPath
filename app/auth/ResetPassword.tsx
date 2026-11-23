@@ -1,5 +1,5 @@
 // @/app/auth/ResetPassword.tsx
-import { PAGE } from '@/constants/colors'
+import { PAGE } from '@/colors'
 import { useAuth } from '@/contexts/AuthContext'
 import { passwordPolicyError } from '@/utils/passwordPolicy'
 import { supabase } from '@/lib/supabase'

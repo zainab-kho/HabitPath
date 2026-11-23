@@ -1,4 +1,6 @@
-// constants/pathColors.ts (or inside constants/colors.ts)
+// @/colors/pathColors.ts
+// the colors a path can be. paths save the color's name ('green'), not the hex code,
+// so the names here have to stay the same or existing paths lose their color
 export const PATH_COLORS = {
   green: '#589b72',
   blue: '#40BAFF',

@@ -1,5 +1,5 @@
 // components/habits/HabitSectionHeader.tsx
-import { COLORS } from '@/constants/colors';
+import { COLORS } from '@/colors';
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 

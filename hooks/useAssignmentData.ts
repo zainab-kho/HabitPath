@@ -1,5 +1,5 @@
 // @/hooks/useAssignmentData.ts
-import { PRESET_COLORS } from '@/constants/colors';
+import { PRESET_COLORS } from '@/colors';
 import { supabase } from '@/lib/supabase';
 import { Assignment } from '@/types/Assignment';
 import { Course } from '@/types/Course';

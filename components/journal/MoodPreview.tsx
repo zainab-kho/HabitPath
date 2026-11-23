@@ -1,6 +1,5 @@
 // @/components/journal/MoodPreview.tsx
-import { PAGE } from '@/constants/colors';
-import { MOOD_COLORS } from '@/colors/journalPalette';
+import { MOOD_COLORS, PAGE } from '@/colors';
 import { globalStyles } from '@/styles';
 import { JournalEntry } from '@/types/JournalEntry';
 import ShadowBox from '@/ui/ShadowBox';

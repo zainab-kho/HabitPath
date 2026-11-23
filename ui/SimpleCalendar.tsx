@@ -1,5 +1,4 @@
 // @/components/ui/SimpleCalendar.tsx
-import { PAGE } from '@/constants/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import { globalStyles } from '@/styles';
 import { formatLocalDate, getWeekDatesForDate, getWeekStartDow } from '@/utils/dateUtils';

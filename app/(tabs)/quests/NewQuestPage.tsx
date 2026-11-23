@@ -5,7 +5,7 @@ import { useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import { Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
 
-import { BUTTON_COLORS, PAGE } from '@/constants/colors';
+import { BUTTON_COLORS, PAGE } from '@/colors';
 import { useAuth } from '@/contexts/AuthContext';
 import { createQuest } from '@/lib/supabase/queries/quests';
 import { globalStyles, uiStyles } from '@/styles';

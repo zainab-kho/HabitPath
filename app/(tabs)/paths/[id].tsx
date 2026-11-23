@@ -1,6 +1,5 @@
 // app/(tabs)/paths/[id].tsx
-import { BUTTON_COLORS, COLORS, PAGE } from '@/constants/colors';
-import { PATH_COLORS, type PathColorKey } from '@/colors/pathColors';
+import { BUTTON_COLORS, COLORS, PAGE, PATH_COLORS, type PathColorKey } from '@/colors';
 import { HABIT_ICONS, SYSTEM_ICONS } from '@/constants/icons';
 import { useAuth } from '@/contexts/AuthContext';
 import { useHabits } from '@/hooks/useHabits';

@@ -21,12 +21,11 @@ import { markJournalEntrySynced } from '@/lib/journal/offlineSync';
 import { getCache, setCache } from '@/lib/journal/journalCacheStore';
 import { encryptEntryFields, getJournalKey } from '@/lib/journal/entryCrypto';
 import { JournalEntry } from '@/types/JournalEntry';
-import { COLORS, PAGE } from '@/constants/colors';
+import { BUTTON_COLORS, COLORS, MAIN_MOOD_COLORS, MOOD_COLORS, PAGE } from '@/colors';
 import MoodPickerModal from '@/modals/MoodPickerModal';
 import SongPickerModal, { SongData } from '@/modals/SongPickerModal';
 import SongCard from '@/components/journal/SongCard';
 import { formatDisplayDate, formatDisplayTime, formatLocalDate } from '@/utils/dateUtils';
-import { MAIN_MOOD_COLORS, MOOD_COLORS } from '@/colors/journalPalette';
 import { SYSTEM_ICONS } from '@/constants/icons';
 
 import { globalStyles, journalStyle } from '@/styles';
@@ -37,7 +36,6 @@ import ShadowBox from '@/ui/ShadowBox';
 import SimpleCalendar from '@/ui/SimpleCalendar';
 import { TimeWheel, pickerStyles, toggleMeridiem } from '@/ui/TimeWheel';
 import ToggleRow from '@/ui/ToggleRow';
-import { BUTTON_COLORS } from '@/constants/colors';
 
 const HOURS = Array.from({ length: 12 }, (_, i) => String(i + 1));
 const MINUTES = Array.from({ length: 60 }, (_, i) => i.toString().padStart(2, '0'));

@@ -28,7 +28,7 @@ import PageHeader from '@/ui/PageHeader';
 import ShadowBox from '@/ui/ShadowBox';
 
 // constants + styles
-import { PAGE } from '@/constants/colors';
+import { PAGE } from '@/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import { globalStyles } from '@/styles';
 

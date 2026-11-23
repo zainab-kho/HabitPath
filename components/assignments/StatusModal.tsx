@@ -6,7 +6,7 @@ import ShadowBox from '@/ui/ShadowBox';
 import React from 'react';
 import { Modal, Pressable, Text, View } from 'react-native';
 
-import { PAGE } from '@/constants/colors';
+import { PAGE } from '@/colors';
 
 interface StatusModalProps {
     visible: boolean;

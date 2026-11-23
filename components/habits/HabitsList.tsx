@@ -12,7 +12,7 @@ import HabitSectionHeader from '@/components/habits/HabitSectionHeader';
 import { getHabitCycleStart, getWeeklyTimeTotal } from '@/utils/habitUtils';
 import HabitDetailModal from '@/modals/HabitDetailModal';
 import TimeLogModal from '@/modals/habits/TimeLogModal';
-import { COLORS, PAGE } from '@/constants/colors';
+import { COLORS, PAGE } from '@/colors';
 import { emptyTimeBuckets, TIME_OPTIONS, TimeOfDay } from '@/constants/habits';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import { STORAGE_KEYS } from '@/storage/keys';

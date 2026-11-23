@@ -1,5 +1,5 @@
 // @/app/styles/journalStyles
-import { PAGE } from '@/constants/colors';
+import { PAGE } from '@/colors';
 import { StyleSheet } from 'react-native';
 
 export const journalStyle = StyleSheet.create({

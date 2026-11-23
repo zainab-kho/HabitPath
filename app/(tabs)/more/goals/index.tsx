@@ -16,7 +16,7 @@ import Sortable from 'react-native-sortables';
 
 import GoalRow from '@/components/habits/GoalRow';
 import HabitSectionHeader from '@/components/habits/HabitSectionHeader';
-import { COLORS, PAGE } from '@/constants/colors';
+import { COLORS, PAGE } from '@/colors';
 import { emptyTimeBuckets, TIME_OPTIONS, TimeOfDay } from '@/constants/habits';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import { useAuth } from '@/contexts/AuthContext';

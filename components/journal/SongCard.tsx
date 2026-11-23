@@ -2,7 +2,7 @@
 import React from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { PAGE } from '@/constants/colors';
+import { PAGE } from '@/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import { MediaType, SongData } from '@/modals/SongPickerModal';
 import ShadowBox from '@/ui/ShadowBox';

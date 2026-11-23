@@ -37,10 +37,9 @@ import { AppLinearGradient } from '@/ui/AppLinearGradient';
 import EmptyStateView from '@/ui/EmptyStateView';
 import PageContainer from '@/ui/PageContainer';
 import PageHeader from '@/ui/PageHeader';
-import ShadowBox from '@/ui/ShadowBox';
 
 // constants
-import { PAGE } from '@/constants/colors';
+import { PAGE } from '@/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import { AssignmentWithCourse } from '@/hooks/useAssignmentData';
 

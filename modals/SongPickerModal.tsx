@@ -1,5 +1,5 @@
 // @/modals/SongPickerModal.tsx
-import { BUTTON_COLORS, PAGE } from '@/constants/colors';
+import { PAGE } from '@/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import { globalStyles, modalStyles } from '@/styles';
 import ShadowBox from '@/ui/ShadowBox';

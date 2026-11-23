@@ -13,7 +13,7 @@ import { getHabitCycleStart, getWeeklyTimeTotal } from '@/utils/habitUtils';
 import HabitDetailModal from '@/modals/HabitDetailModal';
 import TimeLogModal from '@/modals/habits/TimeLogModal';
 import { COLORS, PAGE } from '@/constants/colors';
-import { TIME_OPTIONS } from '@/constants/habits';
+import { emptyTimeBuckets, TIME_OPTIONS, TimeOfDay } from '@/constants/habits';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import { STORAGE_KEYS } from '@/storage/keys';
 import { globalStyles } from '@/styles';
@@ -52,7 +52,6 @@ interface HabitsListProps {
   onReloadHabits?: () => void;
 }
 
-type TimeOfDay = typeof TIME_OPTIONS[number];
 
 // Union type for items in the flat sortable list
 type ListItem =
@@ -248,10 +247,7 @@ export default function HabitsList({
       ? regularOrdered
       : regularOrdered.filter(h => h.status !== 'completed' && h.status !== 'skipped');
 
-    const grouped: Record<TimeOfDay, HabitWithStatus[]> = {
-      'Wake Up': [], 'Morning': [], 'Anytime': [],
-      'Afternoon': [], 'Evening': [], 'Bed Time': [],
-    };
+    const grouped = emptyTimeBuckets<HabitWithStatus>();
     visible.forEach(h => {
       const section = getSection(h, dateStr);
       (grouped[section] || grouped['Anytime']).push(h);

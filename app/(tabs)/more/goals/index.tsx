@@ -17,7 +17,7 @@ import Sortable from 'react-native-sortables';
 import GoalRow from '@/components/habits/GoalRow';
 import HabitSectionHeader from '@/components/habits/HabitSectionHeader';
 import { COLORS, PAGE } from '@/constants/colors';
-import { TIME_OPTIONS } from '@/constants/habits';
+import { emptyTimeBuckets, TIME_OPTIONS, TimeOfDay } from '@/constants/habits';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import { useAuth } from '@/contexts/AuthContext';
 import { savePermanentOrder, savePermanentTimeOfDay } from '@/hooks/useDailyHabitOverrides';
@@ -64,7 +64,6 @@ const isPast = (habit: Habit, todayStr: string) => {
 const SORTS = ['My order', 'Name', 'Recent', 'Start date', 'Path', 'Points'] as const;
 type Sort = typeof SORTS[number];
 
-type TimeOfDay = typeof TIME_OPTIONS[number];
 
 // rows of the draggable list: section headers interleaved with habits
 type ListItem =
@@ -294,10 +293,7 @@ export default function AllGoalsPage() {
     const flatList = useMemo<ListItem[]>(() => {
         if (!isDragMode) return [];
 
-        const grouped: Record<TimeOfDay, Habit[]> = {
-            'Wake Up': [], 'Morning': [], 'Anytime': [],
-            'Afternoon': [], 'Evening': [], 'Bed Time': [],
-        };
+        const grouped = emptyTimeBuckets<Habit>();
         visible.forEach(habit => {
             const section = (habit.selectedTimeOfDay ?? 'Anytime') as TimeOfDay;
             (grouped[section] ?? grouped['Anytime']).push(habit);

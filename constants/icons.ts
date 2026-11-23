@@ -410,6 +410,7 @@ export const SYSTEM_ICONS = {
   calendar: require('@/assets/icons/system/calendar.png'),
   location: require('@/assets/icons/system/location-icon.png'),
   write: require('@/assets/icons/system/write.png'),
+  headphones: require('@/assets/icons/system/headphones.png'),
   musicNote: require('@/assets/icons/system/music-note.png'),
   search: require('@/assets/icons/system/search.png'),
 

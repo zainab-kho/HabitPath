@@ -31,7 +31,7 @@ import { getIconFile } from '@/components/habits/iconUtils';
 import { DEFAULT_REMINDER_TIME, ensureNotificationPermission, formatReminderTime } from '@/lib/notifications';
 import ReminderModal from '@/modals/habits/ReminderModal';
 import { BUTTON_COLORS, COLORS, PAGE } from '@/constants/colors';
-import { CUSTOM_TYPES, FREQUENCIES, REWARD_OPTIONS, TIME_OPTIONS, WEEK_DAYS } from '@/constants/habits';
+import { CUSTOM_TYPES, FREQUENCIES, REWARD_OPTIONS, TIME_OPTIONS, TimeOfDay, WEEK_DAYS } from '@/constants/habits';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import { globalStyles } from '@/styles';
 import { AppLinearGradient } from '@/ui/AppLinearGradient';
@@ -41,7 +41,6 @@ import ShadowBox from '@/ui/ShadowBox';
 import SimpleCalendar from '@/ui/SimpleCalendar';
 
 type Frequency = typeof FREQUENCIES[number];
-type TimeOfDay = typeof TIME_OPTIONS[number];
 
 const ICON_SIZE = 30;
 // space under the card when the keyboard is hidden

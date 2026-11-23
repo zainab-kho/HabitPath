@@ -228,7 +228,6 @@ export const ICON_CATEGORIES: Record<string, HabitIcon[]> = {
     { name: 'folder', file: HABIT_ICONS.folder },
     { name: 'accounting', file: HABIT_ICONS.accounting },
     { name: 'suitcase', file: HABIT_ICONS.suitcase },
-    { name: 'profile', file: HABIT_ICONS.profile },
     // reading & study
     { name: 'books', file: HABIT_ICONS.books },
     { name: 'kindle', file: HABIT_ICONS.kindle },
@@ -377,9 +376,7 @@ export const SYSTEM_ICONS = {
   stats: require('@/assets/icons/system/stats.png'),
 
   path: require('@/assets/icons/system/path-icon.png'),
-  path2: require('@/assets/icons/system/path-icon2.png'),
   quest: require('@/assets/icons/system/quest-icon.png'),
-  profile: require('@/assets/icons/system/profile-icon.png'),
   more: require('@/assets/icons/system/more-icon.png'),
 
   feedback: require('@/assets/icons/system/feedback.png'),
@@ -409,12 +406,10 @@ export const SYSTEM_ICONS = {
   sortRight: require('@/assets/icons/system/sort-right.png'),
   trendUp: require('@/assets/icons/system/trend-up.png'),
   trendDown: require('@/assets/icons/system/trend-down.png'),
-  clock: require('@/assets/icons/system/clock.png'),
   repeat: require('@/assets/icons/system/repeat.png'),
   calendar: require('@/assets/icons/system/calendar.png'),
   location: require('@/assets/icons/system/location-icon.png'),
   write: require('@/assets/icons/system/write.png'),
-  headphones: require('@/assets/icons/system/headphones.png'),
   musicNote: require('@/assets/icons/system/music-note.png'),
   search: require('@/assets/icons/system/search.png'),
 

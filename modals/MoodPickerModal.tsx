@@ -1,6 +1,7 @@
 import React from 'react';
 
-import { MOOD_COLORS, PAGE } from '@/constants/colors';
+import { PAGE } from '@/constants/colors';
+import { MOOD_COLORS } from '@/colors/journalPalette';
 import { journalStyle } from '@/styles';
 import ShadowBox from '@/ui/ShadowBox';
 import { Modal, Pressable, Text, View } from 'react-native';

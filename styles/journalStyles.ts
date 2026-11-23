@@ -22,28 +22,9 @@ export const journalStyle = StyleSheet.create({
         gap: 8,
     },
 
-    moodBox: {
-        height: 20,
-        width: 20,
-        borderRadius: 7,
-        borderWidth: 1,
-        backgroundColor: '#F9F8FF',
-        shadowOffset: { width: 2, height: 2 },
-        shadowOpacity: 1,
-        shadowRadius: 0,
-        elevation: 5,
-    },
-
     moodLabel: {
         fontSize: 11,
         opacity: 0.5,
-    },
-
-    moreText: {
-        textAlign: 'center',
-        opacity: 0.5,
-        fontSize: 11,
-        margin: 10,
     },
 
     locationCard: {

@@ -2,15 +2,6 @@
 
 export const TIME_OPTIONS = ['Wake Up', 'Morning', 'Anytime', 'Afternoon', 'Evening', 'Bed Time'] as const;
 
-export const TIMES_OF_DAY = [
-  'Wake Up',
-  'Morning',
-  'Anytime',
-  'Afternoon',
-  'Evening',
-  'Bed Time',
-] as const;
-
 export const FREQUENCIES = [
   'None',
   'Daily',

@@ -16,7 +16,8 @@ import { migrateJournalEntries } from '@/lib/journal/migrateJournal';
 import { getCache, setCache } from '@/lib/journal/journalCacheStore';
 import { JournalEntry } from '@/types/JournalEntry';
 
-import { COLORS, MOOD_COLORS, PAGE } from '@/constants/colors';
+import { COLORS, PAGE } from '@/constants/colors';
+import { MOOD_COLORS } from '@/colors/journalPalette';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import { AppLinearGradient } from '@/ui/AppLinearGradient';
 import EmptyStateView from '@/ui/EmptyStateView';

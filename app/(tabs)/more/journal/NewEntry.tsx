@@ -26,7 +26,7 @@ import MoodPickerModal from '@/modals/MoodPickerModal';
 import SongPickerModal, { SongData } from '@/modals/SongPickerModal';
 import SongCard from '@/components/journal/SongCard';
 import { formatDisplayDate, formatDisplayTime, formatLocalDate } from '@/utils/dateUtils';
-import { MAIN_MOOD_COLORS, MOOD_COLORS } from '@/constants/colors';
+import { MAIN_MOOD_COLORS, MOOD_COLORS } from '@/colors/journalPalette';
 import { SYSTEM_ICONS } from '@/constants/icons';
 
 import { globalStyles, journalStyle } from '@/styles';

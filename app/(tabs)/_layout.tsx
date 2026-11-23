@@ -36,7 +36,6 @@ export default function TabsLayout() {
             <Stack.Screen name="habits/index" />
             <Stack.Screen name="paths/index" />
             <Stack.Screen name="quests" />
-            <Stack.Screen name="profile/index" />
           </Stack>
         </LinearGradient>
       </View>

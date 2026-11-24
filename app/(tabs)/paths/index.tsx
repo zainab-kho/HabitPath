@@ -493,7 +493,7 @@ function DailySummary({
                     borderColor: '#000',
                     backgroundColor: PAGE.path.primary[1],
                 }}>
-                    <Text style={[globalStyles.body2, { fontSize: 13 }]}>
+                    <Text style={[globalStyles.bodyRegular, { fontSize: 13 }]}>
                         {doneWeekOccurrences}/{totalWeekOccurrences} done this week
                     </Text>
                 </View>

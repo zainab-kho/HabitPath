@@ -219,7 +219,7 @@ export default function HabitDetailModal({ visible, habit, resetHour, resetMin, 
 
     return (
         <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
-            <Pressable style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center' }} onPress={onClose}>
+            <Pressable style={{ flex: 1, backgroundColor: COLORS.Backdrop, justifyContent: 'center' }} onPress={onClose}>
                 <Pressable
                     style={{
                         backgroundColor: '#fff',
@@ -348,7 +348,7 @@ export default function HabitDetailModal({ visible, habit, resetHour, resetMin, 
                         onPress={() => setShowMore(!showMore)}
                         style={{ alignSelf: 'center', paddingVertical: 8, marginBottom: showMore ? 15 : 0 }}
                     >
-                        <Text style={[globalStyles.body2, { fontSize: 13, opacity: 0.5 }]}>
+                        <Text style={[globalStyles.bodyRegular, { fontSize: 13, opacity: 0.5 }]}>
                             {showMore ? 'Less options' : 'More options'}
                         </Text>
                     </Pressable>
@@ -470,7 +470,7 @@ export default function HabitDetailModal({ visible, habit, resetHour, resetMin, 
                                                         shadowColor={isOriginal ? '#000' : COLORS.Accent}
                                                     >
                                                         <View style={{ paddingVertical: 5, alignItems: 'center' }}>
-                                                            <Text style={[globalStyles.body1, { fontSize: 13 }]}>
+                                                            <Text style={[globalStyles.bodySmall, { fontSize: 13 }]}>
                                                                 {DAY_ABBREV[day]}
                                                             </Text>
                                                         </View>
@@ -543,7 +543,7 @@ export default function HabitDetailModal({ visible, habit, resetHour, resetMin, 
                                                             shadowColor={isCurrent ? '#000' : COLORS.Accent}
                                                         >
                                                             <View style={{ paddingVertical: 5, alignItems: 'center' }}>
-                                                                <Text style={[globalStyles.body1, { fontSize: 13 }]}>
+                                                                <Text style={[globalStyles.bodySmall, { fontSize: 13 }]}>
                                                                     {DAY_ABBREV[day]}
                                                                 </Text>
                                                             </View>
@@ -627,7 +627,7 @@ export default function HabitDetailModal({ visible, habit, resetHour, resetMin, 
                                                             shadowColor={isCurrent ? '#000' : COLORS.Accent}
                                                         >
                                                             <View style={{ paddingVertical: 5, alignItems: 'center' }}>
-                                                                <Text style={[globalStyles.body1, { fontSize: 13 }]}>
+                                                                <Text style={[globalStyles.bodySmall, { fontSize: 13 }]}>
                                                                     {DAY_ABBREV[day]}
                                                                 </Text>
                                                             </View>

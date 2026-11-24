@@ -1,8 +1,10 @@
-// @/app/styles/journalStyles
+// @/styles/journalStyles.ts
+// the cards on the journal entry pages (new entry and viewing an entry)
 import { PAGE } from '@/colors';
 import { StyleSheet } from 'react-native';
 
-export const journalStyle = StyleSheet.create({
+export const journalStyles = StyleSheet.create({
+    // the mood picker card
     card: {
         borderWidth: 2,
         borderColor: PAGE.journal.border[0],
@@ -12,6 +14,7 @@ export const journalStyle = StyleSheet.create({
         paddingHorizontal: 10,
     },
 
+    // the row of moods, and each mood in it
     moodRow: {
         flexDirection: 'row',
         justifyContent: 'space-around',
@@ -27,6 +30,7 @@ export const journalStyle = StyleSheet.create({
         opacity: 0.5,
     },
 
+    // where you were when you wrote it
     locationCard: {
         borderWidth: 2,
         borderColor: PAGE.journal.border[0],
@@ -36,6 +40,7 @@ export const journalStyle = StyleSheet.create({
         marginBottom: 10, 
     },
 
+    // the card holding the entry text, and the text box inside it
     journalCard: {
         borderWidth: 2,
         borderColor: PAGE.journal.border[0],

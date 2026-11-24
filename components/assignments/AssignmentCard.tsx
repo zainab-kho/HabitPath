@@ -46,7 +46,7 @@ export function AssignmentCard({ assignment, showDelete = false, onDelete, onSta
 
                             >
                                 <View style={{ paddingHorizontal: 10, paddingVertical: 2 }}>
-                                    <Text style={globalStyles.body2}>
+                                    <Text style={globalStyles.bodyRegular}>
                                         {assignment.course.course_number}
                                     </Text>
                                 </View>

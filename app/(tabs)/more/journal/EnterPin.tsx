@@ -73,7 +73,7 @@ export default function EnterPinPage() {
         <PageHeader title={entryId ? 'Unlock Entry' : 'Unlock Journal'} showBackButton />
 
         <Pressable style={styles.wrapper} onPress={() => inputRef.current?.focus()}>
-          <Text style={[globalStyles.h3, { textAlign: 'center' }]}>Enter PIN</Text>
+          <Text style={[globalStyles.h2, { textAlign: 'center' }]}>Enter PIN</Text>
           <Text style={[globalStyles.body, { opacity: 0.7, textAlign: 'center' }]}>
             {checking ? 'Checking…' : 'Type your 4-digit PIN'}
           </Text>

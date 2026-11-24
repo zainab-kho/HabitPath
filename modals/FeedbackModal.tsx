@@ -2,7 +2,7 @@
 // Feedback report modal — opened from Settings ("Send Feedback") and from the
 // floating feedback button on every page (which passes the current page so
 // reports say where the problem happened).
-import { BUTTON_COLORS, PAGE } from '@/colors';
+import { BUTTON_COLORS, COLORS, PAGE } from '@/colors';
 import { useAuth } from '@/contexts/AuthContext';
 import { submitFeedback } from '@/lib/supabase/queries/feedback';
 import { globalStyles, uiStyles } from '@/styles';
@@ -63,10 +63,10 @@ export default function FeedbackModal({ visible, onClose, page = null }: Props) 
         <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
         <View style={styles.card}>
           <View style={{ marginTop: 20, paddingHorizontal: 20 }}>
-            <Text style={[globalStyles.h3, { textAlign: 'center', marginBottom: 6 }]}>
+            <Text style={[globalStyles.h2, { textAlign: 'center', marginBottom: 6 }]}>
               Send Feedback
             </Text>
-            <Text style={[globalStyles.body2, { textAlign: 'center', opacity: 0.6, fontSize: 13, marginBottom: 16 }]}>
+            <Text style={[globalStyles.bodyRegular, { textAlign: 'center', opacity: 0.6, fontSize: 13, marginBottom: 16 }]}>
               Found a bug or have an idea? Tell me about it!
             </Text>
 
@@ -118,7 +118,7 @@ export default function FeedbackModal({ visible, onClose, page = null }: Props) 
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: COLORS.Backdrop,
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 200,

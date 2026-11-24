@@ -1,7 +1,7 @@
 import React from 'react';
 
-import { MOOD_COLORS, PAGE } from '@/colors';
-import { journalStyle } from '@/styles';
+import { COLORS, MOOD_COLORS, PAGE } from '@/colors';
+import { journalStyles } from '@/styles';
 import ShadowBox from '@/ui/ShadowBox';
 import { Modal, Pressable, Text, View } from 'react-native';
 // RN's ScrollView doesn't scroll reliably inside these modals — use gesture-handler's,
@@ -27,7 +27,7 @@ export default function MoodPickerModal({ visible, selectedMood, onClose, onSele
       <Pressable
         style={{
           flex: 1,
-          backgroundColor: 'rgba(0,0,0,0.5)',
+          backgroundColor: COLORS.Backdrop,
           justifyContent: 'center',
           alignItems: 'center',
         }}
@@ -87,7 +87,7 @@ export default function MoodPickerModal({ visible, selectedMood, onClose, onSele
                         <View style={{ width: 30, height: 30 }} />
                       </ShadowBox>
                     </Pressable>
-                    <Text style={[journalStyle.moodLabel, { marginTop: 6, textAlign: 'center' }]}>{key}</Text>
+                    <Text style={[journalStyles.moodLabel, { marginTop: 6, textAlign: 'center' }]}>{key}</Text>
                   </View>
                 );
               })}

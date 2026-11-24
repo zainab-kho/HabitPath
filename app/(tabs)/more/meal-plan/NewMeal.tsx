@@ -22,8 +22,8 @@ import ShadowBox from '@/ui/ShadowBox';
 
 // constants + styles
 import { BUTTON_COLORS, PAGE } from '@/colors';
-import { globalStyles } from '@/styles';
-import { NewItemStyles } from '@/styles/NewItemStyles';
+import { formStyles, globalStyles } from '@/styles';
+
 
 const ACCENT = PAGE.mealPlan.primary[0];
 
@@ -160,7 +160,7 @@ export default function NewMeal() {
                 <PageHeader title={isEditMode ? 'Edit Meal' : 'New Meal'} showBackButton />
 
                 {/* main card: the fields scroll, the button bar stays pinned at the bottom */}
-                <View style={NewItemStyles.mainCardContainer}>
+                <View style={formStyles.card}>
                     <KeyboardAwareScrollView
                         contentContainerStyle={{ padding: 30, gap: 20 }}
                         showsVerticalScrollIndicator={false}
@@ -200,7 +200,7 @@ export default function NewMeal() {
                                                 shadowBorderRadius={15}
                                             >
                                                 <View style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
-                                                    <Text style={globalStyles.body1}>{type}</Text>
+                                                    <Text style={globalStyles.bodySmall}>{type}</Text>
                                                 </View>
                                             </ShadowBox>
                                         </Pressable>

@@ -5,7 +5,7 @@ import { Alert, Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TextInpu
 // gesture-handler scroll + root view so scrolling works inside the course modal
 import { GestureHandlerRootView, ScrollView as GHScrollView } from 'react-native-gesture-handler';
 
-import { ASSIGNMENT_TYPE_COLORS, BUTTON_COLORS, PAGE, PROGRESS_COLORS } from '@/colors';
+import { ASSIGNMENT_TYPE_COLORS, BUTTON_COLORS, COLORS, PAGE, PROGRESS_COLORS } from '@/colors';
 import { ASSIGNMENT_PROGRESS, ASSIGNMENT_TYPES } from '@/constants/assignments';
 import { supabase } from '@/lib/supabase';
 import { globalStyles, uiStyles } from '@/styles';
@@ -286,7 +286,7 @@ export default function NewAssignment() {
                                         }
                                     >
                                         <View style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
-                                            <Text style={globalStyles.body1}>{assignmentType}</Text>
+                                            <Text style={globalStyles.bodySmall}>{assignmentType}</Text>
                                         </View>
                                     </ShadowBox>
                                 </Pressable>
@@ -330,7 +330,7 @@ export default function NewAssignment() {
                                         }
                                     >
                                         <View style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
-                                            <Text style={globalStyles.body1}>{progressOption}</Text>
+                                            <Text style={globalStyles.bodySmall}>{progressOption}</Text>
                                         </View>
                                     </ShadowBox>
                                 </Pressable>
@@ -371,7 +371,7 @@ export default function NewAssignment() {
                             alignItems: 'center',
                             marginBottom: 10,
                         }}>
-                            <Text style={globalStyles.body1}>Add due time?</Text>
+                            <Text style={globalStyles.bodySmall}>Add due time?</Text>
                             <Switch
                                 value={hasDueTime}
                                 onValueChange={setHasDueTime}
@@ -454,7 +454,7 @@ export default function NewAssignment() {
                             <Pressable style={pickerModal.card} onPress={(e) => e.stopPropagation()}>
 
                                 <View style={{ marginTop: 20 }}>
-                                    <Text style={[globalStyles.h3, { textAlign: 'center', marginBottom: 16 }]}>
+                                    <Text style={[globalStyles.h2, { textAlign: 'center', marginBottom: 16 }]}>
                                         Select Course
                                     </Text>
                                 </View>
@@ -481,7 +481,7 @@ export default function NewAssignment() {
                                                     shadowColor={isSelected ? '#000' : PAGE.assignments.primary[1]}
                                                 >
                                                     <View style={{ paddingVertical: 8, paddingHorizontal: 12 }}>
-                                                        <Text numberOfLines={1} ellipsizeMode="tail" style={globalStyles.body1}>
+                                                        <Text numberOfLines={1} ellipsizeMode="tail" style={globalStyles.bodySmall}>
                                                             {course.course_number} - {course.course_name}
                                                         </Text>
                                                     </View>
@@ -503,7 +503,7 @@ export default function NewAssignment() {
 const pickerModal = StyleSheet.create({
     overlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.45)',
+        backgroundColor: COLORS.Backdrop,
         justifyContent: 'center',
         alignItems: 'center',
     },

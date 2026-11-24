@@ -1,6 +1,5 @@
 // app/components/gradients/AppLinearGradient.tsx
 import { PAGE } from '@/colors';
-import { layoutStyles } from '@/styles';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StyleProp, ViewStyle } from 'react-native';
 
@@ -33,7 +32,7 @@ export function AppLinearGradient({ variant, children, style }: Props) {
       colors={getGradient(variant)}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
-      style={[layoutStyles.container, style]}
+      style={[{ flex: 1 }, style]}
     >
       {children}
     </LinearGradient>

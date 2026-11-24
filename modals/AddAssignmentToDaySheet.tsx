@@ -1,5 +1,5 @@
 // @/modals/AddAssignmentToDaySheet.tsx
-import { ASSIGNMENT_TYPE_COLORS, BUTTON_COLORS, PAGE, PROGRESS_COLORS } from '@/colors';
+import { ASSIGNMENT_TYPE_COLORS, BUTTON_COLORS, COLORS, PAGE, PROGRESS_COLORS } from '@/colors';
 import { globalStyles } from '@/styles';
 import ShadowBox from '@/ui/ShadowBox';
 import React, { useState } from 'react';
@@ -82,7 +82,7 @@ export default function AddAssignmentToDaySheet({
                                 {assignment.course && (
                                     <ShadowBox contentBackgroundColor={assignment.course.color || '#fff'}>
                                         <View style={{ paddingHorizontal: 6, paddingVertical: 2 }}>
-                                            <Text style={globalStyles.body2}>
+                                            <Text style={globalStyles.bodyRegular}>
                                                 {assignment.course.course_number}
                                             </Text>
                                         </View>
@@ -127,7 +127,7 @@ export default function AddAssignmentToDaySheet({
 
     return (
         <Modal visible={visible} transparent animationType="none" onRequestClose={handleCancel}>
-            <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center' }}>
+            <View style={{ flex: 1, backgroundColor: COLORS.Backdrop, justifyContent: 'center' }}>
                 {/* backdrop sits behind the card, not around it — a Pressable parent would
                     claim the touch on press-down and the list could never scroll */}
                 <Pressable style={StyleSheet.absoluteFill} onPress={handleCancel} />
@@ -145,7 +145,7 @@ export default function AddAssignmentToDaySheet({
                 >
                     <View style={{ marginTop: 20, marginBottom: 10 }}>
                         <Text style={[globalStyles.h2, { textAlign: 'center', marginBottom: 5 }]}>Add to {dayLabel}</Text>
-                        <Text style={[globalStyles.body2, { textAlign: 'center', opacity: 0.6 }]}>
+                        <Text style={[globalStyles.bodyRegular, { textAlign: 'center', opacity: 0.6 }]}>
                             {selectedAssignmentIds.length ? `${selectedAssignmentIds.length} selected` : 'Select assignments to work on'}
                         </Text>
                     </View>

@@ -264,7 +264,7 @@ export default function SettingsPage() {
                             style={[globalStyles.bubbleLabel, { backgroundColor: COLORS.TimeLabel }]}
                             onPress={() => setShowTimePicker(prev => !prev)}
                         >
-                            <Text style={globalStyles.body2}>{hour}:{minute} {meridiem}</Text>
+                            <Text style={globalStyles.bodyRegular}>{hour}:{minute} {meridiem}</Text>
                         </Pressable>
                     </View>
 
@@ -295,7 +295,7 @@ export default function SettingsPage() {
                                         paddingHorizontal: 15
                                     }}
                                 >
-                                    <Text style={globalStyles.body1}>Done</Text>
+                                    <Text style={globalStyles.bodySmall}>Done</Text>
                                 </Pressable>
                             </ShadowBox>
                         </View>
@@ -309,7 +309,7 @@ export default function SettingsPage() {
                             style={[globalStyles.bubbleLabel, { backgroundColor: COLORS.TimeLabel }]}
                             onPress={() => setShowWeekStartPicker(prev => !prev)}
                         >
-                            <Text style={globalStyles.body2}>{weekStartDay}</Text>
+                            <Text style={globalStyles.bodyRegular}>{weekStartDay}</Text>
                         </Pressable>
                     </View>
 
@@ -326,7 +326,7 @@ export default function SettingsPage() {
                                             shadowColor={isSelected ? '#000' : COLORS.TimeLabel}
                                         >
                                             <View style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
-                                                <Text style={globalStyles.body1}>{day.slice(0, 3)}</Text>
+                                                <Text style={globalStyles.bodySmall}>{day.slice(0, 3)}</Text>
                                             </View>
                                         </ShadowBox>
                                     </Pressable>
@@ -345,7 +345,7 @@ export default function SettingsPage() {
                             onPress={() => router.push('/more/settings/NavBar')}
                             style={{ paddingVertical: 5, paddingHorizontal: 15, flex: 1, alignItems: 'center' }}
                         >
-                            <Text style={globalStyles.body1}>Customize Navigation bar</Text>
+                            <Text style={globalStyles.bodySmall}>Customize Navigation bar</Text>
                         </Pressable>
                     </ShadowBox>
 
@@ -359,7 +359,7 @@ export default function SettingsPage() {
                             onPress={() => router.push('/more/settings/Notifications')}
                             style={{ paddingVertical: 5, paddingHorizontal: 15, flex: 1, alignItems: 'center' }}
                         >
-                            <Text style={globalStyles.body1}>Notifications</Text>
+                            <Text style={globalStyles.bodySmall}>Notifications</Text>
                         </Pressable>
                     </ShadowBox>
 
@@ -377,7 +377,7 @@ export default function SettingsPage() {
                             onPress={handleClearWishlist}
                             style={{ paddingVertical: 5, paddingHorizontal: 15, flex: 1, alignItems: 'center' }}
                         >
-                            <Text style={globalStyles.body1}>Clear Wishlist</Text>
+                            <Text style={globalStyles.bodySmall}>Clear Wishlist</Text>
                         </Pressable>
                     </ShadowBox>
 
@@ -391,7 +391,7 @@ export default function SettingsPage() {
                             onPress={handleResetPointsBalance}
                             style={{ paddingVertical: 5, paddingHorizontal: 15, flex: 1, alignItems: 'center' }}
                         >
-                            <Text style={globalStyles.body1}>Reset Points Balance</Text>
+                            <Text style={globalStyles.bodySmall}>Reset Points Balance</Text>
                         </Pressable>
                     </ShadowBox>
 
@@ -405,7 +405,7 @@ export default function SettingsPage() {
                             onPress={openExchangeModal}
                             style={{ paddingVertical: 5, paddingHorizontal: 15, flex: 1, alignItems: 'center' }}
                         >
-                            <Text style={globalStyles.body1}>Points Exchange Rate</Text>
+                            <Text style={globalStyles.bodySmall}>Points Exchange Rate</Text>
                         </Pressable>
                     </ShadowBox>
 
@@ -419,7 +419,7 @@ export default function SettingsPage() {
                             onPress={() => setShowFeedbackModal(true)}
                             style={{ paddingVertical: 5, paddingHorizontal: 15, flex: 1, alignItems: 'center' }}
                         >
-                            <Text style={globalStyles.body1}>Send Feedback</Text>
+                            <Text style={globalStyles.bodySmall}>Send Feedback</Text>
                         </Pressable>
                     </ShadowBox>
 
@@ -437,7 +437,7 @@ export default function SettingsPage() {
                             onPress={() => router.push('/more/journal/SetUpEncryption')}
                             style={{ paddingVertical: 5, paddingHorizontal: 15, flex: 1, alignItems: 'center' }}
                         >
-                            <Text style={globalStyles.body1}>Journal Encryption</Text>
+                            <Text style={globalStyles.bodySmall}>Journal Encryption</Text>
                         </Pressable>
                     </ShadowBox>
 
@@ -451,7 +451,7 @@ export default function SettingsPage() {
                             onPress={() => router.push('/more/settings/EditPin')}
                             style={{ paddingVertical: 5, paddingHorizontal: 15, flex: 1, alignItems: 'center' }}
                         >
-                            <Text style={globalStyles.body1}>Edit Pin</Text>
+                            <Text style={globalStyles.bodySmall}>Edit Pin</Text>
                         </Pressable>
                     </ShadowBox>
 
@@ -461,7 +461,7 @@ export default function SettingsPage() {
                             onPress={handleResetPassword}
                             style={{ paddingVertical: 5, paddingHorizontal: 15, flex: 1, alignItems: 'center' }}
                         >
-                            <Text style={globalStyles.body1}>Reset Password</Text>
+                            <Text style={globalStyles.bodySmall}>Reset Password</Text>
                         </Pressable>
                     </ShadowBox>
 
@@ -479,7 +479,7 @@ export default function SettingsPage() {
                             onPress={() => router.push('/more/settings/Credentials')}
                             style={{ paddingVertical: 5, paddingHorizontal: 15, flex: 1, alignItems: 'center' }}
                         >
-                            <Text style={globalStyles.body1}>Credentials</Text>
+                            <Text style={globalStyles.bodySmall}>Credentials</Text>
                         </Pressable>
                     </ShadowBox>
 

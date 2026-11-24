@@ -197,7 +197,7 @@ export default function SimpleCalendar({ selectedDate, onSelectDate, selectedDat
                             >
                                 <Text
                                     style={[
-                                        globalStyles.body2,
+                                        globalStyles.bodyRegular,
                                         { fontSize: 13 },
                                         selected && { fontWeight: 'bold' },
                                         disabled && { opacity: 0.25 },

@@ -95,7 +95,7 @@ export default function SnoozeHabitModal({
 
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
-      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center' }}>
+      <View style={{ flex: 1, backgroundColor: COLORS.Backdrop, justifyContent: 'center' }}>
         <Pressable
           style={{
             backgroundColor: '#fff',

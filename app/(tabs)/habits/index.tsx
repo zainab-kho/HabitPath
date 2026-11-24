@@ -214,7 +214,7 @@ export default function HabitsPage() {
           >
             <Text
               style={[
-                globalStyles.body2,
+                globalStyles.bodyRegular,
                 {
                   color: isViewingToday ? textColor : `${COLORS.Secondary}`,
                   fontSize: 13,

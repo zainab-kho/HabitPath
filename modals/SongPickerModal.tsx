@@ -197,7 +197,7 @@ export default function SongPickerModal({ visible, onClose, onSelect, mediaType 
 
                     {/* header */}
                     <View style={styles.header}>
-                        <Text style={[globalStyles.h3, { fontSize: 18 }]}>{config.title}</Text>
+                        <Text style={[globalStyles.h2, { fontSize: 18 }]}>{config.title}</Text>
                         <Pressable onPress={onClose} hitSlop={10}>
                             <Text style={styles.closeBtn}>✕</Text>
                         </Pressable>
@@ -222,7 +222,7 @@ export default function SongPickerModal({ visible, onClose, onSelect, mediaType 
                                 onChangeText={handleQueryChange}
                                 placeholder={config.placeholder}
                                 placeholderTextColor="#aaa"
-                                style={[globalStyles.body1, styles.searchInput]}
+                                style={[globalStyles.bodySmall, styles.searchInput]}
                                 returnKeyType="search"
                                 onSubmitEditing={() => searchSongs(query)}
                                 clearButtonMode="while-editing"
@@ -244,11 +244,11 @@ export default function SongPickerModal({ visible, onClose, onSelect, mediaType 
                                 </ScrollView>
                             ) : hasSearched ? (
                                 <View style={styles.centeredState}>
-                                    <Text style={[globalStyles.body1, { color: '#999' }]}>No results found.</Text>
+                                    <Text style={[globalStyles.bodySmall, { color: '#999' }]}>No results found.</Text>
                                 </View>
                             ) : (
                                 <View style={styles.centeredState}>
-                                    <Text style={[globalStyles.body1, { color: '#999' }]}>{config.emptyPrompt}</Text>
+                                    <Text style={[globalStyles.bodySmall, { color: '#999' }]}>{config.emptyPrompt}</Text>
                                 </View>
                             )}
                         </View>

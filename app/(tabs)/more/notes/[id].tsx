@@ -245,7 +245,7 @@ function NoteEditor({
                     {/* date / time pill — last edited; tap to dismiss the keyboard */}
                     <Pressable onPress={dismissKeyboard} style={styles.topDismiss}>
                         <View style={styles.datePill}>
-                            <Text style={[globalStyles.body2, { fontSize: 13 }]}>
+                            <Text style={[globalStyles.bodyRegular, { fontSize: 13 }]}>
                                 {localDate}  •  {localTime}
                             </Text>
                         </View>

@@ -1,4 +1,4 @@
-import { globalStyles } from '@/styles';
+import { globalStyles, uiStyles } from '@/styles';
 import { COLORS, PAGE, REWARD_COLORS } from '@/colors';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
@@ -203,18 +203,18 @@ export default function PointsHistoryModal({
             <View style={s.badgesRow}>
               {/* points-per-completion badge */}
               {!!habit.rewardPoints && habit.rewardPoints > 0 && (
-                <View style={[s.badge, s.pointsBadge]}>
+                <View style={[uiStyles.badge, s.pointsBadge]}>
                   <Image
                     source={SYSTEM_ICONS.reward}
                     style={{ width: 12, height: 12, tintColor: REWARD_COLORS.Points }}
                   />
-                  <Text style={s.badgeText}>{totalEarned} pts</Text>
+                  <Text style={uiStyles.badgeText}>{totalEarned} pts</Text>
                 </View>
               )}
 
               {/* last completed date — derived from completionHistory */}
               {lastCompletedDate && (
-                <View style={[s.badge, s.dateBadge]}>
+                <View style={[uiStyles.badge, s.dateBadge]}>
                   <Text style={[globalStyles.label, { fontSize: 10, marginTop: 1, opacity: 1 }]}>
                     {formatDateHeader(parseLocalDate(lastCompletedDate)).toUpperCase()}
                   </Text>
@@ -223,20 +223,20 @@ export default function PointsHistoryModal({
 
               {/* ×N completions badge — only shown when completed more than once */}
               {postResetCount > 1 && (
-                <View style={[s.badge, s.repeatCountBadge]}>
+                <View style={[uiStyles.badge, s.repeatCountBadge]}>
                   <Image
                     source={SYSTEM_ICONS.star}
                     style={{ width: 12, height: 12, tintColor: COLORS.Star }}
                   />
-                  <Text style={[s.badgeText]}>x{postResetCount}</Text>
+                  <Text style={[uiStyles.badgeText]}>x{postResetCount}</Text>
                 </View>
               )}
 
               {/* streak badge */}
               {showStreak && (
-                <View style={[s.badge, s.streakBadge]}>
+                <View style={[uiStyles.badge, s.streakBadge]}>
                   <Image source={SYSTEM_ICONS.fire} style={{ width: 12, height: 12 }} />
-                  <Text style={[s.badgeText, { color: '#FF6B35', fontWeight: 'bold' }]}>
+                  <Text style={[uiStyles.badgeText, { color: '#FF6B35', fontWeight: 'bold' }]}>
                     {habit.streak}
                   </Text>
                 </View>
@@ -306,8 +306,8 @@ export default function PointsHistoryModal({
           {/* Card 2 — last reset date */}
           <ShadowBox shadowOffset={{ x: 0, y: 0 }} contentBackgroundColor={'#FFC7A0'}>
             <View style={{ padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Text style={globalStyles.body1}>Last reset</Text>
-              <View style={[s.badge, s.dateBadge]}>
+              <Text style={globalStyles.bodySmall}>Last reset</Text>
+              <View style={[uiStyles.badge, s.dateBadge]}>
                 <Text style={[globalStyles.label, { fontSize: 11, opacity: 1 }]}>
                   {pointsResetDate
                     ? formatDateHeader(parseLocalDate(pointsResetDate)).toUpperCase()
@@ -320,10 +320,10 @@ export default function PointsHistoryModal({
           {/* Card 3 — all-time total */}
           <ShadowBox shadowOffset={{ x: 0, y: 0 }} contentBackgroundColor={'#7FD1AE'}>
             <View style={{ padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Text style={globalStyles.body1}>All-time total</Text>
-              <View style={[s.badge, s.pointsBadge]}>
+              <Text style={globalStyles.bodySmall}>All-time total</Text>
+              <View style={[uiStyles.badge, s.pointsBadge]}>
                 <Image source={SYSTEM_ICONS.reward} style={{ width: 12, height: 12, tintColor: REWARD_COLORS.Points }} />
-                <Text style={s.badgeText}>{allTimeTotal} pts</Text>
+                <Text style={uiStyles.badgeText}>{allTimeTotal} pts</Text>
               </View>
             </View>
           </ShadowBox>
@@ -342,10 +342,10 @@ export default function PointsHistoryModal({
             style={{ marginBottom: 20 }}
           >
             <View style={{ padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Text style={globalStyles.body1}>Total redeemed</Text>
-              <View style={[s.badge, s.pointsBadge]}>
+              <Text style={globalStyles.bodySmall}>Total redeemed</Text>
+              <View style={[uiStyles.badge, s.pointsBadge]}>
                 <Image source={SYSTEM_ICONS.reward} style={{ width: 12, height: 12, tintColor: REWARD_COLORS.Points }} />
-                <Text style={s.badgeText}>{redeemedPoints} pts</Text>
+                <Text style={uiStyles.badgeText}>{redeemedPoints} pts</Text>
               </View>
             </View>
           </ShadowBox>
@@ -353,7 +353,7 @@ export default function PointsHistoryModal({
           {currentClaimed.length === 0 && pastClaimed.length === 0 ? (
             <View style={s.emptyBox}>
               <Text style={globalStyles.body}>No rewards redeemed yet!</Text>
-              <Text style={[globalStyles.body1, { color: '#666', textAlign: 'center', marginTop: 5, fontSize: 12 }]}>
+              <Text style={[globalStyles.bodySmall, { color: '#666', textAlign: 'center', marginTop: 5, fontSize: 12 }]}>
                 Complete habits to earn points, then redeem them for rewards.
               </Text>
             </View>
@@ -462,7 +462,7 @@ export default function PointsHistoryModal({
 
         {/* claimed date bubble under the card */}
         {date && (
-          <View style={[s.badge, s.dateBadge, { alignSelf: 'center', marginTop: 8 }]}>
+          <View style={[uiStyles.badge, s.dateBadge, { alignSelf: 'center', marginTop: 8 }]}>
             <Text style={[globalStyles.label, { fontSize: 9, opacity: 1 }]}>
               {formatDateHeader(parseLocalDate(date)).toUpperCase()}
             </Text>
@@ -479,7 +479,7 @@ export default function PointsHistoryModal({
         <Pressable style={s.card} onPress={(e) => e.stopPropagation()}>
 
           <View style={{ marginTop: 20 }}>
-            <Text style={[globalStyles.h3, { textAlign: 'center', marginBottom: 20 }]}>
+            <Text style={[globalStyles.h2, { textAlign: 'center', marginBottom: 20 }]}>
               {getTitle()}
             </Text>
           </View>
@@ -530,7 +530,7 @@ export default function PointsHistoryModal({
 const s = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: COLORS.Backdrop,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -567,19 +567,6 @@ const s = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     flexWrap: 'wrap',
-  },
-  badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  badgeText: {
-    fontSize: 10,
-    fontFamily: 'label',
   },
   dateBadge: {
     backgroundColor: '#f7cec8',

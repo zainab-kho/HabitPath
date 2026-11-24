@@ -8,7 +8,7 @@ import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { COLORS, HABIT_COLORS, REWARD_COLORS } from '@/colors';
 import { HABIT_ICONS, SYSTEM_ICONS } from '@/constants/icons';
-import { globalStyles } from '@/styles';
+import { globalStyles, uiStyles } from '@/styles';
 import { Habit } from '@/types/Habit';
 import ShadowBox from '@/ui/ShadowBox';
 import { formatDisplayDateString, formatLocalDate, parseLocalDate } from '@/utils/dateUtils';
@@ -80,39 +80,39 @@ export default function GoalRow({ habit, onPress, nextDate, todayStr }: GoalRowP
                         <View style={styles.badgesRow}>
                             {/* unscheduled habits live on the inbox page */}
                             {isInbox && (
-                                <View style={[styles.badge, { backgroundColor: COLORS.Accent, borderColor: COLORS.Primary }]}>
-                                    <Text style={styles.badgeText}>Inbox</Text>
+                                <View style={[uiStyles.badge, { backgroundColor: COLORS.Accent, borderColor: COLORS.Primary }]}>
+                                    <Text style={uiStyles.badgeText}>Inbox</Text>
                                 </View>
                             )}
 
                             {habit.lastCompletedDate &&
-                                <View style={[styles.badge, { backgroundColor: HABIT_COLORS.Progress, borderColor: '#000', }]}>
+                                <View style={[uiStyles.badge, { backgroundColor: HABIT_COLORS.Progress, borderColor: '#000', }]}>
                                     <Image
                                         source={SYSTEM_ICONS.stats}
-                                        style={[styles.badgeIcon, { tintColor: COLORS.Accent }]}
+                                        style={[uiStyles.badgeIcon, { tintColor: COLORS.Accent }]}
                                     />
-                                    <Text style={styles.badgeText}>{getDateLabel(parseLocalDate(habit.lastCompletedDate))}</Text>
+                                    <Text style={uiStyles.badgeText}>{getDateLabel(parseLocalDate(habit.lastCompletedDate))}</Text>
                                 </View>
                             }
 
                             {nextDate &&
-                                <View style={[styles.badge, { backgroundColor: COLORS.Accent, borderColor: '#000' }]}>
+                                <View style={[uiStyles.badge, { backgroundColor: COLORS.Accent, borderColor: '#000' }]}>
                                     <Image
                                         source={SYSTEM_ICONS.calendar}
-                                        style={[styles.badgeIcon, { tintColor: COLORS.Primary }]}
+                                        style={[uiStyles.badgeIcon, { tintColor: COLORS.Primary }]}
                                     />
-                                    <Text style={styles.badgeText}>{getDateLabel(parseLocalDate(nextDate))}</Text>
+                                    <Text style={uiStyles.badgeText}>{getDateLabel(parseLocalDate(nextDate))}</Text>
                                 </View>
                             }
 
                             {/* points */}
                             {!!habit.rewardPoints && habit.rewardPoints > 0 && (
-                                <View style={[styles.badge, styles.pointsBadge]}>
+                                <View style={[uiStyles.badge, styles.pointsBadge]}>
                                     <Image
                                         source={SYSTEM_ICONS.reward}
-                                        style={[styles.badgeIcon, { tintColor: REWARD_COLORS.Points }]}
+                                        style={[uiStyles.badgeIcon, { tintColor: REWARD_COLORS.Points }]}
                                     />
-                                    <Text style={styles.badgeText}>{habit.rewardPoints}</Text>
+                                    <Text style={uiStyles.badgeText}>{habit.rewardPoints}</Text>
                                 </View>
                             )}
                         </View>
@@ -161,23 +161,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         gap: 6,
         flexWrap: 'wrap',
-    },
-    badge: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 5,
-        paddingHorizontal: 8,
-        paddingVertical: 3,
-        borderRadius: 8,
-        borderWidth: 1,
-    },
-    badgeIcon: {
-        width: 12,
-        height: 12,
-    },
-    badgeText: {
-        fontSize: 10,
-        fontFamily: 'label',
     },
     pointsBadge: {
         backgroundColor: REWARD_COLORS.Background,

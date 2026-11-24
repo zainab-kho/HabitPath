@@ -334,7 +334,7 @@ function Calendar({ selectedDate, onSelectDate, onBack }: CalendarProps) {
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: COLORS.Backdrop,
     justifyContent: 'center',
     alignItems: 'center',
   },

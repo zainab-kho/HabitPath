@@ -607,7 +607,7 @@ export default function NewHabitPage() {
                             </View>
 
                             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                                <Text style={globalStyles.body1}>Goal for the week?</Text>
+                                <Text style={globalStyles.bodySmall}>Goal for the week?</Text>
                                 <Switch
                                     value={isWeeklyGoal}
                                     onValueChange={handleWeeklyGoalChange}
@@ -672,7 +672,7 @@ export default function NewHabitPage() {
                                                     shadowColor={isSelected ? '#000' : PAGE.habits.primary[0]}
                                                 >
                                                     <View style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
-                                                        <Text style={globalStyles.body1}>{label}</Text>
+                                                        <Text style={globalStyles.bodySmall}>{label}</Text>
                                                     </View>
                                                 </ShadowBox>
                                             </Pressable>
@@ -726,7 +726,7 @@ export default function NewHabitPage() {
                                                 source={SYSTEM_ICONS.reward}
                                                 style={{ width: 17, height: 17, tintColor: REWARD_COLORS.Points }}
                                             />
-                                            <Text style={globalStyles.body1}>
+                                            <Text style={globalStyles.bodySmall}>
                                                 {rewardPoints} {rewardPoints === 1 ? 'point' : 'points'}
                                             </Text>
                                         </View>
@@ -832,7 +832,7 @@ export default function NewHabitPage() {
                                                         paddingHorizontal: 12,
                                                     }}>
                                                         <Text style={[
-                                                            globalStyles.body1
+                                                            globalStyles.bodySmall
                                                         ]}>
                                                             {isWeekGoalSelection ? 'Weekly Goal' : freq}
                                                         </Text>
@@ -885,7 +885,7 @@ export default function NewHabitPage() {
                                                                 shadowColor={isSelected ? '#000' : HABIT_COLORS.Frequency}
                                                             >
                                                                 <View style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
-                                                                    <Text style={globalStyles.body1}>{label}</Text>
+                                                                    <Text style={globalStyles.bodySmall}>{label}</Text>
                                                                 </View>
                                                             </ShadowBox>
                                                         </Pressable>
@@ -895,7 +895,7 @@ export default function NewHabitPage() {
 
                                             {/* current selection — tap to change */}
                                             <Pressable onPress={() => { setShowCalendar(false); setShowEndCalendar(false); setShowMonthlyCalendar(true); }}>
-                                                <Text style={globalStyles.body1}>
+                                                <Text style={globalStyles.bodySmall}>
                                                     {monthlyMode === 'dayOfMonth'
                                                         ? `Every month on day ${monthlyDay}`
                                                         : `Every month on the ${nthWeekLabel(monthlyWeek)} ${monthlyWeekday}`}
@@ -940,7 +940,7 @@ export default function NewHabitPage() {
                                                                 shadowColor={isSelected ? '#000' : HABIT_COLORS.Frequency}
                                                             >
                                                                 <View style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
-                                                                    <Text style={globalStyles.body1}>{type}</Text>
+                                                                    <Text style={globalStyles.bodySmall}>{type}</Text>
                                                                 </View>
                                                             </ShadowBox>
                                                         </Pressable>
@@ -1027,7 +1027,7 @@ export default function NewHabitPage() {
                                                                     alignItems: 'center',
                                                                 }}>
                                                                     <Text style={[
-                                                                        globalStyles.body1,
+                                                                        globalStyles.bodySmall,
                                                                         { fontSize: 13 },
                                                                     ]}>
                                                                         {dayAbbrev}
@@ -1048,7 +1048,7 @@ export default function NewHabitPage() {
                                                 paddingVertical: 4,
                                                 paddingHorizontal: 2,
                                             }}>
-                                                <Text style={globalStyles.body1}>Add end date?</Text>
+                                                <Text style={globalStyles.bodySmall}>Add end date?</Text>
                                                 <Switch
                                                     value={addEndDate}
                                                     onValueChange={(val) => {
@@ -1075,7 +1075,7 @@ export default function NewHabitPage() {
                                                     setShowMonthlyCalendar(false);
                                                     setShowEndCalendar(true);
                                                 }}>
-                                                    <Text style={globalStyles.body1}>
+                                                    <Text style={globalStyles.bodySmall}>
                                                         Ends {getCustomDateLabel(endDate ?? startDate)}
                                                     </Text>
                                                 </Pressable>
@@ -1140,7 +1140,7 @@ export default function NewHabitPage() {
                                                     paddingHorizontal: 12,
                                                 }}>
                                                     <Text style={[
-                                                        globalStyles.body1
+                                                        globalStyles.bodySmall
                                                     ]}>
                                                         {time}
                                                     </Text>
@@ -1177,7 +1177,7 @@ export default function NewHabitPage() {
                                                         shadowColor={selected ? '#000' : colorHex}
                                                     >
                                                         <View style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
-                                                            <Text style={globalStyles.body1}>{path.name}</Text>
+                                                            <Text style={globalStyles.bodySmall}>{path.name}</Text>
                                                         </View>
                                                     </ShadowBox>
                                                 </Pressable>
@@ -1279,7 +1279,7 @@ export default function NewHabitPage() {
                                                                         shadowColor={incrementType === type ? '#000' : PAGE.habits.primary[1]}
                                                                     >
                                                                         <View style={{ paddingVertical: 6, paddingHorizontal: 10 }}>
-                                                                            <Text style={globalStyles.body1}>{type}</Text>
+                                                                            <Text style={globalStyles.bodySmall}>{type}</Text>
                                                                         </View>
                                                                     </ShadowBox>
                                                                 </Pressable>

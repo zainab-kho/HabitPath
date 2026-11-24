@@ -167,7 +167,7 @@ export default function MealPlanPage() {
                             style={[styles.viewPill, styles.viewPillLeft, dayView && styles.viewPillActive]}
                             onPress={() => setDayView(true)}
                         >
-                            <Text style={[globalStyles.body2, styles.viewPillText, dayView && { color: '#000' }]}>
+                            <Text style={[globalStyles.bodyRegular, styles.viewPillText, dayView && { color: '#000' }]}>
                                 Day View
                             </Text>
                         </Pressable>
@@ -175,7 +175,7 @@ export default function MealPlanPage() {
                             style={[styles.viewPill, styles.viewPillRight, !dayView && styles.viewPillActive]}
                             onPress={() => setDayView(false)}
                         >
-                            <Text style={[globalStyles.body2, styles.viewPillText, !dayView && { color: '#000' }]}>
+                            <Text style={[globalStyles.bodyRegular, styles.viewPillText, !dayView && { color: '#000' }]}>
                                 Week View
                             </Text>
                         </Pressable>

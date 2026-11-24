@@ -184,7 +184,7 @@ export default function InboxPage() {
             <Pressable style={styles.card} onPress={(e) => e.stopPropagation()}>
 
               <View style={{ marginTop: 20 }}>
-                <Text style={[globalStyles.h3, { textAlign: 'center' }]}>Schedule Habit</Text>
+                <Text style={[globalStyles.h2, { textAlign: 'center' }]}>Schedule Habit</Text>
                 <Text style={[globalStyles.label, { textAlign: 'center', marginTop: 4, marginBottom: 16 }]}>
                   {schedulingHabit?.name}
                 </Text>
@@ -213,7 +213,7 @@ export default function InboxPage() {
                             shadowColor={isSelected ? '#000' : HABIT_COLORS.TimeOfDay}
                           >
                             <View style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
-                              <Text style={globalStyles.body1}>{time}</Text>
+                              <Text style={globalStyles.bodySmall}>{time}</Text>
                             </View>
                           </ShadowBox>
                         </Pressable>
@@ -272,7 +272,7 @@ const styles = StyleSheet.create({
   },
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: COLORS.Backdrop,
     justifyContent: 'center',
     alignItems: 'center',
   },

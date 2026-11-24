@@ -28,7 +28,7 @@ import SongCard from '@/components/journal/SongCard';
 import { formatDisplayDate, formatDisplayTime, formatLocalDate } from '@/utils/dateUtils';
 import { SYSTEM_ICONS } from '@/constants/icons';
 
-import { globalStyles, journalStyle } from '@/styles';
+import { globalStyles, journalStyles } from '@/styles';
 import { AppLinearGradient } from '@/ui/AppLinearGradient';
 import PageContainer from '@/ui/PageContainer';
 import PageHeader from '@/ui/PageHeader';
@@ -246,7 +246,7 @@ export default function JournalPage() {
                         marginBottom: 10,
                     }}
                 >
-                    <Text style={[globalStyles.body2, { fontSize: 13 }]}>
+                    <Text style={[globalStyles.bodyRegular, { fontSize: 13 }]}>
                         {localDate}  •  {localTime}
                     </Text>
                 </Pressable>
@@ -273,13 +273,13 @@ export default function JournalPage() {
                     {/* mood */}
                     <Text style={[globalStyles.body, { marginBottom: 10 }]}>Mood</Text>
 
-                    <View style={journalStyle.card}>
-                        <View style={journalStyle.moodRow}>
+                    <View style={journalStyles.card}>
+                        <View style={journalStyles.moodRow}>
                             {displayedMoods.map((mood) => {
                                 const color = MOOD_COLORS[mood];
 
                                 return (
-                                    <View key={mood} style={journalStyle.moodItem}>
+                                    <View key={mood} style={journalStyles.moodItem}>
                                         <Pressable onPress={() => handleMoodPress(mood)}>
                                             <ShadowBox
                                                 contentBackgroundColor={selectedMood === mood ? color : '#F9F8FF'}
@@ -293,7 +293,7 @@ export default function JournalPage() {
                                                 <View style={{ width: 20, height: 20 }} />
                                             </ShadowBox>
                                         </Pressable>
-                                        <Text style={journalStyle.moodLabel}>{mood}</Text>
+                                        <Text style={journalStyles.moodLabel}>{mood}</Text>
                                     </View>
                                 );
                             })}
@@ -318,7 +318,7 @@ export default function JournalPage() {
 
                     {/* location */}
                     <Text style={[globalStyles.body, { marginBottom: 10 }]}>Location</Text>
-                    <View style={journalStyle.locationCard}>
+                    <View style={journalStyles.locationCard}>
                         <TextInput
                             ref={locationRef}
                             style={[
@@ -363,13 +363,13 @@ export default function JournalPage() {
                         />
                     )}
 
-                    <View style={journalStyle.journalCard}>
+                    <View style={journalStyles.journalCard}>
                         <View>
                             <TextInput
                                 ref={inputRef}
                                 style={[
                                     globalStyles.body,
-                                    journalStyle.textArea,
+                                    journalStyles.textArea,
                                     {
                                         lineHeight: 20,
                                         minHeight: 200,
@@ -487,7 +487,7 @@ export default function JournalPage() {
                     <Pressable style={dtStyles.card} onPress={(e) => e.stopPropagation()}>
 
                         <View style={{ marginTop: 20 }}>
-                            <Text style={[globalStyles.h3, { textAlign: 'center', marginBottom: 16 }]}>
+                            <Text style={[globalStyles.h2, { textAlign: 'center', marginBottom: 16 }]}>
                                 Entry Date & Time
                             </Text>
                         </View>
@@ -545,7 +545,7 @@ export default function JournalPage() {
 const dtStyles = StyleSheet.create({
     overlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.45)',
+        backgroundColor: COLORS.Backdrop,
         justifyContent: 'center',
         alignItems: 'center',
     },

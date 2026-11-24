@@ -203,7 +203,7 @@ export default function GroceryPage() {
             return (
                 <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 }}>
                     <Text style={[globalStyles.body, { marginBottom: 5 }]}>Your list is empty</Text>
-                    <Text style={[globalStyles.body2, { textAlign: 'center', opacity: 0.6 }]}>
+                    <Text style={[globalStyles.bodyRegular, { textAlign: 'center', opacity: 0.6 }]}>
                         Add an item above, or tap Regenerate to pull in the ingredients from your meal plan.
                     </Text>
                 </View>

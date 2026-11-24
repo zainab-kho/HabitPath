@@ -584,7 +584,7 @@ export default function AllGoalsPage() {
                                                 shadowBorderRadius={12}
                                             >
                                                 <View style={{ paddingVertical: 9, paddingHorizontal: 12 }}>
-                                                    <Text style={[globalStyles.body1, { textAlign: 'center' }]}>{option}</Text>
+                                                    <Text style={[globalStyles.bodySmall, { textAlign: 'center' }]}>{option}</Text>
                                                 </View>
                                             </ShadowBox>
                                         </Pressable>
@@ -776,7 +776,7 @@ const styles = StyleSheet.create({
     },
     filterOverlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.45)',
+        backgroundColor: COLORS.Backdrop,
         justifyContent: 'center',
         alignItems: 'center',
     },

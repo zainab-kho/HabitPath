@@ -270,7 +270,7 @@ export default function NewRewardItem() {
                             paddingHorizontal: 15,
                           }}>
                             <Image source={SYSTEM_ICONS.photo} style={{ width: 17, height: 17 }} />
-                            <Text style={globalStyles.body1}>Choose a photo</Text>
+                            <Text style={globalStyles.bodySmall}>Choose a photo</Text>
                           </View>
                         </ShadowBox>
                       </Pressable>
@@ -336,7 +336,7 @@ export default function NewRewardItem() {
                       width: 200,
                       alignSelf: 'center',
                     }]}>
-                      <Text style={[globalStyles.body1, { fontSize: 12, textAlign: 'center' }]}>
+                      <Text style={[globalStyles.bodySmall, { fontSize: 12, textAlign: 'center' }]}>
                         {price}
                       </Text>
                       <Image source={SYSTEM_ICONS.reward} style={{ width: 11, height: 11, tintColor: REWARD_COLORS.Points }} />
@@ -443,7 +443,7 @@ export default function NewRewardItem() {
                                 shadowColor={isSelected ? '#000' : PAGE.rewards.primary[0]}
                               >
                                 <View style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
-                                  <Text style={globalStyles.body1}>{tag}</Text>
+                                  <Text style={globalStyles.bodySmall}>{tag}</Text>
                                 </View>
                               </ShadowBox>
                             </Pressable>
@@ -499,7 +499,7 @@ export default function NewRewardItem() {
                       paddingVertical: 4,
                       paddingHorizontal: 2,
                     }}>
-                      <Text style={globalStyles.body1}>Recurring?</Text>
+                      <Text style={globalStyles.bodySmall}>Recurring?</Text>
                       <Switch
                         value={recurring}
                         onValueChange={setRecurring}

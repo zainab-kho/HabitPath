@@ -2,7 +2,7 @@
 import React from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { PAGE } from '@/colors';
+import { COLORS, PAGE } from '@/colors';
 import { globalStyles } from '@/styles';
 import { Meal, MealType } from '@/types/Meal';
 import ShadowBox from '@/ui/ShadowBox';
@@ -33,7 +33,7 @@ export default function MealPickerModal({ visible, mealType, meals, onPick, onCr
                     </Text>
 
                     {matchingMeals.length === 0 ? (
-                        <Text style={[globalStyles.body2, { textAlign: 'center', opacity: 0.6, marginBottom: 15 }]}>
+                        <Text style={[globalStyles.bodyRegular, { textAlign: 'center', opacity: 0.6, marginBottom: 15 }]}>
                             No saved meals for {mealType?.toLowerCase()} yet.
                         </Text>
                     ) : (
@@ -41,7 +41,7 @@ export default function MealPickerModal({ visible, mealType, meals, onPick, onCr
                             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
                                 {matchingMeals.map(meal => (
                                     <Pressable key={meal.id} style={styles.mealChip} onPress={() => onPick(meal)}>
-                                        <Text style={[globalStyles.body2, { fontSize: 14 }]}>{meal.name}</Text>
+                                        <Text style={[globalStyles.bodyRegular, { fontSize: 14 }]}>{meal.name}</Text>
                                     </Pressable>
                                 ))}
                             </View>
@@ -65,7 +65,7 @@ const styles = StyleSheet.create({
     overlay: {
         flex: 1,
         justifyContent: 'center',
-        backgroundColor: 'rgba(0,0,0,0.45)',
+        backgroundColor: COLORS.Backdrop,
     },
     card: {
         width: '90%',

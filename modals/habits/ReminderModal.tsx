@@ -1,5 +1,5 @@
 // @/modals/habits/ReminderModal.tsx
-import { BUTTON_COLORS, PAGE } from '@/colors';
+import { BUTTON_COLORS, COLORS, PAGE } from '@/colors';
 import { formatReminderTime, REMINDER_PRESETS } from '@/lib/notifications';
 import { globalStyles } from '@/styles';
 import ShadowBox from '@/ui/ShadowBox';
@@ -70,7 +70,7 @@ export default function ReminderModal({
 
     return (
         <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
-            <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center' }}>
+            <View style={{ flex: 1, backgroundColor: COLORS.Backdrop, justifyContent: 'center' }}>
                 {/* backdrop sits behind the card, not around it — a Pressable parent would
                     claim the touch on press-down and the time wheels could never scroll */}
                 <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
@@ -88,7 +88,7 @@ export default function ReminderModal({
                 >
                     <View style={{ marginTop: 20, marginBottom: 15 }}>
                         <Text style={[globalStyles.h2, { textAlign: 'center', marginBottom: 5 }]}>Remind me</Text>
-                        <Text style={[globalStyles.body2, { textAlign: 'center', opacity: 0.6 }]}>
+                        <Text style={[globalStyles.bodyRegular, { textAlign: 'center', opacity: 0.6 }]}>
                             {subtitle(formatReminderTime(time))}
                         </Text>
                     </View>
@@ -120,7 +120,7 @@ export default function ReminderModal({
                                             shadowColor={selected ? '#000' : accentColor}
                                         >
                                             <View style={{ paddingVertical: 6, alignItems: 'center' }}>
-                                                <Text style={globalStyles.body1}>{preset.label}</Text>
+                                                <Text style={globalStyles.bodySmall}>{preset.label}</Text>
                                                 <Text style={[globalStyles.label, { opacity: 0.6 }]}>
                                                     {formatReminderTime(preset.time)}
                                                 </Text>

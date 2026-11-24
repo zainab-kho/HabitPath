@@ -15,4 +15,6 @@ export const COLORS = {
   Placeholder: 'rgba(0,0,0,0.4)',
   // the soft pink behind times, like on the time wheel and in settings
   TimeLabel: '#FFE6FF',
+  // the dark see-through layer behind every popup
+  Backdrop: 'rgba(0,0,0,0.5)',
 } as const;

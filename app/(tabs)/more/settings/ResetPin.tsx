@@ -93,7 +93,7 @@ export default function ResetPinPage() {
         <PageHeader title="Set PIN" showBackButton />
 
         <Pressable style={styles.wrapper} onPress={() => inputRef.current?.focus()}>
-          <Text style={[globalStyles.h3, { textAlign: 'center' }]}>{title}</Text>
+          <Text style={[globalStyles.h2, { textAlign: 'center' }]}>{title}</Text>
           <Text style={[globalStyles.body, { opacity: 0.7, textAlign: 'center' }]}>{subtitle}</Text>
 
           {/* PIN dots */}

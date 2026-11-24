@@ -26,12 +26,12 @@ export function DayMealPlan({ section, entries, onAddMeal, onPressMeal, compact 
                     style={[styles.mealItem, compact && styles.compactChip]}
                     onPress={() => onPressMeal(entry)}
                 >
-                    <Text style={[globalStyles.body2, { fontSize: compact ? 13 : 14 }]}>{entry.meal.name}</Text>
+                    <Text style={[globalStyles.bodyRegular, { fontSize: compact ? 13 : 14 }]}>{entry.meal.name}</Text>
                 </Pressable>
             ))}
 
             <Pressable style={[styles.addMealBtn, compact && styles.compactChip]} onPress={onAddMeal} hitSlop={6}>
-                <Text style={[globalStyles.body2, { fontSize: compact ? 13 : 14 }]}>+</Text>
+                <Text style={[globalStyles.bodyRegular, { fontSize: compact ? 13 : 14 }]}>+</Text>
             </Pressable>
         </View>
     );
@@ -40,7 +40,7 @@ export function DayMealPlan({ section, entries, onAddMeal, onPressMeal, compact 
     if (compact) {
         return (
             <View style={styles.compactRow}>
-                <Text style={[globalStyles.body1, styles.compactLabel]}>{section}</Text>
+                <Text style={[globalStyles.bodySmall, styles.compactLabel]}>{section}</Text>
                 {mealChips}
             </View>
         );

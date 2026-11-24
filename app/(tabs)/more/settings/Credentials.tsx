@@ -30,7 +30,7 @@ export default function CredentialsPage() {
                     >
                         <View style={{ paddingVertical: 16, paddingHorizontal: 15, alignItems: 'center', gap: 6 }}>
                             <Text style={globalStyles.body}>HabitPath</Text>
-                            <Text style={globalStyles.body2}>By Zainab Khoshnaw</Text>
+                            <Text style={globalStyles.bodyRegular}>By Zainab Khoshnaw</Text>
                         </View>
                     </ShadowBox>
 
@@ -47,7 +47,7 @@ export default function CredentialsPage() {
                             onPress={() => Linking.openURL('https://icons8.com')}
                             style={{ paddingVertical: 5, paddingHorizontal: 15, flex: 1, alignItems: 'center' }}
                         >
-                            <Text style={globalStyles.body1}>Icons by Icons8</Text>
+                            <Text style={globalStyles.bodySmall}>Icons by Icons8</Text>
                         </Pressable>
                     </ShadowBox>
                 </ScrollView>

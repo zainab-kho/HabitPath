@@ -335,7 +335,7 @@ export default function HabitsList({
               paddingVertical: 5,
               paddingHorizontal: 25,
             }}>
-            <Text style={[globalStyles.body1]}>New Habit</Text>
+            <Text style={[globalStyles.bodySmall]}>New Habit</Text>
           </Pressable>
         </ShadowBox>
       </View>

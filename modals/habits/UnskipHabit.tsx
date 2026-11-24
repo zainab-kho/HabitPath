@@ -2,7 +2,7 @@
 import React from 'react';
 import { Modal, Pressable, Text, View } from 'react-native';
 
-import { BUTTON_COLORS, PAGE } from '@/colors';
+import { BUTTON_COLORS, COLORS, PAGE } from '@/colors';
 import { globalStyles } from '@/styles';
 import ShadowBox from '@/ui/ShadowBox';
 import { HabitWithStatus } from '@/hooks/useHabits';
@@ -26,7 +26,7 @@ export default function UnskipHabitModal({
 
     return (
         <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
-            <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center' }}>
+            <View style={{ flex: 1, backgroundColor: COLORS.Backdrop, justifyContent: 'center' }}>
                 <Pressable
                     style={{
                         backgroundColor: '#fff',
@@ -43,7 +43,7 @@ export default function UnskipHabitModal({
                         <Text style={[globalStyles.h2, { textAlign: 'center', marginBottom: 8 }]}>
                             {habit.name}
                         </Text>
-                        <Text style={[globalStyles.body2, { textAlign: 'center', opacity: 0.6 }]}>
+                        <Text style={[globalStyles.bodyRegular, { textAlign: 'center', opacity: 0.6 }]}>
                             Are you sure you want to undo skipping this habit?
                         </Text>
                     </View>

@@ -1,5 +1,5 @@
 import { globalStyles } from '@/styles';
-import { BUTTON_COLORS, PAGE, REWARD_COLORS } from '@/colors';
+import { BUTTON_COLORS, COLORS, PAGE, REWARD_COLORS } from '@/colors';
 import { lightenColor } from '@/utils';
 import React, { useEffect, useState } from 'react';
 import { Alert, Dimensions, Image, Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -83,7 +83,7 @@ export default function RewardDetailModal({ visible, onClose, reward, onDelete }
         <Pressable style={styles.card} onPress={(e) => e.stopPropagation()}>
 
           <View style={{ marginTop: 20 }}>
-            <Text style={[globalStyles.h3, { textAlign: 'center', marginBottom: 20 }]}>
+            <Text style={[globalStyles.h2, { textAlign: 'center', marginBottom: 20 }]}>
               Reward Details
             </Text>
           </View>
@@ -255,7 +255,7 @@ export default function RewardDetailModal({ visible, onClose, reward, onDelete }
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: COLORS.Backdrop,
     justifyContent: 'center',
     alignItems: 'center',
   },

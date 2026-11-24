@@ -2,7 +2,7 @@
 // View + delete courses, opened from the assignments page's more menu.
 // Styled to match the assignments modals (white card, assignments-primary border,
 // centered h4 title with divider, ShadowBox rows).
-import { BUTTON_COLORS, PAGE } from '@/colors';
+import { BUTTON_COLORS, COLORS, PAGE } from '@/colors';
 import { CourseWithColor } from '@/hooks/useAssignmentData';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
@@ -71,7 +71,7 @@ export function ManageCoursesModal({ visible, courses, onClose, onChanged }: Man
             <Pressable
                 style={{
                     flex: 1,
-                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                    backgroundColor: COLORS.Backdrop,
                     justifyContent: 'center',
                     paddingHorizontal: 20,
                 }}
@@ -94,7 +94,7 @@ export function ManageCoursesModal({ visible, courses, onClose, onChanged }: Man
 
                     <ScrollView showsVerticalScrollIndicator={false}>
                         {courses.length === 0 ? (
-                            <Text style={[globalStyles.body2, { textAlign: 'center', opacity: 0.5, paddingVertical: 10 }]}>
+                            <Text style={[globalStyles.bodyRegular, { textAlign: 'center', opacity: 0.5, paddingVertical: 10 }]}>
                                 No courses yet.
                             </Text>
                         ) : (
@@ -115,11 +115,11 @@ export function ManageCoursesModal({ visible, courses, onClose, onChanged }: Man
                                         gap: 10,
                                     }}>
                                         <View style={{ flex: 1 }}>
-                                            <Text style={globalStyles.body1} numberOfLines={1}>
+                                            <Text style={globalStyles.bodySmall} numberOfLines={1}>
                                                 {course.course_number}
                                             </Text>
                                             {!!course.course_name && (
-                                                <Text style={[globalStyles.body2, { fontSize: 12, opacity: 0.7 }]} numberOfLines={1}>
+                                                <Text style={[globalStyles.bodyRegular, { fontSize: 12, opacity: 0.7 }]} numberOfLines={1}>
                                                     {course.course_name}
                                                 </Text>
                                             )}
@@ -131,7 +131,7 @@ export function ManageCoursesModal({ visible, courses, onClose, onChanged }: Man
                                         >
                                             <ShadowBox contentBackgroundColor={BUTTON_COLORS.Delete} shadowBorderRadius={12} shadowOffset={{ x: 0, y: 1 }}>
                                                 <View style={{ paddingVertical: 4, paddingHorizontal: 12 }}>
-                                                    <Text style={[globalStyles.body1, { fontSize: 12 }]}>
+                                                    <Text style={[globalStyles.bodySmall, { fontSize: 12 }]}>
                                                         {deletingId === course.id ? '…' : 'Delete'}
                                                     </Text>
                                                 </View>

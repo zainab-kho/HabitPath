@@ -73,10 +73,10 @@ export default function EmptyStateView({
                         alignItems: 'center',
                         gap: 5,
                     }}>
-                        <Text style={[globalStyles.h3]}>{title}</Text>
+                        <Text style={[globalStyles.h2]}>{title}</Text>
 
                         {description && (
-                            <Text style={[globalStyles.body2, { textAlign: 'center' }]}>
+                            <Text style={[globalStyles.bodyRegular, { textAlign: 'center' }]}>
                                 {description}
                             </Text>
                         )}

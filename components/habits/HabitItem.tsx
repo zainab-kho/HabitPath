@@ -6,7 +6,7 @@ import Swipeable from 'react-native-gesture-handler/Swipeable';
 
 import { COLORS, HABIT_COLORS, REWARD_COLORS } from '@/colors';
 import { HABIT_ICONS, SYSTEM_ICONS } from '@/constants/icons';
-import { globalStyles } from '@/styles';
+import { globalStyles, uiStyles } from '@/styles';
 import ShadowBox from '@/ui/ShadowBox';
 import { HabitWithStatus } from '@/hooks/useHabits';
 import { formatMinutesAsTime } from '@/utils/dateUtils';
@@ -250,12 +250,12 @@ export default function HabitItem({
                     </Text>
                     <View style={styles.badgesRow}>
                       {!!habit.rewardPoints && habit.rewardPoints > 0 && (
-                        <View style={[styles.badge, styles.pointsBadge]}>
+                        <View style={[uiStyles.badge, styles.pointsBadge]}>
                           <Image
                             source={SYSTEM_ICONS.reward}
-                            style={[styles.badgeIcon, { tintColor: REWARD_COLORS.Points }]}
+                            style={[uiStyles.badgeIcon, { tintColor: REWARD_COLORS.Points }]}
                           />
-                          <Text style={styles.badgeText}>{habit.rewardPoints}</Text>
+                          <Text style={uiStyles.badgeText}>{habit.rewardPoints}</Text>
                         </View>
                       )}
                     </View>
@@ -338,23 +338,23 @@ export default function HabitItem({
                 <View style={styles.badgesRow}>
                   {/* status badge (e.g. snoozed-until on the inbox page) */}
                   {statusBadge && (
-                    <View style={[styles.badge, { backgroundColor: COLORS.Accent, borderColor: COLORS.Primary }]}>
+                    <View style={[uiStyles.badge, { backgroundColor: COLORS.Accent, borderColor: COLORS.Primary }]}>
                       <Image
                         source={SYSTEM_ICONS.snooze}
-                        style={styles.badgeIcon}
+                        style={uiStyles.badgeIcon}
                       />
-                      <Text style={styles.badgeText}>{statusBadge}</Text>
+                      <Text style={uiStyles.badgeText}>{statusBadge}</Text>
                     </View>
                   )}
 
                   {/* points badge */}
                   {!!habit.rewardPoints && habit.rewardPoints > 0 && (
-                    <View style={[styles.badge, styles.pointsBadge]}>
+                    <View style={[uiStyles.badge, styles.pointsBadge]}>
                       <Image
                         source={SYSTEM_ICONS.reward}
-                        style={[styles.badgeIcon, { tintColor: REWARD_COLORS.Points }]}
+                        style={[uiStyles.badgeIcon, { tintColor: REWARD_COLORS.Points }]}
                       />
-                      <Text style={styles.badgeText}>{habit.rewardPoints}</Text>
+                      <Text style={uiStyles.badgeText}>{habit.rewardPoints}</Text>
                     </View>
                   )}
 
@@ -362,7 +362,7 @@ export default function HabitItem({
                   {showStreak && (
                     <View style={styles.streak}>
                       <Image source={SYSTEM_ICONS.fire} style={styles.streakIcon} />
-                      <Text style={[styles.badgeText]}>
+                      <Text style={[uiStyles.badgeText]}>
                         {habit.streak}d
                       </Text>
                     </View>
@@ -371,10 +371,10 @@ export default function HabitItem({
 
                   {/* increment badge (no goal) */}
                   {isIncrement && !hasGoal && (
-                    <View style={[styles.badge, styles.incrementBadge]}>
+                    <View style={[uiStyles.badge, styles.incrementBadge]}>
                       <Image
                         source={SYSTEM_ICONS.star}
-                        style={[styles.badgeIcon, { tintColor: COLORS.Star }]}
+                        style={[uiStyles.badgeIcon, { tintColor: COLORS.Star }]}
                       />
                       <Text style={styles.incrementBadgeText}>{currentAmount}</Text>
                     </View>
@@ -395,7 +395,7 @@ export default function HabitItem({
                       <View style={styles.progressOverlay} pointerEvents="none">
                         <Image
                           source={SYSTEM_ICONS.star}
-                          style={[styles.badgeIcon, { tintColor: COLORS.Star }]}
+                          style={[uiStyles.badgeIcon, { tintColor: COLORS.Star }]}
                         />
 
                         <Text style={styles.incrementBadgeText}>
@@ -503,23 +503,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     flexWrap: 'wrap',
-  },
-  badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-    borderWidth: 1,
-  },
-  badgeIcon: {
-    width: 12,
-    height: 12,
-  },
-  badgeText: {
-    fontSize: 10,
-    fontFamily: 'label',
   },
   pointsBadge: {
     backgroundColor: REWARD_COLORS.Background,

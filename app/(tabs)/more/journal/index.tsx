@@ -875,7 +875,7 @@ const styles = StyleSheet.create({
   },
   filterOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: COLORS.Backdrop,
     justifyContent: 'center',
     alignItems: 'center',
   },

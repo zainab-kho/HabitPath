@@ -191,7 +191,7 @@ export default function NewCourse() {
                                 marginBottom: 10,
                             }}
                         >
-                            <Text style={globalStyles.body1}>Do you have a set schedule?</Text>
+                            <Text style={globalStyles.bodySmall}>Do you have a set schedule?</Text>
 
                             <Switch
                                 value={hasSchedule}
@@ -229,7 +229,7 @@ export default function NewCourse() {
                                                     shadowColor={selected ? '#000' : PAGE.assignments.primary[0]}
                                                 >
                                                     <View style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
-                                                        <Text style={globalStyles.body1}>{day}</Text>
+                                                        <Text style={globalStyles.bodySmall}>{day}</Text>
                                                     </View>
                                                 </ShadowBox>
                                             </Pressable>

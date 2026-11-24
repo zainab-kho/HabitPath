@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { Modal, Pressable, Text, TextInput, View } from 'react-native';
 
-import { BUTTON_COLORS, HABIT_COLORS, PAGE } from '@/colors';
+import { BUTTON_COLORS, COLORS, HABIT_COLORS, PAGE } from '@/colors';
 import { globalStyles } from '@/styles';
 import ShadowBox from '@/ui/ShadowBox';
 import { formatMinutesAsTime } from '@/utils/dateUtils';
@@ -57,7 +57,7 @@ export default function TimeLogModal({
 
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={handleClose}>
-      <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center' }}>
+      <View style={{ flex: 1, backgroundColor: COLORS.Backdrop, justifyContent: 'center' }}>
         <Pressable
           style={{
             backgroundColor: '#fff',

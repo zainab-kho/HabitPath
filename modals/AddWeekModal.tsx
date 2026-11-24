@@ -1,5 +1,5 @@
 // @/components/modals/AddWeekModal.tsx
-import { BUTTON_COLORS, PAGE } from '@/colors';
+import { BUTTON_COLORS, COLORS, PAGE } from '@/colors';
 import { globalStyles } from '@/styles';
 import ShadowBox from '@/ui/ShadowBox';
 import React, { useState } from 'react';
@@ -114,7 +114,7 @@ export default function AddWeekModal({ visible, weekPlans, onClose, onSave }: Ad
             <View
                 style={{
                     flex: 1,
-                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                    backgroundColor: COLORS.Backdrop,
                     justifyContent: 'center',
                     alignItems: 'center',
                 }}
@@ -198,7 +198,7 @@ export default function AddWeekModal({ visible, weekPlans, onClose, onSave }: Ad
                                         >
                                             <Text
                                                 style={[
-                                                    globalStyles.body2,
+                                                    globalStyles.bodyRegular,
                                                     {
                                                         textAlign: 'center',
                                                         padding: 5,

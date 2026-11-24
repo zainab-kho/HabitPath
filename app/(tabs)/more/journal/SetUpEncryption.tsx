@@ -406,7 +406,7 @@ function Button({ label, onPress, disabled }: { label: string; onPress: () => vo
         disabled={disabled}
         style={{ paddingVertical: 5, paddingHorizontal: 15, flex: 1, alignItems: 'center' }}
       >
-        <Text style={globalStyles.body1}>{label}</Text>
+        <Text style={globalStyles.bodySmall}>{label}</Text>
       </Pressable>
     </ShadowBox>
   );

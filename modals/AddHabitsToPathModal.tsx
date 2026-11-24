@@ -209,7 +209,7 @@ export default function AddHabitsToPathModal({
     return (
         <Modal visible={visible} transparent animationType="none" onRequestClose={handleCancel}>
             <Pressable
-                style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center' }}
+                style={{ flex: 1, backgroundColor: COLORS.Backdrop, justifyContent: 'center' }}
                 onPress={handleCancel}
             >
                 <Pressable
@@ -228,7 +228,7 @@ export default function AddHabitsToPathModal({
                         <Text style={[globalStyles.h2, { textAlign: 'center', marginBottom: 5 }]}>
                             Add Habits
                         </Text>
-                        <Text style={[globalStyles.body2, { textAlign: 'center', opacity: 0.6 }]}>
+                        <Text style={[globalStyles.bodyRegular, { textAlign: 'center', opacity: 0.6 }]}>
                             {selected.size > 0 ? `${selected.size} selected` : 'Select habits for this path'}
                         </Text>
                     </View>

@@ -24,8 +24,8 @@ import { TimeWheel, toggleMeridiem } from '@/ui/TimeWheel';
 
 // constants + styles
 import { BUTTON_COLORS, PAGE, PRESET_COLORS } from '@/colors';
-import { globalStyles } from '@/styles';
-import { NewItemStyles } from '@/styles/NewItemStyles';
+import { formStyles, globalStyles } from '@/styles';
+
 
 // time wheel values. minutes go in steps of 5
 const HOURS = Array.from({ length: 12 }, (_, i) => String(i + 1));
@@ -66,9 +66,9 @@ function ToggleRow({ label, description, value, onValueChange }: {
     return (
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
             <View style={{ flex: 1 }}>
-                <Text style={globalStyles.body1}>{label}</Text>
+                <Text style={globalStyles.bodySmall}>{label}</Text>
                 {description && (
-                    <Text style={[globalStyles.body2, { opacity: 0.6 }]}>{description}</Text>
+                    <Text style={[globalStyles.bodyRegular, { opacity: 0.6 }]}>{description}</Text>
                 )}
             </View>
             <Switch
@@ -254,7 +254,7 @@ export default function NewCountdown() {
                 <PageHeader title={isEditMode ? 'Edit Countdown' : 'New Countdown'} showBackButton />
 
                 {/* main card: the fields scroll, the button bar stays pinned at the bottom */}
-                <View style={NewItemStyles.mainCardContainer}>
+                <View style={formStyles.card}>
                     <ScrollView
                         contentContainerStyle={{ padding: 30, gap: 20 }}
                         showsVerticalScrollIndicator={false}

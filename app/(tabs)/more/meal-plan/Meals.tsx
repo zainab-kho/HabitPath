@@ -204,7 +204,7 @@ export default function MealsPage() {
                                         <Text style={styles.dragHandle}>≡</Text>
                                     </Sortable.Handle>
 
-                                    <Text style={[globalStyles.body1, { flex: 1 }]} numberOfLines={1}>{section}</Text>
+                                    <Text style={[globalStyles.bodySmall, { flex: 1 }]} numberOfLines={1}>{section}</Text>
 
                                     <Pressable onPress={() => removeSection(section)} disabled={sections.length === 1} hitSlop={6}>
                                         <Text style={[styles.sectionAction, sections.length === 1 && { opacity: 0.2 }]}>✕</Text>
@@ -226,7 +226,7 @@ export default function MealsPage() {
                         {/* type your own, like "Work break" */}
                         <View style={styles.addSectionRow}>
                             <TextInput
-                                style={[globalStyles.body1, { flex: 1, paddingVertical: 6 }]}
+                                style={[globalStyles.bodySmall, { flex: 1, paddingVertical: 6 }]}
                                 placeholder="Add your own, like Work break..."
                                 placeholderTextColor="rgba(0,0,0,0.4)"
                                 value={newSectionName}
@@ -248,7 +248,7 @@ export default function MealsPage() {
                         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
                             {suggestedSections.map(type => (
                                 <Pressable key={type} style={styles.suggestionChip} onPress={() => addSection(type)}>
-                                    <Text style={[globalStyles.body2, { fontSize: 13 }]}>+ {type}</Text>
+                                    <Text style={[globalStyles.bodyRegular, { fontSize: 13 }]}>+ {type}</Text>
                                 </Pressable>
                             ))}
                         </View>

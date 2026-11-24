@@ -96,19 +96,19 @@ export default function NavBarSettings() {
 
                     {/* fixed slot 1 */}
                     <View style={{ gap: 10 }}>
-                        <Text style={[globalStyles.body2, { opacity: 0.5, textTransform: 'uppercase', letterSpacing: 0.5 }]}>
+                        <Text style={[globalStyles.bodyRegular, { opacity: 0.5, textTransform: 'uppercase', letterSpacing: 0.5 }]}>
                             Slot 1 · locked
                         </Text>
                         <View style={[styles.optionRow, { opacity: 0.55 }]}>
                             <Image source={NAV_DESTINATIONS[FIXED_TAB].icon} style={{ width: 22, height: 22 }} tintColor="#555" />
                             <Text style={[globalStyles.body, { flex: 1 }]}>{NAV_DESTINATIONS[FIXED_TAB].label}</Text>
-                            <Text style={[globalStyles.body2, { opacity: 0.6 }]}>Always first</Text>
+                            <Text style={[globalStyles.bodyRegular, { opacity: 0.6 }]}>Always first</Text>
                         </View>
                     </View>
 
                     {/* selectable pool */}
                     <View style={{ gap: 10 }}>
-                        <Text style={[globalStyles.body2, { opacity: 0.5, textTransform: 'uppercase', letterSpacing: 0.5 }]}>
+                        <Text style={[globalStyles.bodyRegular, { opacity: 0.5, textTransform: 'uppercase', letterSpacing: 0.5 }]}>
                             Slots 2–4 · pick {CONFIGURABLE_SLOT_COUNT}
                         </Text>
 
@@ -155,13 +155,13 @@ export default function NavBarSettings() {
                             disabled={!canSave}
                             style={{ paddingVertical: 5, paddingHorizontal: 15, flex: 1, alignItems: 'center', opacity: (canSave || saving) ? 1 : 0.5 }}
                         >
-                            <Text style={globalStyles.body1}>{saving ? 'Saving…' : 'Save'}</Text>
+                            <Text style={globalStyles.bodySmall}>{saving ? 'Saving…' : 'Save'}</Text>
                         </Pressable>
                     </ShadowBox>
 
                     {/* reset to default */}
                     <Pressable onPress={onReset} style={{ alignItems: 'center', paddingVertical: 4 }}>
-                        <Text style={[globalStyles.body2, { opacity: 0.6, textDecorationLine: 'underline' }]}>
+                        <Text style={[globalStyles.bodyRegular, { opacity: 0.6, textDecorationLine: 'underline' }]}>
                             Reset to default
                         </Text>
                     </Pressable>

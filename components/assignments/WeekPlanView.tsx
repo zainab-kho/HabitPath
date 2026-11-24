@@ -196,7 +196,7 @@ const WeekPlanView: React.FC<WeekPlanViewProps> = ({
                             {assignment.course && (
                               <ShadowBox contentBackgroundColor={assignment.course.color || '#fff'}>
                                 <View style={{ paddingHorizontal: 10, paddingVertical: 2 }}>
-                                  <Text style={globalStyles.body2}>
+                                  <Text style={globalStyles.bodyRegular}>
                                     {assignment.course.course_number}
                                   </Text>
                                 </View>

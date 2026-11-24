@@ -175,7 +175,7 @@ export default function WeekCalendar({
 
                             <Text
                                 style={[
-                                    globalStyles.body2,
+                                    globalStyles.bodyRegular,
                                     { fontSize: 13 },
                                     muted && { opacity: 0.4 },
                                     isPast && { opacity: 0.3 }, // dim past weeks

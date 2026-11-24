@@ -91,7 +91,7 @@ export default function NotificationSettings() {
                 <PageHeader title="Notifications" showBackButton />
 
                 <ScrollView contentContainerStyle={{ paddingHorizontal: 30, paddingBottom: 70, gap: 20 }}>
-                    <Text style={[globalStyles.body2, { textAlign: 'center', opacity: 0.6 }]}>
+                    <Text style={[globalStyles.bodyRegular, { textAlign: 'center', opacity: 0.6 }]}>
                         Daily nudges are skipped on days with nothing left to do.
                     </Text>
 
@@ -122,7 +122,7 @@ export default function NotificationSettings() {
                                         style={[globalStyles.bubbleLabel, { backgroundColor: COLORS.TimeLabel, alignSelf: 'flex-start' }]}
                                         onPress={() => setOpenSlot(isOpen ? null : slot)}
                                     >
-                                        <Text style={globalStyles.body2}>{formatReminderTime(time)}</Text>
+                                        <Text style={globalStyles.bodyRegular}>{formatReminderTime(time)}</Text>
                                     </Pressable>
                                 )}
 

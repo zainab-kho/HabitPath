@@ -3,7 +3,7 @@ import React, { useMemo, useState } from 'react';
 import { Alert, Image, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { GestureHandlerRootView, ScrollView as GHScrollView } from 'react-native-gesture-handler';
 
-import { BUTTON_COLORS, PAGE } from '@/colors';
+import { BUTTON_COLORS, COLORS, PAGE } from '@/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import { globalStyles } from '@/styles';
 import { Note, NoteFolder } from '@/types/Note';
@@ -88,7 +88,7 @@ export default function FoldersModal({
                     <Pressable style={styles.card} onPress={(e) => e.stopPropagation()}>
 
                         <View style={{ marginTop: 20 }}>
-                            <Text style={[globalStyles.h3, { textAlign: 'center', marginBottom: 16 }]}>
+                            <Text style={[globalStyles.h2, { textAlign: 'center', marginBottom: 16 }]}>
                                 {assignMode ? 'Add to Folder' : 'Folders'}
                             </Text>
                         </View>
@@ -159,7 +159,7 @@ export default function FoldersModal({
                                         onPress={() => onSelectFolder(null)}
                                         style={styles.bottomButton}
                                     >
-                                        <Text style={globalStyles.body1}>No folder</Text>
+                                        <Text style={globalStyles.bodySmall}>No folder</Text>
                                     </Pressable>
                                 </ShadowBox>
                             )}
@@ -174,7 +174,7 @@ export default function FoldersModal({
                                     <Pressable onPress={onOpenDeleted} style={styles.bottomButton}>
                                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                                             <Image source={SYSTEM_ICONS.trash} style={{ width: 15, height: 15, opacity: 0.7 }} />
-                                            <Text style={globalStyles.body1}>
+                                            <Text style={globalStyles.bodySmall}>
                                                 Deleted notes{deletedCount > 0 ? ` (${deletedCount})` : ''}
                                             </Text>
                                         </View>
@@ -210,7 +210,7 @@ export default function FoldersModal({
                                     <Pressable onPress={() => setAddingFolder(true)} style={styles.bottomButton}>
                                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
                                             <Image source={SYSTEM_ICONS.plus} style={{ width: 15, height: 15, opacity: 0.7 }} />
-                                            <Text style={globalStyles.body1}>Add new folder</Text>
+                                            <Text style={globalStyles.bodySmall}>Add new folder</Text>
                                         </View>
                                     </Pressable>
                                 </ShadowBox>
@@ -227,7 +227,7 @@ export default function FoldersModal({
 const styles = StyleSheet.create({
     overlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.45)',
+        backgroundColor: COLORS.Backdrop,
         justifyContent: 'center',
         alignItems: 'center',
     },

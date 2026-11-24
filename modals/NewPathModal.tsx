@@ -1,5 +1,5 @@
 // @/modals/NewPathModal.tsx
-import { BUTTON_COLORS, PAGE, PATH_COLOR_OPTIONS, PathColorKey } from '@/colors';
+import { BUTTON_COLORS, COLORS, PAGE, PATH_COLOR_OPTIONS, PathColorKey } from '@/colors';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { globalStyles, uiStyles } from '@/styles';
@@ -66,7 +66,7 @@ export default function NewPathModal({ visible, onClose, onCreated }: NewPathMod
                 <Pressable style={styles.card} onPress={(e) => e.stopPropagation()}>
 
                     <View style={{ marginTop: 20 }}>
-                        <Text style={[globalStyles.h3, { textAlign: 'center', marginBottom: 20 }]}>
+                        <Text style={[globalStyles.h2, { textAlign: 'center', marginBottom: 20 }]}>
                             New Path
                         </Text>
                     </View>
@@ -129,7 +129,7 @@ export default function NewPathModal({ visible, onClose, onCreated }: NewPathMod
 const styles = StyleSheet.create({
     overlay: {
         flex: 1,
-        backgroundColor: 'rgba(0,0,0,0.45)',
+        backgroundColor: COLORS.Backdrop,
         justifyContent: 'center',
         alignItems: 'center',
     },

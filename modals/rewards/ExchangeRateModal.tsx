@@ -1,5 +1,5 @@
 import { globalStyles, uiStyles } from '@/styles';
-import { BUTTON_COLORS, PAGE } from '@/colors';
+import { BUTTON_COLORS, COLORS, PAGE } from '@/colors';
 import React, { useState } from 'react';
 import { Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import ShadowBox from '@/ui/ShadowBox';
@@ -33,7 +33,7 @@ export default function ExchangeRateModal({ visible, onComplete, initialRate, on
         <View style={styles.card}>
 
           <View style={{ marginTop: 20 }}>
-            <Text style={[globalStyles.h3, { textAlign: 'center', marginBottom: 20 }]}>
+            <Text style={[globalStyles.h2, { textAlign: 'center', marginBottom: 20 }]}>
               Set Your Exchange Rate
             </Text>
           </View>
@@ -84,7 +84,7 @@ export default function ExchangeRateModal({ visible, onComplete, initialRate, on
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    backgroundColor: COLORS.Backdrop,
     justifyContent: 'center',
     alignItems: 'center',
   },

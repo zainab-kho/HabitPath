@@ -607,7 +607,7 @@ export default function PathDetail() {
           {/* trends */}
           <View style={styles.trendRow}>
             <View style={[styles.trendBubble, { backgroundColor: colorHex + '22' }]}>
-              <Text style={[globalStyles.body1, { fontSize: 13 }]}>
+              <Text style={[globalStyles.bodySmall, { fontSize: 13 }]}>
                 {thisWeek} this week
               </Text>
               {(thisWeek > 0 || lastWeek > 0) && (
@@ -616,14 +616,14 @@ export default function PathDetail() {
                     source={weekDiff > 0 ? SYSTEM_ICONS.trendUp : weekDiff < 0 ? SYSTEM_ICONS.trendDown : SYSTEM_ICONS.trendUp}
                     style={[styles.trendIcon, { tintColor: weekDiff > 0 ? '#2bb471' : weekDiff < 0 ? '#bc2d2d' : '#999' }]}
                   />
-                  <Text style={[globalStyles.body1, { color: weekDiff > 0 ? '#2bb471' : weekDiff < 0 ? '#bc2d2d' : '#999' }]}>
+                  <Text style={[globalStyles.bodySmall, { color: weekDiff > 0 ? '#2bb471' : weekDiff < 0 ? '#bc2d2d' : '#999' }]}>
                     {weekDiff === 0 ? '0%' : lastWeek === 0 ? 'New' : `${Math.round(Math.abs(weekDiff / lastWeek) * 100)}%`}
                   </Text>
                 </View>
               )}
             </View>
             <View style={[styles.trendBubble, { backgroundColor: colorHex }]}>
-              <Text style={[globalStyles.body2, { fontSize: 13 }]}>
+              <Text style={[globalStyles.bodyRegular, { fontSize: 13 }]}>
                 {thisMonth} this month
               </Text>
               {(thisMonth > 0 || lastMonth > 0) && (
@@ -632,7 +632,7 @@ export default function PathDetail() {
                     source={monthDiff > 0 ? SYSTEM_ICONS.trendUp : monthDiff < 0 ? SYSTEM_ICONS.trendDown : SYSTEM_ICONS.trendUp}
                     style={[styles.trendIcon, { tintColor: monthDiff > 0 ? '#2bb471' : monthDiff < 0 ? '#bc2d2d' : '#999' }]}
                   />
-                  <Text style={[globalStyles.body1, { color: monthDiff > 0 ? '#2bb471' : monthDiff < 0 ? '#bc2d2d' : '#999' }]}>
+                  <Text style={[globalStyles.bodySmall, { color: monthDiff > 0 ? '#2bb471' : monthDiff < 0 ? '#bc2d2d' : '#999' }]}>
                     {monthDiff === 0 ? '0%' : lastMonth === 0 ? 'New' : `${Math.round(Math.abs(monthDiff / lastMonth) * 100)}%`}
                   </Text>
                 </View>
@@ -705,7 +705,7 @@ export default function PathDetail() {
                           <Pressable onPress={() => setShowArchived(true)}>
                             <ShadowBox contentBackgroundColor="#f0f0f0" shadowBorderRadius={15} shadowOffset={{ x: 0, y: 3 }}>
                               <View style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
-                                <Text style={[globalStyles.body1]}>Archived</Text>
+                                <Text style={[globalStyles.bodySmall]}>Archived</Text>
                               </View>
                             </ShadowBox>
                           </Pressable>
@@ -713,7 +713,7 @@ export default function PathDetail() {
                         <Pressable onPress={() => setShowAddHabits(true)}>
                           <ShadowBox contentBackgroundColor={colorHex} shadowBorderRadius={15} shadowOffset={{ x: 0, y: 3 }}>
                             <View style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
-                              <Text style={[globalStyles.body1]}>Edit</Text>
+                              <Text style={[globalStyles.bodySmall]}>Edit</Text>
                             </View>
                           </ShadowBox>
                         </Pressable>
@@ -1040,7 +1040,7 @@ export default function PathDetail() {
                           shadowOffset={{ x: 0, y: 3 }}
                         >
                           <View style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
-                            <Text style={[globalStyles.body1]}>Add</Text>
+                            <Text style={[globalStyles.bodySmall]}>Add</Text>
                           </View>
                         </ShadowBox>
                       </Pressable>
@@ -1101,7 +1101,7 @@ export default function PathDetail() {
         {/* archived habits modal */}
         <Modal visible={showArchived} transparent animationType="none" onRequestClose={() => setShowArchived(false)}>
           <Pressable
-            style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center' }}
+            style={{ flex: 1, backgroundColor: COLORS.Backdrop, justifyContent: 'center' }}
             onPress={() => setShowArchived(false)}
           >
             <Pressable
@@ -1118,7 +1118,7 @@ export default function PathDetail() {
             >
               <View style={{ marginTop: 20, marginBottom: 10 }}>
                 <Text style={[globalStyles.h2, { textAlign: 'center', marginBottom: 5 }]}>Archived</Text>
-                <Text style={[globalStyles.body2, { textAlign: 'center', opacity: 0.6 }]}>
+                <Text style={[globalStyles.bodyRegular, { textAlign: 'center', opacity: 0.6 }]}>
                   Completed or past one-time habits
                 </Text>
               </View>

@@ -1,5 +1,5 @@
 // @/components/assignments/StatusModal.tsx
-import { PAGE, PROGRESS_COLORS } from '@/colors';
+import { COLORS, PAGE, PROGRESS_COLORS } from '@/colors';
 import { ASSIGNMENT_PROGRESS } from '@/constants/assignments';
 import { AssignmentWithCourse } from '@/hooks/useAssignmentData';
 import { globalStyles } from '@/styles';
@@ -26,7 +26,7 @@ export function StatusModal({ visible, selectedAssignment, onClose, onUpdateStat
             <Pressable
                 style={{
                     flex: 1,
-                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                    backgroundColor: COLORS.Backdrop,
                     justifyContent: 'center',
                     paddingHorizontal: 80,
                 }}
@@ -62,7 +62,7 @@ export function StatusModal({ visible, selectedAssignment, onClose, onUpdateStat
                                     style={{ width: 125 }}
                                 >
                                     <View style={{ paddingVertical: 6 }}>
-                                        <Text style={[globalStyles.body1, { textAlign: 'center' }]}>{status}</Text>
+                                        <Text style={[globalStyles.bodySmall, { textAlign: 'center' }]}>{status}</Text>
                                     </View>
                                 </ShadowBox>
                             </Pressable>

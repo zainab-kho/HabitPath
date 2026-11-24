@@ -1,53 +1,7 @@
-// @/components/constants/index.ts
-
-export const WEEK_DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const;
-
-export const ASSIGNMENT_TYPES = [
-    'Assignment',
-    'Discussion Post',
-    'Essay',
-    'Exam',
-    'Excel',
-    'Homework',
-    'Lecture',
-    'Notes',
-    'Program',
-    'Project',
-    'Review',
-    'Quiz',
-    'Speech',
-    'Study'
-] as const;
-
-export const ASSIGNMENT_PROGRESS = [
-    'Not started',
-    'In progress',
-    'Will do later',
-    'Finished (not submitted)',
-    'Done'
-] as const;
-
-export const PROGRESS_COLORS: Record<string, string> = {
-    'Not started': '#fff',
-    'In progress': '#ffa5c8',
-    'Will do later': '#fcbd6a',
-    'Finished (not submitted)': '#99ccf6',
-    'Done': '#ccd5ae'
-};
-
-export const ASSIGNMENT_TYPE_COLORS: Record<string, string> = {
-    'Assignment': '#efe9ae',
-    'Discussion Post': '#fec3a6',
-    'Essay': '#ffac81',
-    'Exam': '#ffe692',
-    'Excel': '#99c1de',
-    'Homework': '#ff928b',
-    'Lecture': '#d2b7e5',
-    'Notes': '#efaedf',
-    'Program': '#AEBEFF',
-    'Project': '#9DB0A3',
-    'Quiz': '#db9191',
-    'Review': '#cdeac0',
-    'Speech': '#f0efeb',
-    'Study': '#BFE4D2'
-}
+// @/constants/index.ts
+// every constant in the app, importable from one place: import { TIME_OPTIONS } from '@/constants'.
+// each file is named after what it's for, so look there to find or change something
+export * from './assignments';
+export * from './habits';
+export * from './icons';
+export * from './navTabs';

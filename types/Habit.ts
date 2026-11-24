@@ -117,15 +117,4 @@ export interface Habit {
   // reads or writes this field; safe to delete.
   completed?: boolean;
 
-  // quest linkage — real columns on the habits table (null for normal habits)
-  questId?: string;                        // parent quest id
-  phaseId?: string;                        // origin phase id
-  questScope?: 'phase' | 'carry' | 'forever'; // what happens when the phase ends
-  questName?: string;                      // parent quest name (for the card badge)
-
-  // DEPRECATED old virtual quest-goal bridge — no longer populated; kept only so
-  // leftover UI branches still compile until they're cleaned up.
-  isQuestGoal?: boolean;
-  questGoalId?: string;
-  questSubtasks?: { id: string; name: string; completed: boolean }[];
 }

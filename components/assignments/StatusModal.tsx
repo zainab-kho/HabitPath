@@ -1,12 +1,12 @@
 // @/components/assignments/StatusModal.tsx
-import { ASSIGNMENT_PROGRESS, PROGRESS_COLORS } from '@/constants/';
+import { PAGE, PROGRESS_COLORS } from '@/colors';
+import { ASSIGNMENT_PROGRESS } from '@/constants/assignments';
 import { AssignmentWithCourse } from '@/hooks/useAssignmentData';
 import { globalStyles } from '@/styles';
 import ShadowBox from '@/ui/ShadowBox';
 import React from 'react';
 import { Modal, Pressable, Text, View } from 'react-native';
 
-import { PAGE } from '@/colors';
 
 interface StatusModalProps {
     visible: boolean;

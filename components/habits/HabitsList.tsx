@@ -94,7 +94,6 @@ export default function HabitsList({
 
   const [showCompleted, setShowCompleted] = useState(true);
   const [weeklyCollapsed, setWeeklyCollapsed] = useState(false);
-  const [expandedQuestGoals, setExpandedQuestGoals] = useState<Set<string>>(new Set());
 
   // No snapshot needed — `loading` from useHabits is derived (habitsForDate !== dateStr),
   // so it's always true when habits don't match the current date. Safe to use habits directly.
@@ -137,51 +136,9 @@ export default function HabitsList({
     onIncrementUpdate(timeLogHabit.id, todayAmount + minutes);
   };
 
-  const toggleQuestGoalExpanded = (habitId: string) => {
-    setExpandedQuestGoals(prev => {
-      const next = new Set(prev);
-      if (next.has(habitId)) next.delete(habitId);
-      else next.add(habitId);
-      return next;
-    });
-  };
-
-  // Local subtask completion overrides (optimistic, persisted to Supabase)
-  const [subtaskOverrides, setSubtaskOverrides] = useState<Record<string, boolean>>({});
-
-  const handleToggleSubtask = async (subtaskId: string, completed: boolean) => {
-    try {
-      // legacy quest-subtask toggle — quest goals are now real habits with no
-      // subtasks, so this handler is inert (kept until the UI branch is removed)
-      setSubtaskOverrides(prev => ({ ...prev, [subtaskId]: completed }));
-    } catch (err) {
-      console.error('Error toggling quest subtask:', err);
-      // revert on error
-      setSubtaskOverrides(prev => {
-        const next = { ...prev };
-        delete next[subtaskId];
-        return next;
-      });
-    }
-  };
-
-  // Apply subtask overrides to habits
-  const displayHabits = useMemo(() => {
-    if (Object.keys(subtaskOverrides).length === 0) return habits;
-    return habits.map(h => {
-      if (!h.isQuestGoal || !h.questSubtasks) return h;
-      return {
-        ...h,
-        questSubtasks: h.questSubtasks.map(s =>
-          subtaskOverrides[s.id] !== undefined ? { ...s, completed: subtaskOverrides[s.id] } : s
-        ),
-      };
-    });
-  }, [habits, subtaskOverrides]);
-
-  // displayHabits = habits + local subtask overrides. Already active-only from applyHabitsUpdate.
-  const activeHabits = displayHabits;
-  const regularActiveHabits = activeHabits.filter(h => !h.isQuestGoal && h.frequency !== 'Weekly Goal');
+  // already active-only from applyHabitsUpdate
+  const activeHabits = habits;
+  const regularActiveHabits = activeHabits.filter(h => h.frequency !== 'Weekly Goal');
   const weeklyHabits = activeHabits.filter(h => h.frequency === 'Weekly Goal');
 
   const weekRangeLabel = useMemo(() => {
@@ -242,7 +199,7 @@ export default function HabitsList({
 
   // Build the flat list: headers interleaved with habits, grouped by section
   const flatList = useMemo(() => {
-    const regularOrdered = orderedHabits.filter(h => !h.isQuestGoal && h.frequency !== 'Weekly Goal' );
+    const regularOrdered = orderedHabits.filter(h => h.frequency !== 'Weekly Goal');
     const visible = showCompleted
       ? regularOrdered
       : regularOrdered.filter(h => h.status !== 'completed' && h.status !== 'skipped');
@@ -468,10 +425,6 @@ export default function HabitsList({
                   onUnskip={() => onUnskipHabit?.(item.habit.id)}
                   onUnskipAndComplete={() => onUnskipAndCompleteHabit?.(item.habit.id)}
                   onSnooze={() => onSnoozeHabit?.(item.habit.id)}
-                  onToggleSubtask={handleToggleSubtask}
-                  questExpanded={expandedQuestGoals.has(item.habit.id)}
-                  onToggleQuestExpand={() => toggleQuestGoalExpanded(item.habit.id)}
-                  onNavigateToQuest={(questId) => router.push(`/(tabs)/quests/${questId}`)}
                   onOpenTimeLog={handleOpenTimeLog}
                 />
               </Sortable.Handle>
@@ -598,10 +551,6 @@ export default function HabitsList({
                     onUnskip={() => onUnskipHabit?.(habit.id)}
                     onUnskipAndComplete={() => onUnskipAndCompleteHabit?.(habit.id)}
                     onSnooze={() => onSnoozeHabit?.(habit.id)}
-                    onToggleSubtask={handleToggleSubtask}
-                    questExpanded={expandedQuestGoals.has(habit.id)}
-                    onToggleQuestExpand={() => toggleQuestGoalExpanded(habit.id)}
-                    onNavigateToQuest={(questId) => router.push(`/(tabs)/quests/${questId}`)}
                     onOpenTimeLog={handleOpenTimeLog}
                   />
                 ))}

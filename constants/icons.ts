@@ -1,11 +1,21 @@
 // @/constants/icons.ts
+// every icon image in the app. HABIT_ICONS are the ones people can give a habit,
+// SYSTEM_ICONS are the app's own (nav bar, buttons, actions).
+// an image file that isn't listed here can't be used anywhere
+
+/* ============================================================================
+   HABIT ICONS
+============================================================================ */
+
 export interface HabitIcon {
   name: string;
-  file: any; // keep it compatible with require() or imported assets
+  // the loaded image, from require()
+  file: any;
 }
 
+// each habit icon by name. a habit saves this name, so renaming one breaks habits that use it
 export const HABIT_ICONS: Record<string, any> = {
-  // Daily
+  // daily
   goal: require('@/assets/icons/habits/daily-activities/goal.png'),
   target: require('@/assets/icons/habits/daily-activities/target.png'),
   'target-logo': require('@/assets/icons/habits/daily-activities/target-logo.png'),
@@ -26,7 +36,7 @@ export const HABIT_ICONS: Record<string, any> = {
   camper: require('@/assets/icons/habits/daily-activities/camper.png'),
   address: require('@/assets/icons/habits/daily-activities/address.png'),
 
-  // Self-Care
+  // self-care
   shower: require('@/assets/icons/habits/daily-activities/shower.png'),
   bathtub: require('@/assets/icons/habits/daily-activities/bathtub.png'),
   soap: require('@/assets/icons/habits/daily-activities/soap.png'),
@@ -42,7 +52,7 @@ export const HABIT_ICONS: Record<string, any> = {
   facemask: require('@/assets/icons/habits/self-care/facemask.png'),
   mirror: require('@/assets/icons/habits/self-care/mirror.png'),
 
-  // Work & Study
+  // work & study
   monitor: require('@/assets/icons/habits/work/monitor.png'),
   workstation: require('@/assets/icons/habits/work/workstation.png'),
   code: require('@/assets/icons/habits/work/code.png'),
@@ -68,7 +78,7 @@ export const HABIT_ICONS: Record<string, any> = {
   'graduation-cap': require('@/assets/icons/habits/learning/graduation-cap.png'),
   classroom: require('@/assets/icons/habits/learning/classroom.png'),
 
-  // Food
+  // food
   'kitchen-room': require('@/assets/icons/habits/food/kitchen-room.png'),
   'kitchen-pot': require('@/assets/icons/habits/food/kitchen-pot.png'),
   cutlery: require('@/assets/icons/habits/food/cutlery.png'),
@@ -97,7 +107,7 @@ export const HABIT_ICONS: Record<string, any> = {
   milkshake: require('@/assets/icons/habits/food/milkshake.png'),
   noodles: require('@/assets/icons/habits/food/noodles.png'),
 
-  // Home
+  // home
   housekeeping: require('@/assets/icons/habits/cleaning/housekeeping.png'),
   'vacuum-cleaner': require('@/assets/icons/habits/cleaning/vacuum-cleaner.png'),
   'washing-machine': require('@/assets/icons/habits/cleaning/washing-machine.png'),
@@ -119,7 +129,7 @@ export const HABIT_ICONS: Record<string, any> = {
   'living-room': require('@/assets/icons/habits/home/living-room.png'),
   'paint-roller': require('@/assets/icons/habits/home/paint-roller.png'),
 
-  // Fitness
+  // fitness
   running: require('@/assets/icons/habits/fitness/running.png'),
   'girl-running': require('@/assets/icons/habits/fitness/girl-running.png'),
   'yoga-mat': require('@/assets/icons/habits/fitness/yoga-mat.png'),
@@ -128,7 +138,7 @@ export const HABIT_ICONS: Record<string, any> = {
   'heart-with-pulse': require('@/assets/icons/habits/fitness/heart-with-pulse.png'),
   'doctors-bag': require('@/assets/icons/habits/fitness/doctors-bag.png'),
 
-  // Shopping & Finance
+  // shopping & finance
   budget: require('@/assets/icons/habits/financing/budget.png'),
   'dollar-bag': require('@/assets/icons/habits/shopping/dollar-bag.png'),
   'money-transfer': require('@/assets/icons/habits/financing/money-transfer.png'),
@@ -139,7 +149,7 @@ export const HABIT_ICONS: Record<string, any> = {
   'return-purchases': require('@/assets/icons/habits/shopping/return-purchases.png'),
   'measurement-tool': require('@/assets/icons/habits/shopping/measurement-tool.png'),
 
-  // Views
+  // views
   nature: require('@/assets/icons/habits/nature/nature.png'),
   valley: require('@/assets/icons/habits/nature/valley.png'),
   field: require('@/assets/icons/habits/nature/field.png'),
@@ -151,7 +161,7 @@ export const HABIT_ICONS: Record<string, any> = {
   night: require('@/assets/icons/habits/views/night.png'),
   'moon-and-stars': require('@/assets/icons/habits/views/moon-and-stars.png'),
 
-  // Entertainment
+  // entertainment
   radio: require('@/assets/icons/habits/music/radio.png'),
   music: require('@/assets/icons/habits/music/music.png'),
   'apple-music': require('@/assets/icons/habits/music/apple-music.png'),
@@ -169,6 +179,7 @@ export const HABIT_ICONS: Record<string, any> = {
   news: require('@/assets/icons/habits/entertainment/news.png'),
 };
 
+// the icon picker's tabs
 export const ICON_CATEGORIES: Record<string, HabitIcon[]> = {
   Daily: [
     // goals
@@ -354,68 +365,67 @@ export const ICON_CATEGORIES: Record<string, HabitIcon[]> = {
   ],
 };
 
-export function getHabitIcon(name: string) {
-  for (const category of Object.values(ICON_CATEGORIES)) {
-    const found = category.find(icon => icon.name === name);
-    if (found) return found.file;
-  }
-  return null;
-}
+/* ============================================================================
+   SYSTEM ICONS
+============================================================================ */
 
 export const SYSTEM_ICONS = {
-  // nav bar icons
+  // pages: the nav bar, the drawer and page headers
   habit: require('@/assets/icons/system/habit-icon.png'),
-  snooze: require('@/assets/icons/system/snooze.png'),
-  skip: require('@/assets/icons/system/skip.png'),
-  undo: require('@/assets/icons/system/undo.png'),
-
+  path: require('@/assets/icons/system/path-icon.png'),
   assignment: require('@/assets/icons/system/assignment.png'),
   journal: require('@/assets/icons/system/journal-icon.png'),
   lists: require('@/assets/icons/system/lists.png'),
   grocery: require('@/assets/icons/system/grocery.png'),
+  stopwatch: require('@/assets/icons/system/stopwatch.png'),
+  reward: require('@/assets/icons/system/sparkle-fill.png'),
   stats: require('@/assets/icons/system/stats.png'),
-
-  path: require('@/assets/icons/system/path-icon.png'),
-  quest: require('@/assets/icons/system/quest-icon.png'),
+  settings: require('@/assets/icons/system/settings-icon.png'),
   more: require('@/assets/icons/system/more-icon.png'),
 
-  feedback: require('@/assets/icons/system/feedback.png'),
+  // habit actions
+  snooze: require('@/assets/icons/system/snooze.png'),
+  skip: require('@/assets/icons/system/skip.png'),
+  undo: require('@/assets/icons/system/undo.png'),
+  repeat: require('@/assets/icons/system/repeat.png'),
   fire: require('@/assets/icons/system/fire.png'),
   fireBlue: require('@/assets/icons/system/fire-blue.png'),
-  folder: require('@/assets/icons/system/folder.png'),
-  duplicate: require('@/assets/icons/system/duplicate.png'),
-  archive: require('@/assets/icons/system/archive.png'),
-  trash: require('@/assets/icons/system/trash.png'),
   star: require('@/assets/icons/system/star-icon.png'),
-  show: require('@/assets/icons/system/show.png'),
-  hide: require('@/assets/icons/system/hide.png'),
-  list: require('@/assets/icons/system/list.png'),
-  reward: require('@/assets/icons/system/sparkle-fill.png'),
-  stopwatch: require('@/assets/icons/system/stopwatch.png'),
-  tag: require('@/assets/icons/system/tag.png'),
-  settings: require('@/assets/icons/system/settings-icon.png'),
-  plus: require('@/assets/icons/system/plus.png'),
+  archive: require('@/assets/icons/system/archive.png'),
+  duplicate: require('@/assets/icons/system/duplicate.png'),
   pin: require('@/assets/icons/system/pin.png'),
+
+  // general buttons
+  plus: require('@/assets/icons/system/plus.png'),
+  write: require('@/assets/icons/system/write.png'),
   delete: require('@/assets/icons/system/delete.png'),
+  trash: require('@/assets/icons/system/trash.png'),
+  search: require('@/assets/icons/system/search.png'),
+  list: require('@/assets/icons/system/list.png'),
+  folder: require('@/assets/icons/system/folder.png'),
+  tag: require('@/assets/icons/system/tag.png'),
+  calendar: require('@/assets/icons/system/calendar.png'),
+  location: require('@/assets/icons/system/location-icon.png'),
   lock: require('@/assets/icons/system/lock.png'),
   padlock: require('@/assets/icons/system/padlock.png'),
+  show: require('@/assets/icons/system/show.png'),
+  hide: require('@/assets/icons/system/hide.png'),
+  feedback: require('@/assets/icons/system/feedback.png'),
 
-  shoppingCart: require('@/assets/icons/system/shopping-cart.png'),
+  // sorting and trends
   sort: require('@/assets/icons/system/sort.png'),
   sortLeft: require('@/assets/icons/system/sort-left.png'),
   sortRight: require('@/assets/icons/system/sort-right.png'),
   trendUp: require('@/assets/icons/system/trend-up.png'),
   trendDown: require('@/assets/icons/system/trend-down.png'),
-  repeat: require('@/assets/icons/system/repeat.png'),
-  calendar: require('@/assets/icons/system/calendar.png'),
-  location: require('@/assets/icons/system/location-icon.png'),
-  write: require('@/assets/icons/system/write.png'),
+
+  // media, for the journal's song / book / show card
   headphones: require('@/assets/icons/system/headphones.png'),
   musicNote: require('@/assets/icons/system/music-note.png'),
-  search: require('@/assets/icons/system/search.png'),
 
-  // rewards icons
+  // rewards and meal plan
   gift: require('@/assets/icons/system/gift.png'),
   photo: require('@/assets/icons/system/photo.png'),
   link: require('@/assets/icons/system/link.png'),
+  shoppingCart: require('@/assets/icons/system/shopping-cart.png'),
 };

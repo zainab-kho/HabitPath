@@ -5,8 +5,8 @@ import { Alert, Modal, Pressable, ScrollView, StyleSheet, Switch, Text, TextInpu
 // gesture-handler scroll + root view so scrolling works inside the course modal
 import { GestureHandlerRootView, ScrollView as GHScrollView } from 'react-native-gesture-handler';
 
-import { ASSIGNMENT_PROGRESS, ASSIGNMENT_TYPE_COLORS, ASSIGNMENT_TYPES, PROGRESS_COLORS } from '@/constants';
-import { BUTTON_COLORS, PAGE } from '@/colors';
+import { ASSIGNMENT_TYPE_COLORS, BUTTON_COLORS, PAGE, PROGRESS_COLORS } from '@/colors';
+import { ASSIGNMENT_PROGRESS, ASSIGNMENT_TYPES } from '@/constants/assignments';
 import { supabase } from '@/lib/supabase';
 import { globalStyles, uiStyles } from '@/styles';
 import { Course } from '@/types/Course';

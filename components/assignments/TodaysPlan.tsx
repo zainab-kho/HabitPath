@@ -2,8 +2,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import React, { useEffect, useState } from 'react';
 import { Image, Pressable, Text, View } from 'react-native';
 
-import { PROGRESS_COLORS } from '@/constants';
-import { BUTTON_COLORS, PAGE } from '@/colors';
+import { BUTTON_COLORS, PAGE, PROGRESS_COLORS } from '@/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import { AssignmentWithCourse } from '@/hooks/useAssignmentData';
 import { globalStyles } from '@/styles';

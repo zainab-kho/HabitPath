@@ -1,6 +1,5 @@
 // @/components/assignments/AssignmentCard.tsx
-import { ASSIGNMENT_TYPE_COLORS, PROGRESS_COLORS } from '@/constants/';
-import { BUTTON_COLORS, PAGE } from '@/colors';
+import { ASSIGNMENT_TYPE_COLORS, BUTTON_COLORS, PAGE, PROGRESS_COLORS } from '@/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import { AssignmentWithCourse } from '@/hooks/useAssignmentData';
 import { globalStyles } from '@/styles';

@@ -7,8 +7,7 @@ import uuid from 'react-native-uuid';
 // ─── CREATE ──────────────────────────────────────────────────────────────────
 
 // inserts a habit row. `habitData` is the same column-shaped object NewHabitPage
-// builds (snake_case keys). Returns the new row id. Used both by NewHabitPage and
-// when a quest creates a real habit tagged with quest_id / phase_id / quest_scope.
+// builds (snake_case keys). Returns the new row id.
 export async function createHabit(
   habitData: Record<string, any>,
   userId: string,
@@ -50,7 +49,7 @@ export async function loadHabitsFromSupabase(
   }
 }
 
-// maps a raw `habits` row to a Habit. Shared by the full load and quest-scoped load.
+// maps a raw `habits` row to a Habit
 export function mapHabitRow(row: any): Habit {
   return {
     id: row.id,
@@ -97,41 +96,7 @@ export function mapHabitRow(row: any): Habit {
     monthlyDay: row.monthly_day ?? undefined,
     endDate: row.end_date ?? undefined,
     created_at: row.created_at,
-    // quest linkage (real columns; null for normal habits)
-    questId: row.quest_id ?? undefined,
-    phaseId: row.phase_id ?? undefined,
-    questScope: row.quest_scope ?? undefined,
   };
-}
-
-// assign / move a quest goal into a phase: sets phase_id, scope, and end date
-export async function setHabitPhase(
-  habitId: string,
-  userId: string,
-  phaseId: string | null,
-  endDate: string | null,
-  scope: 'phase' | 'carry' | 'forever' = 'phase',
-): Promise<void> {
-  const { error } = await supabase
-    .from('habits')
-    .update({ phase_id: phaseId, quest_scope: scope, end_date: endDate })
-    .eq('id', habitId)
-    .eq('user_id', userId);
-  if (error) throw error;
-}
-
-// loads all habits belonging to one quest (any phase), incl. archived ones —
-// the quest detail decides what to show per phase.
-export async function loadHabitsByQuest(questId: string, userId: string): Promise<Habit[]> {
-  const { data, error } = await supabase
-    .from('habits')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('quest_id', questId)
-    .order('created_at', { ascending: true });
-
-  if (error) throw error;
-  return (data || []).map(mapHabitRow);
 }
 
 // ─── TOGGLE / UPDATE ─────────────────────────────────────────────────────────

@@ -21,10 +21,6 @@ export const PAGE = {
     background: ['#faf3dd', '#c8d5b9', '#8fc0a9'],
     primary: ['#EC9064', '#8fc0a9'],
   },
-  quest: {
-    background: ['#FE9494', '#FFE4E2', '#ABB967'],
-    primary: ['#FF6E83', '#9EA42E']
-  },
   journal: {
     background: ['#8f94fb', '#bec1ffff'],
     foreground: ['#F9F8FF'],

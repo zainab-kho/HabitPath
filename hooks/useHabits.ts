@@ -137,7 +137,6 @@ export function useHabits(viewingDate: Date = new Date()) {
         prev.hour === reset.hour && prev.minute === reset.minute ? prev : reset
       );
 
-      // quest habits are now real habits, so they come through here too
       const fresh = await loadHabitsFromSupabase(user.id);
 
       // fetch streak + points before updating UI so everything lands in one render
@@ -201,7 +200,7 @@ export function useHabits(viewingDate: Date = new Date()) {
         if (updatedTarget) await persistHabitCompletion(updatedTarget, user.id);
 
         const [streak, total] = await Promise.all([
-          updateAppStreak(updatedHabits.filter(h => !h.isQuestGoal), resetTime.hour, resetTime.minute),
+          updateAppStreak(updatedHabits, resetTime.hour, resetTime.minute),
           getTotalPoints(),
         ]);
         setAppStreak(streak);
@@ -231,9 +230,6 @@ export function useHabits(viewingDate: Date = new Date()) {
           : rawDs;
 
       try {
-        // Quest goals don't support increment from habits page
-        if (target?.isQuestGoal) return;
-
         // apply synchronously BEFORE the await so rapid increments never read stale state
         const updatedHabits = applyIncrementUpdate(habitId, currentHabits, ds, newAmount, resetTime.hour, resetTime.minute);
         applyHabitsUpdate(updatedHabits, resetTime);

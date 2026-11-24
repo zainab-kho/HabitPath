@@ -2,8 +2,7 @@
 import React from 'react';
 import { Image, Pressable, Text, View } from 'react-native';
 
-import { PROGRESS_COLORS } from '@/constants/';
-import { BUTTON_COLORS, PAGE } from '@/colors';
+import { BUTTON_COLORS, PAGE, PROGRESS_COLORS } from '@/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import { globalStyles } from '@/styles';
 import { Assignment } from '@/types/Assignment';

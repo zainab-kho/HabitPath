@@ -57,11 +57,8 @@ export async function saveDailyOrder(
   userId: string,
   dateStr: string,
 ): Promise<void> {
-  // Filter out quest goal IDs — they live in quest_goals, not habits
-  const habitIds = orderedIds.filter(id => !id.startsWith('quest_goal_'));
-
   // Batch update: set temp_order for each habit
-  const promises = habitIds.map((id, index) =>
+  const promises = orderedIds.map((id, index) =>
     supabase
       .from('habits')
       .update({ temp_order: index, temp_order_date: dateStr })

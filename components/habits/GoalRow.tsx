@@ -6,7 +6,7 @@
 import React from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { COLORS } from '@/colors';
+import { COLORS, HABIT_COLORS, REWARD_COLORS } from '@/colors';
 import { HABIT_ICONS, SYSTEM_ICONS } from '@/constants/icons';
 import { globalStyles } from '@/styles';
 import { Habit } from '@/types/Habit';
@@ -80,23 +80,23 @@ export default function GoalRow({ habit, onPress, nextDate, todayStr }: GoalRowP
                         <View style={styles.badgesRow}>
                             {/* unscheduled habits live on the inbox page */}
                             {isInbox && (
-                                <View style={[styles.badge, { backgroundColor: COLORS.PrimaryLight, borderColor: COLORS.Primary }]}>
+                                <View style={[styles.badge, { backgroundColor: COLORS.Accent, borderColor: COLORS.Primary }]}>
                                     <Text style={styles.badgeText}>Inbox</Text>
                                 </View>
                             )}
 
                             {habit.lastCompletedDate &&
-                                <View style={[styles.badge, { backgroundColor: COLORS.ProgressColor, borderColor: '#000', }]}>
+                                <View style={[styles.badge, { backgroundColor: HABIT_COLORS.Progress, borderColor: '#000', }]}>
                                     <Image
                                         source={SYSTEM_ICONS.stats}
-                                        style={[styles.badgeIcon, { tintColor: COLORS.PrimaryLight }]}
+                                        style={[styles.badgeIcon, { tintColor: COLORS.Accent }]}
                                     />
                                     <Text style={styles.badgeText}>{getDateLabel(parseLocalDate(habit.lastCompletedDate))}</Text>
                                 </View>
                             }
 
                             {nextDate &&
-                                <View style={[styles.badge, { backgroundColor: COLORS.PrimaryLight, borderColor: '#000' }]}>
+                                <View style={[styles.badge, { backgroundColor: COLORS.Accent, borderColor: '#000' }]}>
                                     <Image
                                         source={SYSTEM_ICONS.calendar}
                                         style={[styles.badgeIcon, { tintColor: COLORS.Primary }]}
@@ -110,7 +110,7 @@ export default function GoalRow({ habit, onPress, nextDate, todayStr }: GoalRowP
                                 <View style={[styles.badge, styles.pointsBadge]}>
                                     <Image
                                         source={SYSTEM_ICONS.reward}
-                                        style={[styles.badgeIcon, { tintColor: COLORS.Rewards }]}
+                                        style={[styles.badgeIcon, { tintColor: REWARD_COLORS.Points }]}
                                     />
                                     <Text style={styles.badgeText}>{habit.rewardPoints}</Text>
                                 </View>
@@ -180,8 +180,8 @@ const styles = StyleSheet.create({
         fontFamily: 'label',
     },
     pointsBadge: {
-        backgroundColor: COLORS.RewardsBackground,
-        borderColor: COLORS.RewardsAccent,
+        backgroundColor: REWARD_COLORS.Background,
+        borderColor: REWARD_COLORS.Accent,
     },
     chevron: {
         width: 14,

@@ -1,7 +1,7 @@
 // @/colors/pages.ts
 // each page's own color scheme: its background gradient, borders and accent colors.
 // the background arrays are also read by name through AppLinearGradient (variant="journal.background")
-import { COLORS } from './core';
+import { REWARD_COLORS } from './rewards';
 
 export const PAGE = {
   auth: {
@@ -26,6 +26,8 @@ export const PAGE = {
     foreground: ['#F9F8FF'],
     border: ['#55d7b0ff'],
     primary: ['#ED8BE7'],
+    // the "read more" link on journal entries
+    link: ['#0000EE'],
   },
   notes: {
     background: ['#FFDBF7', '#FFD3FF', '#FFE7FF'],
@@ -52,6 +54,6 @@ export const PAGE = {
   },
   rewards: {
     background: ['#f9ffa6', '#ffe8b1', '#FF7F50'],
-    primary: ['#FFD581', COLORS.Rewards],
+    primary: ['#FFD581', REWARD_COLORS.Points],
   },
 } as const;

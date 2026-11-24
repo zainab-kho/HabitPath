@@ -66,7 +66,7 @@ const styles = StyleSheet.create({
   },
 
   countBadge: {
-    backgroundColor: COLORS.PrimaryLight,
+    backgroundColor: COLORS.Accent,
     borderRadius: 10,
     paddingHorizontal: 8,
     paddingVertical: 2,

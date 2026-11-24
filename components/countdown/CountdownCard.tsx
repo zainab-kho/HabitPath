@@ -2,7 +2,7 @@
 import React, { memo } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { COLORS, PAGE } from '@/colors';
+import { COLORS, PAGE, REWARD_COLORS } from '@/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import { getCountdownParts, getDaysLeft, getProgressPct } from '@/lib/countdown/countdownMath';
 import { globalStyles } from '@/styles';
@@ -34,7 +34,7 @@ function DaysLeftBadge({ daysLeft }: { daysLeft: number }) {
 
     return (
         <View style={styles.daysBadge}>
-            <Image source={SYSTEM_ICONS.calendar} style={[styles.badgeIcon, { tintColor: COLORS.Rewards }]} />
+            <Image source={SYSTEM_ICONS.calendar} style={[styles.badgeIcon, { tintColor: REWARD_COLORS.Points }]} />
             <Text style={styles.badgeText}>{label}</Text>
         </View>
     );
@@ -51,7 +51,7 @@ function CountdownProgressBar({ percent, isDone }: { percent: number; isDone: bo
                             styles.progressFill,
                             {
                                 width: `${percent}%`,
-                                backgroundColor: isDone ? COLORS.PrimaryLight : COLORS.Primary,
+                                backgroundColor: isDone ? COLORS.Accent : COLORS.Primary,
                             },
                         ]}
                     />
@@ -176,8 +176,8 @@ const styles = StyleSheet.create({
         paddingVertical: 3,
         borderRadius: 8,
         borderWidth: 1,
-        backgroundColor: COLORS.RewardsBackground,
-        borderColor: COLORS.RewardsAccent,
+        backgroundColor: REWARD_COLORS.Background,
+        borderColor: REWARD_COLORS.Accent,
     },
     badgeIcon: {
         width: 12,

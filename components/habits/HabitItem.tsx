@@ -4,7 +4,7 @@ import * as Haptics from 'expo-haptics';
 import { Animated, Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import Swipeable from 'react-native-gesture-handler/Swipeable';
 
-import { COLORS } from '@/colors';
+import { COLORS, HABIT_COLORS, REWARD_COLORS } from '@/colors';
 import { HABIT_ICONS, SYSTEM_ICONS } from '@/constants/icons';
 import { globalStyles } from '@/styles';
 import ShadowBox from '@/ui/ShadowBox';
@@ -253,7 +253,7 @@ export default function HabitItem({
                         <View style={[styles.badge, styles.pointsBadge]}>
                           <Image
                             source={SYSTEM_ICONS.reward}
-                            style={[styles.badgeIcon, { tintColor: COLORS.Rewards }]}
+                            style={[styles.badgeIcon, { tintColor: REWARD_COLORS.Points }]}
                           />
                           <Text style={styles.badgeText}>{habit.rewardPoints}</Text>
                         </View>
@@ -338,7 +338,7 @@ export default function HabitItem({
                 <View style={styles.badgesRow}>
                   {/* status badge (e.g. snoozed-until on the inbox page) */}
                   {statusBadge && (
-                    <View style={[styles.badge, { backgroundColor: COLORS.PrimaryLight, borderColor: COLORS.Primary }]}>
+                    <View style={[styles.badge, { backgroundColor: COLORS.Accent, borderColor: COLORS.Primary }]}>
                       <Image
                         source={SYSTEM_ICONS.snooze}
                         style={styles.badgeIcon}
@@ -352,7 +352,7 @@ export default function HabitItem({
                     <View style={[styles.badge, styles.pointsBadge]}>
                       <Image
                         source={SYSTEM_ICONS.reward}
-                        style={[styles.badgeIcon, { tintColor: COLORS.Rewards }]}
+                        style={[styles.badgeIcon, { tintColor: REWARD_COLORS.Points }]}
                       />
                       <Text style={styles.badgeText}>{habit.rewardPoints}</Text>
                     </View>
@@ -388,7 +388,7 @@ export default function HabitItem({
                           styles.progressBarFill,
                           {
                             width: `${progressPercentage}%`,
-                            backgroundColor: isGoalReached ? COLORS.PrimaryLight : COLORS.ProgressColor,
+                            backgroundColor: isGoalReached ? COLORS.Accent : HABIT_COLORS.Progress,
                           },
                         ]}
                       />
@@ -522,9 +522,9 @@ const styles = StyleSheet.create({
     fontFamily: 'label',
   },
   pointsBadge: {
-    backgroundColor: COLORS.RewardsBackground,
+    backgroundColor: REWARD_COLORS.Background,
     borderWidth: 1,
-    borderColor: COLORS.RewardsAccent,
+    borderColor: REWARD_COLORS.Accent,
   },
   streak: {
     flexDirection: 'row',
@@ -536,7 +536,7 @@ const styles = StyleSheet.create({
     height: 16
   },
   incrementBadge: {
-    backgroundColor: COLORS.ProgressColor,
+    backgroundColor: HABIT_COLORS.Progress,
     borderColor: COLORS.Secondary,
     borderWidth: 0,
   },

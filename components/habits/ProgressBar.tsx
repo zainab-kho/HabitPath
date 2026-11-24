@@ -1,5 +1,5 @@
 // components/habits/ProgressBar.tsx
-import { COLORS } from '@/colors';
+import { COLORS, HABIT_COLORS, REWARD_COLORS } from '@/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import ShadowBox from '@/ui/ShadowBox';
 import { useRouter } from 'expo-router';
@@ -40,13 +40,13 @@ export default function ProgressBar({
       <Pressable onPress={() => router.push({ pathname: '/(tabs)/more/rewards', params: { from: 'drawer' } } as any)}>
         <ShadowBox
           contentBorderColor='#000'
-          shadowColor={COLORS.RewardsAccent}
+          shadowColor={REWARD_COLORS.Accent}
           shadowBorderColor='#000'
         >
           <View style={styles.badgeContent}>
             <Image
               source={SYSTEM_ICONS.reward}
-              style={[styles.badgeIcon, { tintColor: COLORS.Rewards }]}
+              style={[styles.badgeIcon, { tintColor: REWARD_COLORS.Points }]}
             />
             <Text style={styles.badgeText}>
               {earnedPoints ?? 0}/{totalPossiblePoints ?? 0}
@@ -67,7 +67,7 @@ export default function ProgressBar({
                   styles.progressFill,
                   {
                     width: `${completedPct}%`,
-                    backgroundColor: isAllDone ? COLORS.PrimaryLight : COLORS.Primary,
+                    backgroundColor: isAllDone ? COLORS.Accent : COLORS.Primary,
                     zIndex: 2,
                   },
                 ]}
@@ -103,7 +103,7 @@ export default function ProgressBar({
       {/* streak badge */}
       <ShadowBox
         contentBorderColor='#000'
-        shadowColor={COLORS.StreakAccent}
+        shadowColor={HABIT_COLORS.Streak}
         shadowBorderColor='#000'
       >
         <View style={styles.badgeContent}>

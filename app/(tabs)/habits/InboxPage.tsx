@@ -1,4 +1,4 @@
-import { BUTTON_COLORS, COLORS, PAGE } from '@/colors';
+import { BUTTON_COLORS, COLORS, HABIT_COLORS, PAGE } from '@/colors';
 import { TIME_OPTIONS } from '@/constants/habits';
 import { useAuth } from '@/contexts/AuthContext';
 import HabitItem from '@/components/habits/HabitItem';
@@ -207,10 +207,10 @@ export default function InboxPage() {
                       return (
                         <Pressable key={time} onPress={() => setScheduleTime(time)}>
                           <ShadowBox
-                            contentBackgroundColor={isSelected ? COLORS.TimeOfDay : '#fff'}
-                            contentBorderColor={isSelected ? '#000' : COLORS.TimeOfDay}
-                            shadowBorderColor={isSelected ? '#000' : COLORS.TimeOfDay}
-                            shadowColor={isSelected ? '#000' : COLORS.TimeOfDay}
+                            contentBackgroundColor={isSelected ? HABIT_COLORS.TimeOfDay : '#fff'}
+                            contentBorderColor={isSelected ? '#000' : HABIT_COLORS.TimeOfDay}
+                            shadowBorderColor={isSelected ? '#000' : HABIT_COLORS.TimeOfDay}
+                            shadowColor={isSelected ? '#000' : HABIT_COLORS.TimeOfDay}
                           >
                             <View style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
                               <Text style={globalStyles.body1}>{time}</Text>

@@ -6,7 +6,7 @@
 import React, { useState } from 'react';
 import { Modal, Pressable, Text, TextInput, View } from 'react-native';
 
-import { BUTTON_COLORS, COLORS, PAGE } from '@/colors';
+import { BUTTON_COLORS, HABIT_COLORS, PAGE } from '@/colors';
 import { globalStyles } from '@/styles';
 import ShadowBox from '@/ui/ShadowBox';
 import { formatMinutesAsTime } from '@/utils/dateUtils';
@@ -27,7 +27,7 @@ export default function TimeLogModal({
   habitName,
   weeklyTotal,
   weeklyGoal,
-  habitColor = COLORS.ProgressColor,
+  habitColor = HABIT_COLORS.Progress,
   onLogTime,
 }: TimeLogModalProps) {
   const [hours, setHours] = useState('0');

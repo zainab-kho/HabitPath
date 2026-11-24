@@ -1,20 +1,18 @@
 // @/colors/core.ts
-// the app's main brand and ui colors, used all over the place
+// the colors used all over the app. anything that only belongs to one feature
+// has its own file instead (rewards.ts, habits.ts) or lives in pages.ts
 
 export const COLORS = {
+  // the app's main green: selected tabs, checkboxes, buttons
   Primary: '#9BDEAC',
-  PrimaryLight: '#F682A4',
+  // the pink that goes with it: today's date, highlights, finished progress bars
+  Accent: '#F682A4',
+  // a strong red for things that need to stand out, like a date that isn't today
   Secondary: '#dd2d4a',
-  ProgressColor: '#9BDEAC',
-  Rewards: '#FF7F50',
-  RewardsBackground: '#E4E986',
-  RewardsAccent: '#7FD1AE',
-  StreakAccent: '#F55858',
-  XPAccent: '#E69F94',
+  // starred / favorite icons
   Star: '#ea3434ff',
-  Time: '#FFE6FF',
-  ReadMore: '#0000EE',
-  Frequency: '#92C5FF',
-  TimeOfDay: '#AB98F8',
-  PlaceHolder: 'rgba(0,0,0,0.4)',
+  // faded text, like a placeholder in an empty input
+  Placeholder: 'rgba(0,0,0,0.4)',
+  // the soft pink behind times, like on the time wheel and in settings
+  TimeLabel: '#FFE6FF',
 } as const;

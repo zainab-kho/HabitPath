@@ -941,7 +941,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontSize: 12,
     fontFamily: 'p2',
-    color: COLORS.ReadMore,
+    color: PAGE.journal.link[0],
   },
   emptyState: {
     alignItems: 'center',

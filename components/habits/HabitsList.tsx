@@ -12,7 +12,7 @@ import HabitSectionHeader from '@/components/habits/HabitSectionHeader';
 import { getHabitCycleStart, getWeeklyTimeTotal } from '@/utils/habitUtils';
 import HabitDetailModal from '@/modals/HabitDetailModal';
 import TimeLogModal from '@/modals/habits/TimeLogModal';
-import { COLORS, PAGE } from '@/colors';
+import { COLORS, HABIT_COLORS, PAGE, REWARD_COLORS } from '@/colors';
 import { emptyTimeBuckets, TIME_OPTIONS, TimeOfDay } from '@/constants/habits';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import { STORAGE_KEYS } from '@/storage/keys';
@@ -313,7 +313,7 @@ export default function HabitsList({
         description='Add a goal or a habit. A goal does not repeat.'
         buttonText='New habit'
         buttonAction={() => router.push('/(tabs)/habits/NewHabitPage')}
-        buttonColor={COLORS.ProgressColor}
+        buttonColor={HABIT_COLORS.Progress}
         containerStyle={{ marginBottom: 100 }}
       />
     );
@@ -367,7 +367,7 @@ export default function HabitsList({
         {allDoneToday && (
           <View style={{marginBottom: 20}}>
           <ShadowBox
-            contentBackgroundColor={COLORS.PrimaryLight}
+            contentBackgroundColor={COLORS.Accent}
             shadowColor={COLORS.Primary}
             shadowOffset={{x: 0, y: 5}}
           >
@@ -487,11 +487,11 @@ export default function HabitsList({
                       paddingVertical: 3,
                       borderRadius: 8,
                       borderWidth: 1,
-                      backgroundColor: COLORS.RewardsBackground,
-                      borderColor: COLORS.RewardsAccent,
+                      backgroundColor: REWARD_COLORS.Background,
+                      borderColor: REWARD_COLORS.Accent,
                       alignSelf: 'flex-start',
                     }}>
-                      <Image source={SYSTEM_ICONS.reward} style={{ width: 12, height: 12, tintColor: COLORS.Rewards }} />
+                      <Image source={SYSTEM_ICONS.reward} style={{ width: 12, height: 12, tintColor: REWARD_COLORS.Points }} />
                       <Text style={{ fontSize: 10, fontFamily: 'label' }}>
                         {weeklyEarnedPoints}/{weeklyTotalPoints}
                       </Text>

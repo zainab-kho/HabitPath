@@ -1,5 +1,5 @@
 // styles.ts
-import { COLORS } from '@/colors';
+import { REWARD_COLORS } from '@/colors';
 import { StyleSheet } from 'react-native';
 
 export const globalStyles = StyleSheet.create({
@@ -53,7 +53,7 @@ export const globalStyles = StyleSheet.create({
         borderWidth: 1.5,
         borderRadius: 12,
         gap: 4,
-        backgroundColor: COLORS.RewardsBackground,
-        borderColor: COLORS.RewardsAccent,
+        backgroundColor: REWARD_COLORS.Background,
+        borderColor: REWARD_COLORS.Accent,
     },
 });

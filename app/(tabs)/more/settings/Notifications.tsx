@@ -5,7 +5,7 @@
 import React, { useEffect, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 
-import { COLORS } from '@/colors';
+import { COLORS, REWARD_COLORS } from '@/colors';
 import { useAuth } from '@/contexts/AuthContext';
 import {
     DEFAULT_NUDGE_PREFS,
@@ -110,7 +110,7 @@ export default function NotificationSettings() {
                                         </Text>
                                     </View>
                                     <Switch
-                                        trackColor={{ true: COLORS.RewardsAccent }}
+                                        trackColor={{ true: REWARD_COLORS.Accent }}
                                         value={enabled}
                                         onValueChange={(value) => toggleNudge(slot, value)}
                                     />
@@ -119,7 +119,7 @@ export default function NotificationSettings() {
                                 {/* tap the time to open the wheel */}
                                 {enabled && (
                                     <Pressable
-                                        style={[globalStyles.bubbleLabel, { backgroundColor: COLORS.Time, alignSelf: 'flex-start' }]}
+                                        style={[globalStyles.bubbleLabel, { backgroundColor: COLORS.TimeLabel, alignSelf: 'flex-start' }]}
                                         onPress={() => setOpenSlot(isOpen ? null : slot)}
                                     >
                                         <Text style={globalStyles.body2}>{formatReminderTime(time)}</Text>

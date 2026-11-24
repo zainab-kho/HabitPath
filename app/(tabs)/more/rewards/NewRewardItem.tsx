@@ -1,4 +1,4 @@
-import { BUTTON_COLORS, COLORS, PAGE, PRESET_COLORS } from '@/colors';
+import { BUTTON_COLORS, COLORS, PAGE, PRESET_COLORS, REWARD_COLORS } from '@/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import { useAuth } from '@/contexts/AuthContext';
 import { addReward, deleteRewardPhoto, getExchangeRate, updateReward, uploadRewardPhoto } from '@/services/rewards/rewards';
@@ -299,13 +299,13 @@ export default function NewRewardItem() {
                         onPress={() => priceInputRef.current?.focus()}
                         style={{ paddingVertical: 2, width: 100, borderRadius: 20, flexDirection: 'row', justifyContent: 'center', alignItems: 'center' }}
                       >
-                        <Text style={[globalStyles.body, price <= 0 && { color: COLORS.PlaceHolder }]}>$</Text>
+                        <Text style={[globalStyles.body, price <= 0 && { color: COLORS.Placeholder }]}>$</Text>
                         <TextInput
                           ref={priceInputRef}
                           style={[globalStyles.body, { textAlign: 'left', padding: 0 }]}
                           keyboardType="number-pad"
                           placeholder='0'
-                          placeholderTextColor={COLORS.PlaceHolder}
+                          placeholderTextColor={COLORS.Placeholder}
                           value={price > 0 ? rewardPrice : ''}
                           onChangeText={text => setRewardPrice(text.replace(/[^0-9]/g, ''))}
                           onFocus={(e) => scrollRef.current?.scrollToFocusedInput(e.nativeEvent.target)}
@@ -339,7 +339,7 @@ export default function NewRewardItem() {
                       <Text style={[globalStyles.body1, { fontSize: 12, textAlign: 'center' }]}>
                         {price}
                       </Text>
-                      <Image source={SYSTEM_ICONS.reward} style={{ width: 11, height: 11, tintColor: COLORS.Rewards }} />
+                      <Image source={SYSTEM_ICONS.reward} style={{ width: 11, height: 11, tintColor: REWARD_COLORS.Points }} />
                       <Text style={[globalStyles.label, { fontSize: 12, textAlign: 'center' }]}>
                         ({exchangeRate} pts = $1)
                       </Text>
@@ -377,14 +377,14 @@ export default function NewRewardItem() {
                           keyboardType="number-pad"
                           value={points > 0 ? rewardPoints : ''}
                           placeholder='0'
-                          placeholderTextColor={COLORS.PlaceHolder}
+                          placeholderTextColor={COLORS.Placeholder}
                           onChangeText={text => {
                             setPointsOverridden(true);
                             setRewardPoints(text.replace(/[^0-9]/g, ''));
                           }}
                           onFocus={(e) => scrollRef.current?.scrollToFocusedInput(e.nativeEvent.target)}
                         />
-                        <Text style={[globalStyles.body, points <= 0 && { color: COLORS.PlaceHolder }]}> pts</Text>
+                        <Text style={[globalStyles.body, points <= 0 && { color: COLORS.Placeholder }]}> pts</Text>
                       </Pressable>
                     </ShadowBox>
 
@@ -543,7 +543,7 @@ export default function NewRewardItem() {
                           alignSelf: 'center',
                           marginBottom: 10,
                         }}>
-                          <Image source={SYSTEM_ICONS.reward} style={{ width: 11, height: 11, tintColor: COLORS.Rewards }} />
+                          <Image source={SYSTEM_ICONS.reward} style={{ width: 11, height: 11, tintColor: REWARD_COLORS.Points }} />
                           <Text style={[globalStyles.label, { fontSize: 9, opacity: 1 }]}>
                             {finalPoints > 0 ? `${finalPoints} pts` : '0 pts'}
                           </Text>
@@ -567,7 +567,7 @@ export default function NewRewardItem() {
                           ) : (
                             <Image
                               source={SYSTEM_ICONS.gift}
-                              style={{ width: 40, height: 40, tintColor: COLORS.Rewards }}
+                              style={{ width: 40, height: 40, tintColor: REWARD_COLORS.Points }}
                             />
                           )}
                         </View>

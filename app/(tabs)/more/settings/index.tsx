@@ -261,7 +261,7 @@ export default function SettingsPage() {
                         <Text style={globalStyles.body}>End of day time</Text>
 
                         <Pressable
-                            style={[globalStyles.bubbleLabel, { backgroundColor: COLORS.Time }]}
+                            style={[globalStyles.bubbleLabel, { backgroundColor: COLORS.TimeLabel }]}
                             onPress={() => setShowTimePicker(prev => !prev)}
                         >
                             <Text style={globalStyles.body2}>{hour}:{minute} {meridiem}</Text>
@@ -306,7 +306,7 @@ export default function SettingsPage() {
                         <Text style={globalStyles.body}>Week starts on</Text>
 
                         <Pressable
-                            style={[globalStyles.bubbleLabel, { backgroundColor: COLORS.Time }]}
+                            style={[globalStyles.bubbleLabel, { backgroundColor: COLORS.TimeLabel }]}
                             onPress={() => setShowWeekStartPicker(prev => !prev)}
                         >
                             <Text style={globalStyles.body2}>{weekStartDay}</Text>
@@ -320,10 +320,10 @@ export default function SettingsPage() {
                                 return (
                                     <Pressable key={day} onPress={() => onSelectWeekStart(day)}>
                                         <ShadowBox
-                                            contentBackgroundColor={isSelected ? COLORS.Time : '#fff'}
-                                            contentBorderColor={isSelected ? '#000' : COLORS.Time}
-                                            shadowBorderColor={isSelected ? '#000' : COLORS.Time}
-                                            shadowColor={isSelected ? '#000' : COLORS.Time}
+                                            contentBackgroundColor={isSelected ? COLORS.TimeLabel : '#fff'}
+                                            contentBorderColor={isSelected ? '#000' : COLORS.TimeLabel}
+                                            shadowBorderColor={isSelected ? '#000' : COLORS.TimeLabel}
+                                            shadowColor={isSelected ? '#000' : COLORS.TimeLabel}
                                         >
                                             <View style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
                                                 <Text style={globalStyles.body1}>{day.slice(0, 3)}</Text>

@@ -241,7 +241,7 @@ export default function JournalPage() {
                         borderRadius: 12,
                         borderWidth: 1,
                         borderColor: '#000',
-                        backgroundColor: COLORS.PrimaryLight,
+                        backgroundColor: COLORS.Accent,
                         alignSelf: 'center',
                         marginBottom: 10,
                     }}

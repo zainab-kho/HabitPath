@@ -156,7 +156,7 @@ export function TimeWheel({ data, selected, onSelect, wrapAfter, loop = data.len
 
 export const pickerStyles = StyleSheet.create({
     container: {
-        backgroundColor: COLORS.Time,
+        backgroundColor: COLORS.TimeLabel,
         borderWidth: 1,
         borderColor: '#000',
         borderRadius: 18,

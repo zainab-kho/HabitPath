@@ -1,5 +1,5 @@
 import { globalStyles } from '@/styles';
-import { BUTTON_COLORS, COLORS, PAGE } from '@/colors';
+import { BUTTON_COLORS, PAGE, REWARD_COLORS } from '@/colors';
 import { lightenColor } from '@/utils';
 import React, { useEffect, useState } from 'react';
 import { Alert, Dimensions, Image, Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -102,7 +102,7 @@ export default function RewardDetailModal({ visible, onClose, reward, onDelete }
                   <View style={styles.pointsBadge}>
                     <Image
                       source={SYSTEM_ICONS.reward}
-                      style={{ width: 11, height: 11, tintColor: COLORS.Rewards }}
+                      style={{ width: 11, height: 11, tintColor: REWARD_COLORS.Points }}
                     />
                     <Text style={[globalStyles.label, { fontSize: 9, opacity: 1 }]}>
                       {reward.costPoints} pts
@@ -120,7 +120,7 @@ export default function RewardDetailModal({ visible, onClose, reward, onDelete }
                       }]}>
                         <Image
                           source={SYSTEM_ICONS.gift}
-                          style={{ width: 40, height: 40, tintColor: COLORS.Rewards }}
+                          style={{ width: 40, height: 40, tintColor: REWARD_COLORS.Points }}
                         />
                       </View>
                     )}

@@ -19,7 +19,7 @@ import {
 import uuid from 'react-native-uuid';
 
 
-import { BUTTON_COLORS, COLORS, PAGE, PATH_COLORS, type PathColorKey } from '@/colors';
+import { BUTTON_COLORS, COLORS, HABIT_COLORS, PAGE, PATH_COLORS, REWARD_COLORS, type PathColorKey } from '@/colors';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { STORAGE_KEYS } from '@/storage/keys';
@@ -590,7 +590,7 @@ export default function NewHabitPage() {
                                         {
                                             flex: 1,
                                             borderBottomWidth: 1,
-                                            borderBottomColor: COLORS.PrimaryLight,
+                                            borderBottomColor: COLORS.Accent,
                                             paddingVertical: 10,
                                         }
                                     ]}
@@ -712,7 +712,7 @@ export default function NewHabitPage() {
                                         contentBackgroundColor={
                                             rewardPoints === 0 ?
                                                 '#fff' :
-                                                COLORS.RewardsAccent}
+                                                REWARD_COLORS.Accent}
                                         contentBorderRadius={10}
                                     >
                                         <View style={{
@@ -724,7 +724,7 @@ export default function NewHabitPage() {
                                         }}>
                                             <Image
                                                 source={SYSTEM_ICONS.reward}
-                                                style={{ width: 17, height: 17, tintColor: COLORS.Rewards }}
+                                                style={{ width: 17, height: 17, tintColor: REWARD_COLORS.Points }}
                                             />
                                             <Text style={globalStyles.body1}>
                                                 {rewardPoints} {rewardPoints === 1 ? 'point' : 'points'}
@@ -751,23 +751,23 @@ export default function NewHabitPage() {
                                                 <ShadowBox
                                                     contentBackgroundColor={
                                                         rewardPoints === points
-                                                            ? COLORS.Rewards
+                                                            ? REWARD_COLORS.Points
                                                             : '#fff'
                                                     }
                                                     contentBorderColor={
                                                         rewardPoints === points
                                                             ? '#000'
-                                                            : COLORS.Rewards
+                                                            : REWARD_COLORS.Points
                                                     }
                                                     shadowBorderColor={
                                                         rewardPoints === points
                                                             ? '#000'
-                                                            : COLORS.Rewards
+                                                            : REWARD_COLORS.Points
                                                     }
                                                     shadowColor={
                                                         rewardPoints === points
                                                             ? '#000'
-                                                            : COLORS.Rewards
+                                                            : REWARD_COLORS.Points
                                                     }
                                                 >
                                                     <View style={{
@@ -808,23 +808,23 @@ export default function NewHabitPage() {
                                                 <ShadowBox
                                                     contentBackgroundColor={
                                                         selectedFrequency === freq
-                                                            ? COLORS.Frequency
+                                                            ? HABIT_COLORS.Frequency
                                                             : '#fff'
                                                     }
                                                     contentBorderColor={
                                                         selectedFrequency === freq
                                                             ? '#000'
-                                                            : COLORS.Frequency
+                                                            : HABIT_COLORS.Frequency
                                                     }
                                                     shadowBorderColor={
                                                         selectedFrequency === freq
                                                             ? '#000'
-                                                            : COLORS.Frequency
+                                                            : HABIT_COLORS.Frequency
                                                     }
                                                     shadowColor={
                                                         selectedFrequency === freq
                                                             ? '#000'
-                                                            : COLORS.Frequency
+                                                            : HABIT_COLORS.Frequency
                                                     }
                                                 >
                                                     <View style={{
@@ -879,10 +879,10 @@ export default function NewHabitPage() {
                                                             }}
                                                         >
                                                             <ShadowBox
-                                                                contentBackgroundColor={isSelected ? COLORS.Frequency : '#fff'}
-                                                                contentBorderColor={isSelected ? '#000' : COLORS.Frequency}
-                                                                shadowBorderColor={isSelected ? '#000' : COLORS.Frequency}
-                                                                shadowColor={isSelected ? '#000' : COLORS.Frequency}
+                                                                contentBackgroundColor={isSelected ? HABIT_COLORS.Frequency : '#fff'}
+                                                                contentBorderColor={isSelected ? '#000' : HABIT_COLORS.Frequency}
+                                                                shadowBorderColor={isSelected ? '#000' : HABIT_COLORS.Frequency}
+                                                                shadowColor={isSelected ? '#000' : HABIT_COLORS.Frequency}
                                                             >
                                                                 <View style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
                                                                     <Text style={globalStyles.body1}>{label}</Text>
@@ -934,10 +934,10 @@ export default function NewHabitPage() {
                                                     return (
                                                         <Pressable key={type} onPress={() => handleCustomTypeChange(typeValue)}>
                                                             <ShadowBox
-                                                                contentBackgroundColor={isSelected ? COLORS.Frequency : '#fff'}
-                                                                contentBorderColor={isSelected ? '#000' : COLORS.Frequency}
-                                                                shadowBorderColor={isSelected ? '#000' : COLORS.Frequency}
-                                                                shadowColor={isSelected ? '#000' : COLORS.Frequency}
+                                                                contentBackgroundColor={isSelected ? HABIT_COLORS.Frequency : '#fff'}
+                                                                contentBorderColor={isSelected ? '#000' : HABIT_COLORS.Frequency}
+                                                                shadowBorderColor={isSelected ? '#000' : HABIT_COLORS.Frequency}
+                                                                shadowColor={isSelected ? '#000' : HABIT_COLORS.Frequency}
                                                             >
                                                                 <View style={{ paddingVertical: 6, paddingHorizontal: 12 }}>
                                                                     <Text style={globalStyles.body1}>{type}</Text>
@@ -952,7 +952,7 @@ export default function NewHabitPage() {
                                                 EVERY {customInterval} {customType === 'daily' ? (customInterval === 1 ? 'DAY' : 'DAYS') : customType === 'weekly' ? (customInterval === 1 ? 'WEEK' : 'WEEKS') : (customInterval === 1 ? 'MONTH' : 'MONTHS')}
                                             </Text>
                                             <View style={{ flexDirection: 'row', alignSelf: 'center', gap: 10 }}>
-                                                <ShadowBox shadowColor={COLORS.Frequency}>
+                                                <ShadowBox shadowColor={HABIT_COLORS.Frequency}>
                                                     <Pressable
                                                         onPress={() => setCustomInterval(prev => Math.max(1, prev - 1))}
                                                         style={{ paddingVertical: 3, paddingHorizontal: 8, alignItems: 'center', justifyContent: 'center' }}
@@ -961,7 +961,7 @@ export default function NewHabitPage() {
                                                     </Pressable>
                                                 </ShadowBox>
 
-                                                <ShadowBox shadowColor={COLORS.Frequency}>
+                                                <ShadowBox shadowColor={HABIT_COLORS.Frequency}>
                                                     <View style={{
                                                         paddingVertical: 2, width: 100, borderRadius: 20, justifyContent: 'center'
                                                     }}>
@@ -975,7 +975,7 @@ export default function NewHabitPage() {
                                                     </View>
                                                 </ShadowBox>
 
-                                                <ShadowBox shadowColor={COLORS.Frequency}>
+                                                <ShadowBox shadowColor={HABIT_COLORS.Frequency}>
                                                     <Pressable
                                                         onPress={() => setCustomInterval(prev => prev + 1)}
                                                         style={{ paddingVertical: 3, paddingHorizontal: 8, alignItems: 'center', justifyContent: 'center' }}
@@ -1010,16 +1010,16 @@ export default function NewHabitPage() {
                                                         >
                                                             <ShadowBox
                                                                 contentBackgroundColor={
-                                                                    selected ? COLORS.Frequency : '#fff'
+                                                                    selected ? HABIT_COLORS.Frequency : '#fff'
                                                                 }
                                                                 contentBorderColor={
-                                                                    selected ? '#000' : COLORS.Frequency
+                                                                    selected ? '#000' : HABIT_COLORS.Frequency
                                                                 }
                                                                 shadowBorderColor={
-                                                                    selected ? '#000' : COLORS.Frequency
+                                                                    selected ? '#000' : HABIT_COLORS.Frequency
                                                                 }
                                                                 shadowColor={
-                                                                    selected ? '#000' : COLORS.Frequency
+                                                                    selected ? '#000' : HABIT_COLORS.Frequency
                                                                 }
                                                             >
                                                                 <View style={{
@@ -1116,23 +1116,23 @@ export default function NewHabitPage() {
                                             <ShadowBox
                                                 contentBackgroundColor={
                                                     selectedTimeOfDay === time
-                                                        ? COLORS.TimeOfDay
+                                                        ? HABIT_COLORS.TimeOfDay
                                                         : '#fff'
                                                 }
                                                 contentBorderColor={
                                                     selectedTimeOfDay === time
                                                         ? '#000'
-                                                        : COLORS.TimeOfDay
+                                                        : HABIT_COLORS.TimeOfDay
                                                 }
                                                 shadowBorderColor={
                                                     selectedTimeOfDay === time
                                                         ? '#000'
-                                                        : COLORS.TimeOfDay
+                                                        : HABIT_COLORS.TimeOfDay
                                                 }
                                                 shadowColor={
                                                     selectedTimeOfDay === time
                                                         ? '#000'
-                                                        : COLORS.TimeOfDay
+                                                        : HABIT_COLORS.TimeOfDay
                                                 }
                                             >
                                                 <View style={{

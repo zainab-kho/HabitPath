@@ -95,7 +95,7 @@ export default function EmptyStateView({
                         )}
 
                         {secondButtonText && secondButtonAction && (
-                            <ShadowBox contentBackgroundColor={secondButtonColor || COLORS.PrimaryLight}>
+                            <ShadowBox contentBackgroundColor={secondButtonColor || COLORS.Accent}>
                                 <Pressable
                                     onPress={secondButtonAction}
                                     style={{ paddingVertical: 6, paddingHorizontal: 12, minWidth: 100, alignItems: 'center' }}

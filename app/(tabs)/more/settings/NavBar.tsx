@@ -125,7 +125,7 @@ export default function NavBarSettings() {
                                     disabled={disabled}
                                     style={[
                                         styles.optionRow,
-                                        isSelected && { borderColor: '#000', backgroundColor: COLORS.PrimaryLight },
+                                        isSelected && { borderColor: '#000', backgroundColor: COLORS.Accent },
                                         disabled && { opacity: 0.4 },
                                     ]}
                                 >

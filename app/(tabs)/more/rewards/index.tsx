@@ -5,7 +5,7 @@ import { ActivityIndicator, Alert, Image, Pressable, ScrollView, StyleSheet, Tex
 import ExchangeRateModal from '@/modals/rewards/ExchangeRateModal';
 import PointsHistoryModal from '@/modals/rewards/PointsHistoryModal';
 import RewardDetailModal from '@/modals/rewards/RewardDetailModal';
-import { COLORS, PAGE } from '@/colors';
+import { PAGE, REWARD_COLORS } from '@/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import {
     addRedeemedPoints,
@@ -259,7 +259,7 @@ export default function RewardsPage() {
                                                 contentBorderColor='#FFD581'
                                             >
                                                 <View style={[s.statBadge]}>
-                                                    <Image source={SYSTEM_ICONS.reward} style={{ width: 15, height: 15, tintColor: COLORS.Rewards }} />
+                                                    <Image source={SYSTEM_ICONS.reward} style={{ width: 15, height: 15, tintColor: REWARD_COLORS.Points }} />
                                                     <Text style={globalStyles.body}>{availablePoints}</Text>
                                                 </View>
                                             </ShadowBox>
@@ -270,12 +270,12 @@ export default function RewardsPage() {
                                         {/* total */}
                                         <Pressable style={s.statItem} onPress={() => openHistory('total')}>
                                             <ShadowBox
-                                                shadowBorderColor={COLORS.RewardsAccent}
-                                                shadowColor={COLORS.RewardsAccent}
-                                                contentBorderColor={COLORS.RewardsAccent}
+                                                shadowBorderColor={REWARD_COLORS.Accent}
+                                                shadowColor={REWARD_COLORS.Accent}
+                                                contentBorderColor={REWARD_COLORS.Accent}
                                             >
                                                 <View style={[s.statBadge]}>
-                                                    <Image source={SYSTEM_ICONS.reward} style={{ width: 15, height: 15, tintColor: COLORS.Rewards }} />
+                                                    <Image source={SYSTEM_ICONS.reward} style={{ width: 15, height: 15, tintColor: REWARD_COLORS.Points }} />
                                                     <Text style={globalStyles.body}>{totalEarnedAllTime}</Text>
                                                 </View>
                                             </ShadowBox>
@@ -285,12 +285,12 @@ export default function RewardsPage() {
                                         {/* redeemed */}
                                         <Pressable style={s.statItem} onPress={() => openHistory('redeemed')}>
                                             <ShadowBox
-                                                shadowBorderColor={COLORS.Rewards}
-                                                shadowColor={COLORS.Rewards}
-                                                contentBorderColor={COLORS.Rewards}
+                                                shadowBorderColor={REWARD_COLORS.Points}
+                                                shadowColor={REWARD_COLORS.Points}
+                                                contentBorderColor={REWARD_COLORS.Points}
                                             >
                                                 <View style={[s.statBadge]}>
-                                                    <Image source={SYSTEM_ICONS.reward} style={{ width: 15, height: 15, tintColor: COLORS.Rewards }} />
+                                                    <Image source={SYSTEM_ICONS.reward} style={{ width: 15, height: 15, tintColor: REWARD_COLORS.Points }} />
                                                     <Text style={globalStyles.body}>{redeemedPoints}</Text>
                                                 </View>
                                             </ShadowBox>
@@ -303,7 +303,7 @@ export default function RewardsPage() {
                             {unclaimedRewards.length === 0 ? (
                                 <EmptyStateView
                                     icon={SYSTEM_ICONS.gift}
-                                    iconTintColor={COLORS.Rewards}
+                                    iconTintColor={REWARD_COLORS.Points}
                                     title="No Items in Wishlist Yet!"
                                     description="Add things you'd like to reward yourself with after completing habits!"
                                     buttonText="Add Item"
@@ -338,7 +338,7 @@ export default function RewardsPage() {
                                                             <View style={s.pointsBadge}>
                                                                 <Image
                                                                     source={SYSTEM_ICONS.reward}
-                                                                    style={{ width: 11, height: 11, tintColor: COLORS.Rewards }}
+                                                                    style={{ width: 11, height: 11, tintColor: REWARD_COLORS.Points }}
                                                                 />
                                                                 <Text style={[globalStyles.label, { fontSize: 9, opacity: 1 }]}>
                                                                     {reward.costPoints} pts
@@ -357,7 +357,7 @@ export default function RewardsPage() {
                                                                     }]}>
                                                                         <Image
                                                                             source={SYSTEM_ICONS.gift}
-                                                                            style={{ width: 40, height: 40, tintColor: COLORS.Rewards }}
+                                                                            style={{ width: 40, height: 40, tintColor: REWARD_COLORS.Points }}
                                                                         />
                                                                     </View>
                                                                 )}

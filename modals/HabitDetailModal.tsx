@@ -10,7 +10,7 @@ import {
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/contexts/AuthContext';
-import { BUTTON_COLORS, COLORS, PAGE } from '@/colors';
+import { BUTTON_COLORS, COLORS, HABIT_COLORS, PAGE, REWARD_COLORS } from '@/colors';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import ShadowBox from '@/ui/ShadowBox';
 import { globalStyles } from '@/styles';
@@ -33,7 +33,7 @@ interface HabitDetailModalProps {
 }
 
 const ICON_SIZE = 20;
-const ICON_TINT = COLORS.PrimaryLight;
+const ICON_TINT = COLORS.Accent;
 
 function formatLastCompleted(dateStr?: string): string {
     if (!dateStr) return 'Never';
@@ -258,7 +258,7 @@ export default function HabitDetailModal({ visible, habit, resetHour, resetMin, 
                                 borderRadius: 12,
                                 borderWidth: 1,
                                 borderColor: '#000',
-                                backgroundColor: COLORS.PrimaryLight,
+                                backgroundColor: COLORS.Accent,
                             }}>
                                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}>
                                     <Image source={SYSTEM_ICONS.fire} style={{ width: 18, height: 18 }} />
@@ -276,10 +276,10 @@ export default function HabitDetailModal({ visible, habit, resetHour, resetMin, 
                                     paddingVertical: 3,
                                     borderRadius: 8,
                                     borderWidth: 1,
-                                    backgroundColor: COLORS.RewardsBackground,
-                                    borderColor: COLORS.RewardsAccent,
+                                    backgroundColor: REWARD_COLORS.Background,
+                                    borderColor: REWARD_COLORS.Accent,
                                 }}>
-                                    <Image source={SYSTEM_ICONS.reward} style={{ width: 14, height: 14, tintColor: COLORS.Rewards }} />
+                                    <Image source={SYSTEM_ICONS.reward} style={{ width: 14, height: 14, tintColor: REWARD_COLORS.Points }} />
                                     <Text style={{ fontSize: 12, fontFamily: 'label' }}>{habit.rewardPoints ?? 0}</Text>
                                 </View>
                                 <View style={{
@@ -290,7 +290,7 @@ export default function HabitDetailModal({ visible, habit, resetHour, resetMin, 
                                     paddingVertical: 3,
                                     borderRadius: 8,
                                     borderWidth: 1,
-                                    backgroundColor: COLORS.ProgressColor,
+                                    backgroundColor: HABIT_COLORS.Progress,
                                     borderColor: COLORS.Secondary,
                                 }}>
                                     <Image source={SYSTEM_ICONS.star} style={{ width: 14, height: 14, tintColor: COLORS.Star }} />
@@ -331,7 +331,7 @@ export default function HabitDetailModal({ visible, habit, resetHour, resetMin, 
                             <ShadowBox
                                 contentBorderRadius={20}
                                 shadowBorderRadius={20}
-                                contentBackgroundColor={COLORS.ProgressColor}
+                                contentBackgroundColor={HABIT_COLORS.Progress}
                             >
                                 <Pressable
                                     onPress={() => { onUndoIncrement(habit.id); onClose(); }}
@@ -364,7 +364,7 @@ export default function HabitDetailModal({ visible, habit, resetHour, resetMin, 
                         }}>
                             <Pressable onPress={handleEdit} style={{ alignItems: 'center', gap: 6 }}>
                                 <ShadowBox
-                                    contentBackgroundColor={COLORS.PrimaryLight}
+                                    contentBackgroundColor={COLORS.Accent}
                                     contentBorderRadius={20}
                                     shadowBorderRadius={20}
                                     shadowOffset={{ x: 2, y: 2 }}
@@ -377,7 +377,7 @@ export default function HabitDetailModal({ visible, habit, resetHour, resetMin, 
                             </Pressable>
                             <Pressable onPress={handleDuplicate} style={{ alignItems: 'center', gap: 6 }}>
                                 <ShadowBox
-                                    contentBackgroundColor={COLORS.PrimaryLight}
+                                    contentBackgroundColor={COLORS.Accent}
                                     contentBorderRadius={20}
                                     shadowBorderRadius={20}
                                     shadowOffset={{ x: 2, y: 2 }}
@@ -464,10 +464,10 @@ export default function HabitDetailModal({ visible, habit, resetHour, resetMin, 
                                                     style={{ width: 36, opacity: isOriginal ? 0.5 : 1 }}
                                                 >
                                                     <ShadowBox
-                                                        contentBackgroundColor={isOriginal || selected ? COLORS.PrimaryLight : '#fff'}
-                                                        contentBorderColor={isOriginal || selected ? '#000' : COLORS.PrimaryLight}
-                                                        shadowBorderColor={isOriginal || selected ? '#000' : COLORS.PrimaryLight}
-                                                        shadowColor={isOriginal ? '#000' : COLORS.PrimaryLight}
+                                                        contentBackgroundColor={isOriginal || selected ? COLORS.Accent : '#fff'}
+                                                        contentBorderColor={isOriginal || selected ? '#000' : COLORS.Accent}
+                                                        shadowBorderColor={isOriginal || selected ? '#000' : COLORS.Accent}
+                                                        shadowColor={isOriginal ? '#000' : COLORS.Accent}
                                                     >
                                                         <View style={{ paddingVertical: 5, alignItems: 'center' }}>
                                                             <Text style={[globalStyles.body1, { fontSize: 13 }]}>
@@ -482,9 +482,9 @@ export default function HabitDetailModal({ visible, habit, resetHour, resetMin, 
                                     <Pressable onPress={() => setMovingDay(false)} style={{ alignSelf: 'center' }}>
                                         <ShadowBox
                                             contentBackgroundColor={'#fff'}
-                                                        contentBorderColor={COLORS.PrimaryLight}
-                                                        shadowBorderColor={COLORS.PrimaryLight}
-                                                        shadowColor={COLORS.PrimaryLight}
+                                                        contentBorderColor={COLORS.Accent}
+                                                        shadowBorderColor={COLORS.Accent}
+                                                        shadowColor={COLORS.Accent}
                                         >
                                             <View style={{ paddingVertical: 5, paddingHorizontal: 16, alignItems: 'center' }}>
                                                 <Text style={[globalStyles.body, { fontSize: 13 }]}>Cancel</Text>
@@ -537,10 +537,10 @@ export default function HabitDetailModal({ visible, habit, resetHour, resetMin, 
                                                         style={{ width: 36, opacity: isCurrent ? 0.5 : 1 }}
                                                     >
                                                         <ShadowBox
-                                                            contentBackgroundColor={isCurrent ? COLORS.PrimaryLight : '#fff'}
-                                                            contentBorderColor={isCurrent ? '#000' : COLORS.PrimaryLight}
-                                                            shadowBorderColor={isCurrent ? '#000' : COLORS.PrimaryLight}
-                                                            shadowColor={isCurrent ? '#000' : COLORS.PrimaryLight}
+                                                            contentBackgroundColor={isCurrent ? COLORS.Accent : '#fff'}
+                                                            contentBorderColor={isCurrent ? '#000' : COLORS.Accent}
+                                                            shadowBorderColor={isCurrent ? '#000' : COLORS.Accent}
+                                                            shadowColor={isCurrent ? '#000' : COLORS.Accent}
                                                         >
                                                             <View style={{ paddingVertical: 5, alignItems: 'center' }}>
                                                                 <Text style={[globalStyles.body1, { fontSize: 13 }]}>
@@ -556,9 +556,9 @@ export default function HabitDetailModal({ visible, habit, resetHour, resetMin, 
                                     <Pressable onPress={() => setMovingDay(false)} style={{ alignSelf: 'center' }}>
                                         <ShadowBox
                                             contentBackgroundColor={'#fff'}
-                                            contentBorderColor={COLORS.PrimaryLight}
-                                            shadowBorderColor={COLORS.PrimaryLight}
-                                            shadowColor={COLORS.PrimaryLight}
+                                            contentBorderColor={COLORS.Accent}
+                                            shadowBorderColor={COLORS.Accent}
+                                            shadowColor={COLORS.Accent}
                                         >
                                             <View style={{ paddingVertical: 5, paddingHorizontal: 16, alignItems: 'center' }}>
                                                 <Text style={[globalStyles.body, { fontSize: 13 }]}>Cancel</Text>
@@ -621,10 +621,10 @@ export default function HabitDetailModal({ visible, habit, resetHour, resetMin, 
                                                         style={{ width: 36, opacity: isCurrent ? 0.5 : 1 }}
                                                     >
                                                         <ShadowBox
-                                                            contentBackgroundColor={isCurrent ? COLORS.PrimaryLight : '#fff'}
-                                                            contentBorderColor={isCurrent ? '#000' : COLORS.PrimaryLight}
-                                                            shadowBorderColor={isCurrent ? '#000' : COLORS.PrimaryLight}
-                                                            shadowColor={isCurrent ? '#000' : COLORS.PrimaryLight}
+                                                            contentBackgroundColor={isCurrent ? COLORS.Accent : '#fff'}
+                                                            contentBorderColor={isCurrent ? '#000' : COLORS.Accent}
+                                                            shadowBorderColor={isCurrent ? '#000' : COLORS.Accent}
+                                                            shadowColor={isCurrent ? '#000' : COLORS.Accent}
                                                         >
                                                             <View style={{ paddingVertical: 5, alignItems: 'center' }}>
                                                                 <Text style={[globalStyles.body1, { fontSize: 13 }]}>
@@ -640,9 +640,9 @@ export default function HabitDetailModal({ visible, habit, resetHour, resetMin, 
                                     <Pressable onPress={() => setMovingDay(false)} style={{ alignSelf: 'center' }}>
                                         <ShadowBox
                                             contentBackgroundColor={'#fff'}
-                                            contentBorderColor={COLORS.PrimaryLight}
-                                            shadowBorderColor={COLORS.PrimaryLight}
-                                            shadowColor={COLORS.PrimaryLight}
+                                            contentBorderColor={COLORS.Accent}
+                                            shadowBorderColor={COLORS.Accent}
+                                            shadowColor={COLORS.Accent}
                                         >
                                             <View style={{ paddingVertical: 5, paddingHorizontal: 16, alignItems: 'center' }}>
                                                 <Text style={[globalStyles.body, { fontSize: 13 }]}>Cancel</Text>

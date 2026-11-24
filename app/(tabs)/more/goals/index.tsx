@@ -16,7 +16,7 @@ import Sortable from 'react-native-sortables';
 
 import GoalRow from '@/components/habits/GoalRow';
 import HabitSectionHeader from '@/components/habits/HabitSectionHeader';
-import { COLORS, PAGE } from '@/colors';
+import { COLORS, HABIT_COLORS, PAGE } from '@/colors';
 import { emptyTimeBuckets, TIME_OPTIONS, TimeOfDay } from '@/constants/habits';
 import { SYSTEM_ICONS } from '@/constants/icons';
 import { useAuth } from '@/contexts/AuthContext';
@@ -680,7 +680,7 @@ export default function AllGoalsPage() {
                                                 key={option}
                                                 label={option}
                                                 selected={frequencies.includes(option)}
-                                                color={COLORS.Frequency}
+                                                color={HABIT_COLORS.Frequency}
                                                 onPress={() => toggle(frequencies, setFrequencies, option)}
                                             />
                                         ))}
@@ -692,7 +692,7 @@ export default function AllGoalsPage() {
                                                 key={option}
                                                 label={option}
                                                 selected={timesOfDay.includes(option)}
-                                                color={COLORS.TimeOfDay}
+                                                color={HABIT_COLORS.TimeOfDay}
                                                 onPress={() => toggle(timesOfDay, setTimesOfDay, option)}
                                             />
                                         ))}
@@ -704,7 +704,7 @@ export default function AllGoalsPage() {
                                                 key={option}
                                                 label={option}
                                                 selected={statuses.includes(option)}
-                                                color={COLORS.PrimaryLight}
+                                                color={COLORS.Accent}
                                                 onPress={() => toggleStatus(option)}
                                             />
                                         ))}

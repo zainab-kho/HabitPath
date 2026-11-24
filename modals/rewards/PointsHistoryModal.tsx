@@ -1,5 +1,5 @@
 import { globalStyles } from '@/styles';
-import { COLORS, PAGE } from '@/colors';
+import { COLORS, PAGE, REWARD_COLORS } from '@/colors';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -206,7 +206,7 @@ export default function PointsHistoryModal({
                 <View style={[s.badge, s.pointsBadge]}>
                   <Image
                     source={SYSTEM_ICONS.reward}
-                    style={{ width: 12, height: 12, tintColor: COLORS.Rewards }}
+                    style={{ width: 12, height: 12, tintColor: REWARD_COLORS.Points }}
                   />
                   <Text style={s.badgeText}>{totalEarned} pts</Text>
                 </View>
@@ -223,7 +223,7 @@ export default function PointsHistoryModal({
 
               {/* ×N completions badge — only shown when completed more than once */}
               {postResetCount > 1 && (
-                <View style={[s.badge, s.XPBadge]}>
+                <View style={[s.badge, s.repeatCountBadge]}>
                   <Image
                     source={SYSTEM_ICONS.star}
                     style={{ width: 12, height: 12, tintColor: COLORS.Star }}
@@ -287,7 +287,7 @@ export default function PointsHistoryModal({
             shadowBorderRadius={15}
             contentBorderRadius={15}
             contentBorderColor="#000"
-            shadowColor={COLORS.Rewards}
+            shadowColor={REWARD_COLORS.Points}
             shadowOffset={{ x: 0, y: 3 }}
           >
             <View style={{ padding: 20, alignItems: 'center', gap: 6 }}>
@@ -297,7 +297,7 @@ export default function PointsHistoryModal({
               </Text>
 
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <Image source={SYSTEM_ICONS.reward} style={{ width: 22, height: 22, tintColor: COLORS.Rewards }} />
+                <Image source={SYSTEM_ICONS.reward} style={{ width: 22, height: 22, tintColor: REWARD_COLORS.Points }} />
                 <Text style={globalStyles.h1}>{totalPoints}</Text>
               </View>
             </View>
@@ -322,7 +322,7 @@ export default function PointsHistoryModal({
             <View style={{ padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
               <Text style={globalStyles.body1}>All-time total</Text>
               <View style={[s.badge, s.pointsBadge]}>
-                <Image source={SYSTEM_ICONS.reward} style={{ width: 12, height: 12, tintColor: COLORS.Rewards }} />
+                <Image source={SYSTEM_ICONS.reward} style={{ width: 12, height: 12, tintColor: REWARD_COLORS.Points }} />
                 <Text style={s.badgeText}>{allTimeTotal} pts</Text>
               </View>
             </View>
@@ -337,14 +337,14 @@ export default function PointsHistoryModal({
           {/* total redeemed summary */}
           <ShadowBox
             contentBorderColor="#000"
-            shadowColor={COLORS.Rewards}
+            shadowColor={REWARD_COLORS.Points}
             shadowOffset={{ x: 0, y: 3 }}
             style={{ marginBottom: 20 }}
           >
             <View style={{ padding: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
               <Text style={globalStyles.body1}>Total redeemed</Text>
               <View style={[s.badge, s.pointsBadge]}>
-                <Image source={SYSTEM_ICONS.reward} style={{ width: 12, height: 12, tintColor: COLORS.Rewards }} />
+                <Image source={SYSTEM_ICONS.reward} style={{ width: 12, height: 12, tintColor: REWARD_COLORS.Points }} />
                 <Text style={s.badgeText}>{redeemedPoints} pts</Text>
               </View>
             </View>
@@ -422,7 +422,7 @@ export default function PointsHistoryModal({
             <View style={s.cardPointsBadge}>
               <Image
                 source={SYSTEM_ICONS.reward}
-                style={{ width: 11, height: 11, tintColor: COLORS.Rewards }}
+                style={{ width: 11, height: 11, tintColor: REWARD_COLORS.Points }}
               />
               <Text style={[globalStyles.label, { fontSize: 9, opacity: 1 }]}>
                 {points ?? reward.costPoints} pts
@@ -440,7 +440,7 @@ export default function PointsHistoryModal({
                 }]}>
                   <Image
                     source={SYSTEM_ICONS.gift}
-                    style={{ width: 40, height: 40, tintColor: COLORS.Rewards }}
+                    style={{ width: 40, height: 40, tintColor: REWARD_COLORS.Points }}
                   />
                 </View>
               )}
@@ -586,11 +586,11 @@ const s = StyleSheet.create({
     borderColor: '#ff8a36',
   },
   pointsBadge: {
-    backgroundColor: COLORS.RewardsBackground,
-    borderColor: COLORS.RewardsAccent,
+    backgroundColor: REWARD_COLORS.Background,
+    borderColor: REWARD_COLORS.Accent,
   },
-  XPBadge: {
-    backgroundColor: COLORS.XPAccent,
+  repeatCountBadge: {
+    backgroundColor: REWARD_COLORS.RepeatCount,
     borderColor: COLORS.Star,
   },
   streakBadge: {

@@ -208,7 +208,7 @@ export default function HabitsPage() {
               borderRadius: 12,
               borderWidth: 1,
               borderColor: '#000',
-              backgroundColor: COLORS.PrimaryLight,
+              backgroundColor: COLORS.Accent,
             }}
             onPress={handleGoToToday}
           >
@@ -301,7 +301,7 @@ export default function HabitsPage() {
 
             <Pressable onPress={() => router.push({ pathname: '/habits/NewHabitPage', params: { startDate: formatLocalDate(viewingDate) } })}>
               <ShadowBox
-                contentBackgroundColor={COLORS.PrimaryLight}
+                contentBackgroundColor={COLORS.Accent}
                 contentBorderRadius={30}
                 shadowBorderRadius={30}
               >

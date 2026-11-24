@@ -1,5 +1,5 @@
 // app/(tabs)/paths/[id].tsx
-import { BUTTON_COLORS, COLORS, PAGE, PATH_COLORS, type PathColorKey } from '@/colors';
+import { BUTTON_COLORS, COLORS, HABIT_COLORS, PAGE, PATH_COLORS, REWARD_COLORS, type PathColorKey } from '@/colors';
 import { HABIT_ICONS, SYSTEM_ICONS } from '@/constants/icons';
 import { useAuth } from '@/contexts/AuthContext';
 import { useHabits } from '@/hooks/useHabits';
@@ -887,11 +887,11 @@ export default function PathDetail() {
                           paddingVertical: 3,
                           borderRadius: 8,
                           borderWidth: 1,
-                          backgroundColor: COLORS.RewardsBackground,
-                          borderColor: COLORS.RewardsAccent,
+                          backgroundColor: REWARD_COLORS.Background,
+                          borderColor: REWARD_COLORS.Accent,
                           alignSelf: 'flex-start',
                         }}>
-                          <Image source={SYSTEM_ICONS.reward} style={{ width: 12, height: 12, tintColor: COLORS.Rewards }} />
+                          <Image source={SYSTEM_ICONS.reward} style={{ width: 12, height: 12, tintColor: REWARD_COLORS.Points }} />
                           <Text style={{ fontSize: 10, fontFamily: 'label' }}>
                             {weeklyEarnedPoints}/{weeklyTotalPoints}
                           </Text>
@@ -1155,7 +1155,7 @@ export default function PathDetail() {
                                   {habit.frequency === 'Weekly Goal' ? 'Week Goal' : isRecurring(habit) ? `↻ ${habit.frequency}` : '1×'}
                                 </Text>
                               </View>
-                              <View style={[globalStyles.bubbleLabel, { backgroundColor: COLORS.ProgressColor, borderColor: COLORS.ProgressColor }]}>
+                              <View style={[globalStyles.bubbleLabel, { backgroundColor: HABIT_COLORS.Progress, borderColor: HABIT_COLORS.Progress }]}>
                                 <Text style={[globalStyles.label, { opacity: 1 }]}>
                                   {completedDate
                                     ? `${formatDisplayDateString(completedDate)}`

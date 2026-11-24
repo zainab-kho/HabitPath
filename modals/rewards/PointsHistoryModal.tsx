@@ -1,5 +1,5 @@
 import { globalStyles } from '@/styles';
-import { BUTTON_COLORS, COLORS, PAGE } from '@/colors';
+import { COLORS, PAGE } from '@/colors';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
@@ -513,7 +513,7 @@ export default function PointsHistoryModal({
           {/* footer */}
           <View style={{ flexDirection: 'row', borderTopWidth: 1, padding: 10, gap: 10 }}>
             <Pressable style={{ flex: 1 }} onPress={onClose}>
-              <ShadowBox contentBackgroundColor={BUTTON_COLORS.Done} shadowBorderRadius={15}>
+              <ShadowBox contentBackgroundColor={PAGE.rewards.primary[0]} shadowBorderRadius={15}>
                 <View style={{ paddingVertical: 6 }}>
                   <Text style={[globalStyles.body, { textAlign: 'center' }]}>Done</Text>
                 </View>

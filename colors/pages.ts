@@ -52,6 +52,6 @@ export const PAGE = {
   },
   rewards: {
     background: ['#f9ffa6', '#ffe8b1', '#FF7F50'],
-    primary: ['#B9C042', COLORS.Rewards],
+    primary: ['#FFD581', COLORS.Rewards],
   },
 } as const;

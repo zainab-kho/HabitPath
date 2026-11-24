@@ -132,7 +132,7 @@ export default function SettingsPage() {
                         />
 
                         <ShadowBox
-                            contentBackgroundColor={checking ? BUTTON_COLORS.Disabled : BUTTON_COLORS.Edit}
+                            contentBackgroundColor={checking ? BUTTON_COLORS.Disabled : BUTTON_COLORS.Quiet}
                             contentBorderRadius={20}
                             shadowBorderRadius={20}
                         >

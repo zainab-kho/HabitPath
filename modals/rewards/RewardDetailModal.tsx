@@ -218,7 +218,7 @@ export default function RewardDetailModal({ visible, onClose, reward, onDelete }
             {moreOptions && (
               <View style={{ flexDirection: 'row', gap: 10, marginVertical: 10 }}>
                 <Pressable onPress={handleEdit} style={{ flex: 1 }}>
-                  <ShadowBox contentBackgroundColor={BUTTON_COLORS.Edit} shadowBorderRadius={15}>
+                  <ShadowBox contentBackgroundColor={BUTTON_COLORS.Quiet} shadowBorderRadius={15}>
                     <View style={{ paddingVertical: 6 }}>
                       <Text style={[globalStyles.body, { textAlign: 'center' }]}>Edit</Text>
                     </View>
@@ -238,7 +238,7 @@ export default function RewardDetailModal({ visible, onClose, reward, onDelete }
 
           <View style={{ flexDirection: 'row', borderTopWidth: 1, padding: 10, gap: 10 }}>
             <Pressable onPress={onClose} style={{ flex: 1 }}>
-              <ShadowBox contentBackgroundColor={BUTTON_COLORS.Done} shadowBorderRadius={15}>
+              <ShadowBox contentBackgroundColor={PAGE.rewards.primary[0]} shadowBorderRadius={15}>
                 <View style={{ paddingVertical: 6 }}>
                   <Text style={[globalStyles.body, { textAlign: 'center' }]}>Done</Text>
                 </View>
